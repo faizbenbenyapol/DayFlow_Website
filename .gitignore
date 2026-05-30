@@ -1,0 +1,53 @@
+# ==========================================
+# DayFlow Website - Git Ignore Settings
+# Designed for Public Repository
+# ==========================================
+
+# --- System & OS Files ---
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --- IDEs & Editors ---
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# --- LLM & Agent Temporary Directories ---
+.antigravity/
+.claude/
+
+# --- Environment and Sensitive Configuration ---
+# Ignore the auto-generated application encryption key (VERY IMPORTANT for public repos)
+/config/.app_key
+config/config.php
+
+# Ignore any local environment files or backups
+.env
+.env.local
+.env.*.local
+*.env
+*.bak
+*.config
+
+# --- Uploads and User Assets ---
+# Ignore all uploaded files, but keep the directory and security .htaccess file
+/uploads/*
+!/uploads/.htaccess
+
+# --- Database & SQL Backups ---
+# Ignore database dumps or migrations that shouldn't be public
+*.sql
+!/sql/
+
+# --- Server Logs & Caches ---
+*.log
+error_log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
