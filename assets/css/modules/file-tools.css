@@ -1,0 +1,470 @@
+/* =====================================================
+   file-tools.css — Upgraded Premium Version (No Emojis)
+   ===================================================== */
+
+/* ── Tab Bar Redesign ── */
+.ft-tabs {
+    display: flex;
+    gap: var(--space-2);
+    overflow-x: auto;
+    padding: 6px;
+    margin-bottom: var(--space-6);
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    scrollbar-width: none;
+    box-shadow: var(--shadow-sm);
+}
+.ft-tabs::-webkit-scrollbar { display: none; }
+
+.ft-tab {
+    flex-shrink: 0;
+    padding: 8px 20px;
+    border: none;
+    background: transparent;
+    color: var(--color-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: var(--radius);
+    transition: color var(--transition), background var(--transition), transform var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.ft-tab:hover {
+    color: var(--color-text);
+    background: var(--color-surface-2);
+}
+.ft-tab.active {
+    color: var(--color-accent-inv);
+    background: var(--color-text);
+    box-shadow: var(--shadow-sm);
+}
+
+/* ── Panel Layouts and Animations ── */
+.ft-panel { display: none; }
+.ft-panel.active {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-4);
+    align-items: start;
+    animation: tabEntrance 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes tabEntrance {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Elegant Tool Card ── */
+.ft-tool-card {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: var(--space-4) var(--space-4);
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition), box-shadow var(--transition);
+    height: fit-content;
+    overflow: hidden;
+}
+.ft-tool-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+.ft-tool-card .card-header {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+.ft-tool-card .card-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-text);
+}
+.ft-tool-card .text-xs.text-muted {
+    font-size: 0.72rem;
+    color: var(--color-muted);
+}
+.ft-tool-card .card-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+/* ── Vector Icon Drop Zones ── */
+.ft-drop-zone {
+    border: 2px dashed var(--color-border-2);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5) var(--space-4);
+    text-align: center;
+    cursor: pointer;
+    transition: border-color var(--transition), background var(--transition), transform var(--transition);
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    line-height: 1.6;
+    background: var(--color-bg);
+    position: relative;
+}
+.ft-drop-zone::before {
+    content: "";
+    display: block;
+    width: 28px;
+    height: 28px;
+    margin: 0 auto 10px;
+    background-color: var(--color-muted-2);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpolyline points='17 8 12 3 7 8'/%3E%3Cline x1='12' y1='3' x2='12' y2='15'/%3E%3C/svg%3E") no-repeat center;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpolyline points='17 8 12 3 7 8'/%3E%3Cline x1='12' y1='3' x2='12' y2='15'/%3E%3C/svg%3E") no-repeat center;
+    transition: background-color var(--transition), transform var(--transition);
+}
+.ft-drop-zone:hover,
+.ft-drop-zone.dragover {
+    border-color: var(--color-text);
+    background: var(--color-surface);
+    color: var(--color-text);
+}
+.ft-drop-zone:hover::before,
+.ft-drop-zone.dragover::before {
+    background-color: var(--color-text);
+    transform: translateY(-2px);
+}
+
+.ft-link {
+    color: var(--color-text);
+    cursor: pointer;
+    text-decoration: underline;
+    font-weight: 600;
+}
+
+/* ── Actions Row ── */
+.ft-actions {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    margin-top: var(--space-2);
+}
+
+/* ── Status & Feedback ── */
+.ft-status {
+    margin-top: var(--space-2);
+    font-size: 0.78rem;
+    font-weight: 500;
+    min-height: 1.2em;
+    padding: 6px 12px;
+    border-radius: var(--radius);
+    display: inline-block;
+    width: fit-content;
+}
+.ft-status.ok  { background: var(--color-success-bg); color: var(--color-success); }
+.ft-status.err { background: var(--color-danger-bg); color: var(--color-danger); }
+.ft-status.info { background: var(--color-surface-2); color: var(--color-muted); }
+
+/* ── File Lists (Multi-file upload item list) ── */
+.ft-file-list {
+    margin-top: var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.ft-file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    font-size: 0.78rem;
+    gap: var(--space-3);
+    color: var(--color-text);
+}
+.ft-file-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; font-weight: 500; }
+.ft-file-item .ft-remove {
+    flex-shrink: 0;
+    cursor: pointer;
+    color: var(--color-muted);
+    font-size: 0.8rem;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    transition: background var(--transition), color var(--transition);
+}
+.ft-file-item .ft-remove:hover {
+    background: var(--color-danger-bg);
+    color: var(--color-danger);
+}
+
+/* ── Chosen Single File details ── */
+.ft-chosen-file {
+    margin-top: var(--space-2);
+    font-size: 0.78rem;
+    color: var(--color-muted);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background: var(--color-surface);
+    padding: 6px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+}
+
+/* ── PDF Page Selection grid ── */
+.ft-page-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    max-height: 280px;
+    overflow-y: auto;
+    padding: 4px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+}
+.ft-page-thumb {
+    position: relative;
+    cursor: pointer;
+    border-radius: var(--radius);
+    border: 2px solid var(--color-border-2);
+    overflow: hidden;
+    transition: border-color var(--transition), transform var(--transition);
+    background: var(--color-bg);
+}
+.ft-page-thumb:hover {
+    transform: scale(1.02);
+}
+.ft-page-thumb canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+.ft-page-thumb .ft-page-num {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.65);
+    color: #fff;
+    font-size: 0.68rem;
+    text-align: center;
+    padding: 2px;
+    font-weight: 500;
+}
+.ft-page-thumb .ft-page-check {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--color-text);
+    cursor: pointer;
+}
+.ft-page-thumb.selected {
+    border-color: var(--color-text);
+}
+.ft-page-thumb.selected .ft-page-num {
+    background: var(--color-text);
+    color: var(--color-bg);
+}
+
+/* ── Angle & Action buttons groups ── */
+.ft-btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+.ft-btn-group .btn { flex-shrink: 0; }
+.ft-angle-btn.active,
+.ft-op-btn.active,
+.ft-fx-btn.active,
+.ft-dir-btn.active,
+.ft-b64-tab.active,
+.ft-hash-tab.active {
+    background: var(--color-text) !important;
+    color: var(--color-bg) !important;
+    border-color: var(--color-text) !important;
+}
+
+/* ── Form grids ── */
+.ft-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: var(--space-3);
+}
+
+/* ── Customizable Slider Range ── */
+.ft-range {
+    width: 100%;
+    accent-color: var(--color-text);
+    margin-top: var(--space-2);
+    height: 6px;
+    background: var(--color-border);
+    border-radius: var(--radius-full);
+    outline: none;
+}
+
+/* ── Dark Monospaced Code Textareas ── */
+.ft-textarea {
+    width: 100%;
+    min-height: 140px;
+    resize: vertical;
+    font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.8rem;
+    padding: var(--space-3);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border-2);
+    background: var(--color-bg);
+    color: var(--color-text);
+    line-height: 1.5;
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+.ft-textarea:focus {
+    border-color: var(--color-text);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
+}
+.ft-output {
+    margin-top: var(--space-3);
+    background: var(--color-surface);
+    color: var(--color-text);
+    border-color: var(--color-border);
+}
+[data-theme="dark"] .ft-output {
+    background: var(--color-surface-2);
+    border-color: var(--color-border);
+}
+
+/* ── Inner tab options ── */
+.ft-tabs-inner {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+/* ── GD Image preview ── */
+.ft-img-preview {
+    margin-top: var(--space-3);
+    text-align: center;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    padding: var(--space-3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.ft-img-preview img {
+    max-width: 100%;
+    max-height: 160px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    object-fit: contain;
+}
+
+/* ── Progress Indicators ── */
+.ft-progress-wrap { margin-top: var(--space-3); }
+.ft-progress-bar {
+    height: 6px;
+    background: var(--color-surface-2);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+.ft-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--color-text);
+    border-radius: var(--radius-full);
+    transition: width var(--transition);
+}
+.ft-progress-label {
+    font-size: 0.72rem;
+    color: var(--color-muted);
+    margin-top: var(--space-1);
+    font-weight: 500;
+}
+
+/* ── Security Hashing details layout ── */
+.ft-hash-results {
+    margin-top: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    background: var(--color-surface);
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+}
+.ft-hash-row {
+    display: grid;
+    grid-template-columns: 5rem 1fr;
+    gap: var(--space-3);
+    align-items: center;
+    font-size: 0.8rem;
+}
+.ft-hash-row label { font-weight: 700; color: var(--color-text); font-size: 0.78rem; }
+.ft-hash-row input {
+    font-family: SFMono-Regular, Consolas, monospace;
+    font-size: 0.75rem;
+    padding: 6px 12px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-2);
+    border-radius: var(--radius);
+    color: var(--color-text);
+    width: 100%;
+    cursor: text;
+}
+.ft-hash-row input:focus {
+    border-color: var(--color-text);
+    outline: none;
+}
+
+/* ── ZIP directory listing table ── */
+.ft-zip-table-wrap {
+    margin-top: var(--space-4);
+    overflow-x: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    background: var(--color-bg);
+}
+.ft-zip-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+.ft-zip-table th,
+.ft-zip-table td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+}
+.ft-zip-table th {
+    background: var(--color-surface);
+    font-weight: 700;
+    color: var(--color-text);
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+.ft-zip-table tr:last-child td { border-bottom: none; }
+.ft-zip-table td { color: var(--color-text); }
+.ft-zip-table td:last-child { color: var(--color-muted); white-space: nowrap; }
+
+/* ── Custom rounded pickers ── */
+input[type="color"].form-control {
+    padding: 2px;
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+}
+
+/* ── Watermark text styles ── */
+#wmText, #pwdUser, #pwdOwner { font-family: inherit; }
+
+/* ── Responsive grids ── */
+@media (max-width: 540px) {
+    .ft-panel.active { grid-template-columns: 1fr; }
+    .ft-form-grid { grid-template-columns: 1fr; }
+}

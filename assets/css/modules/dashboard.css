@@ -1,0 +1,689 @@
+/* =====================================================
+   dashboard.css — Upgraded Premium Visual System
+===================================================== */
+
+/* ── Welcome Greeting Banner ── */
+.dash-welcome-card {
+    background: radial-gradient(120% 120% at 0% 0%, #17171a 0%, #09090b 100%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5) var(--space-6);
+    color: #ffffff;
+    margin-bottom: var(--space-6);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+}
+
+[data-theme="light"] .dash-welcome-card {
+    background: radial-gradient(120% 120% at 0% 0%, #ffffff 0%, #f4f5f6 100%);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.05);
+}
+
+.dash-welcome-text h2 {
+    font-size: 1.45rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 2px;
+}
+
+.dash-welcome-text p {
+    font-size: 0.85rem;
+    color: #86868b;
+}
+
+[data-theme="light"] .dash-welcome-text p {
+    color: var(--color-muted);
+}
+
+.dash-welcome-actions {
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+}
+
+/* ── Quick stat strip ── */
+.dash-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
+@media (max-width: 860px) {
+    .dash-strip { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 480px) {
+    .dash-strip { grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+}
+
+.dash-strip-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4) var(--space-5);
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dash-strip-card:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--ic, var(--color-border)) 40%, var(--color-border));
+    box-shadow: 0 8px 16px -6px color-mix(in srgb, var(--ic, transparent) 12%, transparent);
+}
+
+.dash-strip-card:nth-child(1) { --ic: #f43f5e; border-left: 3px solid #f43f5e; }
+.dash-strip-card:nth-child(2) { --ic: #10b981; border-left: 3px solid #10b981; }
+.dash-strip-card:nth-child(3) { --ic: #22c55e; border-left: 3px solid #22c55e; }
+.dash-strip-card:nth-child(4) { --ic: #8b5cf6; border-left: 3px solid #8b5cf6; }
+
+.dash-strip-val {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-text);
+    line-height: 1.2;
+    margin-bottom: 4px;
+}
+
+.dash-strip-val.danger  { color: var(--color-danger); }
+.dash-strip-val.success { color: var(--color-success); }
+.dash-strip-val.warning { color: var(--color-warning); }
+
+.dash-strip-lbl {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+}
+
+/* ── Widget grid ── */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-5);
+}
+
+@media (max-width: 900px) {
+    .dashboard-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Widget card ── */
+.widget[data-widget="tasks"]         { --wc: #f43f5e; }
+.widget[data-widget="calendar"]      { --wc: #6366f1; }
+.widget[data-widget="finance"]       { --wc: #10b981; }
+.widget[data-widget="workout"]       { --wc: #22c55e; }
+.widget[data-widget="subscriptions"] { --wc: #8b5cf6; }
+.widget[data-widget="projects"]      { --wc: #06b6d4; }
+.widget[data-widget="notes"]         { --wc: #f59e0b; }
+.widget[data-widget="stocks"]        { --wc: #14b8a6; }
+
+.widget {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-top: 3px solid var(--wc, var(--color-border));
+    border-radius: var(--radius-lg);
+    padding: 0;
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    cursor: default;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.widget:hover {
+    transform: translateY(-4px) scale(1.005);
+    border-color: color-mix(in srgb, var(--wc) 40%, var(--color-border));
+    box-shadow: 0 12px 24px -10px color-mix(in srgb, var(--wc) 15%, transparent),
+                0 4px 12px -5px color-mix(in srgb, var(--wc) 10%, transparent);
+}
+
+.widget-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-5);
+    border-bottom: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--wc, transparent) 5%, var(--color-surface));
+}
+
+.widget-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.widget-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--wc, var(--color-muted));
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.widget-title svg {
+    color: var(--wc);
+    flex-shrink: 0;
+}
+
+.widget-link {
+    font-size: 0.75rem;
+    color: var(--color-muted-2);
+    text-decoration: none;
+    transition: color var(--transition);
+}
+
+.widget-link:hover {
+    color: var(--wc, var(--color-text));
+    text-decoration: none;
+}
+
+.widget-body {
+    flex: 1;
+    padding: var(--space-3) var(--space-5) var(--space-4);
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Drag handle ── */
+.widget .drag-handle {
+    opacity: 0;
+    transition: opacity var(--transition);
+    font-size: 1rem;
+    cursor: grab;
+    color: var(--color-muted-2);
+}
+
+.widget:hover .drag-handle { opacity: 1; }
+
+/* ── Empty state ── */
+.widget-empty {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-6) 0;
+    color: var(--color-muted-2);
+    font-size: 0.82rem;
+    text-align: center;
+}
+
+.widget-empty-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.widget-empty-content svg {
+    color: var(--color-muted-2);
+    opacity: 0.4;
+}
+
+/* ── Loading ── */
+.widget-loading {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-6) 0;
+    color: var(--color-muted);
+    font-size: 0.85rem;
+    gap: var(--space-3);
+}
+
+/* ── Generic widget badge ── */
+.wdg-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.wdg-badge.danger  { background: var(--color-danger-bg);  color: var(--color-danger); }
+.wdg-badge.warning { background: var(--color-warning-bg); color: var(--color-warning); }
+.wdg-badge.muted   { background: var(--color-surface-2);  color: var(--color-muted); }
+
+[data-theme="dark"] .wdg-badge.danger  { background: rgba(192,57,43,.18);  color: #fc8181; }
+[data-theme="dark"] .wdg-badge.warning { background: rgba(192,122,0,.18);  color: #fbbf24; }
+
+/* ── Tasks widget ── */
+.widget-alert-row {
+    margin-bottom: var(--space-2);
+}
+
+.widget-alert-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: var(--radius);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.widget-alert-badge.danger { background: var(--color-danger-bg); color: var(--color-danger); }
+
+[data-theme="dark"] .widget-alert-badge.danger { background: rgba(192,57,43,.18); color: #fc8181; }
+
+.widget-task-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.875rem;
+}
+
+.widget-task-item:last-child { border-bottom: none; }
+
+.widget-task-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.widget-task-title {
+    flex: 1;
+    color: var(--color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Calendar widget ── */
+.widget-event-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.875rem;
+}
+
+.widget-event-item:last-child { border-bottom: none; }
+
+.widget-event-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.widget-event-time {
+    font-size: 0.72rem;
+    color: var(--color-muted);
+    white-space: nowrap;
+    min-width: 44px;
+}
+
+.widget-event-title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Finance widget ── */
+.dash-finance-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+    margin-bottom: var(--space-3);
+    padding-top: var(--space-1);
+}
+
+.dash-finance-label {
+    font-size: 0.72rem;
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+}
+
+.dash-finance-amount {
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.dash-finance-amount.income  { color: var(--color-success); }
+.dash-finance-amount.expense { color: var(--color-danger); }
+
+.dash-finance-bar-wrap {
+    height: 5px;
+    background: var(--color-border);
+    border-radius: 99px;
+    overflow: hidden;
+    margin-bottom: var(--space-3);
+}
+
+.dash-finance-bar {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.6s ease;
+}
+
+.dash-finance-bar.ok      { background: var(--color-success); }
+.dash-finance-bar.warning { background: var(--color-warning); }
+.dash-finance-bar.danger  { background: var(--color-danger); }
+
+.dash-finance-balance {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--color-border);
+}
+
+.dash-finance-balance-label {
+    font-size: 0.8rem;
+    color: var(--color-muted);
+}
+
+.dash-finance-balance-val {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.dash-finance-balance-val.positive { color: var(--color-success); }
+.dash-finance-balance-val.negative { color: var(--color-danger); }
+
+/* ── Workout widget ── */
+.widget-workout-card { padding: var(--space-1) 0; }
+
+.widget-workout-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-2);
+}
+
+.widget-workout-ago {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+}
+
+.widget-workout-date {
+    font-size: 0.82rem;
+    color: var(--color-muted);
+    margin-bottom: var(--space-2);
+}
+
+.widget-workout-details {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.widget-workout-details span {
+    font-size: 0.78rem;
+    color: var(--color-muted);
+    background: var(--color-surface-2);
+    padding: 2px 8px;
+    border-radius: var(--radius);
+}
+
+/* ── Subscriptions widget ── */
+.widget-sub-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.875rem;
+    gap: var(--space-3);
+}
+
+.widget-sub-item:last-child { border-bottom: none; }
+
+.widget-sub-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.widget-sub-name {
+    display: block;
+    color: var(--color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.widget-sub-amount {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--color-muted);
+    margin-top: 1px;
+}
+
+/* ── Projects Widget ── */
+.widget-project-item {
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.widget-project-item:last-child { border-bottom: none; }
+
+.widget-project-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.widget-project-name {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
+.widget-project-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: 0.72rem;
+    color: var(--color-muted);
+}
+
+.widget-project-progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+}
+
+.widget-project-progress-bar {
+    flex: 1;
+    height: 4px;
+    background: var(--color-border);
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.widget-project-progress-fill {
+    height: 100%;
+    background: #06b6d4;
+    border-radius: 99px;
+    transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.widget-project-pct {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--color-muted);
+    min-width: 28px;
+    text-align: right;
+}
+
+/* ── Notes Widget ── */
+.widget-note-item {
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    cursor: pointer;
+    transition: opacity var(--transition);
+}
+
+.widget-note-item:hover {
+    opacity: 0.85;
+}
+
+.widget-note-item:last-child { border-bottom: none; }
+
+.widget-note-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.widget-note-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.widget-note-pinned-dot {
+    width: 6px;
+    height: 6px;
+    background: #f59e0b;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #f59e0b;
+}
+
+.widget-note-time {
+    font-size: 0.72rem;
+    color: var(--color-muted-2);
+}
+
+.widget-note-preview {
+    font-size: 0.78rem;
+    color: var(--color-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.4;
+}
+
+.widget-note-tags {
+    display: flex;
+    gap: var(--space-1);
+    flex-wrap: wrap;
+    margin-top: 2px;
+}
+
+.widget-note-tag-chip {
+    font-size: 0.68rem;
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+[data-theme="dark"] .widget-note-tag-chip {
+    background: rgba(245, 158, 11, 0.15);
+}
+
+/* ── Stocks Widget ── */
+.widget-stock-item {
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.widget-stock-item:last-child { border-bottom: none; }
+
+.widget-stock-left {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.widget-stock-ticker {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.widget-stock-market {
+    font-size: 0.68rem;
+    color: var(--color-muted-2);
+    text-transform: uppercase;
+}
+
+.widget-stock-right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.widget-stock-price {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--color-text);
+    text-align: right;
+}
+
+.widget-stock-change-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 0.72rem;
+    font-weight: 700;
+    min-width: 65px;
+    text-align: right;
+}
+
+.widget-stock-change-badge.positive {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+}
+
+.widget-stock-change-badge.negative {
+    background: var(--color-danger-bg);
+    color: var(--color-danger);
+}
+
+[data-theme="dark"] .widget-stock-change-badge.positive {
+    background: rgba(34, 197, 94, 0.12);
+}
+
+[data-theme="dark"] .widget-stock-change-badge.negative {
+    background: rgba(226, 54, 54, 0.12);
+}

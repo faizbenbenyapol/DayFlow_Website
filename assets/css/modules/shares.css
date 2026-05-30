@@ -1,0 +1,122 @@
+/* =====================================================
+   shares.css — Share Links management tab
+===================================================== */
+
+.shares-table-wrap { overflow-x: auto; }
+
+.shares-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .85rem;
+}
+.shares-table th {
+    text-align: left;
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 2px solid var(--color-border);
+    color: var(--color-muted);
+    font-weight: 500;
+    white-space: nowrap;
+}
+.shares-table td {
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: middle;
+}
+.shares-table tr:last-child td { border-bottom: none; }
+.shares-table tr:hover td { background: var(--color-surface); }
+
+.share-link-url {
+    font-size: .78rem;
+    color: var(--color-muted);
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+}
+.share-perm-badge {
+    display: inline-block;
+    font-size: .72rem;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-weight: 500;
+}
+.share-perm-badge.view     { background: #dbeafe; color: #1d4ed8; }
+.share-perm-badge.download { background: #d1fae5; color: #065f46; }
+
+.share-expired { color: var(--color-danger); font-size: .75rem; }
+.share-no-expiry { color: var(--color-muted); font-size: .75rem; }
+
+.share-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+
+/* Create share modal */
+.share-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.25);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    backdrop-filter: blur(16px) saturate(180%);
+    z-index: 9997;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-6);
+    overflow-y: auto;
+    animation: backdropFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.share-modal-box {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-2);
+    border-radius: var(--radius-xl);
+    width: 100%;
+    max-width: 520px;
+    margin: auto;
+    max-height: calc(100vh - 48px);
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+    animation: modalScaleIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+.share-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-4) var(--space-5);
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+.share-modal-title { font-weight: 600; }
+.share-modal-close { background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--color-muted); transition: color var(--transition); }
+.share-modal-close:hover { color: var(--color-text); }
+.share-modal-body  { padding: var(--space-4) var(--space-5); overflow-y: auto; flex: 1; }
+.share-modal-footer {
+    display: flex; gap: var(--space-2); justify-content: flex-end;
+    padding: var(--space-3) var(--space-5);
+    border-top: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+/* File/folder tree picker */
+.file-picker {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: var(--space-3);
+}
+.file-picker-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    cursor: pointer;
+    font-size: .85rem;
+    transition: background var(--transition);
+}
+.file-picker-item:hover { background: var(--color-surface); }
+.file-picker-item.selected {
+    background: var(--color-surface-2);
+    font-weight: 600;
+}
+.file-picker-empty { padding: var(--space-3); color: var(--color-muted); font-size: .85rem; }

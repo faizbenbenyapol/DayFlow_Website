@@ -1,0 +1,848 @@
+/* =====================================================
+   components.css — Reusable UI Components
+===================================================== */
+
+/* --- Buttons --- */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-5);
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.5;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition), color var(--transition), opacity var(--transition), transform var(--transition);
+    white-space: nowrap;
+    text-decoration: none;
+    background: none;
+    color: var(--color-text);
+    font-family: inherit;
+}
+
+.btn:active {
+    transform: scale(0.97);
+}
+
+.btn:hover {
+    text-decoration: none;
+    opacity: 0.85;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background: var(--color-text);
+    color: var(--color-bg);
+    border-color: var(--color-text);
+}
+
+.btn-primary:hover {
+    opacity: 0.8;
+}
+
+.btn-ghost {
+    background: transparent;
+    border-color: var(--color-border-2);
+    color: var(--color-text);
+}
+
+.btn-ghost:hover {
+    background: var(--color-surface-2);
+}
+
+.btn-danger {
+    background: transparent;
+    border-color: var(--color-danger);
+    color: var(--color-danger);
+}
+
+.btn-danger:hover {
+    background: var(--color-danger-bg);
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    color: var(--color-muted);
+    padding: var(--space-1) var(--space-2);
+    font-size: 0.85rem;
+}
+
+.btn-link:hover {
+    color: var(--color-text);
+    opacity: 1;
+}
+
+.btn-sm {
+    padding: var(--space-1) var(--space-3);
+    font-size: 0.8rem;
+}
+
+.btn-lg {
+    padding: var(--space-3) var(--space-6);
+    font-size: 1rem;
+}
+
+.btn-block {
+    width: 100%;
+}
+
+.btn-icon {
+    padding: var(--space-2);
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius);
+}
+
+/* --- Cards --- */
+.card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-sm);
+}
+
+.card, .note-card, .widget, .dash-strip-card {
+    transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+}
+
+/* ── Global Card & Widget Lift Hover Effects ── */
+.card:hover, .widget:hover, .dash-strip-card:hover, .note-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+    border-color: var(--color-border-2);
+}
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-5);
+}
+
+.card-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.card-body {
+    flex: 1;
+}
+
+.card-sm {
+    padding: var(--space-4);
+}
+
+/* --- Forms --- */
+.form-group {
+    margin-bottom: var(--space-5);
+}
+
+.form-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-text);
+    margin-bottom: var(--space-2);
+}
+
+.form-control {
+    display: block;
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-2);
+    border-radius: var(--radius);
+    color: var(--color-text);
+    transition: border-color var(--transition), box-shadow var(--transition);
+    font-size: 0.9rem;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--color-text);
+    box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-text);
+}
+
+.form-control::placeholder {
+    color: var(--color-muted-2);
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 80px;
+}
+
+select.form-control {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b6b6b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 2rem;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+/* ── Date / time inputs: กดได้ทั้งช่อง ── */
+input[type="date"].form-control,
+input[type="time"].form-control,
+input[type="datetime-local"].form-control,
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+    position: relative;
+    cursor: pointer;
+}
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    height: auto;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-5);
+}
+
+.form-hint {
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    margin-top: var(--space-1);
+}
+
+.form-error {
+    font-size: 0.8rem;
+    color: var(--color-danger);
+    margin-top: var(--space-1);
+}
+
+/* --- Alerts --- */
+.alert {
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius);
+    font-size: 0.875rem;
+    margin-bottom: var(--space-5);
+    border: 1px solid transparent;
+}
+
+.alert-danger {
+    background: var(--color-danger-bg);
+    color: var(--color-danger);
+    border-color: #e8b4b0;
+}
+
+.alert-success {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+    border-color: #b0dfc3;
+}
+
+.alert-warning {
+    background: var(--color-warning-bg);
+    color: var(--color-warning);
+    border-color: #e5d5a0;
+}
+
+/* --- Modals --- */
+.modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0);
+    -webkit-backdrop-filter: blur(0px) saturate(100%);
+    backdrop-filter: blur(0px) saturate(100%);
+    z-index: 9990;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-6);
+    overflow-y: auto;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal-backdrop.active {
+    display: flex;
+    animation: backdropFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.modal-backdrop.active .modal {
+    animation: modalScaleIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes backdropFadeIn {
+    from {
+        background: rgba(15, 23, 42, 0);
+        -webkit-backdrop-filter: blur(0px) saturate(100%);
+        backdrop-filter: blur(0px) saturate(100%);
+    }
+    to {
+        background: rgba(15, 23, 42, 0.25);
+        -webkit-backdrop-filter: blur(16px) saturate(180%);
+        backdrop-filter: blur(16px) saturate(180%);
+    }
+}
+
+@keyframes modalScaleIn {
+    from {
+        transform: scale(0.92);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.modal {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-2);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 520px;
+    margin: auto;
+    max-height: calc(100vh - 48px);
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-5) var(--space-6);
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+.modal-title {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-muted);
+    font-size: 1.2rem;
+    line-height: 1;
+    padding: var(--space-1);
+    border-radius: var(--radius);
+    transition: color var(--transition);
+}
+
+.modal-close:hover {
+    color: var(--color-text);
+}
+
+.modal-body {
+    padding: var(--space-6);
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-footer {
+    padding: var(--space-4) var(--space-6);
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    gap: var(--space-3);
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+/* --- Toasts --- */
+.toast-container {
+    position: fixed;
+    bottom: var(--space-6);
+    right: var(--space-6);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    pointer-events: none;
+}
+
+.toast {
+    background: var(--color-text);
+    color: var(--color-bg);
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius);
+    font-size: 0.875rem;
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: auto;
+    max-width: 320px;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast.toast-danger {
+    background: var(--color-danger);
+}
+
+.toast.toast-success {
+    background: var(--color-success);
+}
+
+/* --- Tables --- */
+.table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.table th,
+.table td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--color-border);
+    text-align: left;
+}
+
+.table th {
+    font-weight: 600;
+    font-size: 0.78rem;
+    color: var(--color-muted-2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--color-surface);
+    border-bottom: 2px solid var(--color-border);
+}
+
+.table tbody tr {
+    transition: background var(--transition);
+}
+
+.table tbody tr:hover {
+    background: var(--color-surface-2);
+}
+
+.table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* --- Badges / Tags --- */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.badge-gray {
+    background: var(--color-surface-2);
+    color: var(--color-muted);
+    border: 1px solid var(--color-border);
+}
+
+.badge-dark {
+    background: var(--color-text);
+    color: var(--color-bg);
+}
+
+.badge-danger {
+    background: var(--color-danger-bg);
+    color: var(--color-danger);
+}
+
+.badge-success {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+}
+
+.badge-warning {
+    background: var(--color-warning-bg);
+    color: var(--color-warning);
+}
+
+/* --- Tag pills --- */
+.tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.tag {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 3px var(--space-3);
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    font-size: 0.78rem;
+    color: var(--color-muted);
+    cursor: pointer;
+    transition: background var(--transition), color var(--transition);
+}
+
+.tag:hover,
+.tag.active {
+    background: var(--color-text);
+    color: var(--color-bg);
+    border-color: var(--color-text);
+}
+
+/* --- Empty State --- */
+.empty-state {
+    text-align: center;
+    padding: var(--space-12) var(--space-8);
+    color: var(--color-muted);
+}
+
+.empty-state-title {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--color-muted);
+    margin-bottom: var(--space-2);
+}
+
+.empty-state-text {
+    font-size: 0.875rem;
+}
+
+/* --- Workout type badge (shared: exercise page + dashboard) --- */
+.workout-type-badge {
+    display: inline-block;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    font-size: .75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    background: var(--color-surface-2);
+    color: var(--color-muted);
+}
+
+.workout-type-badge[data-wtype="วิ่ง"]          { background: #dcfce7; color: #15803d; }
+.workout-type-badge[data-wtype="ยกน้ำหนัก"]    { background: #fee2e2; color: #b91c1c; }
+.workout-type-badge[data-wtype="ว่ายน้ำ"]      { background: #dbeafe; color: #1d4ed8; }
+.workout-type-badge[data-wtype="ปั่นจักรยาน"]  { background: #ffedd5; color: #c2410c; }
+.workout-type-badge[data-wtype="โยคะ"]          { background: #ede9fe; color: #7c3aed; }
+.workout-type-badge[data-wtype="HIIT"]           { background: #fce7f3; color: #be185d; }
+.workout-type-badge[data-wtype="เดิน"]          { background: #ccfbf1; color: #0f766e; }
+.workout-type-badge[data-wtype="กระโดดเชือก"]  { background: #f3e8ff; color: #7e22ce; }
+
+[data-theme="dark"] .workout-type-badge[data-wtype="วิ่ง"]          { background: rgba(34,197,94,.15);  color: #86efac; }
+[data-theme="dark"] .workout-type-badge[data-wtype="ยกน้ำหนัก"]    { background: rgba(244,63,94,.15);  color: #fca5a5; }
+[data-theme="dark"] .workout-type-badge[data-wtype="ว่ายน้ำ"]      { background: rgba(59,130,246,.15); color: #93c5fd; }
+[data-theme="dark"] .workout-type-badge[data-wtype="ปั่นจักรยาน"]  { background: rgba(249,115,22,.15); color: #fdba74; }
+[data-theme="dark"] .workout-type-badge[data-wtype="โยคะ"]          { background: rgba(139,92,246,.15); color: #c4b5fd; }
+[data-theme="dark"] .workout-type-badge[data-wtype="HIIT"]           { background: rgba(236,72,153,.15); color: #f9a8d4; }
+[data-theme="dark"] .workout-type-badge[data-wtype="เดิน"]          { background: rgba(20,184,166,.15); color: #5eead4; }
+[data-theme="dark"] .workout-type-badge[data-wtype="กระโดดเชือก"]  { background: rgba(168,85,247,.15); color: #d8b4fe; }
+
+/* --- Divider --- */
+.divider {
+    border: none;
+    border-top: 1px solid var(--color-border);
+    margin: var(--space-6) 0;
+}
+
+/* --- Loading spinner --- */
+.spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--color-border);
+    border-top-color: var(--color-text);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* --- Flex / Grid utilities --- */
+.flex {
+    display: flex;
+}
+
+.flex-col {
+    display: flex;
+    flex-direction: column;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.items-start {
+    align-items: flex-start;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.justify-end {
+    justify-content: flex-end;
+}
+
+.gap-2 {
+    gap: var(--space-2);
+}
+
+.gap-3 {
+    gap: var(--space-3);
+}
+
+.gap-4 {
+    gap: var(--space-4);
+}
+
+.gap-6 {
+    gap: var(--space-6);
+}
+
+.flex-1 {
+    flex: 1;
+}
+
+.flex-wrap {
+    flex-wrap: wrap;
+}
+
+.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-5);
+}
+
+.grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: var(--space-5);
+}
+
+.grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-5);
+}
+
+@media (max-width: 768px) {
+
+    .grid-2,
+    .grid-3,
+    .grid-4 {
+        grid-template-columns: 1fr;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* --- Spacing utilities --- */
+.mt-2 {
+    margin-top: var(--space-2);
+}
+
+.mt-4 {
+    margin-top: var(--space-4);
+}
+
+.mt-6 {
+    margin-top: var(--space-6);
+}
+
+.mt-8 {
+    margin-top: var(--space-8);
+}
+
+.mb-2 {
+    margin-bottom: var(--space-2);
+}
+
+.mb-4 {
+    margin-bottom: var(--space-4);
+}
+
+.mb-6 {
+    margin-bottom: var(--space-6);
+}
+
+.mb-8 {
+    margin-bottom: var(--space-8);
+}
+
+/* --- Text utilities --- */
+.text-muted {
+    color: var(--color-muted);
+}
+
+.text-sm {
+    font-size: 0.85rem;
+}
+
+.text-xs {
+    font-size: 0.75rem;
+}
+
+.font-medium {
+    font-weight: 500;
+}
+
+.font-semibold {
+    font-weight: 600;
+}
+
+.truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* --- Misc --- */
+.clickable {
+    cursor: pointer;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* --- Drag handle indicator --- */
+.drag-handle {
+    cursor: grab;
+    color: var(--color-muted-2);
+    font-size: 0.8rem;
+    padding: var(--space-1);
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+.sortable-ghost {
+    opacity: 0.4;
+    background: var(--color-surface-2) !important;
+}
+
+.sortable-drag {
+    opacity: 0.95;
+    box-shadow: var(--shadow-lg);
+}
+
+/* --- Status indicators --- */
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.status-open {
+    background: var(--color-muted-2);
+}
+
+.status-done {
+    background: var(--color-success);
+}
+
+.status-urgent {
+    background: var(--color-danger);
+}
+
+/* --- Checkbox custom --- */
+.check-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-2) 0;
+}
+
+.check-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin-top: 3px;
+    flex-shrink: 0;
+    cursor: pointer;
+    accent-color: var(--color-text);
+}
+
+.check-item label {
+    flex: 1;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.check-item input:checked+label {
+    text-decoration: line-through;
+    color: var(--color-muted);
+}
+
+/* --- Progress bar --- */
+.progress {
+    height: 4px;
+    background: var(--color-surface-2);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: var(--color-text);
+    border-radius: var(--radius-full);
+    transition: width 0.3s ease;
+}
+
+
+
+
+
+/* --- Scrollbar styling --- */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-border-2);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-muted);
+}

@@ -1,0 +1,260 @@
+.skills-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding-bottom: 2rem;
+}
+
+/* Header & Timer Section */
+.timer-widget {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    position: sticky;
+    top: 1rem;
+    z-index: 10;
+    border: 1px solid var(--border);
+}
+
+.timer-input-group {
+    flex-grow: 1;
+    display: flex;
+    gap: 0.75rem;
+}
+
+.timer-input-group select, 
+.timer-input-group input {
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.75rem 1rem;
+    color: var(--text);
+    font-size: 1rem;
+}
+
+.timer-input-group select {
+    min-width: 200px;
+}
+
+.timer-input-group input {
+    flex-grow: 1;
+}
+
+.timer-display {
+    font-size: 2.5rem;
+    font-family: monospace;
+    font-weight: 600;
+    color: var(--text);
+    min-width: 170px;
+    text-align: center;
+    letter-spacing: 2px;
+}
+
+.btn-timer {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--color-text);
+    color: var(--color-bg);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-timer:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-timer.active {
+    background: var(--color-danger);
+    color: var(--color-bg);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(192, 57, 43, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(192, 57, 43, 0);
+    }
+}
+
+/* Stats Section */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: var(--surface);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    text-align: center;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+/* Main Content Grid */
+.skills-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+}
+
+@media (max-width: 900px) {
+    .skills-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .timer-widget {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .timer-input-group {
+        flex-direction: column;
+    }
+    
+    .timer-display-wrapper {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Sub-sections */
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card {
+    background: var(--surface);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+
+/* Logs Table */
+.logs-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.logs-table th, 
+.logs-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+}
+
+.logs-table th {
+    background: var(--background);
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+.logs-table tr:last-child td {
+    border-bottom: none;
+}
+
+.log-skill-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+}
+
+/* Skill List */
+.skill-item {
+    padding: 1.25rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.skill-item:last-child {
+    border-bottom: none;
+}
+
+.skill-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.skill-name {
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.color-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.progress-container {
+    width: 100%;
+    height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: var(--color-text);
+    transition: width 0.3s;
+}
+
+.skill-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+}

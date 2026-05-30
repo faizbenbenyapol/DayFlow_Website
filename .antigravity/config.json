@@ -1,0 +1,10 @@
+{
+    "provider": "ollama",
+    "model": "llama3.1",
+    "baseUrl": "http://localhost:11434",
+    "temperature": 0.2,
+    "privacy": {
+        "localOnly": true,
+        "telemetry": false
+    }
+}

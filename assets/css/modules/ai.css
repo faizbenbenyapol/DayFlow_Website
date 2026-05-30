@@ -1,0 +1,274 @@
+/* =====================================================
+   ai.css — AI Content Generator
+===================================================== */
+
+.ai-tab {
+    transition: all .15s;
+}
+
+.ai-help-list {
+    list-style: disc;
+    padding-left: 1.25rem;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    font-size: .9rem;
+}
+.ai-help-list a {
+    color: var(--color-primary);
+    word-break: break-all;
+}
+
+/* ---------- API Keys ---------- */
+.ai-key-row[data-provider="openai"]     { border-left: 3px solid #10a37f; }
+.ai-key-row[data-provider="gemini"]     { border-left: 3px solid #4285f4; }
+.ai-key-row[data-provider="anthropic"]  { border-left: 3px solid #d97706; }
+.ai-key-row[data-provider="replicate"]  { border-left: 3px solid #7c3aed; }
+
+.ai-key-row {
+    padding: .75rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-alt, var(--color-surface));
+    margin-bottom: .5rem;
+}
+.ai-key-head {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: .5rem;
+}
+.ai-key-body {
+    display: flex;
+    gap: .5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.ai-key-body input {
+    flex: 1;
+    min-width: 200px;
+}
+
+/* ---------- Result sections ---------- */
+.ai-section {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: .75rem 1rem;
+    margin-bottom: .75rem;
+    background: var(--color-surface);
+    position: relative;
+}
+.ai-section-label {
+    font-size: .8rem;
+    color: var(--color-muted);
+    margin-bottom: .35rem;
+    font-weight: 600;
+}
+.ai-section-val {
+    font-size: 1rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.ai-section button[data-copy] {
+    margin-top: .5rem;
+}
+.ai-hashtags {
+    color: var(--color-primary);
+    font-weight: 500;
+}
+
+/* ---------- Scenes ---------- */
+.ai-scenes {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    margin-top: .5rem;
+}
+.ai-scene {
+    border-left: 3px solid var(--color-primary);
+    padding: .5rem .75rem;
+    background: var(--color-bg, var(--color-surface));
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.ai-scene-head {
+    display: flex;
+    gap: .5rem;
+    align-items: center;
+    margin-bottom: .35rem;
+}
+.ai-scene-row {
+    font-size: .9rem;
+    line-height: 1.5;
+    margin-bottom: .2rem;
+}
+.ai-scene-row em {
+    color: var(--color-muted);
+    font-style: italic;
+}
+
+/* ---------- History ---------- */
+.ai-history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .75rem;
+    padding: .75rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    margin-bottom: .5rem;
+    flex-wrap: wrap;
+}
+.ai-history-main {
+    flex: 1;
+    min-width: 200px;
+}
+.ai-history-title {
+    font-weight: 600;
+    margin-bottom: .25rem;
+}
+.ai-history-actions {
+    display: flex;
+    gap: .35rem;
+    flex-wrap: wrap;
+}
+
+/* ---------- Preset chips ---------- */
+.ai-preset-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem;
+    margin-top: .5rem;
+    align-items: center;
+}
+.ai-chip-label {
+    font-size: .75rem;
+    color: var(--color-muted);
+    margin-right: .25rem;
+}
+.ai-chip {
+    font-size: .8rem;
+    padding: .25rem .65rem;
+    background: var(--color-surface-alt, transparent);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    color: var(--color-text);
+    cursor: pointer;
+    font-family: inherit;
+    transition: all .15s;
+}
+.ai-chip:hover {
+    background: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
+}
+
+/* ---------- Section head (label + regen btn) ---------- */
+.ai-section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: .35rem;
+}
+.ai-section-val[contenteditable="true"] {
+    outline: none;
+    padding: .25rem;
+    border-radius: var(--radius-sm);
+    transition: background .15s;
+}
+.ai-section-val[contenteditable="true"]:hover,
+.ai-section-val[contenteditable="true"]:focus {
+    background: var(--color-surface-alt, rgba(0, 0, 0, .03));
+}
+
+/* ---------- Options picker (regenerate) ---------- */
+.ai-options {
+    margin-top: .75rem;
+    padding: .75rem;
+    background: var(--color-surface-alt, rgba(0, 0, 0, .03));
+    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    gap: .4rem;
+}
+.ai-option-btn {
+    text-align: left;
+    padding: .5rem .75rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: .92rem;
+    color: var(--color-text);
+    transition: all .15s;
+}
+.ai-option-btn:hover {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: #fff;
+}
+
+/* ---------- Skeleton loader ---------- */
+@keyframes ai-skel-pulse {
+    0%, 100% { opacity: .6; }
+    50%      { opacity: 1; }
+}
+.ai-skel {
+    background: linear-gradient(90deg,
+        var(--color-border) 0%,
+        var(--color-surface-alt, rgba(0,0,0,.05)) 50%,
+        var(--color-border) 100%);
+    border-radius: var(--radius-sm);
+    animation: ai-skel-pulse 1.4s ease-in-out infinite;
+}
+.ai-skel-line {
+    height: 14px;
+    margin-bottom: .6rem;
+}
+.ai-skel-block {
+    height: 80px;
+    margin: 1rem 0;
+}
+
+/* ---------- kbd ---------- */
+kbd {
+    display: inline-block;
+    padding: 1px 6px;
+    font-size: .75rem;
+    font-family: ui-monospace, monospace;
+    background: var(--color-surface-alt, #f0f0f0);
+    border: 1px solid var(--color-border);
+    border-bottom-width: 2px;
+    border-radius: 3px;
+    color: var(--color-text);
+}
+
+/* ---------- Key test message ---------- */
+.ai-key-msg {
+    margin-top: .4rem;
+    min-height: 1rem;
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 640px) {
+    .ai-tabs {
+        overflow-x: auto;
+        flex-wrap: nowrap !important;
+    }
+    .ai-tab {
+        flex: 0 0 auto;
+    }
+    .ai-section-head {
+        flex-wrap: wrap;
+    }
+    .ai-history-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    .ai-gen-actions kbd {
+        display: none;
+    }
+}

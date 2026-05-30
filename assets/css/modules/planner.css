@@ -1,0 +1,286 @@
+/* =====================================================
+   planner.css — High-Fidelity Planner & Scheduler
+   ===================================================== */
+
+.planner-layout {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: var(--space-6);
+    align-items: start;
+}
+
+@media (max-width: 992px) {
+    .planner-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* --- Calendar Nav Header --- */
+.calendar-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-5);
+}
+
+.calendar-month-label {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--color-text);
+}
+
+/* --- Premium Borderless Calendar Grid --- */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+}
+
+.calendar-day-name {
+    text-align: center;
+    padding: var(--space-2) 0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-muted);
+    background: transparent;
+}
+
+.calendar-cell {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: var(--space-2);
+    min-height: 90px;
+    cursor: pointer;
+    transition: transform var(--transition), background-color var(--transition), border-color var(--transition), box-shadow var(--transition);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.calendar-cell:hover {
+    background: var(--color-surface-2);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.calendar-cell.other-month {
+    opacity: 0.35;
+}
+
+/* Today accent */
+.calendar-cell.today {
+    border-color: #3b82f6;
+    background: color-mix(in srgb, #3b82f6 5%, var(--color-surface));
+}
+
+.calendar-cell.today .calendar-day-number {
+    background: #3b82f6;
+    color: #ffffff;
+    font-weight: 700;
+}
+
+/* Selected state */
+.calendar-cell.selected {
+    background: var(--color-surface-2);
+    border-color: var(--color-text);
+    box-shadow: 0 0 0 1.5px var(--color-text);
+}
+
+.calendar-day-number {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: var(--space-2);
+    color: var(--color-text);
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background var(--transition), color var(--transition);
+}
+
+/* Dynamic Event Badges in Cells */
+.calendar-event-dot {
+    display: block;
+    padding: 2px 6px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    border-radius: 4px;
+    color: #ffffff;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    transition: opacity var(--transition);
+}
+
+.calendar-event-dot:hover {
+    opacity: 0.85;
+}
+
+.calendar-more {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--color-muted);
+    padding-left: 4px;
+    margin-top: 1px;
+}
+
+/* --- Day Panel Details --- */
+.day-panel {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    position: sticky;
+    top: var(--space-8);
+}
+
+.day-panel-date {
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: var(--space-5);
+    color: var(--color-text);
+    border-bottom: 2px solid var(--color-border);
+    padding-bottom: var(--space-3);
+}
+
+.day-panel-section {
+    margin-bottom: var(--space-6);
+}
+
+.day-panel-section-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-muted);
+    margin-bottom: var(--space-4);
+}
+
+/* Premium Left-Bordered Event Card Strips */
+.day-event-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-left: 4px solid var(--event-color, #3b82f6);
+    border-radius: var(--radius);
+    font-size: 0.875rem;
+    transition: transform var(--transition), border-color var(--transition);
+}
+
+.day-event-item:hover {
+    transform: translateX(2px);
+    border-color: var(--color-border-2);
+}
+
+.day-event-time {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--color-muted);
+    white-space: nowrap;
+    background: var(--color-surface-2);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.day-event-title {
+    flex: 1;
+    font-weight: 600;
+    margin-left: 10px;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Todo checklists */
+.day-todo-add {
+    display: flex;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+}
+
+.day-todo-add input {
+    flex: 1;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-border-2);
+    border-radius: var(--radius);
+    font-size: 0.88rem;
+    background: var(--color-bg);
+    color: var(--color-text);
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.day-todo-add input:focus {
+    outline: none;
+    border-color: var(--color-text);
+    box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-text);
+}
+
+.day-todo-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    font-size: 0.88rem;
+    transition: border-color var(--transition), opacity var(--transition);
+}
+
+.day-todo-item:hover {
+    border-color: var(--color-border-2);
+}
+
+.day-todo-item.done {
+    opacity: 0.65;
+}
+
+.day-todo-text {
+    flex: 1;
+    font-weight: 500;
+    color: var(--color-text);
+    transition: color var(--transition);
+}
+
+.day-todo-item.done .day-todo-text {
+    text-decoration: line-through;
+    color: var(--color-muted);
+}
+
+/* Event Color presets selector in modal */
+.event-color-selector {
+    display: flex;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+.color-dot {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform var(--transition), box-shadow var(--transition);
+    border: 2px solid transparent;
+}
+
+.color-dot:hover {
+    transform: scale(1.15);
+}
+
+.color-dot.active {
+    box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-text);
+    transform: scale(1.05);
+}

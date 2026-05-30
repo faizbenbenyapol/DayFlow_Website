@@ -1,0 +1,12 @@
+Options -Indexes -ExecCGI
+
+# Deny execution of PHP and script files in uploads directory
+<FilesMatch "\.(php|php3|php4|php5|php7|php8|phtml|phar|cgi|pl|py|sh|rb)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Force all files to be treated as plain or download
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>

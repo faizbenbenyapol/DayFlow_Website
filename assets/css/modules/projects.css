@@ -1,0 +1,1259 @@
+/* =====================================================
+   projects.css — Premium Modern SaaS UI (Notion + ClickUp + Linear)
+   Clean minimal styling with glassmorphism & soft shadows
+===================================================== */
+
+/* --- Layout Grid Structure --- */
+.projects-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+}
+
+.projects-main-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+}
+
+.projects-sidebar-widgets {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-6);
+}
+
+@media (min-width: 1024px) {
+    .projects-layout {
+        grid-template-columns: 3fr 1fr;
+    }
+    .projects-sidebar-widgets {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* --- Header Section Tools --- */
+.projects-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4) var(--space-5);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--space-6);
+}
+
+.filter-left, .filter-right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+
+.search-input-wrap {
+    position: relative;
+}
+
+.search-input-wrap svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-muted);
+    pointer-events: none;
+}
+
+.projects-search {
+    padding-left: 36px !important;
+    width: 220px;
+    height: 38px;
+    border-radius: var(--radius-md) !important;
+}
+
+.filter-select {
+    height: 38px;
+    padding: var(--space-1) var(--space-4) var(--space-1) var(--space-3) !important;
+    border-radius: var(--radius-md) !important;
+    font-size: 0.85rem !important;
+    width: 130px;
+}
+
+/* --- Projects Grid & Cards --- */
+.projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-6);
+    margin-bottom: var(--space-6);
+}
+
+.project-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 180px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+}
+
+.project-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+    border-color: var(--color-border-2);
+}
+
+.project-card.active-project {
+    border-color: #06b6d4;
+    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.15);
+}
+
+/* Glassmorphism accents on card */
+.project-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--pc-accent, var(--color-border-2));
+}
+
+.project-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+.project-card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.project-card-desc {
+    font-size: 0.82rem;
+    color: var(--color-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: var(--space-4);
+    height: 38px;
+    line-height: 1.5;
+}
+
+/* Progress bar inside cards */
+.project-progress-wrap {
+    margin-bottom: var(--space-4);
+}
+
+.project-progress-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--color-muted);
+    margin-bottom: var(--space-1);
+    font-weight: 500;
+}
+
+.project-progress-track {
+    height: 6px;
+    background: var(--color-surface-2);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.project-progress-bar {
+    height: 100%;
+    background: var(--pc-accent, var(--color-success));
+    border-radius: var(--radius-full);
+    transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.project-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--color-border);
+    padding-top: var(--space-3);
+    margin-top: auto;
+}
+
+.project-date-badge {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: 0.75rem;
+    color: var(--color-muted);
+    font-weight: 500;
+}
+
+/* --- Team Avatars mock --- */
+.avatar-group {
+    display: flex;
+    align-items: center;
+}
+
+.avatar-member {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--color-surface);
+    background: var(--avatar-bg, #9ca3af);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    margin-left: -6px;
+}
+
+.avatar-member:first-child {
+    margin-left: 0;
+}
+
+/* --- Kanban Board UI --- */
+.kanban-section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: var(--space-4);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.kanban-board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+    align-items: flex-start;
+    margin-bottom: var(--space-8);
+}
+
+@media (max-width: 1023px) {
+    .kanban-board {
+        grid-template-columns: 1fr;
+    }
+}
+
+.kanban-column {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    min-height: 450px;
+    display: flex;
+    flex-direction: column;
+}
+
+.kanban-column-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-4);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.kanban-column-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.kanban-column-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.kanban-column-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.kanban-column-count {
+    font-size: 0.72rem;
+    background: var(--color-surface-2);
+    color: var(--color-muted);
+    padding: 2px 7px;
+    border-radius: var(--radius-full);
+    font-weight: 600;
+}
+
+.kanban-cards-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-height: 380px;
+    overflow-y: auto;
+    max-height: 600px;
+    padding: var(--space-1);
+    /* Custom thin scrollbar */
+}
+
+.kanban-cards-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.kanban-cards-list::-webkit-scrollbar-thumb {
+    background: var(--color-border-2);
+    border-radius: var(--radius-full);
+}
+
+/* Kanban Empty column card placeholder */
+.kanban-empty-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-6) var(--space-4);
+    border: 1.5px dashed var(--color-border-2);
+    border-radius: var(--radius-md);
+    color: var(--color-muted);
+    font-size: 0.78rem;
+    text-align: center;
+    min-height: 120px;
+    background: rgba(255, 255, 255, 0.45);
+    transition: border-color var(--transition), background var(--transition);
+}
+
+.kanban-empty-placeholder:hover {
+    border-color: var(--color-muted);
+    background: rgba(255, 255, 255, 0.75);
+}
+
+[data-theme="dark"] .kanban-empty-placeholder {
+    background: rgba(20, 20, 20, 0.2);
+    border-color: var(--color-border-2);
+}
+
+[data-theme="dark"] .kanban-empty-placeholder:hover {
+    background: rgba(20, 20, 20, 0.4);
+    border-color: var(--color-muted);
+}
+
+.kanban-card {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    box-shadow: var(--shadow-sm);
+    cursor: grab;
+    transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+    position: relative;
+}
+
+.kanban-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+    border-color: var(--color-border-2);
+}
+
+.kanban-card-title {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-text);
+    margin-bottom: var(--space-3);
+    line-height: 1.4;
+}
+
+.kanban-card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.kanban-card-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+/* Kanban Quick Add Button */
+.kanban-quick-add-btn {
+    width: 100%;
+    margin-top: var(--space-3);
+    border: 1px dashed var(--color-border-2);
+    border-radius: var(--radius-md);
+    color: var(--color-muted);
+    font-size: 0.82rem;
+    padding: var(--space-2) var(--space-3);
+    background: transparent;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+}
+
+.kanban-quick-add-btn:hover {
+    background: var(--color-surface-2);
+    color: var(--color-text);
+    border-color: var(--color-text);
+}
+
+/* Kanban Quick Add Inline Form */
+.kanban-quick-add-form {
+    display: none;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-2);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+    margin-top: var(--space-3);
+    box-shadow: var(--shadow-sm);
+}
+
+/* --- Priority & Status HSL Color Badges --- */
+.priority-tag {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.priority-critical {
+    background: hsla(0, 84%, 60%, 0.12);
+    color: hsl(0, 84%, 55%);
+}
+
+.priority-high {
+    background: hsla(24, 100%, 55%, 0.12);
+    color: hsl(24, 100%, 48%);
+}
+
+.priority-medium {
+    background: hsla(45, 93%, 47%, 0.12);
+    color: hsl(45, 93%, 38%);
+}
+
+.priority-low {
+    background: hsla(142, 69%, 58%, 0.12);
+    color: hsl(142, 69%, 33%);
+}
+
+[data-theme="dark"] .priority-critical {
+    background: hsla(0, 84%, 60%, 0.2);
+    color: hsl(0, 84%, 70%);
+}
+
+[data-theme="dark"] .priority-high {
+    background: hsla(24, 100%, 55%, 0.2);
+    color: hsl(24, 100%, 70%);
+}
+
+[data-theme="dark"] .priority-medium {
+    background: hsla(45, 93%, 47%, 0.2);
+    color: hsl(45, 93%, 70%);
+}
+
+[data-theme="dark"] .priority-low {
+    background: hsla(142, 69%, 58%, 0.2);
+    color: hsl(142, 69%, 70%);
+}
+
+/* Custom indicator color variables */
+.dot-todo { background: var(--color-muted-2); }
+.dot-in-progress { background: #3b82f6; }
+.dot-review { background: #f59e0b; }
+.dot-done { background: var(--color-success); }
+
+/* --- Checklist Indicator Progress --- */
+.card-checklist-badge {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.72rem;
+    color: var(--color-muted);
+    font-weight: 500;
+}
+
+.card-checklist-badge.all-done {
+    color: var(--color-success);
+}
+
+/* --- Interactive Checklist Items inside Modal --- */
+.modal-checklist-container {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    padding: var(--space-4);
+    margin-top: var(--space-4);
+}
+
+.checklist-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-3);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.checklist-progress-bar-wrap {
+    height: 5px;
+    background: var(--color-surface-2);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    margin-bottom: var(--space-4);
+}
+
+.checklist-progress-fill {
+    height: 100%;
+    background: var(--color-success);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.checklist-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+.checklist-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding: 6px var(--space-2);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+}
+
+.checklist-item-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex: 1;
+}
+
+.checklist-item-input {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    font-size: 0.85rem;
+    width: 100%;
+    color: var(--color-text);
+}
+
+.checklist-item-input:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.checklist-item-input.line-through {
+    text-decoration: line-through;
+    color: var(--color-muted);
+}
+
+.checklist-btn-del {
+    color: var(--color-danger);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+}
+
+.checklist-btn-del:hover {
+    background: var(--color-danger-bg);
+}
+
+/* --- Project Analytics Widget --- */
+.analytics-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    box-shadow: var(--shadow-sm);
+}
+
+.analytics-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: var(--space-5);
+    color: var(--color-text);
+}
+
+.analytics-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-4);
+    text-align: center;
+    margin-bottom: var(--space-6);
+}
+
+.stat-item {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-2);
+}
+
+.stat-val {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--color-text);
+    line-height: 1.2;
+}
+
+.stat-lbl {
+    font-size: 0.72rem;
+    color: var(--color-muted);
+    margin-top: 2px;
+    font-weight: 500;
+}
+
+.analytics-chart-container {
+    height: 160px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* --- Mini Calendar Widget --- */
+.mini-cal-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    box-shadow: var(--shadow-sm);
+}
+
+.mini-cal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-4);
+}
+
+.mini-cal-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.mini-cal-nav {
+    display: flex;
+    gap: var(--space-1);
+}
+
+.mini-cal-arrow {
+    background: none;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text);
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.mini-cal-arrow:hover {
+    background: var(--color-surface-2);
+}
+
+.mini-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    text-align: center;
+}
+
+.mini-cal-day-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--color-muted-2);
+    padding: 4px 0;
+    text-transform: uppercase;
+}
+
+.mini-cal-cell {
+    font-size: 0.78rem;
+    padding: 6px 0;
+    border-radius: var(--radius-sm);
+    position: relative;
+    font-weight: 500;
+    color: var(--color-text);
+}
+
+.mini-cal-cell.other-month {
+    color: var(--color-muted-2);
+    opacity: 0.4;
+}
+
+.mini-cal-cell.cal-today {
+    background: var(--color-text);
+    color: var(--color-bg);
+    font-weight: 700;
+}
+
+/* Event indicator dot in calendar */
+.mini-cal-dot {
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--color-primary);
+}
+
+/* --- Activity Feed Widget --- */
+.activity-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    box-shadow: var(--shadow-sm);
+}
+
+.activity-feed-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    position: relative;
+    padding-left: var(--space-2);
+}
+
+.activity-feed-list::before {
+    content: '';
+    position: absolute;
+    top: 5px;
+    bottom: 5px;
+    left: 11px;
+    width: 1px;
+    background: var(--color-border-2);
+}
+
+.activity-feed-item {
+    display: flex;
+    gap: var(--space-3);
+    position: relative;
+    z-index: 1;
+}
+
+.activity-icon-bullet {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-bg);
+    border: 2px solid var(--color-text);
+    margin-left: 2px;
+    margin-top: 7px;
+    flex-shrink: 0;
+}
+
+.activity-item-content {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.8rem;
+}
+
+.activity-item-text {
+    color: var(--color-text);
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.activity-item-time {
+    font-size: 0.7rem;
+    color: var(--color-muted);
+    margin-top: 1px;
+}
+
+/* --- AI Summary Insights Card --- */
+.ai-summary-card {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.05) 0%, rgba(99, 102, 241, 0.05) 100%);
+    border: 1px solid rgba(6, 182, 212, 0.2);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+}
+
+.ai-summary-card::after {
+    content: 'AI';
+    position: absolute;
+    top: -10px;
+    right: -5px;
+    font-size: 4rem;
+    font-weight: 900;
+    color: rgba(6, 182, 212, 0.03);
+    user-select: none;
+    pointer-events: none;
+}
+
+.ai-summary-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+.ai-summary-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-text);
+    letter-spacing: -0.01em;
+}
+
+.ai-summary-sparkle {
+    color: #06b6d4;
+    animation: sparkle 2s ease infinite;
+}
+
+@keyframes sparkle {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.15); }
+}
+
+.ai-summary-text {
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: var(--color-text);
+    font-weight: 500;
+}
+
+.ai-summary-warning {
+    margin-top: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    background: rgba(239, 68, 68, 0.08);
+    border-left: 3px solid #ef4444;
+    border-radius: var(--radius-sm);
+    font-size: 0.78rem;
+    color: #ef4444;
+    font-weight: 600;
+}
+
+/* --- Project Smart Deadline Warning Banner --- */
+.smart-warning-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    background: var(--color-danger-bg);
+    border: 1px solid #fecaca;
+    color: var(--color-danger);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-lg);
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-bottom: var(--space-6);
+    box-shadow: var(--shadow-sm);
+}
+
+[data-theme="dark"] .smart-warning-banner {
+    border-color: #7f1d1d;
+}
+
+/* =====================================================
+   Responsive Mobile & Tablet UX Optimizations
+   ===================================================== */
+
+/* 1. Tablet Adjustments (Below 1024px) */
+@media (max-width: 1023px) {
+    .projects-sidebar-widgets {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* 2. Standard Mobile Screen Adjustments (Below 768px) */
+@media (max-width: 768px) {
+    .projects-sidebar-widgets {
+        grid-template-columns: 1fr; /* เรียงซ้อนการ์ดข้างแนวตั้ง */
+    }
+    
+    .kanban-board {
+        grid-template-columns: 1fr; /* คอลัมน์คัมบังเรียงแนวดิ่ง */
+        gap: var(--space-5);
+    }
+    
+    .kanban-column {
+        min-height: auto; /* ปลดความสูงตายตัวออกบนมือถือเพื่อประหยัดสเกลหน้าจอ */
+        padding: var(--space-4);
+    }
+    
+    .kanban-cards-list {
+        min-height: auto; /* หดตัวหากว่างเพื่อลดพื้นที่ว่างเปล่าสีขาว */
+        max-height: 450px;
+    }
+    
+    .project-card {
+        min-height: 160px; /* บีบการ์ดโปรเจคให้กะทัดรัดขึ้น */
+    }
+}
+
+/* 3. Narrow Mobile Screen Adjustments (Below 576px) */
+@media (max-width: 576px) {
+    .projects-filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: var(--space-4);
+    }
+    
+    .filter-left, .filter-right {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        gap: var(--space-3);
+    }
+    
+    .search-input-wrap, 
+    .projects-search, 
+    .filter-select {
+        width: 100% !important; /* ยืดกล่องรับค่าให้เต็มขอบจอมือถือเพื่อความง่ายในการใช้นิ้วกดสัมผัส */
+    }
+    
+    .projects-grid {
+        grid-template-columns: 1fr; /* ตารางโปรเจคเหลือ 1 คอลัมน์แนวตั้ง */
+        gap: var(--space-4);
+    }
+    
+    .page-title {
+        font-size: 1.5rem;
+    }
+    
+    .projects-layout {
+        gap: var(--space-6);
+    }
+}
+
+/* =====================================================
+   Collaboration (เชิญร่วมงาน) & Live Chat Premium UI
+   ===================================================== */
+
+/* 1. Project Chat Widget */
+.chat-card {
+    display: flex;
+    flex-direction: column;
+    height: 480px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.chat-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-4) var(--space-5);
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+}
+
+.chat-status-dot {
+    width: 8px;
+    height: 8px;
+    background: #06b6d4; /* Teal Accent */
+    border-radius: 50%;
+    animation: chat-pulse 2s infinite;
+}
+
+@keyframes chat-pulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 5px rgba(6, 182, 212, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(6, 182, 212, 0); }
+}
+
+.chat-status-text {
+    font-size: 0.72rem;
+    color: var(--color-muted);
+    font-weight: 500;
+}
+
+.chat-messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-4) var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    background: var(--color-surface);
+}
+
+/* Custom Scrollbar for Chat */
+.chat-messages-container::-webkit-scrollbar {
+    width: 6px;
+}
+.chat-messages-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+.chat-messages-container::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: var(--radius-full);
+}
+.chat-messages-container::-webkit-scrollbar-thumb:hover {
+    background: var(--color-muted-2);
+}
+
+.chat-msg-item {
+    display: flex;
+    flex-direction: column;
+    max-width: 85%;
+    gap: 2px;
+}
+
+.chat-msg-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.72rem;
+    color: var(--color-muted);
+    padding: 0 var(--space-1);
+}
+
+.chat-msg-sender {
+    font-weight: 600;
+}
+
+.chat-msg-time {
+    opacity: 0.8;
+}
+
+.chat-msg-bubble {
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    word-break: break-word;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* Own Message */
+.chat-msg-own {
+    align-self: flex-end;
+}
+.chat-msg-own .chat-msg-meta {
+    justify-content: flex-end;
+}
+.chat-msg-own .chat-msg-bubble {
+    background: #06b6d4; /* Teal Accent */
+    color: #ffffff;
+    border-bottom-right-radius: 2px;
+}
+
+/* Other Message */
+.chat-msg-other {
+    align-self: flex-start;
+}
+.chat-msg-other .chat-msg-bubble {
+    background: var(--color-surface-2);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-bottom-left-radius: 2px;
+}
+
+.chat-input-wrap {
+    display: flex;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+}
+
+.chat-input {
+    flex: 1;
+    height: 38px !important;
+    border-radius: var(--radius-md) !important;
+    font-size: 0.85rem !important;
+    border: 1px solid var(--color-border) !important;
+    background: var(--color-surface) !important;
+    color: var(--color-text) !important;
+}
+
+.btn-chat-send {
+    height: 38px;
+    width: 38px;
+    min-width: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md) !important;
+    padding: 0 !important;
+    background: #06b6d4 !important;
+    border: none !important;
+}
+.btn-chat-send:hover {
+    background: #0891b2 !important;
+}
+
+/* 2. Members List in Modal */
+.members-list-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    max-height: 250px;
+    overflow-y: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+    background: var(--color-surface-2);
+}
+
+.member-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    box-shadow: var(--shadow-sm);
+}
+
+.member-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.member-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #06b6d4;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.member-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.member-name {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.member-email {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+}
+
+.member-role-badge {
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+}
+
+.role-owner {
+    background: rgba(6, 182, 212, 0.15);
+    color: #06b6d4;
+}
+
+.role-editor {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+}
+
+.role-viewer {
+    background: rgba(107, 114, 128, 0.15);
+    color: #6b7280;
+}
+
+.member-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.btn-remove-member {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-danger);
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    transition: background var(--transition);
+}
+
+.btn-remove-member:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* --- Elegant Switch Toggle for Public Share --- */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 38px;
+    height: 20px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--color-border);
+    transition: .3s;
+    border-radius: 20px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background-color: #ffffff;
+    transition: .3s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #06b6d4; /* Teal Accent */
+}
+
+input:checked + .slider:before {
+    transform: translateX(18px);
+}
+

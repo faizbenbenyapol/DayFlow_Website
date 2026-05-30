@@ -1,0 +1,40 @@
+Options -Indexes
+
+# Enable rewrite engine
+RewriteEngine On
+
+# Block direct access to sensitive directories
+RewriteRule ^config(/|$) - [F,L]
+RewriteRule ^core(/|$) - [F,L]
+RewriteRule ^models(/|$) - [F,L]
+RewriteRule ^controllers(/|$) - [F,L]
+RewriteRule ^sql(/|$) - [F,L]
+RewriteRule ^views(/|$) - [F,L]
+
+# Allow access to assets and uploads directly
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Route everything else through index.php
+RewriteRule ^ index.php [QSA,L]
+
+# Security headers
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options "DENY"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "same-origin"
+    Header always set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# PHP settings (if mod_php)
+<IfModule mod_php7.c>
+    php_value upload_max_filesize 20M
+    php_value post_max_size 22M
+    php_value max_execution_time 60
+</IfModule>
+<IfModule mod_php8.c>
+    php_value upload_max_filesize 20M
+    php_value post_max_size 22M
+    php_value max_execution_time 60
+</IfModule>

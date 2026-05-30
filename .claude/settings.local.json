@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php --version)",
+      "Bash(\"c:/xampp/mysql/bin/mysql.exe\" -u root -e \"CREATE DATABASE IF NOT EXISTS mylife_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\")",
+      "Bash(\"c:/xampp/mysql/bin/mysql.exe\" -u root mylife_db -e \"SHOW TABLES;\")",
+      "Bash(curl -s \"http://localhost/my/\" -o /dev/null -w \"%{http_code}\")"
+    ]
+  }
+}

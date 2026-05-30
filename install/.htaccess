@@ -1,0 +1,5 @@
+# Block access to install directory after setup
+# Uncomment the lines below AFTER installation is complete:
+
+# Order deny,allow
+# Deny from all
