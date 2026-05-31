@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -295,8 +296,7 @@
 
     <!-- Brand -->
     <div class="auth-brand">
-        <div class="auth-brand-name"><?= h(APP_NAME) ?></div>
-        <div class="auth-brand-sub">ระบบจัดการชีวิตส่วนตัว</div>
+        <div class="auth-brand-name">DayFlow</div>
     </div>
 
     <!-- Tabs -->
@@ -330,6 +330,10 @@
             </div>
 
             <button class="btn-submit" id="loginBtn" onclick="doLogin()">เข้าสู่ระบบ</button>
+            <div class="auth-divider">หรือ</div>
+            <div style="display: flex; justify-content: center; width: 100%;">
+                <div id="googleBtnLogin" style="width: 100%;"></div>
+            </div>
         </div>
 
         <!-- ─── Register Pane ─── -->
@@ -381,6 +385,10 @@
             </div>
 
             <button class="btn-submit" id="registerBtn" onclick="doRegister()">สมัครสมาชิก</button>
+            <div class="auth-divider">หรือ</div>
+            <div style="display: flex; justify-content: center; width: 100%;">
+                <div id="googleBtnReg" style="width: 100%;"></div>
+            </div>
         </div>
 
     </div><!-- /.auth-body -->
@@ -564,6 +572,74 @@ async function doRegister() {
         showAlert('registerAlert', 'ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่', 'error');
         setLoading('registerBtn', false);
         document.getElementById('registerBtn').textContent = 'สมัครสมาชิก';
+    }
+}
+
+// ── Google Sign-In ─────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+    const initGoogle = () => {
+        if (typeof google !== 'undefined' && google.accounts) {
+            google.accounts.id.initialize({
+                client_id: '<?= GOOGLE_CLIENT_ID ?>',
+                callback: handleCredentialResponse
+            });
+            
+            const loginBtn = document.getElementById('googleBtnLogin');
+            if (loginBtn) {
+                google.accounts.id.renderButton(loginBtn, {
+                    theme: 'outline',
+                    size: 'large',
+                    width: '350',
+                    text: 'signin_with',
+                    locale: 'th'
+                });
+            }
+
+            const regBtn = document.getElementById('googleBtnReg');
+            if (regBtn) {
+                google.accounts.id.renderButton(regBtn, {
+                    theme: 'outline',
+                    size: 'large',
+                    width: '350',
+                    text: 'signup_with',
+                    locale: 'th'
+                });
+            }
+        } else {
+            setTimeout(initGoogle, 100);
+        }
+    };
+    initGoogle();
+});
+
+async function handleCredentialResponse(response) {
+    const credential = response.credential;
+    clearAlerts();
+    
+    const activeTab = document.getElementById('paneLogin').classList.contains('active') ? 'login' : 'register';
+    const btnId = activeTab === 'login' ? 'loginBtn' : 'registerBtn';
+    const alertId = activeTab === 'login' ? 'loginAlert' : 'registerAlert';
+    
+    setLoading(btnId, true);
+    
+    try {
+        const res = await fetch(BASE_URL + '/api/auth/google', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+            body: JSON.stringify({ credential })
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+            window.location.href = data.redirect || BASE_URL + '/';
+        } else {
+            showAlert(alertId, data.error || 'เกิดข้อผิดพลาดในการลงชื่อเข้าใช้ด้วย Google', 'error');
+            setLoading(btnId, false);
+        }
+    } catch (e) {
+        showAlert(alertId, 'ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่', 'error');
+        setLoading(btnId, false);
     }
 }
 </script>

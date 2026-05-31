@@ -86,4 +86,88 @@ class AuthController
         Auth::logout();
         Response::json(['ok' => true]);
     }
+
+    public function apiGoogleLogin(): void
+    {
+        $credential = Request::rawInput('credential', '');
+
+        if (!$credential) {
+            Response::json(['error' => 'กรุณาส่ง Google credential'], 400);
+        }
+
+        // Verify Google Token using Google's secure tokeninfo API
+        $url = 'https://oauth2.googleapis.com/tokeninfo?id_token=' . urlencode($credential);
+        
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200 || !$response) {
+            Response::json(['error' => 'ไม่สามารถยืนยันตัวตนกับ Google ได้ หรือ Token หมดอายุ'], 400);
+        }
+
+        $payload = json_decode($response, true);
+
+        // Check Client ID matching
+        if (($payload['aud'] ?? '') !== GOOGLE_CLIENT_ID) {
+            Response::json(['error' => 'Client ID ไม่ตรงกัน'], 400);
+        }
+
+        $email = trim($payload['email'] ?? '');
+        $emailVerified = $payload['email_verified'] ?? false;
+        $name = trim($payload['name'] ?? '');
+        $picture = trim($payload['picture'] ?? '');
+
+        if (!$email || !$emailVerified) {
+            Response::json(['error' => 'อีเมลจาก Google ไม่ถูกต้องหรือไม่ได้รับการยืนยัน'], 400);
+        }
+
+        // Check if user already exists
+        $user = User::findByEmail($email);
+
+        if (!$user) {
+            // Register a new user
+            $emailParts = explode('@', $email);
+            $prefix = preg_replace('/[^a-zA-Z0-9_]/', '', $emailParts[0]);
+            
+            if (strlen($prefix) < 3) {
+                $prefix = 'user_' . $prefix;
+            }
+            $prefix = substr($prefix, 0, 20); // Leave space for random suffix
+
+            $username = $prefix;
+            $counter = 1;
+            while (User::usernameExists($username)) {
+                $suffix = '_' . $counter;
+                $username = substr($prefix, 0, 30 - strlen($suffix)) . $suffix;
+                $counter++;
+            }
+
+            // Generate secure random password
+            $password = bin2hex(random_bytes(16));
+            
+            try {
+                $userId = User::create($username, $email, $password, $name ?: $username);
+                $user = User::findById($userId);
+            } catch (\Throwable $e) {
+                Response::json(['error' => 'เกิดข้อผิดพลาดในการลงทะเบียน: ' . $e->getMessage()], 500);
+            }
+        }
+
+        unset($_SESSION['app_share_token']);
+        Auth::login($user);
+
+        // Update picture as avatar if available
+        if ($picture) {
+            User::updateAvatar($user['id'], $picture);
+        }
+
+        Response::json(['ok' => true, 'redirect' => APP_URL . '/']);
+    }
 }

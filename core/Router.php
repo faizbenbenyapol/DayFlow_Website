@@ -45,6 +45,7 @@ class Router
         $this->add('POST', '/api/auth/login',    'AuthController', 'apiLogin',    false);
         $this->add('POST', '/api/auth/logout',   'AuthController', 'apiLogout',   true);
         $this->add('POST', '/api/auth/register', 'AuthController', 'apiRegister', false);
+        $this->add('POST', '/api/auth/google',   'AuthController', 'apiGoogleLogin', false);
 
         // --- API: Dashboard ---
         $this->add('GET',  '/api/dashboard/summary', 'DashboardController', 'summary', true);
