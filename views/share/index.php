@@ -2,7 +2,7 @@
 <html lang="th" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
     <title><?= h($pageTitle ?? 'ไฟล์แชร์') ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -22,7 +22,7 @@
             --bg: #111827; --surface: #1f2937; --border: #374151;
             --text: #f9fafb; --muted: #9ca3af;
         }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; }
 
         .share-header {
             background: var(--surface);

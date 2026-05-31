@@ -2,7 +2,7 @@
 <html lang="th" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
     <meta name="csrf-token" content="<?= h(Csrf::token()) ?>">
     <title><?= h($pageTitle ?? 'เข้าสู่ระบบ') ?> — <?= h(APP_NAME) ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,19 +13,21 @@
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --bg:       #f4f4f5;
-            --surface:  #ffffff;
-            --border:   #e4e4e7;
-            --border-2: #d1d1d6;
-            --text:     #18181b;
-            --muted:    #71717a;
-            --muted-2:  #a1a1aa;
-            --accent:   #18181b;
-            --danger:   #dc2626;
-            --success:  #16a34a;
+            --bg:       #eef2f7;
+            --surface:  #eef2f7;
+            --border:   transparent;
+            --border-2: transparent;
+            --text:     #1e293b;
+            --muted:    #64748b;
+            --muted-2:  #94a3b8;
+            --accent:   #0f172a;
+            --danger:   #ef4444;
+            --success:  #22c55e;
             --font:     'Sarabun', 'Noto Sans Thai', -apple-system, sans-serif;
-            --radius:   10px;
-            --shadow:   0 4px 24px rgba(0,0,0,.08), 0 1px 4px rgba(0,0,0,.04);
+            --radius:   12px;
+            --shadow:   6px 6px 12px rgba(163, 177, 198, 0.6), -6px -6px 12px rgba(255, 255, 255, 0.8);
+            --shadow-recessed: inset 3px 3px 6px rgba(163, 177, 198, 0.6), inset -3px -3px 6px rgba(255, 255, 255, 0.8);
+            --shadow-sm: 2px 2px 5px rgba(163, 177, 198, 0.4), -2px -2px 5px rgba(255, 255, 255, 0.7);
         }
 
         html { font-size: 15px; -webkit-text-size-adjust: 100%; }
@@ -33,7 +35,7 @@
         body {
             font-family: var(--font);
             background: var(--bg);
-            min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -45,12 +47,13 @@
         /* ── Card ── */
         .auth-card {
             background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
+            border: none;
+            border-radius: 20px;
             box-shadow: var(--shadow);
             width: 100%;
             max-width: 420px;
             overflow: hidden;
+            padding: 1rem 0;
         }
 
         /* ── Brand header ── */
@@ -60,9 +63,9 @@
         }
 
         .auth-brand-name {
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             font-weight: 700;
-            letter-spacing: -0.01em;
+            letter-spacing: -0.02em;
             color: var(--text);
         }
 
@@ -77,32 +80,33 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             margin: 1.8rem 2.2rem 0;
-            border: 1px solid var(--border);
-            border-radius: 8px;
+            border: none;
+            border-radius: 12px;
             overflow: hidden;
             background: var(--bg);
-            padding: 3px;
-            gap: 3px;
+            padding: 4px;
+            gap: 4px;
+            box-shadow: var(--shadow-recessed);
         }
 
         .auth-tab {
-            padding: 0.55rem;
+            padding: 0.6rem;
             font-size: 0.875rem;
-            font-weight: 500;
+            font-weight: 600;
             font-family: var(--font);
             color: var(--muted);
             background: transparent;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: background .15s, color .15s;
+            transition: all .2s cubic-bezier(0.34, 1.56, 0.64, 1);
             text-align: center;
         }
 
         .auth-tab.active {
             background: var(--surface);
             color: var(--text);
-            box-shadow: 0 1px 3px rgba(0,0,0,.1);
+            box-shadow: var(--shadow-sm);
         }
 
         /* ── Forms ── */
@@ -114,13 +118,13 @@
         .auth-pane.active { display: block; }
 
         .form-group {
-            margin-bottom: 1rem;
+            margin-bottom: 1.2rem;
         }
 
         .form-label {
             display: block;
             font-size: 0.82rem;
-            font-weight: 500;
+            font-weight: 600;
             color: var(--text);
             margin-bottom: 0.4rem;
         }
@@ -128,22 +132,28 @@
         .form-control {
             display: block;
             width: 100%;
-            padding: 0.65rem 0.9rem;
+            padding: 0.75rem 1rem;
             background: var(--bg);
-            border: 1px solid var(--border-2);
-            border-radius: 8px;
+            border: none;
+            border-radius: 10px;
             color: var(--text);
             font-size: 0.9rem;
             font-family: var(--font);
             line-height: 1.5;
-            transition: border-color .15s, box-shadow .15s, background .15s;
+            transition: box-shadow .2s;
             outline: none;
+            box-shadow: var(--shadow-recessed);
+        }
+
+        @media (max-width: 768px) {
+            .form-control {
+                font-size: 16px;
+                padding: 0.85rem 1.1rem;
+            }
         }
 
         .form-control:focus {
-            border-color: var(--text);
-            background: var(--surface);
-            box-shadow: 0 0 0 3px rgba(24,24,27,.08);
+            box-shadow: var(--shadow-recessed), 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
         }
 
         .form-control::placeholder { color: var(--muted-2); }
@@ -185,42 +195,53 @@
         .btn-submit {
             display: block;
             width: 100%;
-            padding: 0.75rem;
-            background: var(--text);
+            padding: 0.8rem;
+            background: var(--accent);
             color: #fff;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 0.95rem;
             font-weight: 600;
             font-family: var(--font);
             cursor: pointer;
-            transition: opacity .15s;
-            margin-top: 1.4rem;
+            box-shadow: var(--shadow-sm);
+            transition: all .2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            margin-top: 1.8rem;
         }
 
-        .btn-submit:hover { opacity: 0.85; }
-        .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-submit:hover {
+            opacity: 0.95;
+            box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.15), -4px -4px 10px rgba(255, 255, 255, 0.1);
+            transform: translateY(-1.5px);
+        }
+
+        .btn-submit:active {
+            box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.3);
+            transform: translateY(0.5px);
+        }
+
+        .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
         /* Error/success alerts */
         .auth-alert {
-            padding: 0.65rem 0.9rem;
-            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
             font-size: 0.85rem;
-            margin-bottom: 1rem;
+            margin-bottom: 1.2rem;
             display: none;
+            border: none;
+            box-shadow: var(--shadow-recessed);
         }
 
         .auth-alert.error {
-            background: #fef2f2;
+            background: #fee2e2;
             color: var(--danger);
-            border: 1px solid #fecaca;
             display: block;
         }
 
         .auth-alert.success {
-            background: #f0fdf4;
+            background: #dcfce7;
             color: var(--success);
-            border: 1px solid #bbf7d0;
             display: block;
         }
 
@@ -229,7 +250,7 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            margin: 1.2rem 0;
+            margin: 1.4rem 0;
             color: var(--muted-2);
             font-size: 0.75rem;
         }
@@ -238,8 +259,10 @@
         .auth-divider::after {
             content: '';
             flex: 1;
-            height: 1px;
-            background: var(--border);
+            height: 3px;
+            background: transparent;
+            box-shadow: inset 1px 1px 2px rgba(163, 177, 198, 0.4), inset -1px -1px 2px rgba(255, 255, 255, 0.7);
+            border-radius: 99px;
         }
 
         /* Footer note */
@@ -252,10 +275,11 @@
 
         /* Strength bar */
         .pw-strength {
-            height: 3px;
+            height: 4px;
             background: var(--border);
+            box-shadow: var(--shadow-recessed);
             border-radius: 99px;
-            margin-top: 0.4rem;
+            margin-top: 0.5rem;
             overflow: hidden;
         }
 
@@ -394,7 +418,7 @@
     </div><!-- /.auth-body -->
 
     <div class="auth-footer-note">
-        ระบบนี้ใช้งานส่วนตัว — ข้อมูลทั้งหมดเก็บบนเซิร์ฟเวอร์ของคุณ
+        v1.0.0
     </div>
 
 </div><!-- /.auth-card -->

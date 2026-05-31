@@ -48,7 +48,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: var(--space-4);
-    align-items: start;
+    align-items: stretch;
     animation: tabEntrance 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -65,8 +65,9 @@
     padding: var(--space-4) var(--space-4);
     box-shadow: var(--shadow-sm);
     transition: transform var(--transition), box-shadow var(--transition);
-    height: fit-content;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 .ft-tool-card:hover {
     transform: translateY(-2px);
@@ -93,6 +94,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
+    flex: 1;
 }
 
 /* ── Vector Icon Drop Zones ── */

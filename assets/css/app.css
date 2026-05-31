@@ -9,38 +9,41 @@
 
 /* --- CSS Custom Properties --- */
 :root {
-    --color-bg:         #ffffff;
-    --color-surface:    #f8f9fa; /* Premium soft gray-warm background for cards and sidebar */
-    --color-surface-2:  #f1f3f5; /* Smooth hover background tint */
-    --color-border:     #eaeaea; /* Elegant ultra-thin boundary borders */
-    --color-border-2:   #d2d2d7; /* Modern dark gray for inputs/secondary borders */
-    --color-text:       #1d1d1f; /* Soft near-black for perfect contrast without glare */
-    --color-muted:      #6e6e73; /* Clean gray for primary description texts */
-    --color-muted-2:    #86868b; /* Lighter slate gray for subtle subtitles */
-    --color-accent:     #1d1d1f;
-    --color-accent-inv: #ffffff;
-    --color-danger:     #e23636;
-    --color-danger-bg:  #fff5f5;
+    --color-bg:         #eef2f7; /* Pure neomorphic background color */
+    --color-surface:    #eef2f7; /* Surface identical to background for seamless soft UI */
+    --color-surface-2:  #e2e8f0; /* Soft contrast background for hovers/active items */
+    --color-border:     color-mix(in srgb, var(--color-text) 8%, transparent); /* Smart borders in Soft UI */
+    --color-border-2:   color-mix(in srgb, var(--color-text) 14%, transparent);
+    --color-text:       #1e293b; /* Premium slate gray for high contrast text without harshness */
+    --color-muted:      #64748b; /* Sleek medium gray for secondary texts */
+    --color-muted-2:    #94a3b8; /* Elegant light slate for captions */
+    --color-accent:     #0f172a; /* Slate black accent */
+    --color-accent-inv: #eef2f7;
+    --color-danger:     #ef4444;
+    --color-danger-bg:  #fee2e2;
     --color-success:    #22c55e;
-    --color-success-bg: #f0fdf4;
-    --color-warning:    #f59e0b;
-    --color-warning-bg: #fffbeb;
+    --color-success-bg: #dcfce7;
+    --color-warning:    #eab308;
+    --color-warning-bg: #fef08a;
 
     --font:             'Inter', 'IBM Plex Sans Thai', 'Noto Sans Thai', -apple-system, sans-serif;
     --font-size-base:   14.5px;
     --line-height:      1.65;
 
-    --radius:           8px; /* Expanded, soft modern radius */
-    --radius-lg:        12px;
+    --radius:           12px; /* Soft pillowy roundings */
+    --radius-lg:        18px; /* Extra premium smooth curves */
     --radius-full:      999px;
 
-    --shadow-sm:        0 1px 2px 0 rgba(0, 0, 0, 0.02), 0 1px 3px 0 rgba(0, 0, 0, 0.03);
-    --shadow:           0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
-    --shadow-lg:        0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+    /* Neomorphic Dual Shadows - Raised and Recessed */
+    --shadow-sm:        2px 2px 5px rgba(163, 177, 198, 0.4), -2px -2px 5px rgba(255, 255, 255, 0.7);
+    --shadow:           6px 6px 12px rgba(163, 177, 198, 0.6), -6px -6px 12px rgba(255, 255, 255, 0.8);
+    --shadow-lg:        10px 10px 20px rgba(163, 177, 198, 0.6), -10px -10px 20px rgba(255, 255, 255, 0.8);
+    --shadow-nm-recessed: inset 3px 3px 6px rgba(163, 177, 198, 0.6), inset -3px -3px 6px rgba(255, 255, 255, 0.8);
+    --shadow-nm-btn-hover: 3px 3px 6px rgba(163, 177, 198, 0.5), -3px -3px 6px rgba(255, 255, 255, 0.7);
 
-    --sidebar-width:    230px; /* Slightly wider for elegant spacing */
+    --sidebar-width:    240px;
     --header-height:    56px;
-    --transition:       0.2s cubic-bezier(0.16, 1, 0.3, 1); /* Elegant high-end cubic-bezier transition */
+    --transition:       0.25s cubic-bezier(0.34, 1.56, 0.64, 1); /* Bouncy high-end transition for micro-interactions */
 
     --space-1:  0.25rem;
     --space-2:  0.5rem;
@@ -52,17 +55,17 @@
     --space-10: 2.5rem;
     --space-12: 3rem;
 
-    /* ── Extra radius tokens ── */
-    --radius-sm:         6px;
+    /* Extra radius tokens */
+    --radius-sm:         8px;
     --radius-md:         var(--radius);
 
-    /* ── Semantic alias: primary = accent ── */
+    /* Semantic alias: primary = accent */
     --color-primary:     var(--color-accent);
 
-    /* ── Surface alias ── */
+    /* Surface alias */
     --color-surface-alt: var(--color-surface-2);
 
-    /* ── Short-hand aliases (used in some modules) ── */
+    /* Short-hand aliases */
     --accent:      var(--color-accent);
     --border:      var(--color-border);
     --text:        var(--color-text);
@@ -75,23 +78,134 @@
 
 /* --- Dark Mode Variables --- */
 [data-theme="dark"] {
-    --color-bg:         #0a0a0a; /* Deep premium dark black background */
-    --color-surface:    #121212; /* Sleek dark card / sidebar surface */
-    --color-surface-2:  #1c1c1e; /* Smooth dark gray hover background tint */
-    --color-border:     #1f1f1f; /* Elegant ultra-thin dark borders */
-    --color-border-2:   #2d2d30; /* Medium gray dark borders */
-    --color-text:       #f5f5f7; /* Very clean near-white text */
-    --color-muted:      #86868b; /* Slate gray dark description texts */
-    --color-muted-2:    #555555; /* Tertiary dark placeholders */
-    --color-accent:     #f5f5f7;
-    --color-accent-inv: #0a0a0a;
-    --color-danger-bg:  #241212;
-    --color-success-bg: #0c1a10;
-    --color-warning-bg: #261a06;
+    --color-bg:         #1d1f24; /* Matte deep dark gray for dark neomorphism */
+    --color-surface:    #1d1f24;
+    --color-surface-2:  #25282f; /* Dark soft highlights */
+    --color-border:     color-mix(in srgb, var(--color-text) 8%, transparent);
+    --color-border-2:   color-mix(in srgb, var(--color-text) 14%, transparent);
+    --color-text:       #f1f5f9;
+    --color-muted:      #94a3b8;
+    --color-muted-2:    #4e5460;
+    --color-accent:     #f8fafc;
+    --color-accent-inv: #1d1f24;
+    --color-danger-bg:  rgba(239, 68, 68, 0.15);
+    --color-success-bg: rgba(34, 197, 94, 0.15);
+    --color-warning-bg: rgba(234, 179, 8, 0.15);
 
-    --shadow-sm:        0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow:           0 4px 12px rgba(0, 0, 0, 0.5);
-    --shadow-lg:        0 12px 36px rgba(0, 0, 0, 0.6);
+    /* Dark Mode Neomorphic Dual Shadows */
+    --shadow-sm:        2px 2px 5px rgba(10, 10, 12, 0.4), -2px -2px 5px rgba(38, 41, 49, 0.5);
+    --shadow:           6px 6px 12px rgba(10, 10, 12, 0.6), -6px -6px 12px rgba(38, 41, 49, 0.7);
+    --shadow-lg:        12px 12px 24px rgba(10, 10, 12, 0.7), -12px -12px 24px rgba(38, 41, 49, 0.8);
+    --shadow-nm-recessed: inset 3px 3px 6px rgba(10, 10, 12, 0.6), inset -3px -3px 6px rgba(38, 41, 49, 0.7);
+    --shadow-nm-btn-hover: 3px 3px 6px rgba(10, 10, 12, 0.5), -3px -3px 6px rgba(38, 41, 49, 0.6);
+}
+
+/* --- Pastel Sand/Cream Theme Variables --- */
+[data-theme="soft"] {
+    --color-bg:         #f4efe6; /* Premium warm pastel cream/sand background */
+    --color-surface:    #f4efe6;
+    --color-surface-2:  #e9e0cd; /* Elegant linen gray contrast */
+    --color-border:     color-mix(in srgb, var(--color-text) 8%, transparent);
+    --color-border-2:   color-mix(in srgb, var(--color-text) 14%, transparent);
+    --color-text:       #433422; /* Warm coffee brown for high contrast legibility */
+    --color-muted:      #7c6a59;
+    --color-muted-2:    #a69584;
+    --color-accent:     #2a1e12;
+    --color-accent-inv: #f4efe6;
+    --color-danger:     #d94636;
+    --color-danger-bg:  #fcece9;
+    --color-success:    #16a34a;
+    --color-success-bg: #f0fdf4;
+    --color-warning:    #ca8a04;
+    --color-warning-bg: #fef9c3;
+
+    /* Soft Sand Neomorphic Shadows */
+    --shadow-sm:        2px 2px 5px rgba(189, 179, 161, 0.45), -2px -2px 5px rgba(255, 255, 255, 0.85);
+    --shadow:           6px 6px 12px rgba(189, 179, 161, 0.65), -6px -6px 12px rgba(255, 255, 255, 0.95);
+    --shadow-lg:        12px 12px 24px rgba(189, 179, 161, 0.7), -12px -12px 24px rgba(255, 255, 255, 0.95);
+    --shadow-nm-recessed: inset 3px 3px 6px rgba(189, 179, 161, 0.65), inset -3px -3px 6px rgba(255, 255, 255, 0.95);
+    --shadow-nm-btn-hover: 3px 3px 6px rgba(189, 179, 161, 0.55), -3px -3px 6px rgba(255, 255, 255, 0.85);
+}
+
+/* --- Pastel Lavender Theme Variables --- */
+[data-theme="lavender"] {
+    --color-bg:         #ede9fe; /* Soft pastel lavender background */
+    --color-surface:    #ede9fe;
+    --color-surface-2:  #ddd6fe; /* Soft purple contrast tint */
+    --color-border:     color-mix(in srgb, var(--color-text) 8%, transparent);
+    --color-border-2:   color-mix(in srgb, var(--color-text) 14%, transparent);
+    --color-text:       #3b0764; /* Deep rich purple for high contrast visibility */
+    --color-muted:      #6b21a8;
+    --color-muted-2:    #a855f7;
+    --color-accent:     #1e1b4b; /* Deep royal navy */
+    --color-accent-inv: #ede9fe;
+    --color-danger:     #e11d48;
+    --color-danger-bg:  #ffe4e6;
+    --color-success:    #059669;
+    --color-success-bg: #d1fae5;
+    --color-warning:    #d97706;
+    --color-warning-bg: #fef3c7;
+
+    /* Lavender Neomorphic Shadows */
+    --shadow-sm:        2px 2px 5px rgba(196, 181, 253, 0.45), -2px -2px 5px rgba(255, 255, 255, 0.85);
+    --shadow:           6px 6px 12px rgba(196, 181, 253, 0.65), -6px -6px 12px rgba(255, 255, 255, 0.95);
+    --shadow-lg:        12px 12px 24px rgba(196, 181, 253, 0.7), -12px -12px 24px rgba(255, 255, 255, 0.95);
+    --shadow-nm-recessed: inset 3px 3px 6px rgba(196, 181, 253, 0.65), inset -3px -3px 6px rgba(255, 255, 255, 0.95);
+    --shadow-nm-btn-hover: 3px 3px 6px rgba(196, 181, 253, 0.55), -3px -3px 6px rgba(255, 255, 255, 0.85);
+}
+
+/* --- Pastel Cool Mint/Ocean Theme Variables --- */
+[data-theme="ocean"] {
+    --color-bg:         #e0f2fe; /* Clean cool minty water background */
+    --color-surface:    #e0f2fe;
+    --color-surface-2:  #bae6fd; /* Light ocean blue contrast */
+    --color-border:     color-mix(in srgb, var(--color-text) 8%, transparent);
+    --color-border-2:   color-mix(in srgb, var(--color-text) 14%, transparent);
+    --color-text:       #0369a1; /* Deep ocean blue for high contrast visibility */
+    --color-muted:      #0284c7;
+    --color-muted-2:    #38bdf8;
+    --color-accent:     #0c4a6e;
+    --color-accent-inv: #e0f2fe;
+    --color-danger:     #dc2626;
+    --color-danger-bg:  #fee2e2;
+    --color-success:    #16a34a;
+    --color-success-bg: #dcfce7;
+    --color-warning:    #ca8a04;
+    --color-warning-bg: #fef08a;
+
+    /* Ocean Neomorphic Shadows */
+    --shadow-sm:        2px 2px 5px rgba(186, 230, 253, 0.45), -2px -2px 5px rgba(255, 255, 255, 0.85);
+    --shadow:           6px 6px 12px rgba(186, 230, 253, 0.65), -6px -6px 12px rgba(255, 255, 255, 0.95);
+    --shadow-lg:        12px 12px 24px rgba(186, 230, 253, 0.7), -12px -12px 24px rgba(255, 255, 255, 0.95);
+    --shadow-nm-recessed: inset 3px 3px 6px rgba(186, 230, 253, 0.65), inset -3px -3px 6px rgba(255, 255, 255, 0.95);
+    --shadow-nm-btn-hover: 3px 3px 6px rgba(186, 230, 253, 0.55), -3px -3px 6px rgba(255, 255, 255, 0.85);
+}
+
+/* --- Pastel Rose/Peach Theme Variables --- */
+[data-theme="peach"] {
+    --color-bg:         #ffe4e6; /* Soft light rose peach background */
+    --color-surface:    #ffe4e6;
+    --color-surface-2:  #fecdd3; /* Sweet peach contrast */
+    --color-border:     color-mix(in srgb, var(--color-text) 8%, transparent);
+    --color-border-2:   color-mix(in srgb, var(--color-text) 14%, transparent);
+    --color-text:       #9f1239; /* Deep rose pink for high contrast visibility */
+    --color-muted:      #be123c;
+    --color-muted-2:    #fda4af;
+    --color-accent:     #4c0519; /* Deep burgundy maroon */
+    --color-accent-inv: #ffe4e6;
+    --color-danger:     #dc2626;
+    --color-danger-bg:  #fff1f2;
+    --color-success:    #15803d;
+    --color-success-bg: #f0fdf4;
+    --color-warning:    #b45309;
+    --color-warning-bg: #fef3c7;
+
+    /* Peach/Rose Neomorphic Shadows */
+    --shadow-sm:        2px 2px 5px rgba(244, 196, 202, 0.5), -2px -2px 5px rgba(255, 255, 255, 0.85);
+    --shadow:           6px 6px 12px rgba(244, 196, 202, 0.7), -6px -6px 12px rgba(255, 255, 255, 0.95);
+    --shadow-lg:        12px 12px 24px rgba(244, 196, 202, 0.75), -12px -12px 24px rgba(255, 255, 255, 0.95);
+    --shadow-nm-recessed: inset 3px 3px 6px rgba(244, 196, 202, 0.7), inset -3px -3px 6px rgba(255, 255, 255, 0.95);
+    --shadow-nm-btn-hover: 3px 3px 6px rgba(244, 196, 202, 0.6), -3px -3px 6px rgba(255, 255, 255, 0.85);
 }
 
 /* --- Reset & Base --- */
@@ -113,8 +227,9 @@ body {
     line-height: var(--line-height);
     color: var(--color-text);
     background: var(--color-bg);
-    min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
+    flex-direction: column; /* Mobile-First default: stacked vertically */
 }
 
 a {
@@ -144,29 +259,60 @@ button, input, textarea, select {
 
 hr {
     border: none;
-    border-top: 1px solid var(--color-border);
+    height: 3px;
+    background: transparent;
+    box-shadow: inset 1px 1px 2px rgba(163, 177, 198, 0.4), inset -1px -1px 2px rgba(255, 255, 255, 0.7);
+    border-radius: var(--radius-full);
     margin: var(--space-6) 0;
 }
 
-/* --- App Layout --- */
+[data-theme="dark"] hr {
+    box-shadow: inset 1px 1px 2px rgba(10, 10, 12, 0.5), inset -1px -1px 2px rgba(38, 41, 49, 0.6);
+}
+
+[data-theme="soft"] hr {
+    box-shadow: inset 1px 1px 2px rgba(189, 179, 161, 0.5), inset -1px -1px 2px rgba(255, 255, 255, 0.75);
+}
+
+[data-theme="lavender"] hr {
+    box-shadow: inset 1px 1px 2px rgba(196, 181, 253, 0.5), inset -1px -1px 2px rgba(255, 255, 255, 0.75);
+}
+
+[data-theme="ocean"] hr {
+    box-shadow: inset 1px 1px 2px rgba(186, 230, 253, 0.5), inset -1px -1px 2px rgba(255, 255, 255, 0.75);
+}
+
+[data-theme="peach"] hr {
+    box-shadow: inset 1px 1px 2px rgba(244, 196, 202, 0.5), inset -1px -1px 2px rgba(255, 255, 255, 0.75);
+}
+
+/* --- App Layout (Mobile-First Baseline) --- */
 .app-sidebar {
-    width: var(--sidebar-width);
-    min-height: 100vh;
+    display: none;
+    width: 100%;
+    min-height: auto;
+    height: calc(100dvh - var(--header-height));
+    position: fixed;
+    top: var(--header-height);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 150;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
     background: var(--color-surface);
-    border-right: 1px solid var(--color-border);
-    display: flex;
+    border-right: none;
     flex-direction: column;
     flex-shrink: 0;
-    position: sticky;
-    top: 0;
-    height: 100vh;
-    overflow-y: auto;
-    z-index: 100;
+}
+
+.app-sidebar.open {
+    display: flex;
 }
 
 .app-main {
     flex: 1;
-    min-height: 100vh;
+    min-height: auto;
     overflow-x: hidden;
     background: var(--color-bg);
 }
@@ -174,7 +320,7 @@ hr {
 .app-content {
     max-width: 1200px;
     margin: 0 auto;
-    padding: var(--space-8) var(--space-8);
+    padding: var(--space-5) var(--space-4); /* Comfortable touch padding for mobile */
 }
 
 /* --- Sidebar Navigation --- */
@@ -216,13 +362,13 @@ hr {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 8px 12px;
-    margin: 2px 12px;
+    padding: 10px 16px;
+    margin: 6px 14px;
     font-size: 0.88rem;
     font-weight: 500;
     color: var(--color-muted);
     border-radius: var(--radius);
-    transition: background var(--transition), color var(--transition), transform var(--transition);
+    transition: background var(--transition), color var(--transition), transform var(--transition), box-shadow var(--transition);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -234,15 +380,19 @@ hr {
 }
 
 .nav-item:hover {
-    background: color-mix(in srgb, var(--nc, var(--color-text)) 8%, transparent);
     color: var(--nc, var(--color-text));
+    background: var(--color-bg);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
     text-decoration: none;
 }
 
 .nav-item.active {
-    background: color-mix(in srgb, var(--nc, var(--color-text)) 12%, transparent);
+    background: var(--color-bg);
     color: var(--nc, var(--color-text));
     font-weight: 600;
+    box-shadow: var(--shadow-nm-recessed);
+    transform: translateY(0);
 }
 
 .sidebar-footer {
@@ -276,9 +426,9 @@ hr {
     text-overflow: ellipsis;
 }
 
-/* --- Mobile Top Bar (sidebar hidden) --- */
+/* --- Mobile Top Bar (sidebar hidden, visible by default on mobile) --- */
 .app-topbar {
-    display: none;
+    display: flex;
     height: var(--header-height);
     background: var(--color-surface);
     border-bottom: 1px solid var(--color-border);
@@ -302,16 +452,38 @@ hr {
     color: var(--color-text);
     display: flex;
     flex-direction: column;
+    justify-content: center;
+    align-items: center;
     gap: 4px;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius);
+    transition: background var(--transition);
+}
+
+.topbar-menu-btn:hover {
+    background: var(--color-surface-2);
 }
 
 .topbar-menu-btn span {
     display: block;
-    width: 22px;
+    width: 20px;
     height: 2px;
     background: currentColor;
     border-radius: 2px;
-    transition: var(--transition);
+    transition: transform var(--transition), opacity var(--transition);
+}
+
+.topbar-menu-btn.active span:nth-child(1) {
+    transform: translateY(6px) rotate(45deg);
+}
+
+.topbar-menu-btn.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.topbar-menu-btn.active span:nth-child(3) {
+    transform: translateY(-6px) rotate(-45deg);
 }
 
 /* --- Page Header --- */
@@ -348,46 +520,94 @@ hr {
     animation: fadeIn 0.35s ease both;
 }
 
-/* --- Responsive --- */
-@media (max-width: 768px) {
+/* --- Responsive Overrides --- */
+
+/* ── Tablet & Up Breakpoint (min-width: 768px) ── */
+@media (min-width: 768px) {
     body {
-        flex-direction: column;
+        flex-direction: row;
     }
 
     .app-sidebar {
-        display: none;
-        width: 100%;
-        min-height: auto;
-        height: auto;
-        position: fixed;
-        top: var(--header-height);
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: 150;
-        overflow-y: auto;
-        box-shadow: var(--shadow-lg);
+        display: flex !important;
+        width: var(--sidebar-width);
+        min-height: 100dvh;
+        height: 100dvh;
+        position: sticky;
+        top: 0;
+        box-shadow: 4px 0 16px rgba(163, 177, 198, 0.25);
+        z-index: 100;
+        border-right: none;
     }
-
-    .app-sidebar.open {
-        display: flex;
+    [data-theme="dark"] .app-sidebar {
+        box-shadow: 4px 0 16px rgba(10, 10, 12, 0.35);
+    }
+    [data-theme="soft"] .app-sidebar {
+        box-shadow: 4px 0 16px rgba(189, 179, 161, 0.35);
+    }
+    [data-theme="lavender"] .app-sidebar {
+        box-shadow: 4px 0 16px rgba(196, 181, 253, 0.35);
+    }
+    [data-theme="ocean"] .app-sidebar {
+        box-shadow: 4px 0 16px rgba(186, 230, 253, 0.35);
+    }
+    [data-theme="peach"] .app-sidebar {
+        box-shadow: 4px 0 16px rgba(244, 196, 202, 0.4);
     }
 
     .app-topbar {
-        display: flex;
+        display: none;
     }
 
     .app-main {
-        min-height: auto;
+        min-height: 100dvh;
     }
 
     .app-content {
-        padding: var(--space-5) var(--space-4);
+        padding: var(--space-8) var(--space-8);
     }
 }
 
-@media (min-width: 769px) {
-    .app-sidebar {
-        display: flex !important;
+/* ── Desktop Breakpoint (min-width: 1024px) ── */
+@media (min-width: 1024px) {
+    .app-content {
+        max-width: 1400px;
+    }
+}
+
+/* ── Mobile Only / Touch Adjustments (max-width: 767px) ── */
+@media (max-width: 767px) {
+    .hidden-mobile {
+        display: none !important;
+    }
+
+    .page-header.flex {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: var(--space-3) !important;
+    }
+    
+    .page-header.flex > .flex,
+    .page-header.flex > div {
+        width: 100% !important;
+        flex-wrap: wrap !important;
+        gap: var(--space-2) !important;
+    }
+    
+    .page-header.flex > .flex > .btn,
+    .page-header.flex > .flex > button,
+    .page-header.flex > div > .btn,
+    .page-header.flex > div > button,
+    .page-header.flex > .flex > .files-sort-wrap,
+    .page-header.flex > .flex > .files-search-wrap {
+        flex: 1 1 auto !important;
+        min-height: 44px !important;
+        justify-content: center !important;
+    }
+    
+    .files-search-wrap input,
+    .files-sort-wrap select {
+        height: 44px !important;
+        font-size: 16px !important;
     }
 }

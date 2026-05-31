@@ -542,7 +542,7 @@
     position: fixed;
     bottom: var(--space-6);
     left: 50%;
-    transform: translate(-50%, 80px);
+    transform: translate(-50%, 100px);
     background: var(--color-text);
     color: var(--color-bg);
     padding: var(--space-3) var(--space-5);
@@ -552,13 +552,15 @@
     gap: var(--space-4);
     box-shadow: var(--shadow-lg), 0 20px 40px rgba(0, 0, 0, 0.15);
     z-index: 9500;
-    transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.25s ease;
     pointer-events: none;
     border: 1px solid rgba(255, 255, 255, 0.1);
+    opacity: 0;
 }
 .batch-toolbar.active {
     transform: translate(-50%, 0);
     pointer-events: auto;
+    opacity: 1;
 }
 .batch-count-wrap {
     display: flex;
@@ -605,6 +607,46 @@
 .batch-btn.danger-btn:hover {
     background: var(--color-danger);
     color: #ffffff;
+}
+
+@media (max-width: 576px) {
+    .batch-toolbar {
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 16px 16px 0 0 !important;
+        transform: translateY(100%) !important;
+        padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom)) !important;
+        gap: var(--space-2) !important;
+        justify-content: space-between !important;
+        border: none !important;
+        border-top: 1px solid var(--color-border) !important;
+        box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    .batch-toolbar.active {
+        transform: translateY(0) !important;
+    }
+    
+    .batch-count-wrap {
+        padding-right: var(--space-2) !important;
+        font-size: 0.78rem !important;
+        gap: 6px !important;
+    }
+    
+    .batch-actions-wrap {
+        flex: 1;
+        justify-content: flex-end;
+        gap: 6px !important;
+    }
+    
+    .batch-btn {
+        padding: 8px 12px !important;
+        font-size: 0.78rem !important;
+        min-height: 38px;
+    }
 }
 
 /* ---- Image Preview Modal ---- */

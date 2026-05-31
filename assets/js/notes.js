@@ -61,7 +61,7 @@ function renderNotesList(notes) {
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                     </button>
                 </div>
-                <div class="note-card-title">${escHtml(n.title)} ${n.is_encrypted ? '<span class="note-lock-icon" title="โน้ตเข้ารหัส">🔒</span>' : ''}</div>
+                <div class="note-card-title">${escHtml(n.title)} ${n.is_encrypted ? '<span class="note-lock-icon" title="โน้ตเข้ารหัส" style="display: inline-flex; align-items: center; color: var(--color-muted);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px; opacity: 0.8;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span>' : ''}</div>
                 ${n.preview && !n.is_encrypted ? `<div class="note-card-preview">${escHtml(n.preview.substring(0, 100))}</div>` : ''}
                 <div class="note-card-footer">
                     <span class="note-card-date">${formatDate(n.updated_at ? n.updated_at.split(' ')[0] : '')}</span>
@@ -154,6 +154,9 @@ if (document.getElementById('noteEditor')) {
                 animation: 150,
                 handle: '.block-drag-handle',
                 ghostClass: 'sortable-ghost',
+                delay: 120, // Smooth touch delay to avoid scroll locking
+                delayOnTouchOnly: true, // Maintain instant dragging on desktop
+                touchStartThreshold: 7, // Tolerates tiny finger tremors before starting drag
                 onEnd: saveBlockOrder
             });
         }
@@ -247,51 +250,187 @@ function renderBlockContent(block) {
     const wrap = document.createElement('div');
 
     if (block.type === 'text') {
+        const editWrap = document.createElement('div');
+        editWrap.className = 'block-text-edit-wrap';
+        editWrap.style.display = block.content ? 'none' : 'block';
+
         const ta = document.createElement('textarea');
         ta.className = 'block-textarea';
         ta.value = block.content || '';
         ta.rows = 1;
         ta.placeholder = 'พิมพ์ข้อความ...';
         autoResize(ta);
+
+        editWrap.appendChild(ta);
+
+        const previewWrap = document.createElement('div');
+        previewWrap.className = 'block-text-preview';
+        previewWrap.style.display = block.content ? 'block' : 'none';
+        
+        function updatePreview() {
+            previewWrap.textContent = block.content || '';
+        }
+        
+        updatePreview();
+
         ta.oninput = function() {
             autoResize(this);
             block.content = this.value;
             debouncedSaveBlock(block.id, 'text', this.value);
         };
-        wrap.appendChild(ta);
+
+        ta.onblur = function() {
+            if (this.value.trim()) {
+                updatePreview();
+                editWrap.style.display = 'none';
+                previewWrap.style.display = 'block';
+            }
+        };
+
+        previewWrap.onclick = function() {
+            previewWrap.style.display = 'none';
+            editWrap.style.display = 'block';
+            ta.focus();
+            autoResize(ta);
+        };
+
+        wrap.appendChild(editWrap);
+        wrap.appendChild(previewWrap);
 
     } else if (block.type === 'link') {
         let linkData = {};
         try { linkData = JSON.parse(block.content) || {}; } catch {}
 
+        const editWrap = document.createElement('div');
+        editWrap.className = 'block-link-wrap';
+        editWrap.style.display = linkData.url ? 'none' : 'flex';
+        editWrap.style.flexDirection = 'column';
+        editWrap.style.gap = 'var(--space-2)';
+
         const urlInput = document.createElement('input');
         urlInput.className = 'block-link-url';
         urlInput.type = 'url';
-        urlInput.placeholder = 'URL...';
+        urlInput.placeholder = 'URL (เช่น https://example.com)...';
         urlInput.value = linkData.url || '';
-        urlInput.oninput = function() {
-            saveLink(block.id, wrap);
-        };
 
         const labelInput = document.createElement('input');
         labelInput.className = 'block-link-label';
         labelInput.type = 'text';
         labelInput.placeholder = 'ชื่อลิงก์ (ไม่บังคับ)';
         labelInput.value = linkData.label || '';
-        labelInput.oninput = function() { saveLink(block.id, wrap); };
 
-        const linkWrap = document.createElement('div');
-        linkWrap.className = 'block-link-wrap';
-        linkWrap.appendChild(urlInput);
-        linkWrap.appendChild(labelInput);
-        wrap.appendChild(linkWrap);
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'btn btn-primary btn-sm';
+        saveBtn.style.alignSelf = 'flex-start';
+        saveBtn.style.fontSize = '0.75rem';
+        saveBtn.style.padding = '4px 12px';
+        saveBtn.style.marginTop = '4px';
+        saveBtn.textContent = 'เสร็จสิ้น';
 
-        function saveLink(bid, parent) {
-            const url   = parent.querySelector('.block-link-url').value;
-            const label = parent.querySelector('.block-link-label').value;
-            block.content = JSON.stringify({ url, label });
-            debouncedSaveBlock(bid, 'link', block.content);
+        editWrap.appendChild(urlInput);
+        editWrap.appendChild(labelInput);
+        editWrap.appendChild(saveBtn);
+
+        const previewWrap = document.createElement('div');
+        previewWrap.className = 'block-link-preview-wrap';
+        previewWrap.style.display = linkData.url ? 'block' : 'none';
+
+        function updatePreview() {
+            previewWrap.innerHTML = '';
+            if (!linkData.url) return;
+
+            let targetUrl = linkData.url.trim();
+            if (!/^https?:\/\//i.test(targetUrl)) {
+                targetUrl = 'https://' + targetUrl;
+            }
+
+            const linkDisplay = document.createElement('a');
+            linkDisplay.className = 'block-link-display';
+            linkDisplay.href = targetUrl;
+            linkDisplay.target = '_blank';
+            linkDisplay.rel = 'noopener noreferrer';
+            
+            linkDisplay.innerHTML = `
+                <span class="block-link-icon" style="margin-right: var(--space-2); display: inline-flex; align-items: center; justify-content: center; color: var(--color-muted);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                </span>
+                <div style="display: flex; flex-direction: column; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; text-align: left;">
+                    <strong class="link-title" style="font-size: 0.9rem; color: var(--color-text); font-weight: 600;">${escHtml(linkData.label || 'เปิดลิงก์')}</strong>
+                    <span class="link-url-sub" style="font-size: 0.75rem; color: var(--color-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; display: block;">${escHtml(linkData.url)}</span>
+                </div>
+                <span style="color: var(--color-muted); font-size: 0.72rem; display: flex; align-items: center; gap: 4px; padding-left: 8px; flex-shrink: 0; font-weight: 500;">
+                    เปิดลิงก์ 
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+                </span>
+            `;
+
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn btn-ghost btn-sm';
+            editBtn.style.marginTop = 'var(--space-2)';
+            editBtn.style.fontSize = '0.72rem';
+            editBtn.style.padding = '3px 8px';
+            editBtn.innerHTML = `
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; vertical-align: middle; display: inline-block;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"></path></svg>
+                แก้ไขลิงก์
+            `;
+            editBtn.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                previewWrap.style.display = 'none';
+                editWrap.style.display = 'flex';
+                urlInput.focus();
+            };
+
+            previewWrap.appendChild(linkDisplay);
+            previewWrap.appendChild(editBtn);
         }
+
+        updatePreview();
+
+        function saveLink() {
+            const url = urlInput.value.trim();
+            const label = labelInput.value.trim();
+            linkData = { url, label };
+            block.content = JSON.stringify(linkData);
+            debouncedSaveBlock(block.id, 'link', block.content);
+        }
+
+        urlInput.oninput = saveLink;
+        labelInput.oninput = saveLink;
+
+        function commitLink() {
+            saveLink();
+            const url = urlInput.value.trim();
+            if (url) {
+                updatePreview();
+                editWrap.style.display = 'none';
+                previewWrap.style.display = 'block';
+            } else {
+                toast('กรุณากรอก URL ลิงก์', 'warning');
+            }
+        }
+
+        saveBtn.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            commitLink();
+        };
+
+        urlInput.onkeydown = function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                commitLink();
+            }
+        };
+        labelInput.onkeydown = function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                commitLink();
+            }
+        };
+
+        wrap.appendChild(editWrap);
+        wrap.appendChild(previewWrap);
 
     } else if (block.type === 'checklist') {
         let items = [];

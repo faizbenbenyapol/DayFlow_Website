@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ลิงก์หมดอายุหรือไม่พบไฟล์</title>
     <style>
-        body { font-family: sans-serif; background: #f8f9fb; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        body { font-family: sans-serif; background: #f8f9fb; display: flex; align-items: center; justify-content: center; min-height: 100dvh; }
         .box { text-align: center; padding: 2rem; }
         h1 { font-size: 1.5rem; color: #111; margin-bottom: .5rem; }
         p  { color: #6b7280; }

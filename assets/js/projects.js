@@ -530,6 +530,9 @@ function initSortable() {
             ghostClass: 'sortable-ghost',
             dragClass: 'sortable-drag',
             handle: '.kanban-card-title', // ดึงลากผ่านหัวชื่องาน
+            delay: 120, // Smooth touch delay to avoid scroll locking
+            delayOnTouchOnly: true, // Maintain instant dragging on desktop
+            touchStartThreshold: 7, // Tolerates tiny finger tremors before starting drag
             onEnd: async function (evt) {
                 // เก็บอาเรย์เรียงลำดับใหม่ทั้งหมด
                 const items = [];

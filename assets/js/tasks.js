@@ -81,6 +81,9 @@ function initSortable() {
             ghostClass:  'sortable-ghost',
             dragClass:   'sortable-drag',
             handle:      '.task-content',
+            delay:       120, // Smooth touch delay to avoid scroll locking
+            delayOnTouchOnly: true,
+            touchStartThreshold: 7, // Tolerates tiny finger tremors before starting drag
             onEnd:       handleDragEnd
         });
     });

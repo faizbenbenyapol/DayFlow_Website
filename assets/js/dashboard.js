@@ -28,6 +28,9 @@ document.addEventListener('DOMContentLoaded', async function () {
             handle: '.drag-handle',
             ghostClass: 'sortable-ghost',
             dragClass: 'sortable-drag',
+            delay: 120, // Smooth touch delay to avoid scroll locking
+            delayOnTouchOnly: true, // Maintain instant dragging on desktop
+            touchStartThreshold: 7, // Tolerates tiny finger tremors before starting drag
             onEnd: saveLayout
         });
     }

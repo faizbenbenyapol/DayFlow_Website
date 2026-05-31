@@ -1,15 +1,21 @@
-<div class="page-header flex items-center justify-between">
+<div class="page-header flex items-center justify-between" style="flex-wrap:wrap;gap:var(--space-3)">
     <div>
         <h1 class="page-title">โน้ต</h1>
     </div>
-    <div class="flex gap-3">
-        <button class="btn btn-ghost btn-sm" onclick="openCreateNote(false)">โน้ตใหม่</button>
-        <button class="btn btn-ghost btn-sm" onclick="openCreateNote(true)">โน้ตเข้ารหัส</button>
+    <div class="flex gap-2" style="flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="openCreateNote(false)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            โน้ตใหม่
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="openCreateNote(true)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            โน้ตเข้ารหัส
+        </button>
     </div>
 </div>
 
 <div class="notes-layout">
-    <!-- Sidebar: Tags -->
+    <!-- Sidebar: Tags (scrollable strip on mobile) -->
     <aside class="notes-sidebar">
         <div class="notes-sidebar-title">แท็ก</div>
         <div id="tagList">
@@ -25,9 +31,9 @@
 
     <!-- Notes grid -->
     <div>
-        <div class="flex items-center gap-3 mb-6">
+        <div class="notes-search-wrap">
             <input type="text" class="form-control" id="noteSearch"
-                   placeholder="ค้นหาโน้ต..." style="max-width:320px"
+                   placeholder="ค้นหาโน้ต..."
                    oninput="searchNotes(this.value)">
         </div>
 

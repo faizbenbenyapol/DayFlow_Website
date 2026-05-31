@@ -9,7 +9,10 @@ $tagsData = json_encode($tags, JSON_UNESCAPED_UNICODE);
      data-encrypted="<?= (int)$note['is_encrypted'] ?>">
 
     <div class="note-editor-toolbar">
-        <a href="<?= APP_URL ?>/notes" class="btn btn-ghost btn-sm">← กลับ</a>
+        <a href="<?= APP_URL ?>/notes" class="btn btn-ghost btn-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            กลับ
+        </a>
 
         <!-- Tags -->
         <div class="note-tag-input-wrap" id="tagWrap">
@@ -70,16 +73,24 @@ $tagsData = json_encode($tags, JSON_UNESCAPED_UNICODE);
 
         <!-- Add block -->
         <button class="add-block-btn" id="addBlockBtn">
-            + เพิ่มบล็อก
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            เพิ่มบล็อก
         </button>
 
         <!-- Add block type menu -->
-        <div id="blockTypeMenu" style="display:none;padding:var(--space-3);background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);margin-top:var(--space-2);display:none">
-            <div class="flex gap-3">
-                <button class="btn btn-ghost btn-sm" onclick="addBlock('text')">ข้อความ</button>
-                <button class="btn btn-ghost btn-sm" onclick="addBlock('link')">ลิงก์</button>
-                <button class="btn btn-ghost btn-sm" onclick="addBlock('checklist')">Checklist</button>
-            </div>
+        <div id="blockTypeMenu" class="block-type-menu" style="display:none">
+            <button class="btn btn-ghost btn-sm" onclick="addBlock('text')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                ข้อความ
+            </button>
+            <button class="btn btn-ghost btn-sm" onclick="addBlock('link')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                ลิงก์
+            </button>
+            <button class="btn btn-ghost btn-sm" onclick="addBlock('checklist')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                Checklist
+            </button>
         </div>
 
     </div>

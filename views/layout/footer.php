@@ -30,20 +30,22 @@
 <?php endif; ?>
 
 <script>
-// Mobile sidebar toggle
+// Mobile sidebar toggle and hamburger icon animation
 (function() {
     const btn     = document.getElementById('menuToggle');
     const sidebar = document.getElementById('appSidebar');
     if (!btn || !sidebar) return;
 
     btn.addEventListener('click', function() {
-        sidebar.classList.toggle('open');
+        const isOpen = sidebar.classList.toggle('open');
+        btn.classList.toggle('active', isOpen);
     });
 
     // Close sidebar when nav item clicked on mobile
     sidebar.querySelectorAll('.nav-item').forEach(function(el) {
         el.addEventListener('click', function() {
             sidebar.classList.remove('open');
+            btn.classList.remove('active');
         });
     });
 
@@ -52,8 +54,21 @@
         if (window.innerWidth > 768) return;
         if (!sidebar.contains(e.target) && !btn.contains(e.target)) {
             sidebar.classList.remove('open');
+            btn.classList.remove('active');
         }
     });
+
+    // Touch device soft keyboard scroll-into-view helper
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+        document.addEventListener('focusin', function(e) {
+            const el = e.target;
+            if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT') {
+                setTimeout(function() {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 280);
+            }
+        });
+    }
 })();
 </script>
 

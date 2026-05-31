@@ -7,13 +7,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Sarabun', sans-serif; background: #f7f7f7; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 3rem 1rem; }
+        body { font-family: 'Sarabun', sans-serif; background: #f7f7f7; min-height: 100dvh; display: flex; align-items: flex-start; justify-content: center; padding: 3rem 1rem; }
         .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 2.5rem; width: 100%; max-width: 560px; }
         h1 { font-size: 1.4rem; font-weight: 600; margin-bottom: 0.5rem; }
         .subtitle { color: #6b6b6b; font-size: 0.9rem; margin-bottom: 2rem; }
         .form-group { margin-bottom: 1.2rem; }
         label { display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.4rem; }
         input { width: 100%; padding: 0.6rem 0.9rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
+        @media (max-width: 768px) {
+            input { font-size: 16px; padding: 0.75rem 1rem; }
+        }
         input:focus { outline: none; border-color: #1a1a1a; }
         .btn { display: inline-block; padding: 0.6rem 1.4rem; background: #1a1a1a; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-family: inherit; margin-top: 1rem; width: 100%; }
         .btn:hover { opacity: 0.85; }

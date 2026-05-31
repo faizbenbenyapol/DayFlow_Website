@@ -89,7 +89,7 @@ class Response
 <html lang="th" data-theme="<?= h($theme) ?>">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
     <title><?= h((string)$status) ?> — <?= h(APP_NAME) ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -124,7 +124,7 @@ class Response
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
+            min-height: 100dvh;
             padding: 24px;
             box-sizing: border-box;
             line-height: 1.6;

@@ -91,7 +91,7 @@ class SettingsController
         $userId = Auth::userId();
         $theme  = Request::input('theme', 'light');
 
-        if (!in_array($theme, ['light', 'dark'])) {
+        if (!in_array($theme, ['light', 'dark', 'soft', 'lavender', 'ocean', 'peach'])) {
             Response::json(['error' => 'ธีมไม่ถูกต้อง'], 422);
         }
 

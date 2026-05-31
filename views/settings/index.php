@@ -107,8 +107,8 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
     <div class="card mb-6" style="max-width:540px">
         <div class="card-header"><span class="card-title">ธีม</span></div>
         <div class="card-body">
-            <div class="flex gap-4 theme-cards-container">
-                <label class="theme-card-option" style="cursor:pointer">
+            <div class="flex gap-4 theme-cards-container" style="flex-wrap:wrap">
+                <label class="theme-card-option" style="cursor:pointer; min-width:140px;">
                     <input type="radio" name="theme" value="light"
                            <?= ($settings['theme'] ?? 'light') === 'light' ? 'checked' : '' ?>
                            class="sr-only">
@@ -124,7 +124,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
                         สว่าง (Light Mode)
                     </span>
                 </label>
-                <label class="theme-card-option" style="cursor:pointer">
+                <label class="theme-card-option" style="cursor:pointer; min-width:140px;">
                     <input type="radio" name="theme" value="dark"
                            <?= ($settings['theme'] ?? 'light') === 'dark' ? 'checked' : '' ?>
                            class="sr-only">
@@ -138,6 +138,70 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
                     <span class="theme-card-label">
                         <span class="theme-card-dot"></span>
                         มืด (Dark Mode)
+                    </span>
+                </label>
+                <label class="theme-card-option" style="cursor:pointer; min-width:140px;">
+                    <input type="radio" name="theme" value="soft"
+                           <?= ($settings['theme'] ?? 'light') === 'soft' ? 'checked' : '' ?>
+                           class="sr-only">
+                    <div class="theme-card-preview theme-soft-preview">
+                        <div class="preview-header"></div>
+                        <div class="preview-body">
+                            <div class="preview-line-1"></div>
+                            <div class="preview-line-2"></div>
+                        </div>
+                    </div>
+                    <span class="theme-card-label">
+                        <span class="theme-card-dot"></span>
+                        พาสเทลครีม (Pastel Soft)
+                    </span>
+                </label>
+                <label class="theme-card-option" style="cursor:pointer; min-width:140px;">
+                    <input type="radio" name="theme" value="lavender"
+                           <?= ($settings['theme'] ?? 'light') === 'lavender' ? 'checked' : '' ?>
+                           class="sr-only">
+                    <div class="theme-card-preview theme-lavender-preview">
+                        <div class="preview-header"></div>
+                        <div class="preview-body">
+                            <div class="preview-line-1"></div>
+                            <div class="preview-line-2"></div>
+                        </div>
+                    </div>
+                    <span class="theme-card-label">
+                        <span class="theme-card-dot"></span>
+                        พาสเทลม่วง (Lavender)
+                    </span>
+                </label>
+                <label class="theme-card-option" style="cursor:pointer; min-width:140px;">
+                    <input type="radio" name="theme" value="ocean"
+                           <?= ($settings['theme'] ?? 'light') === 'ocean' ? 'checked' : '' ?>
+                           class="sr-only">
+                    <div class="theme-card-preview theme-ocean-preview">
+                        <div class="preview-header"></div>
+                        <div class="preview-body">
+                            <div class="preview-line-1"></div>
+                            <div class="preview-line-2"></div>
+                        </div>
+                    </div>
+                    <span class="theme-card-label">
+                        <span class="theme-card-dot"></span>
+                        พาสเทลฟ้าน้ำทะเล (Mint)
+                    </span>
+                </label>
+                <label class="theme-card-option" style="cursor:pointer; min-width:140px;">
+                    <input type="radio" name="theme" value="peach"
+                           <?= ($settings['theme'] ?? 'light') === 'peach' ? 'checked' : '' ?>
+                           class="sr-only">
+                    <div class="theme-card-preview theme-peach-preview">
+                        <div class="preview-header"></div>
+                        <div class="preview-body">
+                            <div class="preview-line-1"></div>
+                            <div class="preview-line-2"></div>
+                        </div>
+                    </div>
+                    <span class="theme-card-label">
+                        <span class="theme-card-dot"></span>
+                        พาสเทลชมพูพีช (Rose)
                     </span>
                 </label>
             </div>
@@ -296,7 +360,15 @@ window.dashboardLayout = <?= json_encode($layout, JSON_UNESCAPED_UNICODE) ?>;
                 <dd><?= h($currentTz) ?></dd>
 
                 <dt>ธีม</dt>
-                <dd><?= ($settings['theme'] ?? 'light') === 'dark' ? 'Dark' : 'Light' ?></dd>
+                <dd><?php
+                    $themeVal = $settings['theme'] ?? 'light';
+                    if ($themeVal === 'dark') echo 'Dark Mode';
+                    elseif ($themeVal === 'soft') echo 'Pastel Soft';
+                    elseif ($themeVal === 'lavender') echo 'Pastel Lavender';
+                    elseif ($themeVal === 'ocean') echo 'Pastel Mint/Ocean';
+                    elseif ($themeVal === 'peach') echo 'Pastel Rose/Peach';
+                    else echo 'Light Mode';
+                ?></dd>
 
                 <dt>สมัครเมื่อ</dt>
                 <dd>

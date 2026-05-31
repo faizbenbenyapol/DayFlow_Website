@@ -116,16 +116,16 @@
 <div class="batch-toolbar" id="batchToolbar">
     <div class="batch-count-wrap">
         <span class="batch-count-badge" id="batchCountBadge">0</span>
-        <span>เลือกอยู่</span>
+        <span>เลือก<span class="hidden-mobile">อยู่</span></span>
     </div>
     <div class="batch-actions-wrap">
-        <button class="batch-btn" id="btnBatchMove">
+        <button class="batch-btn" id="btnBatchMove" title="ย้ายรายการที่เลือก">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg>
-            ย้ายรายการที่เลือก
+            <span>ย้าย<span class="hidden-mobile">รายการ</span></span>
         </button>
-        <button class="batch-btn danger-btn" id="btnBatchDelete">
+        <button class="batch-btn danger-btn" id="btnBatchDelete" title="ลบรายการที่เลือก">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-            ลบรายการที่เลือก
+            <span>ลบ<span class="hidden-mobile">รายการ</span></span>
         </button>
         <button class="batch-btn" id="btnBatchClear">
             ยกเลิก
