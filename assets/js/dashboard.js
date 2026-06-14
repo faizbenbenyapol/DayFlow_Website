@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         renderProjectsWidget(data.projects);
         renderNotesWidget(data.notes);
         renderStocksWidget(data.stocks);
+        renderTransferWidget(data.transfer);
     } catch (err) {
         console.error('Dashboard load error:', err);
     }
@@ -433,4 +434,46 @@ function formatRelativeTime(mysqlDate) {
     
     // Fallback to formatted date
     return date.toLocaleDateString('th-TH', { month: 'short', day: 'numeric' });
+}
+
+/* ── Transfer Widget ── */
+function renderTransferWidget(data) {
+    const el = document.getElementById('widget-transfer');
+    if (!el) return;
+
+    if (!data || !data.items || data.items.length === 0) {
+        el.innerHTML = renderEmpty('ยังไม่มีประวัติการส่ง', '<path d="M22 2 11 13"/><path d="M22 2 15 22 11 13 2 9l20-7z"/>');
+        return;
+    }
+
+    function formatSize(bytes) {
+        bytes = Number(bytes);
+        if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
+        if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
+        if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
+        return bytes + ' B';
+    }
+
+    let html = '';
+    data.items.forEach(function (t) {
+        const files = JSON.parse(t.files_json || '[]');
+        const isExpired = t.is_expired;
+        const statusBadge = isExpired
+            ? '<span class="wdg-badge danger">หมดอายุ</span>'
+            : '<span class="wdg-badge success">ใช้งานได้</span>';
+            
+        let sizeStr = formatSize(t.total_size);
+
+        html += '<div class="widget-transfer-item" onclick="window.location.href=\'' + BASE_URL + '/transfer\'" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--color-border);">'
+            +   '  <div class="widget-transfer-left" style="display:flex; flex-direction:column; gap:2px; overflow:hidden;">'
+            +   '    <span class="widget-transfer-code" style="font-weight:600; font-size:0.95rem; color:var(--color-text);">' + escHtml(t.code) + '</span>'
+            +   '    <span class="widget-transfer-meta" style="font-size:0.75rem; color:var(--color-muted); white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">' + files.length + ' ไฟล์ · ' + sizeStr + ' · ดาวน์โหลด ' + t.download_count + ' ครั้ง</span>'
+            +   '  </div>'
+            +   '  <div class="widget-transfer-right" style="flex-shrink:0;">'
+            +      statusBadge
+            +   '  </div>'
+            +   '</div>';
+    });
+
+    el.innerHTML = html;
 }

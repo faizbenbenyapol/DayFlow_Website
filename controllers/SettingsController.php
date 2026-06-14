@@ -122,7 +122,7 @@ class SettingsController
             Response::json(['error' => 'รูปแบบข้อมูลไม่ถูกต้อง'], 422);
         }
 
-        $allowedMenus = ['tasks', 'notes', 'planner', 'exercise', 'food-notes', 'finance', 'subscriptions', 'stocks', 'ai', 'file-tools', 'files'];
+        $allowedMenus = ['tasks', 'notes', 'planner', 'exercise', 'food-notes', 'finance', 'subscriptions', 'stocks', 'ai', 'file-tools', 'files', 'transfer'];
         $hiddenMenus = [];
         foreach ($allowedMenus as $m) {
             if (!in_array($m, $menus)) {

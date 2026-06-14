@@ -1,0 +1,815 @@
+/* =====================================================
+   transfer.css — File Transfer (Send-Anywhere style)
+===================================================== */
+
+/* ── Tab bar ── */
+.tf-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+}
+
+.tf-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-muted);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+}
+
+.tf-tab:hover {
+    color: var(--color-text);
+    background: rgba(var(--color-primary-rgb, 29, 29, 31), 0.04);
+}
+
+.tf-tab.active {
+    background: var(--color-primary);
+    color: var(--color-bg, #fff);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.tf-tab svg {
+    flex-shrink: 0;
+}
+
+/* ── Panels ── */
+.tf-panels { position: relative; }
+.tf-panel { display: none; animation: tfFadeIn 0.3s ease; }
+.tf-panel.active { display: block; }
+
+@keyframes tfFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Card ── */
+.tf-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.tf-card .card-body {
+    padding: 2rem;
+}
+
+/* ── Hero Icon ── */
+.tf-hero-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 24px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.25rem;
+    color: #fff;
+    box-shadow: 0 8px 32px rgba(99, 102, 241, 0.3);
+    animation: tfHeroFloat 3s ease-in-out infinite;
+}
+
+.tf-hero-receive {
+    background: linear-gradient(135deg, #06b6d4, #0891b2);
+    box-shadow: 0 8px 32px rgba(6, 182, 212, 0.3);
+}
+
+@keyframes tfHeroFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+.tf-section-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    text-align: center;
+    margin: 0 0 0.25rem;
+    color: var(--color-text);
+}
+
+.tf-section-desc {
+    text-align: center;
+    color: var(--color-muted);
+    font-size: 0.875rem;
+    margin: 0 0 1.5rem;
+}
+
+/* ── Drop Zone ── */
+.tf-drop-zone {
+    border: 2px dashed var(--color-border-2, var(--color-border));
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: rgba(var(--color-primary-rgb, 29, 29, 31), 0.01);
+    position: relative;
+}
+
+.tf-drop-zone:hover,
+.tf-drop-zone.drag-over {
+    border-color: #6366f1;
+    background: rgba(99, 102, 241, 0.04);
+    transform: scale(1.01);
+}
+
+.tf-drop-zone.drag-over {
+    border-style: solid;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+}
+
+.tf-drop-icon {
+    color: var(--color-muted);
+    margin-bottom: 0.75rem;
+    opacity: 0.5;
+}
+
+.tf-drop-text {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 0.5rem;
+}
+
+.tf-drop-or {
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    margin-bottom: 0.5rem;
+}
+
+.tf-browse-btn {
+    cursor: pointer;
+    border: 1px solid var(--color-border) !important;
+}
+
+.tf-drop-hint {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+    margin-top: 0.75rem;
+    opacity: 0.7;
+}
+
+/* ── File List ── */
+.tf-file-list {
+    margin-top: 1rem;
+}
+
+.tf-file-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: rgba(var(--color-primary-rgb, 29, 29, 31), 0.03);
+    border-radius: 10px;
+    margin-bottom: 6px;
+    animation: tfSlideIn 0.25s ease;
+}
+
+@keyframes tfSlideIn {
+    from { opacity: 0; transform: translateX(-12px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.tf-file-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.tf-file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.tf-file-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tf-file-size {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+}
+
+.tf-file-remove {
+    background: none;
+    border: none;
+    color: var(--color-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.tf-file-remove:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.tf-file-total {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    border-top: 1px solid var(--color-border);
+    margin-top: 8px;
+}
+
+/* ── Options ── */
+.tf-options {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: rgba(var(--color-primary-rgb, 29, 29, 31), 0.02);
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+}
+
+.tf-option-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.tf-option-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-text);
+    white-space: nowrap;
+}
+
+.tf-select {
+    max-width: 160px;
+    font-size: 0.85rem;
+    padding: 6px 12px;
+}
+
+/* ── Actions ── */
+.tf-actions {
+    margin-top: 1.25rem;
+    text-align: center;
+}
+
+.tf-send-btn,
+.tf-receive-btn,
+.tf-download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 48px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 12px;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tf-send-btn {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-color: transparent;
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
+}
+
+.tf-send-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.45);
+}
+
+.tf-receive-btn {
+    background: linear-gradient(135deg, #06b6d4, #0891b2);
+    border-color: transparent;
+    box-shadow: 0 4px 16px rgba(6, 182, 212, 0.35);
+}
+
+.tf-receive-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(6, 182, 212, 0.45);
+}
+
+.tf-download-btn {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border-color: transparent;
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
+    text-decoration: none;
+    color: #fff;
+    justify-content: center;
+    width: 100%;
+}
+
+.tf-download-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.45);
+}
+
+/* ── Code Display Card ── */
+.tf-code-card {
+    text-align: center;
+}
+
+.tf-code-display {
+    padding: 2rem 0;
+}
+
+.tf-code-ring {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tf-countdown-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.tf-countdown-bg {
+    fill: none;
+    stroke: var(--color-border);
+    stroke-width: 4;
+}
+
+.tf-countdown-fg {
+    fill: none;
+    stroke: url(#countdownGrad);
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-dasharray: 565.48;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1s linear;
+}
+
+.tf-code-inner {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+}
+
+.tf-code-label {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+}
+
+.tf-code-digits {
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: 0.25em;
+    color: var(--color-text);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.tf-code-timer {
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    margin-top: 4px;
+    font-variant-numeric: tabular-nums;
+}
+
+.tf-code-timer.tf-urgent {
+    color: #ef4444;
+    font-weight: 600;
+    animation: tfPulse 1s ease-in-out infinite;
+}
+
+@keyframes tfPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* ── Code Actions ── */
+.tf-code-actions {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.tf-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    padding: 8px 16px;
+    border-radius: 8px;
+}
+
+/* ── QR Code ── */
+.tf-qr-section {
+    margin: 1.5rem 0;
+    padding: 1.5rem;
+    background: rgba(var(--color-primary-rgb, 29, 29, 31), 0.02);
+    border-radius: 16px;
+    border: 1px solid var(--color-border);
+}
+
+.tf-qr-label {
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    margin-bottom: 1rem;
+    font-weight: 500;
+}
+
+.tf-qr-wrap {
+    display: flex;
+    justify-content: center;
+}
+
+.tf-qr-wrap img,
+.tf-qr-wrap canvas,
+.tf-qr-wrap svg {
+    border-radius: 12px;
+    background: #fff;
+    padding: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* ── Files Summary ── */
+.tf-files-summary {
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    margin-bottom: 1rem;
+    padding: 12px 16px;
+    background: rgba(var(--color-primary-rgb, 29, 29, 31), 0.03);
+    border-radius: 10px;
+}
+
+/* ── New Transfer Button ── */
+.tf-new-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--color-muted);
+}
+
+/* ── Receive Code Input ── */
+.tf-code-input-wrap {
+    display: flex;
+    justify-content: center;
+    margin: 1.5rem 0;
+}
+
+.tf-code-input {
+    width: 280px;
+    text-align: center;
+    font-size: 2.5rem;
+    font-weight: 700;
+    letter-spacing: 0.4em;
+    padding: 16px 24px;
+    border: 2px solid var(--color-border);
+    border-radius: 16px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: inherit;
+    transition: all 0.3s ease;
+    font-variant-numeric: tabular-nums;
+}
+
+.tf-code-input:focus {
+    outline: none;
+    border-color: #06b6d4;
+    box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.12);
+}
+
+.tf-code-input::placeholder {
+    color: var(--color-border);
+    letter-spacing: 0.4em;
+}
+
+/* ── Receive Result ── */
+.tf-receive-result {
+    margin-top: 1.5rem;
+    animation: tfFadeIn 0.4s ease;
+}
+
+.tf-result-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #10b981;
+    margin-bottom: 1rem;
+    justify-content: center;
+}
+
+.tf-result-files {
+    margin-bottom: 1rem;
+}
+
+.tf-result-file {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: rgba(var(--color-primary-rgb, 29, 29, 31), 0.03);
+    border-radius: 10px;
+    margin-bottom: 4px;
+}
+
+.tf-result-file-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.tf-result-file-name {
+    flex: 1;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tf-result-file-size {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+    flex-shrink: 0;
+}
+
+.tf-result-meta {
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+/* ── Progress Overlay ── */
+.tf-progress-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.tf-progress-card {
+    background: var(--color-surface);
+    border-radius: 20px;
+    padding: 3rem 4rem;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.tf-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--color-border);
+    border-top-color: #6366f1;
+    border-radius: 50%;
+    margin: 0 auto 1rem;
+    animation: tfSpin 0.8s linear infinite;
+}
+
+@keyframes tfSpin {
+    to { transform: rotate(360deg); }
+}
+
+.tf-progress-text {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--color-text);
+}
+
+/* ── History ── */
+.tf-history-list {
+    min-height: 100px;
+}
+
+.tf-empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--color-muted);
+}
+
+.tf-empty-state p {
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.tf-history-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    background: rgba(var(--color-primary-rgb, 29, 29, 31), 0.02);
+    border: 1px solid var(--color-border);
+    margin-bottom: 8px;
+    transition: all 0.2s ease;
+    animation: tfSlideIn 0.3s ease;
+}
+
+.tf-history-item:hover {
+    background: rgba(var(--color-primary-rgb, 29, 29, 31), 0.04);
+}
+
+.tf-history-item.tf-expired {
+    opacity: 0.5;
+}
+
+.tf-history-code {
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text);
+    flex-shrink: 0;
+    min-width: 100px;
+    text-align: center;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.tf-expired .tf-history-code {
+    background: var(--color-muted);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.tf-history-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.tf-history-files {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-text);
+    margin-bottom: 2px;
+}
+
+.tf-history-meta {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tf-history-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tf-history-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.tf-badge-active {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.tf-badge-expired {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.tf-history-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.tf-history-actions .btn {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+}
+
+/* ── SVG Gradient Def (injected via JS) ── */
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+    .tf-card .card-body {
+        padding: 1.25rem;
+    }
+
+    .tf-code-input {
+        width: 220px;
+        font-size: 2rem;
+        padding: 12px 16px;
+    }
+
+    .tf-code-digits {
+        font-size: 2rem;
+    }
+
+    .tf-code-ring {
+        width: 180px;
+        height: 180px;
+    }
+
+    .tf-code-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .tf-history-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 10px;
+    }
+
+    .tf-history-meta {
+        justify-content: center;
+    }
+
+    .tf-send-btn,
+    .tf-receive-btn,
+    .tf-download-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 14px 24px;
+    }
+
+    .tf-hero-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 18px;
+    }
+
+    .tf-hero-icon svg {
+        width: 36px;
+        height: 36px;
+    }
+
+    .tf-drop-zone {
+        padding: 2rem 1rem;
+    }
+
+    .tf-option-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .tf-select {
+        max-width: 100%;
+        width: 100%;
+    }
+}

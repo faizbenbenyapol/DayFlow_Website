@@ -146,6 +146,24 @@ class DashboardController
             $stocks = [];
         }
 
+        // File transfers: Top 3 recently created transfers
+        $transfers = [];
+        try {
+            $transfers = DB::run(
+                'SELECT id, code, token, files_json, total_size, download_count, expires_at, created_at
+                 FROM file_transfers
+                 WHERE user_id = ?
+                 ORDER BY created_at DESC
+                 LIMIT 3',
+                [$userId]
+            )->fetchAll();
+            foreach ($transfers as &$t) {
+                $t['is_expired'] = strtotime($t['expires_at']) <= time();
+            }
+        } catch (PDOException $e) {
+            $transfers = [];
+        }
+
         Response::json([
             'tasks' => [
                 'overdue' => $overdueCount,
@@ -174,6 +192,9 @@ class DashboardController
             ],
             'stocks' => [
                 'items' => $stocks,
+            ],
+            'transfer' => [
+                'items' => $transfers,
             ],
         ]);
     }

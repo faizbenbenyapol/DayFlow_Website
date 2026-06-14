@@ -17,6 +17,10 @@
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/spark-md5@3.0.2/spark-md5.min.js"></script>
 <?php endif; ?>
+<!-- CDN: QR Code generator (loaded only on transfer page) -->
+<?php if (isset($loadQrLib) && $loadQrLib): ?>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<?php endif; ?>
 
 <!-- Global JS -->
 <script src="<?= APP_URL ?>/assets/js/app.js?v=<?= @filemtime(ROOT . '/assets/js/app.js') ?>"></script>

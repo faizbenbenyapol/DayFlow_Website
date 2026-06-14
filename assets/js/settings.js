@@ -827,7 +827,8 @@
                     { widget_key: 'subscriptions', position: 4, is_visible: 1 },
                     { widget_key: 'projects',      position: 5, is_visible: 1 },
                     { widget_key: 'notes',         position: 6, is_visible: 1 },
-                    { widget_key: 'stocks',        position: 7, is_visible: 1 }
+                    { widget_key: 'stocks',        position: 7, is_visible: 1 },
+                    { widget_key: 'transfer',      position: 8, is_visible: 1 }
                 ];
                 
                 try {

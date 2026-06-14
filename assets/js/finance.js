@@ -7,11 +7,11 @@ let editingTxnId = null;
 let financeChart = null;
 let currentChartType = 'bar'; // default chart type: 'bar' or 'line'
 
-const THAI_MONTHS_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.',
-                           'ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const THAI_MONTHS_SHORT = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+    'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
 const PASTEL_COLORS = [
-    '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', 
+    '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444',
     '#06b6d4', '#f97316', '#ec4899', '#14b8a6', '#64748b'
 ];
 
@@ -19,12 +19,12 @@ document.addEventListener('DOMContentLoaded', async function () {
     const year = document.getElementById('chartYear')?.value;
     document.getElementById('txnType')?.addEventListener('change', filterCategoryOptions);
     document.getElementById('qaType')?.addEventListener('change', filterQaCategoryOptions);
-    
+
     await Promise.all([
         loadTransactions(),
         loadChart(year)
     ]);
-    
+
     // Initial category options filtering
     filterQaCategoryOptions();
 });
@@ -33,21 +33,21 @@ async function loadSummary() {
     const month = document.getElementById('monthFilter')?.value || '';
     try {
         const data = await apiFetch(BASE_URL + '/api/finance/summary' + (month ? '?month=' + month : ''));
-        
+
         const incomeVal = parseFloat(data.income || 0);
         const expenseVal = parseFloat(data.expense || 0);
         const balanceVal = parseFloat(data.balance || 0);
 
-        document.getElementById('sumIncome').textContent  = formatMoney(incomeVal);
+        document.getElementById('sumIncome').textContent = formatMoney(incomeVal);
         document.getElementById('sumExpense').textContent = formatMoney(expenseVal);
-        
+
         const bal = document.getElementById('sumBalance');
         bal.textContent = formatMoney(balanceVal);
-        bal.className   = 'finance-stat-amount ' + (balanceVal >= 0 ? 'income' : 'expense');
-        
+        bal.className = 'finance-stat-amount ' + (balanceVal >= 0 ? 'income' : 'expense');
+
         // Update spending ratio & financial health insights
         updateFinancialRatio(incomeVal, expenseVal);
-    } catch {}
+    } catch { }
 }
 
 function updateFinancialRatio(income, expense) {
@@ -55,9 +55,9 @@ function updateFinancialRatio(income, expense) {
     const ratioBar = document.getElementById('spendingRatioBar');
     const ratioText = document.getElementById('spendingRatioText');
     const adviceText = document.getElementById('financialAdviceText');
-    
+
     if (!ratioCard || !ratioBar || !ratioText || !adviceText) return;
-    
+
     if (income <= 0) {
         if (expense > 0) {
             ratioCard.style.display = 'block';
@@ -71,14 +71,14 @@ function updateFinancialRatio(income, expense) {
         }
         return;
     }
-    
+
     ratioCard.style.display = 'block';
     const ratio = (expense / income) * 100;
     const boundedRatio = Math.min(ratio, 100);
-    
+
     ratioBar.style.width = boundedRatio.toFixed(1) + '%';
     ratioText.textContent = `${ratio.toFixed(1)}% ของรายรับ (ใช้ไป ${formatMoney(expense)} จาก ${formatMoney(income)} บาท)`;
-    
+
     // Smooth color change based on ratio severity
     if (ratio <= 50) {
         ratioBar.style.backgroundColor = 'var(--color-success)';
@@ -97,20 +97,20 @@ function updateFinancialRatio(income, expense) {
 
 async function loadTransactions() {
     const month = document.getElementById('monthFilter')?.value || '';
-    const type  = document.getElementById('typeFilter')?.value  || '';
+    const type = document.getElementById('typeFilter')?.value || '';
     const params = new URLSearchParams();
     if (month) params.set('month', month);
-    if (type)  params.set('type', type);
+    if (type) params.set('type', type);
 
     try {
         const data = await apiFetch(BASE_URL + '/api/finance?' + params.toString());
         transactions = data.transactions || [];
-        
+
         // Render view & summary
         renderTransactions();
         loadSummary();
         renderCategoryBreakdown();
-    } catch {}
+    } catch { }
 }
 
 function renderTransactions(filteredList) {
@@ -148,50 +148,50 @@ function renderTransactions(filteredList) {
 function filterTransactionsLocal() {
     const q = document.getElementById('searchFilter').value.trim().toLowerCase();
     const cat = document.getElementById('categoryFilter').value;
-    
+
     const filtered = transactions.filter(t => {
-        const matchesQuery = !q || 
-            (t.description && t.description.toLowerCase().includes(q)) || 
-            (t.category_name && t.category_name.toLowerCase().includes(q)) || 
+        const matchesQuery = !q ||
+            (t.description && t.description.toLowerCase().includes(q)) ||
+            (t.category_name && t.category_name.toLowerCase().includes(q)) ||
             (t.amount && String(t.amount).includes(q));
-            
+
         const matchesCategory = !cat || (t.category_name === cat);
-        
+
         return matchesQuery && matchesCategory;
     });
-    
+
     renderTransactions(filtered);
 }
 
 function renderCategoryBreakdown() {
     const container = document.getElementById('categoryBreakdown');
     if (!container) return;
-    
+
     // Group only expenses
     const expenses = transactions.filter(t => t.type === 'expense');
-    
+
     if (expenses.length === 0) {
         container.innerHTML = '<div class="text-center text-muted" style="padding: 2rem 0;">ไม่มีข้อมูลค่าใช้จ่ายในเดือนนี้</div>';
         return;
     }
-    
+
     const totalsByCategory = {};
     let totalExpenseSum = 0;
-    
+
     expenses.forEach(e => {
         const cat = e.category_name || 'ไม่ระบุ';
         const amt = parseFloat(e.amount || 0);
         totalsByCategory[cat] = (totalsByCategory[cat] || 0) + amt;
         totalExpenseSum += amt;
     });
-    
+
     // Convert to sorted array
     const sortedCategories = Object.keys(totalsByCategory).map(name => ({
         name,
         amount: totalsByCategory[name],
         percentage: totalExpenseSum > 0 ? (totalsByCategory[name] / totalExpenseSum) * 100 : 0
     })).sort((a, b) => b.amount - a.amount);
-    
+
     container.innerHTML = sortedCategories.map((c, index) => {
         const color = PASTEL_COLORS[index % PASTEL_COLORS.length];
         return `
@@ -218,30 +218,30 @@ async function loadChart(year) {
         const data = await apiFetch(BASE_URL + '/api/finance/chart?year=' + year);
         const chart = data.chart || [];
 
-        const labels   = chart.map(c => THAI_MONTHS_SHORT[c.month - 1]);
-        const incomes  = chart.map(c => c.income);
+        const labels = chart.map(c => THAI_MONTHS_SHORT[c.month - 1]);
+        const incomes = chart.map(c => c.income);
         const expenses = chart.map(c => c.expense);
 
         const ctx = document.getElementById('financeChart');
         if (!ctx) return;
 
         if (financeChart) financeChart.destroy();
-        
+
         const style = getComputedStyle(document.documentElement);
         const textColor = style.getPropertyValue('--color-text').trim() || '#1d1d1f';
         const borderColor = style.getPropertyValue('--color-border').trim() || '#eaeaea';
-        
+
         // Define clean custom canvas gradients for premium look
         const canvasCtx = ctx.getContext('2d');
-        
+
         let incomeBg, expenseBg;
-        
+
         if (currentChartType === 'line') {
             // Glowing Area fills
             incomeBg = canvasCtx.createLinearGradient(0, 0, 0, 240);
             incomeBg.addColorStop(0, 'rgba(34,197,94,0.3)');
             incomeBg.addColorStop(1, 'rgba(34,197,94,0.01)');
-            
+
             expenseBg = canvasCtx.createLinearGradient(0, 0, 0, 240);
             expenseBg.addColorStop(0, 'rgba(239,68,68,0.25)');
             expenseBg.addColorStop(1, 'rgba(239,68,68,0.01)');
@@ -300,7 +300,7 @@ async function loadChart(year) {
                         titleFont: { family: 'inherit', size: 12, weight: '600' },
                         bodyFont: { family: 'inherit', size: 12 },
                         callbacks: {
-                            label: function(ctx) {
+                            label: function (ctx) {
                                 return ' ' + ctx.dataset.label.split(' ')[0] + ': ' + formatMoney(ctx.parsed.y) + ' บาท';
                             }
                         }
@@ -322,13 +322,13 @@ async function loadChart(year) {
                 }
             }
         });
-    } catch {}
+    } catch { }
 }
 
 function changeChartType(type) {
     if (currentChartType === type) return;
     currentChartType = type;
-    
+
     // Toggle active classes on toggles
     const btns = document.querySelectorAll('#chartTypeToggle button');
     btns.forEach(btn => {
@@ -336,14 +336,14 @@ function changeChartType(type) {
         btn.classList.toggle('active', isActive);
         btn.className = isActive ? 'segmented-btn active' : 'segmented-btn';
     });
-    
+
     const year = document.getElementById('chartYear')?.value;
     loadChart(year);
 }
 
 /* --- Modals and Dropdowns --- */
 function filterCategoryOptions() {
-    const sel  = document.getElementById('txnCategory');
+    const sel = document.getElementById('txnCategory');
     const type = document.getElementById('txnType')?.value;
     if (!sel || !type) return;
 
@@ -361,7 +361,7 @@ function filterQaCategoryOptions() {
     const sel = document.getElementById('qaCategory');
     const type = document.getElementById('qaType')?.value;
     if (!sel || !type) return;
-    
+
     let matchedCurrent = false;
     Array.from(sel.options).forEach(opt => {
         if (!opt.value) { opt.hidden = false; return; }
@@ -375,12 +375,12 @@ function filterQaCategoryOptions() {
 function openAddTransaction() {
     editingTxnId = null;
     document.getElementById('txnModalTitle').textContent = 'บันทึกรายการ';
-    document.getElementById('editTxnId').value   = '';
-    document.getElementById('txnType').value     = 'expense';
-    document.getElementById('txnAmount').value   = '';
+    document.getElementById('editTxnId').value = '';
+    document.getElementById('txnType').value = 'expense';
+    document.getElementById('txnAmount').value = '';
     document.getElementById('txnCategory').value = '';
-    document.getElementById('txnDate').value     = todayISO();
-    document.getElementById('txnDesc').value     = '';
+    document.getElementById('txnDate').value = todayISO();
+    document.getElementById('txnDesc').value = '';
     filterCategoryOptions();
     openModal('txnModal');
 }
@@ -390,22 +390,22 @@ function openEditTransaction(id) {
     if (!t) return;
     editingTxnId = id;
     document.getElementById('txnModalTitle').textContent = 'แก้ไขรายการ';
-    document.getElementById('editTxnId').value   = id;
-    document.getElementById('txnType').value     = t.type;
-    document.getElementById('txnAmount').value   = t.amount;
+    document.getElementById('editTxnId').value = id;
+    document.getElementById('txnType').value = t.type;
+    document.getElementById('txnAmount').value = t.amount;
     filterCategoryOptions();
     document.getElementById('txnCategory').value = t.category_id || '';
-    document.getElementById('txnDate').value     = t.txn_date;
-    document.getElementById('txnDesc').value     = t.description || '';
+    document.getElementById('txnDate').value = t.txn_date;
+    document.getElementById('txnDesc').value = t.description || '';
     openModal('txnModal');
 }
 
 async function saveTransaction() {
     const body = {
-        type:        document.getElementById('txnType').value,
-        amount:      document.getElementById('txnAmount').value,
+        type: document.getElementById('txnType').value,
+        amount: document.getElementById('txnAmount').value,
         category_id: document.getElementById('txnCategory').value,
-        txn_date:    document.getElementById('txnDate').value,
+        txn_date: document.getElementById('txnDate').value,
         description: document.getElementById('txnDesc').value,
     };
 
@@ -414,7 +414,7 @@ async function saveTransaction() {
     }
 
     try {
-        const url    = editingTxnId ? BASE_URL + '/api/finance/' + editingTxnId : BASE_URL + '/api/finance';
+        const url = editingTxnId ? BASE_URL + '/api/finance/' + editingTxnId : BASE_URL + '/api/finance';
         const method = editingTxnId ? 'PUT' : 'POST';
         await apiFetch(url, { method, body: JSON.stringify(body) });
         closeModal('txnModal');
@@ -429,10 +429,10 @@ async function saveTransaction() {
 
 async function saveQuickTransaction() {
     const body = {
-        type:        document.getElementById('qaType').value,
-        amount:      document.getElementById('qaAmount').value,
+        type: document.getElementById('qaType').value,
+        amount: document.getElementById('qaAmount').value,
         category_id: document.getElementById('qaCategory').value,
-        txn_date:    todayISO(), // quick add uses today
+        txn_date: todayISO(), // quick add uses today
         description: document.getElementById('qaDesc').value.trim(),
     };
 
@@ -442,13 +442,13 @@ async function saveQuickTransaction() {
 
     try {
         await apiFetch(BASE_URL + '/api/finance', { method: 'POST', body: JSON.stringify(body) });
-        
+
         // Reset quick add form fields except type
         document.getElementById('qaAmount').value = '';
         document.getElementById('qaCategory').value = '';
         document.getElementById('qaDesc').value = '';
         filterQaCategoryOptions();
-        
+
         // Reload dashboard
         await loadTransactions();
         const year = document.getElementById('chartYear')?.value;
@@ -470,7 +470,7 @@ async function deleteTxn(id) {
 
 function escHtml(str) {
     if (str == null) return '';
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 /* =====================================================
@@ -479,40 +479,26 @@ function escHtml(str) {
 
 let currentExportType = 'month';
 
-function loadHtml2PdfLibrary() {
-    return new Promise((resolve, reject) => {
-        if (window.html2pdf) {
-            resolve();
-            return;
-        }
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error('โหลดโมดูลสำหรับสร้าง PDF ล้มเหลว กรุณาตรวจสอบอินเทอร์เน็ต'));
-        document.head.appendChild(script);
-    });
-}
-
 function openExportModal() {
     currentExportType = 'month';
     const monthFilter = document.getElementById('monthFilter');
     if (monthFilter && monthFilter.value) {
         document.getElementById('exportMonthValue').value = monthFilter.value;
     }
-    
+
     // Set default dates for range selection
     const todayStr = todayISO();
     const [yr, mn] = todayStr.split('-');
     document.getElementById('exportStartDate').value = `${yr}-${mn}-01`;
     document.getElementById('exportEndDate').value = todayStr;
-    
+
     setExportType('month');
     openModal('exportPdfModal');
 }
 
 function setExportType(type) {
     currentExportType = type;
-    
+
     // Toggle active segment buttons
     const btns = document.querySelectorAll('#exportTypeToggle .segmented-btn');
     btns.forEach(btn => {
@@ -520,7 +506,7 @@ function setExportType(type) {
         btn.classList.toggle('active', isActive);
         btn.className = isActive ? 'segmented-btn active' : 'segmented-btn';
     });
-    
+
     // Toggle input field displays
     document.getElementById('exportMonthGroup').style.display = type === 'month' ? 'block' : 'none';
     document.getElementById('exportRangeGroup').style.display = type === 'range' ? 'block' : 'none';
@@ -531,7 +517,7 @@ function buildPrintTemplate(list, totals, periodText) {
         year: 'numeric', month: 'long', day: 'numeric',
         hour: '2-digit', minute: '2-digit'
     });
-    
+
     // Sort transactions chronologically
     const sortedList = [...list].sort((a, b) => new Date(a.txn_date) - new Date(b.txn_date));
 
@@ -553,8 +539,8 @@ function buildPrintTemplate(list, totals, periodText) {
     }).sort((a, b) => b.amount - a.amount);
 
     const spendingRate = totals.income > 0 ? (totals.expense / totals.income) * 100 : 0;
-    let spendingRateText = 'N/A';
-    let spendingRateColor = '#3b82f6';
+    let spendingRateText = 'ไม่มีข้อมูล';
+    let spendingRateColor = '#6b7280';
     if (totals.income > 0) {
         spendingRateText = spendingRate.toFixed(1) + '%';
         if (spendingRate <= 50) spendingRateColor = '#22c55e';
@@ -621,36 +607,36 @@ function buildPrintTemplate(list, totals, periodText) {
                     </div>
                 </div>
                 <div style="text-align: right;">
-                    <div style="font-size: 16px; font-weight: 700; color: #1e3a8a; letter-spacing: -0.01em;">MY MANAGER</div>
+                    <div style="font-size: 16px; font-weight: 700; color: #1e3a8a; letter-spacing: -0.01em;"></div>
                     <div style="font-size: 9px; color: #6b7280; margin-top: 2px;">ออกเอกสาร: ${escHtml(today)} น.</div>
                 </div>
             </div>
 
-            <!-- Summary Cards Grid -->
+            <!-- Summary Cards -->
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;">
                 <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 12px; text-align: center;">
-                    <div style="font-size: 9px; text-transform: uppercase; font-weight: 700; color: #166534; margin-bottom: 4px; letter-spacing: 0.05em;">รายรับรวม</div>
+                    <div style="font-size: 9px; text-transform: uppercase; font-weight: 700; color: #166534; margin-bottom: 4px; letter-spacing: 0.05em;">รายรับ</div>
                     <div style="font-size: 14px; font-weight: 700; color: #166534;">+${formatMoney(totals.income)}</div>
                 </div>
                 <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 12px; text-align: center;">
-                    <div style="font-size: 9px; text-transform: uppercase; font-weight: 700; color: #991b1b; margin-bottom: 4px; letter-spacing: 0.05em;">รายจ่ายรวม</div>
+                    <div style="font-size: 9px; text-transform: uppercase; font-weight: 700; color: #991b1b; margin-bottom: 4px; letter-spacing: 0.05em;">รายจ่าย</div>
                     <div style="font-size: 14px; font-weight: 700; color: #991b1b;">-${formatMoney(totals.expense)}</div>
                 </div>
                 <div style="background: ${totals.balance >= 0 ? '#eff6ff' : '#fff7ed'}; border: 1px solid ${totals.balance >= 0 ? '#bfdbfe' : '#fed7aa'}; border-radius: 6px; padding: 12px; text-align: center;">
-                    <div style="font-size: 9px; text-transform: uppercase; font-weight: 700; color: ${totals.balance >= 0 ? '#1e40af' : '#854d0e'}; margin-bottom: 4px; letter-spacing: 0.05em;">คงเหลือสุทธิ</div>
+                    <div style="font-size: 9px; text-transform: uppercase; font-weight: 700; color: ${totals.balance >= 0 ? '#1e40af' : '#854d0e'}; margin-bottom: 4px; letter-spacing: 0.05em;">คงเหลือ</div>
                     <div style="font-size: 14px; font-weight: 700; color: ${totals.balance >= 0 ? '#1e40af' : '#b45309'};">${formatMoney(totals.balance)}</div>
                 </div>
                 <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; text-align: center;">
-                    <div style="font-size: 9px; text-transform: uppercase; font-weight: 700; color: #4b5563; margin-bottom: 4px; letter-spacing: 0.05em;">Spending Rate</div>
+                    <div style="font-size: 9px; text-transform: uppercase; font-weight: 700; color: #4b5563; margin-bottom: 4px; letter-spacing: 0.05em;">ใช้จ่าย</div>
                     <div style="font-size: 14px; font-weight: 700; color: ${spendingRateColor};">${spendingRateText}</div>
                 </div>
             </div>
 
-            <!-- Two Columns Breakdown -->
+            <!-- Category Breakdown -->
             <div style="margin-bottom: 24px;">
                 <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px;">
                     <h2 style="font-size: 12px; font-weight: 700; margin: 0 0 12px 0; border-bottom: 1px dashed #e5e7eb; padding-bottom: 6px; color: #1e3a8a;">
-                        สัดส่วนรายจ่ายแยกตามหมวดหมู่ (Expense Distribution Breakdown)
+                        สัดส่วนรายจ่ายแยกตามหมวดหมู่
                     </h2>
                     ${categoryRows}
                 </div>
@@ -659,7 +645,7 @@ function buildPrintTemplate(list, totals, periodText) {
             <!-- Detailed Transactions Table -->
             <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px;">
                 <h2 style="font-size: 12px; font-weight: 700; margin: 0 0 12px 0; border-bottom: 1px dashed #e5e7eb; padding-bottom: 6px; color: #1e3a8a;">
-                    ประวัติธุรกรรมการทำรายการโดยละเอียด (Detailed Ledger)
+                    ประวัติธุรกรรมการทำรายการโดยละเอียด
                 </h2>
                 <table style="width: 100%; border-collapse: collapse; text-align: left;">
                     <thead>
@@ -689,14 +675,14 @@ async function generatePdfReport() {
     const btn = document.getElementById('btnExportSubmit');
     if (!btn) return;
     const originalText = btn.textContent;
-    
+
     try {
         btn.disabled = true;
         btn.textContent = 'กำลังเตรียมเอกสาร...';
-        
+
         let url = BASE_URL + '/api/finance';
         let periodText = '';
-        
+
         if (currentExportType === 'month') {
             const mVal = document.getElementById('exportMonthValue').value;
             if (!mVal) {
@@ -706,10 +692,10 @@ async function generatePdfReport() {
                 return;
             }
             url += '?month=' + encodeURIComponent(mVal);
-            
+
             const [y, m] = mVal.split('-');
-            const thaiMonthsFull = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
-                                    'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+            const thaiMonthsFull = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
             periodText = `ประจำเดือน ${thaiMonthsFull[parseInt(m) - 1]} ${parseInt(y) + 543}`;
         } else {
             const start = document.getElementById('exportStartDate').value;
@@ -733,7 +719,7 @@ async function generatePdfReport() {
         // Fetch transactions for report
         const data = await apiFetch(url);
         const txns = data.transactions || [];
-        
+
         if (txns.length === 0) {
             toast('ไม่พบข้อมูลการทำรายการในช่วงเวลาที่เลือก', 'danger');
             btn.disabled = false;
@@ -741,10 +727,6 @@ async function generatePdfReport() {
             return;
         }
 
-        // Load html2pdf library
-        btn.textContent = 'กำลังโหลดโมดูล PDF...';
-        await loadHtml2PdfLibrary();
-        
         // Calculate totals
         let income = 0;
         let expense = 0;
@@ -759,27 +741,74 @@ async function generatePdfReport() {
             balance: income - expense
         };
 
-        // Render template to printable element
-        btn.textContent = 'กำลังสร้างไฟล์ PDF...';
-        const printContainer = document.getElementById('printReportContainer');
-        printContainer.innerHTML = buildPrintTemplate(txns, summaryInfo, periodText);
-        printContainer.style.display = 'block'; // Temporarily make it block for rendering
+        // Build report HTML
+        btn.textContent = 'กำลังสร้างรายงาน...';
+        const reportHtml = buildPrintTemplate(txns, summaryInfo, periodText);
 
-        const opt = {
-            margin:       [12, 12, 12, 12],
-            filename:     `รายงานการเงิน_${periodText.replace(/ /g, '_')}.pdf`,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2.5, useCORS: true, letterRendering: true },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        // Use hidden iframe + browser print for perfect Thai text rendering
+        const iframe = document.createElement('iframe');
+        iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:none;opacity:0;pointer-events:none;';
+        document.body.appendChild(iframe);
+
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(`<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>รายงานการเงิน — ${escHtml(periodText)}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background: #ffffff;
+            color: #111827;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        @media print {
+            body { margin: 0; padding: 12mm; }
+            @page { size: A4; margin: 0; }
+        }
+    </style>
+</head>
+<body>${reportHtml}</body>
+</html>`);
+        iframeDoc.close();
+
+        // Wait for iframe content and fonts to load, then print
+        closeModal('exportPdfModal');
+
+        const triggerPrint = () => {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+            // Cleanup after print dialog closes
+            const cleanup = () => {
+                try { document.body.removeChild(iframe); } catch (e) { }
+            };
+            // Listen for focus return (print dialog closed)
+            window.addEventListener('focus', function onFocus() {
+                window.removeEventListener('focus', onFocus);
+                setTimeout(cleanup, 500);
+            }, { once: true });
+            // Fallback cleanup
+            setTimeout(cleanup, 60000);
         };
 
-        await html2pdf().set(opt).from(printContainer).save();
-        
-        // Cleanup
-        printContainer.style.display = 'none';
-        printContainer.innerHTML = '';
-        closeModal('exportPdfModal');
-        toast('ดาวน์โหลดรายงาน PDF สำเร็จ');
+        // Wait for font loading in iframe
+        if (iframe.contentDocument.fonts && iframe.contentDocument.fonts.ready) {
+            iframe.contentDocument.fonts.ready.then(() => {
+                setTimeout(triggerPrint, 300);
+            });
+        } else {
+            // Fallback: wait a fixed time
+            setTimeout(triggerPrint, 1500);
+        }
+
+        toast('เลือก "Microsoft Print to PDF" หรือ "Save as PDF" แล้วกด Save เพื่อดาวน์โหลด');
     } catch (err) {
         console.error(err);
         toast(err.message || 'สร้างรายงานไม่สำเร็จ', 'danger');
@@ -788,3 +817,4 @@ async function generatePdfReport() {
         btn.textContent = originalText;
     }
 }
+

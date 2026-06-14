@@ -49,7 +49,8 @@ usort($layout, fn($a, $b) => $a['position'] <=> $b['position']);
             'subscriptions' => 'subscriptions',
             'projects' => 'projects',
             'notes' => 'notes',
-            'stocks' => 'stocks'
+            'stocks' => 'stocks',
+            'transfer' => 'transfer'
         ];
         $menuKey = $widgetMenuMap[$widget['widget_key']] ?? null;
         if ($menuKey && !showMenu($menuKey)) continue;
@@ -173,6 +174,21 @@ usort($layout, fn($a, $b) => $a['position'] <=> $b['position']);
                     </div>
                 </div>
                 <div class="widget-body" id="widget-stocks">
+                    <div class="widget-loading"><span class="spinner"></span></div>
+                </div>
+            <?php break;
+            case 'transfer': ?>
+                <div class="widget-header">
+                    <span class="widget-title">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22 11 13 2 9l20-7z"/></svg>
+                        ย้ายไฟล์ล่าสุด
+                    </span>
+                    <div class="widget-header-right">
+                        <span class="drag-handle">&#8942;</span>
+                        <a href="<?= APP_URL ?>/transfer" class="widget-link">ย้ายไฟล์ →</a>
+                    </div>
+                </div>
+                <div class="widget-body" id="widget-transfer">
                     <div class="widget-loading"><span class="spinner"></span></div>
                 </div>
             <?php break;

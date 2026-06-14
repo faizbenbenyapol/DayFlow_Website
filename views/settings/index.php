@@ -285,6 +285,10 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
                     <span>เครื่องมือจัดการไฟล์ (File Tools)</span>
                 </label>
                 <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
+                    <input type="checkbox" name="visible_menus[]" value="transfer" style="width:18px; height:18px;" <?= $isMenuVisible('transfer') ? 'checked' : '' ?>>
+                    <span>ย้ายไฟล์ (File Transfer)</span>
+                </label>
+                <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
                     <input type="checkbox" name="visible_menus[]" value="files" style="width:18px; height:18px;" <?= $isMenuVisible('files') ? 'checked' : '' ?>>
                     <span>ไฟล์ (Files)</span>
                 </label>
@@ -315,6 +319,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
                         'projects' => 'โปรเจคล่าสุด (Projects)',
                         'notes' => 'โน้ตล่าสุด (Notes)',
                         'stocks' => 'หุ้นและพอร์ตโฟลิโอ (Stocks)',
+                        'transfer' => 'ย้ายไฟล์ล่าสุด (File Transfer)',
                     ];
                     
                     foreach ($layout as $widget):

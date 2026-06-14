@@ -248,4 +248,3 @@
 
 <!-- Print template container (hidden) -->
 <div id="printReportContainer" style="display: none;"></div>
-

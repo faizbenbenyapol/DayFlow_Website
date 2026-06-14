@@ -151,6 +151,14 @@ class Router
         $this->add('POST', '/api/file-tools/zip/inspect',    'FileToolsController', 'apiZipInspect',true);
         $this->add('POST', '/api/file-tools/zip/extract',    'FileToolsController', 'apiZipExtract',true);
 
+        // --- Page & API: File Transfer ---
+        $this->add('GET',    '/transfer',                    'FileTransferController', 'index',      true);
+        $this->add('POST',   '/api/transfer/send',           'FileTransferController', 'apiSend',    true);
+        $this->add('GET',    '/api/transfer',                'FileTransferController', 'apiList',    true);
+        $this->add('DELETE', '/api/transfer/{id}',           'FileTransferController', 'apiDelete',  true);
+        $this->add('POST',   '/api/transfer/receive',        'FileTransferController', 'apiReceive', false);
+        $this->add('GET',    '/transfer/download/{token}',   'FileTransferController', 'download',   false);
+
         // --- API: Food Notes ---
         $this->add('GET',    '/api/food-notes',      'FoodNoteController', 'apiList',   true);
         $this->add('POST',   '/api/food-notes',      'FoodNoteController', 'apiCreate', true);

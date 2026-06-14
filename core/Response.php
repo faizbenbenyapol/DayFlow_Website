@@ -82,7 +82,8 @@ class Response
             'stocks' => 'หุ้น',
             'files' => 'ไฟล์', 
             'ai' => 'ผู้ช่วยอัจฉริยะ', 
-            'file-tools' => 'เครื่องมือจัดการไฟล์'
+            'file-tools' => 'เครื่องมือจัดการไฟล์',
+            'transfer' => 'ย้ายไฟล์'
         ];
         ?>
 <!doctype html>
