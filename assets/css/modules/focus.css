@@ -1,0 +1,335 @@
+/* =====================================================
+   focus.css — Premium Pomodoro Focus Visuals
+   ===================================================== */
+
+/* Layout Grid */
+.focus-layout-grid {
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    gap: var(--space-6);
+    align-items: start;
+}
+
+@media (max-width: 960px) {
+    .focus-layout-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Timer Card & Modes */
+.focus-card {
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-md);
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.focus-card:hover {
+    border-color: var(--focus-color, var(--color-primary));
+    box-shadow: 0 10px 30px -15px color-mix(in srgb, var(--focus-color, var(--color-primary)) 20%, transparent);
+}
+
+.focus-mode-selector {
+    display: flex;
+    justify-content: center;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border-2);
+    padding: 4px;
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-6);
+    gap: 2px;
+}
+
+.focus-mode-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-muted);
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.focus-mode-btn:hover {
+    color: var(--color-text);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="light"] .focus-mode-btn:hover {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.focus-mode-btn.active {
+    color: var(--focus-color-text, #ffffff);
+    background: var(--focus-color, var(--color-primary));
+    box-shadow: var(--shadow-sm);
+}
+
+/* Circular Timer */
+.timer-visual-container {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    margin: 0 auto var(--space-6) auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.timer-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.timer-track {
+    fill: none;
+    stroke: var(--color-surface-2);
+    stroke-width: 8px;
+}
+
+.timer-progress {
+    fill: none;
+    stroke: var(--focus-color, var(--color-primary));
+    stroke-width: 8px;
+    stroke-linecap: round;
+    stroke-dasharray: 597; /* 2 * PI * r (r=95) = ~596.9 */
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 0.1s linear, stroke var(--transition);
+    filter: drop-shadow(0 0 6px var(--focus-color, var(--color-primary)));
+}
+
+.timer-content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.timer-phase-lbl {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--focus-color, var(--color-muted));
+    margin-bottom: 4px;
+    transition: color var(--transition);
+}
+
+.timer-countdown {
+    font-size: 3.2rem;
+    font-weight: 800;
+    color: var(--color-text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    letter-spacing: -0.04em;
+    line-height: 1;
+}
+
+/* Controls */
+.timer-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
+}
+
+.btn-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    color: var(--color-muted);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.btn-circle:hover {
+    color: var(--color-text);
+    border-color: var(--color-text);
+    background: var(--color-surface-3);
+    transform: scale(1.05);
+}
+
+.btn-circle-play {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: var(--focus-color, var(--color-primary));
+    color: var(--focus-color-text, #ffffff);
+    border: none;
+    box-shadow: 0 8px 20px -6px var(--focus-color, var(--color-primary));
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.btn-circle-play:hover {
+    transform: scale(1.08);
+    box-shadow: 0 12px 24px -6px var(--focus-color, var(--color-primary));
+}
+
+.btn-circle-play:active {
+    transform: scale(0.96);
+}
+
+/* Custom Settings Details */
+.timer-custom-settings {
+    text-align: left;
+    margin-top: var(--space-4);
+}
+
+.timer-custom-settings summary {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+    cursor: pointer;
+    user-select: none;
+    transition: color var(--transition);
+    font-weight: 500;
+}
+
+.timer-custom-settings summary:hover {
+    color: var(--color-text);
+}
+
+.custom-settings-fields {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    padding: var(--space-3);
+    background: var(--color-surface-2);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border-2);
+}
+
+.custom-settings-fields .form-label {
+    font-size: 0.65rem;
+    margin-bottom: 4px;
+}
+
+.custom-settings-fields .form-control {
+    font-size: 0.75rem;
+    padding: 6px var(--space-2);
+}
+
+/* Stats Section */
+.focus-stats-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-4);
+}
+
+@media (max-width: 480px) {
+    .focus-stats-strip {
+        grid-template-columns: 1fr;
+    }
+}
+
+.focus-stat-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4) var(--space-5);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.focus-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.focus-stat-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.focus-stat-icon.red { background: rgba(244, 63, 94, 0.1); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.15); }
+.focus-stat-icon.green { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.15); }
+.focus-stat-icon.purple { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.15); }
+
+.focus-stat-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.focus-stat-val {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--color-text);
+    line-height: 1.2;
+}
+
+.focus-stat-lbl {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+}
+
+/* Log deletion indicator and types styling */
+.badge-focus-type {
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.badge-focus-type.work {
+    background: rgba(244, 63, 94, 0.1);
+    color: #f43f5e;
+}
+
+.badge-focus-type.short_break {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.badge-focus-type.long_break {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+/* Theme variables defaults override */
+:root {
+    --focus-color: #f43f5e;
+    --focus-color-text: #ffffff;
+}
+.focus-layout-grid[data-mode="work"] {
+    --focus-color: #f43f5e;
+}
+.focus-layout-grid[data-mode="short_break"] {
+    --focus-color: #10b981;
+}
+.focus-layout-grid[data-mode="long_break"] {
+    --focus-color: #3b82f6;
+}

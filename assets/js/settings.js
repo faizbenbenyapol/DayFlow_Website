@@ -816,34 +816,36 @@
     function initDashboardConfig() {
         const btnReset = $('#btnResetDashboardLayout');
         if (btnReset) {
-            btnReset.addEventListener('click', async function() {
-                if (!confirm('คุณต้องการรีเซ็ตลำดับการแสดงผลและเปิดวิดเจ็ตทั้งหมดเป็นค่าเริ่มต้นใช่หรือไม่?')) return;
-                
-                const defaults = [
-                    { widget_key: 'tasks',         position: 0, is_visible: 1 },
-                    { widget_key: 'calendar',      position: 1, is_visible: 1 },
-                    { widget_key: 'finance',       position: 2, is_visible: 1 },
-                    { widget_key: 'workout',       position: 3, is_visible: 1 },
-                    { widget_key: 'subscriptions', position: 4, is_visible: 1 },
-                    { widget_key: 'projects',      position: 5, is_visible: 1 },
-                    { widget_key: 'notes',         position: 6, is_visible: 1 },
-                    { widget_key: 'stocks',        position: 7, is_visible: 1 },
-                    { widget_key: 'transfer',      position: 8, is_visible: 1 }
-                ];
-                
-                try {
-                    btnReset.disabled = true;
-                    await apiFetch(BASE_URL + '/api/dashboard/layout', {
-                        method: 'POST',
-                        body: JSON.stringify({ widgets: defaults })
-                    });
-                    toast('รีเซ็ตการแสดงผลแดชบอร์ดเรียบร้อยแล้ว');
-                    setTimeout(() => window.location.reload(), 600);
-                } catch (err) {
-                    console.error(err);
-                    toast('ไม่สามารถรีเซ็ตได้ กรุณาลองใหม่อีกครั้ง', 'danger');
-                    btnReset.disabled = false;
-                }
+            btnReset.addEventListener('click', function() {
+                confirmAction('คุณต้องการรีเซ็ตลำดับการแสดงผลและเปิดวิดเจ็ตทั้งหมดเป็นค่าเริ่มต้นใช่หรือไม่?', 'รีเซ็ต', 'ยืนยันรีเซ็ต').then(async ok => {
+                    if (!ok) return;
+                    
+                    const defaults = [
+                        { widget_key: 'tasks',         position: 0, is_visible: 1 },
+                        { widget_key: 'calendar',      position: 1, is_visible: 1 },
+                        { widget_key: 'finance',       position: 2, is_visible: 1 },
+                        { widget_key: 'workout',       position: 3, is_visible: 1 },
+                        { widget_key: 'subscriptions', position: 4, is_visible: 1 },
+                        { widget_key: 'projects',      position: 5, is_visible: 1 },
+                        { widget_key: 'notes',         position: 6, is_visible: 1 },
+                        { widget_key: 'stocks',        position: 7, is_visible: 1 },
+                        { widget_key: 'transfer',      position: 8, is_visible: 1 }
+                    ];
+                    
+                    try {
+                        btnReset.disabled = true;
+                        await apiFetch(BASE_URL + '/api/dashboard/layout', {
+                            method: 'POST',
+                            body: JSON.stringify({ widgets: defaults })
+                        });
+                        toast('รีเซ็ตการแสดงผลแดชบอร์ดเรียบร้อยแล้ว');
+                        setTimeout(() => window.location.reload(), 600);
+                    } catch (err) {
+                        console.error(err);
+                        toast('ไม่สามารถรีเซ็ตได้ กรุณาลองใหม่อีกครั้ง', 'danger');
+                        btnReset.disabled = false;
+                    }
+                });
             });
         }
         

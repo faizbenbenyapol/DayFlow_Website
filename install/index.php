@@ -31,7 +31,7 @@
 </head>
 <body>
 <div class="card">
-    <h1>ติดตั้งระบบจัดการชีวิต</h1>
+    <h1>ติดตั้ง DayFlow</h1>
     <p class="subtitle">กรอกข้อมูลด้านล่างเพื่อตั้งค่าระบบครั้งแรก</p>
 
 <?php
@@ -117,7 +117,7 @@ define(\'DB_PASS\', \'' . addslashes($dbPass) . '\');
 define(\'APP_URL\', \'' . addslashes($appUrl) . '\');
 
 // --- Application Settings ---
-define(\'APP_NAME\', \'ระบบจัดการชีวิต\');
+define(\'APP_NAME\', \'DayFlow\');
 define(\'SESSION_NAME\', \'mylife_sess\');
 define(\'UPLOAD_DIR\', dirname(__DIR__) . \'/uploads/\');
 define(\'UPLOAD_URL\', APP_URL . \'/uploads/\');

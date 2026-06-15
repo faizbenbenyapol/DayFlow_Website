@@ -72,6 +72,9 @@
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
                 box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
                 border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
 }
 
 .dash-strip-card:hover {
@@ -84,6 +87,29 @@
 .dash-strip-card:nth-child(2) { --ic: #10b981; border-left: 3px solid #10b981; }
 .dash-strip-card:nth-child(3) { --ic: #22c55e; border-left: 3px solid #22c55e; }
 .dash-strip-card:nth-child(4) { --ic: #8b5cf6; border-left: 3px solid #8b5cf6; }
+
+.dash-strip-icon-wrap {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-surface-2);
+    color: var(--ic);
+    flex-shrink: 0;
+    transition: background var(--transition), transform var(--transition);
+}
+
+.dash-strip-card:hover .dash-strip-icon-wrap {
+    transform: scale(1.08);
+    background: color-mix(in srgb, var(--ic) 12%, var(--color-surface-2));
+}
+
+.dash-strip-content {
+    flex: 1;
+    min-width: 0;
+}
 
 .dash-strip-val {
     font-size: 1.1rem;
@@ -686,4 +712,143 @@
 
 [data-theme="dark"] .widget-stock-change-badge.negative {
     background: rgba(226, 54, 54, 0.12);
+}
+
+/* ---- Stock Sparkline Styling ---- */
+.stock-sparkline-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-right: var(--space-2);
+}
+.stock-sparkline {
+    display: block;
+    width: 60px;
+    height: 24px;
+    opacity: 0.85;
+    transition: opacity var(--transition);
+}
+.widget-stock-item:hover .stock-sparkline {
+    opacity: 1;
+}
+
+/* ---- Fade-in animations for welcome banner ---- */
+.animate-fade-in {
+    animation: welcomeFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes welcomeFade {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Transfer copy action design ---- */
+.btn-copy-code {
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    color: var(--color-muted);
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    text-transform: uppercase;
+}
+.btn-copy-code:hover {
+    background: var(--color-text);
+    color: var(--color-bg);
+    border-color: var(--color-text);
+}
+
+/* ---- Widget inner scrollbar updates ---- */
+.widget-body {
+    scrollbar-width: thin;
+    max-height: 260px;
+    overflow-y: auto;
+}
+.widget-body::-webkit-scrollbar {
+    width: 4px;
+}
+.widget-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+.widget-body::-webkit-scrollbar-thumb {
+    background: var(--color-border-2);
+    border-radius: 99px;
+}
+
+/* ---- Premium Dashboard Page Header ---- */
+.dashboard-header-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: var(--space-4);
+    margin-bottom: var(--space-6);
+    flex-wrap: wrap;
+    gap: var(--space-4);
+}
+
+.dashboard-title-area {
+    display: flex;
+    flex-direction: column;
+}
+
+.dashboard-title-gradient {
+    font-size: 2.2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--color-text) 30%, var(--color-muted) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    line-height: 1.1;
+    margin: 0;
+}
+
+.active-status-dot {
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    box-shadow: 0 0 12px #10b981;
+    animation: pulseGlow 2s infinite;
+}
+
+@keyframes pulseGlow {
+    0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.header-pill {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    padding: 6px 14px;
+    border-radius: 99px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-text);
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition);
+}
+
+.header-pill:hover {
+    border-color: var(--color-text);
+    transform: translateY(-1px);
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.loading-spin svg {
+    animation: spin 0.8s linear infinite;
 }

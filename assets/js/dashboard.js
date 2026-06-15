@@ -3,6 +3,16 @@
 ===================================================== */
 
 document.addEventListener('DOMContentLoaded', async function () {
+    // Last update timestamp helper
+    const updateLastTimestamp = () => {
+        const lastUpdateEl = document.getElementById('headerLastUpdate');
+        if (lastUpdateEl) {
+            const now = new Date();
+            lastUpdateEl.textContent = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+        }
+    };
+
+    // Initial Load
     try {
         const data = await apiFetch(BASE_URL + '/api/dashboard/summary');
         renderStatStrip(data);
@@ -15,11 +25,48 @@ document.addEventListener('DOMContentLoaded', async function () {
         renderNotesWidget(data.notes);
         renderStocksWidget(data.stocks);
         renderTransferWidget(data.transfer);
+        updateLastTimestamp();
     } catch (err) {
         console.error('Dashboard load error:', err);
     }
 
+    // Live Clock in Dashboard Header
+    const clockEl = document.getElementById('headerLiveClock');
+    if (clockEl) {
+        const updateClock = () => {
+            const now = new Date();
+            clockEl.textContent = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        };
+        updateClock();
+        setInterval(updateClock, 1000);
+    }
 
+    // Refresh Button click handler
+    const refreshBtn = document.getElementById('btnRefreshDashboard');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', async function () {
+            if (refreshBtn.classList.contains('loading-spin')) return;
+            refreshBtn.classList.add('loading-spin');
+            try {
+                const data = await apiFetch(BASE_URL + '/api/dashboard/summary');
+                renderStatStrip(data);
+                renderTasksWidget(data.tasks);
+                renderCalendarWidget(data.calendar);
+                renderFinanceWidget(data.finance);
+                renderWorkoutWidget(data.workout);
+                renderSubscriptionsWidget(data.subscriptions);
+                renderProjectsWidget(data.projects);
+                renderNotesWidget(data.notes);
+                renderStocksWidget(data.stocks);
+                renderTransferWidget(data.transfer);
+                updateLastTimestamp();
+            } catch (err) {
+                console.error('Manual refresh error:', err);
+            } finally {
+                setTimeout(() => refreshBtn.classList.remove('loading-spin'), 800);
+            }
+        });
+    }
 
     // Sortable setup
     const grid = document.getElementById('dashboardGrid');
@@ -102,6 +149,29 @@ function renderStatStrip(data) {
     } else {
         set('ds-subs-val', 'ds-subs-lbl', '—', '', 'ไม่มีรายการใกล้ถึง');
     }
+
+    // Dynamic greeting banner subtitle calculation
+    const taskCount = over + items;
+    const eventCount = data.calendar?.today_events?.length || 0;
+    let welcomeTxt = '';
+    
+    if (taskCount > 0 && eventCount > 0) {
+        welcomeTxt = `วันนี้คุณมีงานด่วน/ใกล้ครบกำหนด ${taskCount} รายการ และกำหนดการอีก ${eventCount} รายการ`;
+    } else if (taskCount > 0) {
+        welcomeTxt = `วันนี้คุณมีงานด่วน/ใกล้ครบกำหนด ${taskCount} รายการ มาสะสางกันเถอะ`;
+    } else if (eventCount > 0) {
+        welcomeTxt = `วันนี้คุณมีกำหนดการสำคัญ ${eventCount} รายการ เตรียมตัวให้พร้อมล่ะ!`;
+    } else {
+        welcomeTxt = `วันนี้ยังไม่มีกิจกรรมเร่งด่วน พักผ่อนและเรียนรู้สิ่งใหม่ ๆ ได้เต็มที่ครับ`;
+    }
+    
+    const subEl = document.getElementById('dashWelcomeSubtitle');
+    if (subEl) {
+        const daysOfWeek = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+        const now = new Date();
+        const displayDate = "วัน" + daysOfWeek[now.getDay()] + "ที่ " + formatDate(now.toISOString().slice(0, 10));
+        subEl.textContent = `${displayDate} · ${welcomeTxt}`;
+    }
 }
 
 /* ── Tasks Widget ── */
@@ -136,7 +206,7 @@ function renderTasksWidget(data) {
 
         const qColor = QUADRANT_COLOR[task.quadrant] || 'var(--color-border-2)';
 
-        html += '<div class="widget-task-item">'
+        html += '<div class="widget-task-item" onclick="window.location.href=\'' + BASE_URL + '/tasks\'" style="cursor:pointer;">'
             + '<span class="widget-task-dot" style="background:' + qColor + '"></span>'
             + '<span class="widget-task-title">' + escHtml(task.title) + '</span>'
             + badge
@@ -160,10 +230,10 @@ function renderCalendarWidget(data) {
     data.today_events.forEach(function (ev) {
         let timeStr = ev.is_all_day ? 'ทั้งวัน' : new Date(ev.start_datetime).toTimeString().slice(0, 5);
         const dot   = ev.color || '#6366f1';
-        html += '<div class="widget-event-item">'
+        html += '<div class="widget-event-item" onclick="window.location.href=\'' + BASE_URL + '/planner\'" style="cursor:pointer;">'
             + '<span class="widget-event-dot" style="background:' + escHtml(dot) + '"></span>'
             + '<span class="widget-event-time">' + escHtml(timeStr) + '</span>'
-            + '<span class="widget-event-title">' + escHtml(ev.title) + '</span>'
+            + '<span class="widget-event-title" style="color:var(--color-text); font-weight:500;">' + escHtml(ev.title) + '</span>'
             + '</div>';
     });
 
@@ -186,19 +256,19 @@ function renderFinanceWidget(data) {
         '<div class="dash-finance-row">'
         +   '<div class="dash-finance-item">'
         +       '<div class="dash-finance-label">รายรับ</div>'
-        +       '<div class="dash-finance-amount income">' + formatMoney(income) + '</div>'
+        +       '<div class="dash-finance-amount income" style="color:var(--color-success); font-weight:700;">' + formatMoney(income) + '</div>'
         +   '</div>'
         +   '<div class="dash-finance-item">'
         +       '<div class="dash-finance-label">รายจ่าย</div>'
-        +       '<div class="dash-finance-amount expense">' + formatMoney(expense) + '</div>'
+        +       '<div class="dash-finance-amount expense" style="color:var(--color-danger); font-weight:700;">' + formatMoney(expense) + '</div>'
         +   '</div>'
         + '</div>'
-        + '<div class="dash-finance-bar-wrap">'
-        +   '<div class="dash-finance-bar ' + barCls + '" style="width:' + pct + '%"></div>'
+        + '<div class="dash-finance-bar-wrap" style="height:6px; background:var(--color-surface-2); border-radius:99px; overflow:hidden; margin:12px 0;">'
+        +   '<div class="dash-finance-bar ' + barCls + '" style="height:100%; border-radius:99px; transition:width 0.6s ease; width:' + pct + '%"></div>'
         + '</div>'
-        + '<div class="dash-finance-balance">'
-        +   '<span class="dash-finance-balance-label">คงเหลือ</span>'
-        +   '<span class="dash-finance-balance-val ' + (balance < 0 ? 'negative' : 'positive') + '">'
+        + '<div class="dash-finance-balance" style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--color-border); padding-top:8px;">'
+        +   '<span class="dash-finance-balance-label" style="font-size:0.8rem; color:var(--color-muted);">คงเหลือเดือนนี้</span>'
+        +   '<span class="dash-finance-balance-val ' + (balance < 0 ? 'negative' : 'positive') + '" style="font-weight:700; color:' + (balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)') + ';">'
         +       (balance >= 0 ? '+' : '') + formatMoney(balance) + ' บาท'
         +   '</span>'
         + '</div>';
@@ -223,18 +293,18 @@ function renderWorkoutWidget(data) {
     }
 
     let details = '';
-    if (session.duration_min) details += '<span>' + session.duration_min + ' นาที</span>';
-    if (session.sets && session.reps) details += '<span>' + session.sets + ' x ' + session.reps + '</span>';
-    if (session.weight_kg)           details += '<span>' + session.weight_kg + ' กก.</span>';
+    if (session.duration_min) details += '<span>⏱️ ' + session.duration_min + ' นาที</span>';
+    if (session.sets && session.reps) details += '<span>🔁 ' + session.sets + ' x ' + session.reps + '</span>';
+    if (session.weight_kg)           details += '<span>🏋️ ' + session.weight_kg + ' กก.</span>';
 
     el.innerHTML =
-        '<div class="widget-workout-card">'
-        +   '<div class="widget-workout-top">'
-        +       '<span class="workout-type-badge" data-wtype="' + escHtml(session.type) + '">' + escHtml(session.type) + '</span>'
-        +       '<span class="widget-workout-ago">' + daysAgo + '</span>'
+        '<div class="widget-workout-card" onclick="window.location.href=\'' + BASE_URL + '/exercise\'" style="cursor:pointer; display:flex; flex-direction:column; gap:8px;">'
+        +   '<div class="widget-workout-top" style="display:flex; justify-content:space-between; align-items:center;">'
+        +       '<span class="workout-type-badge" data-wtype="' + escHtml(session.type) + '" style="font-size:0.75rem; font-weight:700; background:rgba(34,197,94,0.12); color:#16a34a; padding:4px 10px; border-radius:8px;">' + escHtml(session.type) + '</span>'
+        +       '<span class="widget-workout-ago" style="font-size:0.75rem; color:var(--color-muted);">' + daysAgo + '</span>'
         +   '</div>'
-        +   '<div class="widget-workout-date">' + formatDate(session.workout_date) + '</div>'
-        +   (details ? '<div class="widget-workout-details">' + details + '</div>' : '')
+        +   '<div class="widget-workout-date" style="font-size:0.82rem; color:var(--color-muted);">' + formatDate(session.workout_date) + '</div>'
+        +   (details ? '<div class="widget-workout-details" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px;">' + details + '</div>' : '')
         + '</div>';
 }
 
@@ -258,10 +328,10 @@ function renderSubscriptionsWidget(data) {
         const daysLabel = days === 0 ? 'วันนี้' : days < 0 ? 'เกิน ' + Math.abs(days) + ' วัน' : 'อีก ' + days + ' วัน';
         const amtLabel  = sub.amount > 0 ? formatMoney(sub.amount) + ' บาท' : '';
 
-        html += '<div class="widget-sub-item">'
-            + '<div class="widget-sub-info">'
-            +   '<span class="widget-sub-name">' + escHtml(sub.name) + '</span>'
-            +   (amtLabel ? '<span class="widget-sub-amount">' + amtLabel + '</span>' : '')
+        html += '<div class="widget-sub-item" onclick="window.location.href=\'' + BASE_URL + '/subscriptions\'" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--color-border);">'
+            + '<div class="widget-sub-info" style="display:flex; flex-direction:column; gap:2px;">'
+            +   '<span class="widget-sub-name" style="font-weight:600; color:var(--color-text);">' + escHtml(sub.name) + '</span>'
+            +   (amtLabel ? '<span class="widget-sub-amount" style="font-size:0.72rem; color:var(--color-muted);">' + amtLabel + '</span>' : '')
             + '</div>'
             + '<span class="wdg-badge ' + badgeCls + '">' + daysLabel + '</span>'
             + '</div>';
@@ -288,9 +358,9 @@ function renderProjectsWidget(data) {
         
         let metaHtml = '';
         if (proj.due_date) {
-            metaHtml += '<span>เดดไลน์: ' + formatDate(proj.due_date) + '</span>';
+            metaHtml += '<span>📅 เดดไลน์: ' + formatDate(proj.due_date) + '</span>';
         }
-        metaHtml += '<span>งาน: ' + done + '/' + total + '</span>';
+        metaHtml += '<span>🎯 งานเสร็จ: ' + done + '/' + total + '</span>';
 
         const badgeClasses = {
             'Planning': 'muted',
@@ -300,18 +370,18 @@ function renderProjectsWidget(data) {
         };
         const statusCls = badgeClasses[proj.status] || 'muted';
 
-        html += '<div class="widget-project-item">'
-            +   '  <div class="widget-project-top">'
-            +   '    <span class="widget-project-name">' + escHtml(proj.name) + '</span>'
+        html += '<div class="widget-project-item" onclick="window.location.href=\'' + BASE_URL + '/projects\'" style="cursor:pointer; padding:12px 0; border-bottom:1px solid var(--color-border); display:flex; flex-direction:column; gap:8px;">'
+            +   '  <div class="widget-project-top" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">'
+            +   '    <span class="widget-project-name" style="font-weight:600; color:var(--color-text);">' + escHtml(proj.name) + '</span>'
             +   '    <span class="wdg-badge ' + statusCls + '">' + escHtml(proj.status) + '</span>'
             +   '  </div>'
-            +   '  <div class="widget-project-progress-wrap">'
-            +   '    <div class="widget-project-progress-bar">'
-            +   '      <div class="widget-project-progress-fill" style="width:' + pct + '%"></div>'
+            +   '  <div class="widget-project-progress-wrap" style="display:flex; align-items:center; gap:12px;">'
+            +   '    <div class="widget-project-progress-bar" style="flex:1; height:5px; background:var(--color-surface-2); border-radius:99px; overflow:hidden;">'
+            +   '      <div class="widget-project-progress-fill" style="height:100%; background:#06b6d4; border-radius:99px; transition:width 0.6s cubic-bezier(0.16, 1, 0.3, 1); width:' + pct + '%"></div>'
             +   '    </div>'
-            +   '    <span class="widget-project-pct">' + pct + '%</span>'
+            +   '    <span class="widget-project-pct" style="font-size:0.72rem; font-weight:600; color:var(--color-muted); min-width:28px; text-align:right;">' + pct + '%</span>'
             +   '  </div>'
-            +   '  <div class="widget-project-meta">'
+            +   '  <div class="widget-project-meta" style="display:flex; justify-content:space-between; font-size:0.72rem; color:var(--color-muted);">'
             +       metaHtml
             +   '  </div>'
             +   '</div>';
@@ -343,16 +413,16 @@ function renderNotesWidget(data) {
         const previewText = note.is_encrypted ? 'เนื้อหานี้ได้รับการเข้ารหัสความปลอดภัย' : (note.preview || 'ไม่มีเนื้อหาหลัก');
         const pinDotHtml = note.pinned ? '<span class="widget-note-pinned-dot"></span>' : '';
 
-        html += '<div class="widget-note-item" onclick="window.location.href=\'' + BASE_URL + '/notes\'">'
-            +   '  <div class="widget-note-header">'
-            +   '    <span class="widget-note-title">'
+        html += '<div class="widget-note-item" onclick="window.location.href=\'' + BASE_URL + '/notes\'" style="cursor:pointer; display:flex; flex-direction:column; gap:4px; padding:10px 0; border-bottom:1px solid var(--color-border);">'
+            +   '  <div class="widget-note-header" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">'
+            +   '    <span class="widget-note-title" style="font-weight:600; color:var(--color-text); display:flex; align-items:center; gap:6px;">'
             +          pinDotHtml
             +          escHtml(note.title)
             +   '    </span>'
-            +   '    <span class="widget-note-time">' + formatRelativeTime(note.updated_at) + '</span>'
+            +   '    <span class="widget-note-time" style="font-size:0.72rem; color:var(--color-muted-2);">' + formatRelativeTime(note.updated_at) + '</span>'
             +   '  </div>'
-            +   '  <div class="widget-note-preview">' + escHtml(previewText) + '</div>'
-            +      (tagHtml ? '<div class="widget-note-tags">' + tagHtml + '</div>' : '')
+            +   '  <div class="widget-note-preview" style="font-size:0.78rem; color:var(--color-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escHtml(previewText) + '</div>'
+            +      (tagHtml ? '<div class="widget-note-tags" style="display:flex; gap:4px; margin-top:2px;">' + tagHtml + '</div>' : '')
             +   '</div>';
     });
 
@@ -369,8 +439,8 @@ function renderStocksWidget(data) {
         return;
     }
 
-    let html = '';
-    data.items.forEach(function (stk) {
+    let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
+    data.items.forEach(function (stk, idx) {
         const change = parseFloat(stk.day_change_pct);
         const hasChange = change !== null && !isNaN(change);
         let chgText = '0.00%';
@@ -388,20 +458,122 @@ function renderStocksWidget(data) {
 
         const formattedPrice = stk.last_price !== null ? parseFloat(stk.last_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
         const symbol = stk.currency === 'THB' ? '฿' : '$';
+        const canvasId = 'sparkline-' + idx;
 
-        html += '<div class="widget-stock-item">'
-            +   '  <div class="widget-stock-left">'
-            +   '    <span class="widget-stock-ticker">' + escHtml(stk.ticker) + '</span>'
-            +   '    <span class="widget-stock-market">' + escHtml(stk.market) + '</span>'
+        html += '<div class="widget-stock-item" onclick="window.location.href=\'' + BASE_URL + '/stocks\'" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--color-border);">'
+            +   '  <div class="widget-stock-left" style="min-width:70px;">'
+            +   '    <span class="widget-stock-ticker" style="font-weight:700; font-size:0.95rem; color:var(--color-text);">' + escHtml(stk.ticker) + '</span>'
+            +   '    <span class="widget-stock-market" style="font-size:0.68rem; color:var(--color-muted-2); text-transform:uppercase; display:block;">' + escHtml(stk.market) + '</span>'
             +   '  </div>'
-            +   '  <div class="widget-stock-right">'
-            +   '    <span class="widget-stock-price">' + symbol + formattedPrice + '</span>'
+            +   '  <div class="stock-sparkline-wrap" style="flex:1; display:flex; justify-content:center;">'
+            +   '    <canvas class="stock-sparkline" id="' + canvasId + '" width="70" height="24" data-change="' + change + '"></canvas>'
+            +   '  </div>'
+            +   '  <div class="widget-stock-right" style="display:flex; align-items:center; gap:10px; text-align:right;">'
+            +   '    <span class="widget-stock-price" style="font-weight:600; font-size:0.9rem; color:var(--color-text);">' + symbol + formattedPrice + '</span>'
             +   '    <span class="widget-stock-change-badge ' + badgeCls + '">' + chgText + '</span>'
             +   '  </div>'
             +   '</div>';
     });
-
+    html += '</div>';
     el.innerHTML = html;
+
+    // Draw sparklines on the canvas items
+    data.items.forEach(function (stk, idx) {
+        const change = parseFloat(stk.day_change_pct) || 0;
+        drawSparkline('sparkline-' + idx, change);
+    });
+}
+
+/* ── Live Sparkline Canvas Drawing ── */
+function drawSparkline(canvasId, change) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    const width = canvas.width;
+    const height = canvas.height;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+    
+    // Define color based on change
+    let color = '#64748b'; // neutral slate
+    let gradColor = 'rgba(100, 116, 139, 0.05)';
+    if (change > 0) {
+        color = '#22c55e'; // success green
+        gradColor = 'rgba(34, 197, 94, 0.08)';
+    } else if (change < 0) {
+        color = '#ef4444'; // danger red
+        gradColor = 'rgba(239, 68, 68, 0.08)';
+    }
+    
+    // Generate pseudo-random points biased by change
+    const points = [];
+    const steps = 6;
+    const segment = width / (steps - 1);
+    
+    // Fixed seed based on canvasId string sum to make the graph consistent per ticker
+    let seed = 0;
+    for (let i = 0; i < canvasId.length; i++) {
+        seed += canvasId.charCodeAt(i);
+    }
+    
+    function seededRandom(max, min) {
+        seed = (seed * 9301 + 49297) % 233280;
+        const rnd = seed / 233280;
+        return min + rnd * (max - min);
+    }
+    
+    // Baseline starts at center
+    points.push({ x: 0, y: height * 0.5 });
+    
+    // Generate walking path
+    for (let i = 1; i < steps - 1; i++) {
+        let yOffset = seededRandom(-height * 0.25, height * 0.25);
+        // Add a slight trend bias
+        if (change > 0) yOffset -= (i / steps) * height * 0.15;
+        if (change < 0) yOffset += (i / steps) * height * 0.15;
+        
+        let y = height * 0.5 + yOffset;
+        y = Math.max(height * 0.1, Math.min(height * 0.9, y));
+        points.push({ x: i * segment, y: y });
+    }
+    
+    // End point based on actual change direction
+    let finalY = height * 0.5;
+    if (change > 0) finalY = height * 0.25 - seededRandom(0, height * 0.15);
+    if (change < 0) finalY = height * 0.75 + seededRandom(0, height * 0.15);
+    finalY = Math.max(height * 0.1, Math.min(height * 0.9, finalY));
+    points.push({ x: width, y: finalY });
+    
+    // Draw line
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+        // Smooth curve drawing using bezier controls
+        const xc = (points[i - 1].x + points[i].x) / 2;
+        const yc = (points[i - 1].y + points[i].y) / 2;
+        ctx.quadraticCurveTo(points[i - 1].x, points[i - 1].y, xc, yc);
+    }
+    ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
+    ctx.stroke();
+    
+    // Draw fill gradient below sparkline
+    ctx.lineTo(width, height);
+    ctx.lineTo(0, height);
+    ctx.closePath();
+    
+    const grad = ctx.createLinearGradient(0, 0, 0, height);
+    grad.addColorStop(0, gradColor);
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.fill();
 }
 
 /* ── Helpers ── */
@@ -458,19 +630,19 @@ function renderTransferWidget(data) {
     data.items.forEach(function (t) {
         const files = JSON.parse(t.files_json || '[]');
         const isExpired = t.is_expired;
-        const statusBadge = isExpired
-            ? '<span class="wdg-badge danger">หมดอายุ</span>'
-            : '<span class="wdg-badge success">ใช้งานได้</span>';
-            
-        let sizeStr = formatSize(t.total_size);
+        const sizeStr = formatSize(t.total_size);
+        
+        // Copy helper
+        const copyText = BASE_URL + '/transfer?code=' + t.code;
 
-        html += '<div class="widget-transfer-item" onclick="window.location.href=\'' + BASE_URL + '/transfer\'" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--color-border);">'
-            +   '  <div class="widget-transfer-left" style="display:flex; flex-direction:column; gap:2px; overflow:hidden;">'
+        html += '<div class="widget-transfer-item" style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--color-border);">'
+            +   '  <div class="widget-transfer-left" onclick="window.location.href=\'' + BASE_URL + '/transfer\'" style="cursor:pointer; display:flex; flex-direction:column; gap:2px; overflow:hidden; flex:1;">'
             +   '    <span class="widget-transfer-code" style="font-weight:600; font-size:0.95rem; color:var(--color-text);">' + escHtml(t.code) + '</span>'
             +   '    <span class="widget-transfer-meta" style="font-size:0.75rem; color:var(--color-muted); white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">' + files.length + ' ไฟล์ · ' + sizeStr + ' · ดาวน์โหลด ' + t.download_count + ' ครั้ง</span>'
             +   '  </div>'
-            +   '  <div class="widget-transfer-right" style="flex-shrink:0;">'
-            +      statusBadge
+            +   '  <div class="widget-transfer-right" style="flex-shrink:0; display:flex; align-items:center; gap:8px;">'
+            +   '    <button class="btn-copy-code" onclick="event.stopPropagation(); navigator.clipboard.writeText(\'' + copyText + '\'); toast(\'คัดลอกลิงก์รับไฟล์แล้ว\', \'success\');">คัดลอกลิงก์</button>'
+            +        (isExpired ? '<span class="wdg-badge danger">หมดอายุ</span>' : '<span class="wdg-badge success">ใช้งานได้</span>')
             +   '  </div>'
             +   '</div>';
     });

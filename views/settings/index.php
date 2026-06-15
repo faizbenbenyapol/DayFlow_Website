@@ -257,6 +257,10 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
                     <span>แพลนเนอร์ (Planner)</span>
                 </label>
                 <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
+                    <input type="checkbox" name="visible_menus[]" value="focus" style="width:18px; height:18px;" <?= $isMenuVisible('focus') ? 'checked' : '' ?>>
+                    <span>โฟกัส (Focus/Pomodoro)</span>
+                </label>
+                <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
                     <input type="checkbox" name="visible_menus[]" value="exercise" style="width:18px; height:18px;" <?= $isMenuVisible('exercise') ? 'checked' : '' ?>>
                     <span>ออกกำลังกาย (Workout)</span>
                 </label>

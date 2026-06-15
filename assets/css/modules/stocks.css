@@ -235,6 +235,9 @@ td.stk-num { font-variant-numeric: tabular-nums; text-align: right; }
     display: flex;
     flex-wrap: nowrap;
     overflow-x: auto;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     gap: var(--space-2);
     border-bottom: 1px solid var(--color-border);
     margin-bottom: var(--space-6);
@@ -267,6 +270,9 @@ td.stk-num { font-variant-numeric: tabular-nums; text-align: right; }
     display: flex;
     flex-wrap: nowrap;
     overflow-x: auto;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     gap: var(--space-6);
     margin-bottom: -1px; /* Align perfectly over card-header bottom border */
     scrollbar-width: none; /* Hide scrollbar for clean premium look */

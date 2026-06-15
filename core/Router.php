@@ -201,6 +201,12 @@ class Router
         $this->add('POST',   '/api/skills/timer/update',      'SkillController', 'apiUpdateTimer', true);
         $this->add('DELETE', '/api/skills/logs/{id}',         'SkillController', 'apiDeleteLog',   true);
 
+        // --- Page & API: Pomodoro Focus ---
+        $this->add('GET',    '/focus',                        'FocusController', 'index',          true);
+        $this->add('GET',    '/api/focus',                    'FocusController', 'apiList',        true);
+        $this->add('POST',   '/api/focus',                    'FocusController', 'apiCreate',      true);
+        $this->add('DELETE', '/api/focus/{id}',              'FocusController', 'apiDelete',      true);
+
         // --- Page: Stocks ---
         $this->add('GET',    '/stocks',                       'StocksController', 'index',         true);
 

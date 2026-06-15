@@ -389,7 +389,8 @@ async function saveSkill(e) {
 }
 
 async function deleteSkill(id) {
-    if(!confirm('คุณต้องการลบทักษะนี้ใช่หรือไม่? ประวัติการจับเวลาของทักษะนี้จะถูกลบไปด้วย')) return;
+    const ok = await confirmAction('คุณต้องการลบทักษะนี้ใช่หรือไม่? ประวัติการจับเวลาของทักษะนี้จะถูกลบไปด้วย', 'ลบทักษะ', 'ลบทักษะเป้าหมาย');
+    if (!ok) return;
     try {
         const res = await fetch(`<?= APP_URL ?>/api/skills/${id}`, {
             method: 'DELETE',
@@ -403,7 +404,8 @@ async function deleteSkill(id) {
 }
 
 async function deleteLog(id) {
-    if(!confirm('ลบประวัตินี้?')) return;
+    const ok = await confirmAction('ต้องการลบประวัติรายการนี้ใช่หรือไม่?', 'ลบประวัติ', 'ลบรายการ');
+    if (!ok) return;
     try {
         const res = await fetch(`<?= APP_URL ?>/api/skills/logs/${id}`, {
             method: 'DELETE',
