@@ -179,10 +179,14 @@ class SettingsController
     public function apiCronTest(): void
     {
         ob_start();
-        require_once ROOT . '/cron.php';
-        $output = ob_get_clean();
-
-        Response::json(['ok' => true, 'output' => $output]);
+        try {
+            require_once ROOT . '/cron.php';
+            $output = ob_get_clean();
+            Response::json(['ok' => true, 'output' => $output]);
+        } catch (\Throwable $e) {
+            ob_end_clean();
+            Response::json(['error' => 'Cron Error: ' . $e->getMessage()], 500);
+        }
     }
 
     public function apiExport(): void
