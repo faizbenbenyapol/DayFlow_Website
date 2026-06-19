@@ -5,6 +5,7 @@
 
 require_once ROOT . '/models/CalendarEvent.php';
 require_once ROOT . '/models/DailyTodo.php';
+require_once ROOT . '/core/TelegramService.php';
 
 class PlannerController
 {
@@ -39,6 +40,16 @@ class PlannerController
 
         $id = CalendarEvent::create($userId, $data);
         $ev = CalendarEvent::getById($id, $userId);
+        $timeStr = TelegramService::formatThaiDateTime($data['start_datetime']);
+        $msg = TelegramService::formatMessage(
+            "📅 กิจกรรมใหม่ในแพลนเนอร์",
+            [
+                'หัวข้อ' => htmlspecialchars($data['title']),
+                'เริ่ม' => $timeStr
+            ]
+        );
+        TelegramService::sendNotification($userId, 'planner', $msg);
+
         Response::json(['ok' => true, 'event' => $ev], 201);
     }
 

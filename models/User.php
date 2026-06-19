@@ -127,6 +127,15 @@ class User
         );
     }
 
+    public static function updateTelegramSettings(int $userId, ?string $botToken, ?string $chatId, ?string $notifyEvents): void
+    {
+        DB::run(
+            'INSERT INTO user_settings (user_id, telegram_bot_token, telegram_chat_id, telegram_notify_events) VALUES (?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE telegram_bot_token = VALUES(telegram_bot_token), telegram_chat_id = VALUES(telegram_chat_id), telegram_notify_events = VALUES(telegram_notify_events)',
+            [$userId, $botToken, $chatId, $notifyEvents]
+        );
+    }
+
     public static function deleteAccount(int $userId): bool
     {
         // CASCADE on FK will remove child rows

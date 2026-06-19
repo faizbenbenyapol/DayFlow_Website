@@ -34,6 +34,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
     <button class="btn btn-ghost btn-sm settings-tab" data-tab="app-shares">แชร์เมนู</button>
     <button class="btn btn-ghost btn-sm settings-tab" data-tab="shares">ไฟล์ที่แชร์</button>
     <button class="btn btn-ghost btn-sm settings-tab" data-tab="data">ข้อมูล</button>
+    <button class="btn btn-ghost btn-sm settings-tab" data-tab="telegram">Telegram</button>
     <button class="btn btn-ghost btn-sm settings-tab" data-tab="danger">เขตอันตราย</button>
 </div>
 
@@ -539,6 +540,48 @@ window.dashboardLayout = <?= json_encode($layout, JSON_UNESCAPED_UNICODE) ?>;
             <p class="form-hint">ข้อมูลที่เก็บในเบราว์เซอร์นี้: ประวัติการคำนวณ, แท็บที่เปิดล่าสุด ฯลฯ การลบจะไม่กระทบข้อมูลบนเซิร์ฟเวอร์</p>
             <div id="localStorageInfo" class="text-xs text-muted mb-4">—</div>
             <button class="btn btn-ghost" id="btnClearLocal">ล้างข้อมูลในเบราว์เซอร์</button>
+        </div>
+    </div>
+</div>
+
+<!-- TELEGRAM -->
+<div id="tab-telegram" class="settings-pane" style="display:none">
+    <div class="card" style="max-width:540px">
+        <div class="card-header"><span class="card-title">Telegram Bot Integration</span></div>
+        <div class="card-body">
+            <p class="form-hint mb-4">รับการแจ้งเตือนจากระบบผ่าน Telegram</p>
+            <div class="form-group">
+                <label class="form-label">Bot Token</label>
+                <input type="text" class="form-control" id="telegramBotToken" value="<?= h($settings['telegram_bot_token'] ?? '') ?>" placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Chat ID</label>
+                <input type="text" class="form-control" id="telegramChatId" value="<?= h($settings['telegram_chat_id'] ?? '') ?>" placeholder="123456789 หรือ -123456789 สำหรับกลุ่ม">
+            </div>
+            <div class="form-group" style="margin-top:16px">
+                <label class="form-label">เปิดรับการแจ้งเตือนจากเมนู</label>
+                <?php
+                $tgEvents = !empty($settings['telegram_notify_events']) ? json_decode($settings['telegram_notify_events'], true) : [];
+                $isTgEnabled = function($event) use ($tgEvents) {
+                    return !isset($tgEvents[$event]) || $tgEvents[$event] !== false;
+                };
+                ?>
+                <div style="display:flex; flex-direction:column; gap:8px;" id="telegramEventsList">
+                    <label class="flex items-center gap-2" style="cursor:pointer;"><input type="checkbox" name="tg_events[]" value="project" <?= $isTgEnabled('project') ? 'checked' : '' ?> style="width:18px;height:18px;"> โปรเจค (สร้างใหม่/ทีม)</label>
+                    <label class="flex items-center gap-2" style="cursor:pointer;"><input type="checkbox" name="tg_events[]" value="task" <?= $isTgEnabled('task') ? 'checked' : '' ?> style="width:18px;height:18px;"> งาน (เมื่อทำสำเร็จ)</label>
+                    <label class="flex items-center gap-2" style="cursor:pointer;"><input type="checkbox" name="tg_events[]" value="note" <?= $isTgEnabled('note') ? 'checked' : '' ?> style="width:18px;height:18px;"> โน๊ต (สร้างใหม่)</label>
+                    <label class="flex items-center gap-2" style="cursor:pointer;"><input type="checkbox" name="tg_events[]" value="planner" <?= $isTgEnabled('planner') ? 'checked' : '' ?> style="width:18px;height:18px;"> แพลนเนอร์ (กิจกรรมใหม่)</label>
+                    <label class="flex items-center gap-2" style="cursor:pointer;"><input type="checkbox" name="tg_events[]" value="focus" <?= $isTgEnabled('focus') ? 'checked' : '' ?> style="width:18px;height:18px;"> โฟกัส (เมื่อสิ้นสุดเวลา)</label>
+                    <label class="flex items-center gap-2" style="cursor:pointer;"><input type="checkbox" name="tg_events[]" value="subscription" <?= $isTgEnabled('subscription') ? 'checked' : '' ?> style="width:18px;height:18px;"> การแจ้งเตือน (เมื่อสร้างใหม่)</label>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid var(--color-border); justify-content: space-between;">
+            <div>
+                <button class="btn btn-ghost" id="btnTestTelegram">ทดสอบส่งข้อความ</button>
+                <button class="btn btn-ghost" id="btnTestCron" style="color:var(--color-primary)">ทดสอบรัน Cron</button>
+            </div>
+            <button class="btn btn-primary" id="btnSaveTelegram">บันทึกตั้งค่า Telegram</button>
         </div>
     </div>
 </div>

@@ -4,6 +4,7 @@
 // =====================================================
 
 require_once ROOT . '/models/Task.php';
+require_once ROOT . '/core/TelegramService.php';
 
 class TaskController
 {
@@ -80,6 +81,18 @@ class TaskController
 
         Task::update($taskId, $userId, $data);
         $updated = Task::getById($taskId, $userId);
+        
+        if (isset($data['status']) && $data['status'] === 'done' && $task['status'] !== 'done') {
+            $msg = TelegramService::formatMessage(
+                "✅ งานส่วนตัวเสร็จสมบูรณ์",
+                [
+                    'ชื่องาน' => htmlspecialchars($task['title'])
+                ],
+                'เสร็จสิ้น'
+            );
+            TelegramService::sendNotification($userId, 'task', $msg);
+        }
+
         Response::json(['ok' => true, 'task' => $updated]);
     }
 

@@ -172,6 +172,9 @@ class Router
         $this->add('POST', '/api/settings/theme',    'SettingsController', 'apiTheme',    true);
         $this->add('POST', '/api/settings/timezone', 'SettingsController', 'apiTimezone', true);
         $this->add('POST', '/api/settings/menus',    'SettingsController', 'apiMenus',    true);
+        $this->add('POST', '/api/settings/telegram', 'SettingsController', 'apiTelegram', true);
+        $this->add('POST', '/api/settings/telegram/test', 'SettingsController', 'apiTelegramTest', true);
+        $this->add('POST', '/api/settings/telegram/cron', 'SettingsController', 'apiCronTest', true);
         $this->add('GET',  '/api/settings/export',   'SettingsController', 'apiExport',   true);
         $this->add('POST', '/api/settings/import',   'SettingsController', 'apiImport',   true);
         $this->add('POST', '/api/settings/delete',   'SettingsController', 'apiDeleteAccount', true);

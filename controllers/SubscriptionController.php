@@ -4,6 +4,7 @@
 // =====================================================
 
 require_once ROOT . '/models/Subscription.php';
+require_once ROOT . '/core/TelegramService.php';
 
 class SubscriptionController
 {
@@ -32,6 +33,18 @@ class SubscriptionController
 
         $id  = Subscription::create($userId, $data);
         $sub = Subscription::getById($id, $userId);
+        
+        $startDate = TelegramService::formatThaiDate($data['next_due_date']);
+        $msg = TelegramService::formatMessage(
+            "🔔 เพิ่มการแจ้งเตือนบิลใหม่",
+            [
+                'รายการ' => htmlspecialchars($data['name']),
+                'เริ่มชำระ' => $startDate,
+                'รอบบิล' => $data['billing_cycle'] == 'monthly' ? 'รายเดือน' : 'รายปี'
+            ]
+        );
+        TelegramService::sendNotification($userId, 'subscription', $msg);
+
         Response::json(['ok' => true, 'subscription' => $sub], 201);
     }
 

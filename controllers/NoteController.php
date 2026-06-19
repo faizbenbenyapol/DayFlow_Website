@@ -5,6 +5,7 @@
 
 require_once ROOT . '/models/Note.php';
 require_once ROOT . '/models/NoteBlock.php';
+require_once ROOT . '/core/TelegramService.php';
 
 class NoteController
 {
@@ -62,6 +63,15 @@ class NoteController
 
         $id = Note::create($userId, $title, $encrypted, $password);
         $note = Note::getById($id, $userId);
+        $msg = TelegramService::formatMessage(
+            "📝 โน้ตใหม่ถูกสร้างขึ้น",
+            [
+                'หัวข้อ' => htmlspecialchars($title),
+                'ประเภท' => $encrypted ? 'เข้ารหัส' : 'ปกติ'
+            ]
+        );
+        TelegramService::sendNotification($userId, 'note', $msg);
+
         Response::json(['ok' => true, 'note' => $note], 201);
     }
 

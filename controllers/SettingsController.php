@@ -136,6 +136,55 @@ class SettingsController
         Response::json(['ok' => true, 'hidden_menus' => $hiddenMenus]);
     }
 
+    public function apiTelegram(): void
+    {
+        $userId = Auth::userId();
+        $botToken = Request::input('telegram_bot_token', '');
+        $chatId = Request::input('telegram_chat_id', '');
+        
+        $notifyEvents = Request::input('telegram_notify_events', []);
+        $jsonEvents = empty($notifyEvents) ? null : json_encode($notifyEvents);
+
+        User::updateTelegramSettings($userId, $botToken, $chatId, $jsonEvents);
+        Response::json(['ok' => true]);
+    }
+
+    public function apiTelegramTest(): void
+    {
+        $botToken = Request::input('telegram_bot_token', '');
+        $chatId = Request::input('telegram_chat_id', '');
+
+        if (empty($botToken) || empty($chatId)) {
+            Response::json(['error' => 'กรุณากรอก Bot Token และ Chat ID ก่อนทดสอบ'], 422);
+        }
+
+        require_once ROOT . '/core/TelegramService.php';
+        $msg = TelegramService::formatMessage(
+            "✅ การทดสอบระบบแจ้งเตือน",
+            [
+                'บริการ' => 'Telegram Bot',
+                'การเชื่อมต่อ' => 'สำเร็จ'
+            ],
+            'พร้อมใช้งาน'
+        );
+        $success = TelegramService::sendMessage($botToken, $chatId, $msg);
+
+        if ($success) {
+            Response::json(['ok' => true]);
+        } else {
+            Response::json(['error' => 'ส่งข้อความไม่สำเร็จ กรุณาตรวจสอบ Token และ Chat ID อีกครั้ง'], 500);
+        }
+    }
+
+    public function apiCronTest(): void
+    {
+        ob_start();
+        require_once ROOT . '/cron.php';
+        $output = ob_get_clean();
+
+        Response::json(['ok' => true, 'output' => $output]);
+    }
+
     public function apiExport(): void
     {
         $userId = Auth::userId();

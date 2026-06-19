@@ -5,6 +5,7 @@
 
 require_once ROOT . '/models/FocusSession.php';
 require_once ROOT . '/models/Task.php';
+require_once ROOT . '/core/TelegramService.php';
 
 class FocusController
 {
@@ -92,6 +93,15 @@ class FocusController
         ];
 
         $sessionId = FocusSession::create($userId, $data);
+
+        $msg = TelegramService::formatMessage(
+            "🍅 สิ้นสุดเซสชันโฟกัส",
+            [
+                'กิจกรรม' => htmlspecialchars($title),
+                'ระยะเวลา' => "{$duration} นาที"
+            ]
+        );
+        TelegramService::sendNotification($userId, 'focus', $msg);
 
         Response::json([
             'ok' => true,

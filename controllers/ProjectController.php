@@ -8,6 +8,7 @@ require_once ROOT . '/models/ProjectTask.php';
 require_once ROOT . '/models/ProjectActivity.php';
 require_once ROOT . '/models/ProjectMember.php';
 require_once ROOT . '/models/ProjectChat.php';
+require_once ROOT . '/core/TelegramService.php';
 
 class ProjectController
 {
@@ -108,13 +109,23 @@ class ProjectController
         $data = [
             'name'        => $name,
             'description' => Request::input('description', ''),
-            'status'      => Request::input('status', 'Planning'),
-            'priority'    => Request::input('priority', 'Medium'),
+            'status'      => $status,
+            'priority'    => $priority,
             'due_date'    => Request::input('due_date', '')
         ];
 
         $projectId = Project::create($userId, $data);
         ProjectActivity::log($projectId, $userId, 'สร้างโปรเจคใหม่: "' . $name . '"');
+
+        $msg = TelegramService::formatMessage(
+            "📁 โปรเจคใหม่ถูกสร้างขึ้น",
+            [
+                'ชื่อโปรเจค' => htmlspecialchars($name),
+                'สถานะ' => $status,
+                'ความสำคัญ' => $priority
+            ]
+        );
+        TelegramService::sendNotification($userId, 'project', $msg);
 
         Response::json(['ok' => true, 'id' => $projectId], 201);
     }
@@ -301,6 +312,19 @@ class ProjectController
                 $actText .= ' (' . implode(', ', $changes) . ')';
             }
             ProjectActivity::log($task['project_id'], $userId, $actText);
+
+            // Send notification if task is marked as Done
+            if (isset($data['status']) && $data['status'] === 'Done' && $task['status'] !== 'Done') {
+                $msg = TelegramService::formatMessage(
+                    "✅ งานในโปรเจคเสร็จสมบูรณ์",
+                    [
+                        'ชื่องาน' => htmlspecialchars($task['title']),
+                        'รหัสโปรเจค' => $task['project_id']
+                    ],
+                    'เสร็จสิ้น'
+                );
+                TelegramService::sendNotification($userId, 'task', $msg);
+            }
 
             Response::json(['ok' => true]);
         } else {
