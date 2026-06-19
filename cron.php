@@ -4,7 +4,7 @@
 // Run this file via CLI or Web URL (Cron Job)
 // =====================================================
 
-define('ROOT', __DIR__);
+if (!defined('ROOT')) define('ROOT', __DIR__);
 
 require_once ROOT . '/config/config.php';
 require_once ROOT . '/config/database.php';
@@ -32,7 +32,7 @@ $users = DB::run("
 
 if (empty($users)) {
     echo "No users configured for Telegram.\n";
-    exit;
+    return;
 }
 
 $today = date('Y-m-d');
