@@ -96,6 +96,17 @@ class User
 
     public static function getSettings(int $userId): array
     {
+        try {
+            DB::run('SELECT telegram_bot_token FROM user_settings LIMIT 1');
+        } catch (\Exception $e) {
+            try {
+                DB::run('ALTER TABLE user_settings ADD COLUMN telegram_bot_token VARCHAR(255) DEFAULT NULL');
+                DB::run('ALTER TABLE user_settings ADD COLUMN telegram_chat_id VARCHAR(100) DEFAULT NULL');
+                DB::run('ALTER TABLE user_settings ADD COLUMN telegram_notify_events JSON DEFAULT NULL');
+            } catch (\Exception $e2) {
+                // Ignore if they already exist but threw for some other reason
+            }
+        }
         $stmt = DB::run('SELECT * FROM user_settings WHERE user_id = ?', [$userId]);
         return $stmt->fetch() ?: ['user_id' => $userId, 'theme' => 'light', 'timezone' => 'Asia/Bangkok'];
     }
