@@ -207,6 +207,45 @@ class Stock
             return $bv <=> $av;
         });
 
+
+        // Calculate Net Capital Flows per currency
+        $flows = DB::run('SELECT * FROM stock_capital_flows WHERE user_id = ?', [$userId])->fetchAll();
+        $netFlows = [];
+        foreach ($flows as $f) {
+            $cur = strtoupper($f['currency']);
+            if (!isset($netFlows[$cur])) $netFlows[$cur] = 0.0;
+            if ($f['flow_type'] === 'deposit') {
+                $netFlows[$cur] += (float)$f['amount'];
+            } else {
+                $netFlows[$cur] -= (float)$f['amount'];
+            }
+        }
+
+        // Calculate Cash Effects from stock transactions per currency
+        $cashEffects = [];
+        foreach ($txns as $t) {
+            $cur = strtoupper($t['currency']);
+            if (!isset($cashEffects[$cur])) $cashEffects[$cur] = 0.0;
+            $val = (float)$t['quantity'] * (float)$t['price'];
+            $fee = (float)$t['fee'];
+            if ($t['side'] === 'buy') {
+                $cashEffects[$cur] -= ($val + $fee);
+            } else {
+                $cashEffects[$cur] += ($val - $fee);
+            }
+        }
+
+        $allCurs = array_unique(array_merge(array_keys($netFlows), array_keys($cashEffects)));
+        $capital = [];
+        foreach ($allCurs as $cur) {
+            $net = $netFlows[$cur] ?? 0.0;
+            $eff = $cashEffects[$cur] ?? 0.0;
+            $capital[$cur] = [
+                'net_capital'  => round($net, 2),
+                'cash_balance' => round($net + $eff, 2),
+            ];
+        }
+
         return [
             'holdings' => $holdings,
             'totals' => [
@@ -215,6 +254,7 @@ class Stock
                 'unrealized_pl' => round($totUnreal, 2),
                 'realized_pl'   => round($totRealized, 2),
                 'total_pl'      => round($totUnreal + $totRealized, 2),
+                'capital'       => $capital,
             ],
         ];
     }
@@ -381,5 +421,104 @@ class Stock
             'p_fcf_ratio' => $pFcf,
             'eps'         => $eps,
         ];
+    }
+
+    // ============================================================
+    // CAPITAL FLOWS
+    // ============================================================
+    public static function listCapitalFlows(int $userId): array
+    {
+        return DB::run(
+            'SELECT * FROM stock_capital_flows WHERE user_id = ? ORDER BY flow_date DESC, id DESC',
+            [$userId]
+        )->fetchAll();
+    }
+
+    public static function getCapitalFlowById(int $id, int $userId): ?array
+    {
+        return DB::run(
+            'SELECT * FROM stock_capital_flows WHERE id = ? AND user_id = ?',
+            [$id, $userId]
+        )->fetch() ?: null;
+    }
+
+    public static function createCapitalFlow(int $userId, array $data): int
+    {
+        DB::run(
+            'INSERT INTO stock_capital_flows (user_id, flow_type, amount, currency, flow_date, notes)
+             VALUES (?, ?, ?, ?, ?, ?)',
+            [
+                $userId,
+                $data['flow_type'],
+                (float)$data['amount'],
+                strtoupper($data['currency'] ?? 'THB'),
+                $data['flow_date'],
+                $data['notes'] ?? null
+            ]
+        );
+        return (int)DB::conn()->lastInsertId();
+    }
+
+    public static function updateCapitalFlow(int $id, int $userId, array $data): bool
+    {
+        return DB::run(
+            'UPDATE stock_capital_flows
+             SET flow_type = ?, amount = ?, currency = ?, flow_date = ?, notes = ?
+             WHERE id = ? AND user_id = ?',
+            [
+                $data['flow_type'],
+                (float)$data['amount'],
+                strtoupper($data['currency'] ?? 'THB'),
+                $data['flow_date'],
+                $data['notes'] ?? null,
+                $id,
+                $userId
+            ]
+        )->rowCount() >= 0;
+    }
+
+    public static function deleteCapitalFlow(int $id, int $userId): bool
+    {
+        return DB::run(
+            'DELETE FROM stock_capital_flows WHERE id = ? AND user_id = ?',
+            [$id, $userId]
+        )->rowCount() > 0;
+    }
+
+    // ============================================================
+    // SCREENSHOTS
+    // ============================================================
+    public static function listScreenshots(int $userId): array
+    {
+        return DB::run(
+            'SELECT * FROM stock_screenshots WHERE user_id = ? ORDER BY id DESC',
+            [$userId]
+        )->fetchAll();
+    }
+
+    public static function getScreenshotById(int $id, int $userId): ?array
+    {
+        return DB::run(
+            'SELECT * FROM stock_screenshots WHERE id = ? AND user_id = ?',
+            [$id, $userId]
+        )->fetch() ?: null;
+    }
+
+    public static function createScreenshot(int $userId, string $name, string $filePath, int $fileSize, ?string $mimeType, ?string $description): int
+    {
+        DB::run(
+            'INSERT INTO stock_screenshots (user_id, name, file_path, file_size, mime_type, description)
+             VALUES (?, ?, ?, ?, ?, ?)',
+            [$userId, $name, $filePath, $fileSize, $mimeType, $description]
+        );
+        return (int)DB::conn()->lastInsertId();
+    }
+
+    public static function deleteScreenshot(int $id, int $userId): bool
+    {
+        return DB::run(
+            'DELETE FROM stock_screenshots WHERE id = ? AND user_id = ?',
+            [$id, $userId]
+        )->rowCount() > 0;
     }
 }

@@ -2,13 +2,16 @@
    stocks.js — Stock Portfolio Tracker
 ===================================================== */
 
-let stockTxns     = [];
-let stockHoldings = [];
+let stockTxns       = [];
+let stockHoldings   = [];
 let stockWatchlists = [];
-let stockTotals   = {};
-let editingStockId = null;
-let stkValueChart  = null;
-let stkPlChart     = null;
+let stockTotals     = {};
+let stockCapitalFlows = [];
+let stockScreenshots = [];
+let editingStockId  = null;
+let editingCapitalId = null;
+let stkValueChart   = null;
+let stkPlChart      = null;
 let stkAutoRefreshed = false;
 
 const THAI_MONTHS_SHORT_STK = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.',
@@ -17,12 +20,15 @@ const THAI_MONTHS_SHORT_STK = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.'
 document.addEventListener('DOMContentLoaded', async function () {
     initStockTabs();
     initMainTabs();
+    initDropzone();
     const year = document.getElementById('stkChartYear')?.value;
     await Promise.all([
         loadStockPortfolio(),
         loadStockWatchlists(),
         loadStockTransactions(),
         loadStockChart(year),
+        loadCapitalFlows(),
+        loadScreenshots(),
     ]);
     // Auto-refresh prices if oldest fetch >15 min ago, or if any holding lacks price
     maybeAutoRefresh();
@@ -96,6 +102,46 @@ function renderStockSummary() {
     if (rl) {
         rl.textContent = (t.realized_pl >= 0 ? '+' : '') + formatMoney(t.realized_pl || 0);
         rl.className = 'stk-stat-amount ' + ((t.realized_pl || 0) >= 0 ? 'pl-pos' : 'pl-neg');
+    }
+
+    // Render capital stats
+    const cap = t.capital || {};
+    
+    const capNetTHB = document.getElementById('capNetTHB');
+    const capCashTHB = document.getElementById('capCashTHB');
+    const capNetUSD = document.getElementById('capNetUSD');
+    const capCashUSD = document.getElementById('capCashUSD');
+
+    const sideNetTHB = document.getElementById('sideNetTHB');
+    const sideCashTHB = document.getElementById('sideCashTHB');
+
+    if (capNetTHB) {
+        const netTHB = cap.THB ? cap.THB.net_capital : 0;
+        capNetTHB.textContent = formatMoney(netTHB) + ' THB';
+    }
+    if (capCashTHB) {
+        const cashTHB = cap.THB ? cap.THB.cash_balance : 0;
+        capCashTHB.textContent = formatMoney(cashTHB) + ' THB';
+        capCashTHB.className = 'stk-cap-val ' + (cashTHB >= 0 ? 'stk-day-pos' : 'stk-day-neg');
+    }
+    if (sideNetTHB) {
+        const netTHB = cap.THB ? cap.THB.net_capital : 0;
+        sideNetTHB.textContent = formatMoney(netTHB) + ' THB';
+    }
+    if (sideCashTHB) {
+        const cashTHB = cap.THB ? cap.THB.cash_balance : 0;
+        sideCashTHB.textContent = formatMoney(cashTHB) + ' THB';
+        sideCashTHB.className = 'stk-sidebar-value ' + (cashTHB >= 0 ? 'stk-day-pos' : 'stk-day-neg');
+    }
+
+    if (capNetUSD) {
+        const netUSD = cap.USD ? cap.USD.net_capital : 0;
+        capNetUSD.textContent = '$' + formatMoney(netUSD) + ' USD';
+    }
+    if (capCashUSD) {
+        const cashUSD = cap.USD ? cap.USD.cash_balance : 0;
+        capCashUSD.textContent = '$' + formatMoney(cashUSD) + ' USD';
+        capCashUSD.className = 'stk-cap-val ' + (cashUSD >= 0 ? 'stk-day-pos' : 'stk-day-neg');
     }
 
     // Refreshed-at label
@@ -457,7 +503,7 @@ function renderStockTxnList() {
                 <td class="stk-num">${formatMoney(t.price)} ${escHtmlStk(t.currency)}</td>
                 <td class="stk-num">${formatMoney(t.fee)}</td>
                 <td class="stk-num">${formatMoney(value)}</td>
-                <td>
+                <td class="mode-readonly-hide">
                     <button class="btn-link" onclick="openEditStock(${t.id})">แก้ไข</button>
                 </td>
             </tr>`;
@@ -1068,3 +1114,315 @@ function renderStockAnalysisResult(data) {
     // Add micro-animation scroll into view
     container.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+
+/* ============================================================
+   CAPITAL FLOWS
+   ============================================================ */
+
+async function loadCapitalFlows() {
+    try {
+        const data = await apiFetch(BASE_URL + '/api/stocks/capital');
+        stockCapitalFlows = data.flows || [];
+        renderCapitalList();
+    } catch (err) {
+        toast(err.message || 'โหลดข้อมูลเงินลงทุนไม่สำเร็จ', 'danger');
+    }
+}
+
+function renderCapitalList() {
+    const tbody = document.getElementById('stkCapitalList');
+    if (!tbody) return;
+
+    if (!stockCapitalFlows.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted" style="padding:2rem">ไม่มีรายการเงินลงทุน</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = stockCapitalFlows.map(f => {
+        const typeBadge = f.flow_type === 'deposit'
+            ? '<span class="stk-side-buy">เติมเงิน</span>'
+            : '<span class="stk-side-sell">ถอนเงิน</span>';
+        
+        return `
+            <tr>
+                <td class="text-sm">${escHtmlStk(formatDate(f.flow_date))}</td>
+                <td>${typeBadge}</td>
+                <td class="stk-num" style="font-weight:700">${formatMoney(f.amount)}</td>
+                <td>${escHtmlStk(f.currency)}</td>
+                <td class="text-sm">${escHtmlStk(f.notes || '—')}</td>
+                <td class="mode-readonly-hide">
+                    <button class="btn-link" onclick="openEditCapital(${f.id})">แก้ไข</button>
+                </td>
+            </tr>`;
+    }).join('');
+}
+
+function openAddCapital() {
+    editingCapitalId = null;
+    document.getElementById('capitalModalTitle').textContent = 'บันทึกรายการเงินลงทุน';
+    document.getElementById('editCapitalId').value = '';
+    document.getElementById('capType').value = 'deposit';
+    document.getElementById('capCurrency').value = 'THB';
+    document.getElementById('capAmount').value = '';
+    document.getElementById('capDate').value = todayISO();
+    document.getElementById('capNotes').value = '';
+    document.getElementById('deleteCapitalBtn').style.display = 'none';
+    openModal('capitalModal');
+}
+
+function openEditCapital(id) {
+    const f = stockCapitalFlows.find(x => x.id === id);
+    if (!f) return;
+    editingCapitalId = id;
+    document.getElementById('capitalModalTitle').textContent = 'แก้ไขรายการเงินลงทุน';
+    document.getElementById('editCapitalId').value = id;
+    document.getElementById('capType').value = f.flow_type;
+    document.getElementById('capCurrency').value = f.currency;
+    document.getElementById('capAmount').value = f.amount;
+    document.getElementById('capDate').value = f.flow_date;
+    document.getElementById('capNotes').value = f.notes || '';
+    document.getElementById('deleteCapitalBtn').style.display = '';
+    openModal('capitalModal');
+}
+
+async function saveCapital() {
+    const body = {
+        flow_type: document.getElementById('capType').value,
+        currency:  document.getElementById('capCurrency').value,
+        amount:    document.getElementById('capAmount').value,
+        flow_date: document.getElementById('capDate').value,
+        notes:     document.getElementById('capNotes').value,
+    };
+
+    if (!body.amount || parseFloat(body.amount) <= 0) {
+        toast('กรุณากรอกจำนวนเงินที่ถูกต้อง', 'danger'); return;
+    }
+    if (!body.flow_date) {
+        toast('กรุณาเลือกวันที่', 'danger'); return;
+    }
+
+    try {
+        const url = editingCapitalId
+            ? BASE_URL + '/api/stocks/capital/' + editingCapitalId
+            : BASE_URL + '/api/stocks/capital';
+        const method = editingCapitalId ? 'PUT' : 'POST';
+        await apiFetch(url, { method, body: JSON.stringify(body) });
+        closeModal('capitalModal');
+        await Promise.all([
+            loadStockPortfolio(),
+            loadCapitalFlows()
+        ]);
+        toast('บันทึกเรียบร้อยแล้ว');
+    } catch (err) {
+        toast(err.message || 'บันทึกไม่สำเร็จ', 'danger');
+    }
+}
+
+async function deleteCapital() {
+    if (!editingCapitalId) return;
+    if (!await confirmAction('ต้องการลบรายการเงินลงทุนนี้?', 'ลบ')) return;
+    try {
+        await apiFetch(BASE_URL + '/api/stocks/capital/' + editingCapitalId, { method: 'DELETE' });
+        closeModal('capitalModal');
+        await Promise.all([
+            loadStockPortfolio(),
+            loadCapitalFlows()
+        ]);
+        toast('ลบเรียบร้อยแล้ว');
+    } catch (err) {
+        toast(err.message || 'ลบไม่สำเร็จ', 'danger');
+    }
+}
+
+/* ============================================================
+   SCREENSHOTS
+   ============================================================ */
+
+async function loadScreenshots() {
+    try {
+        const data = await apiFetch(BASE_URL + '/api/stocks/screenshots');
+        stockScreenshots = data.screenshots || [];
+        renderScreenshotsGrid();
+    } catch (err) {
+        toast(err.message || 'โหลดรูปภาพไม่สำเร็จ', 'danger');
+    }
+}
+
+function renderScreenshotsGrid() {
+    const grid = document.getElementById('stkScreenshotsGrid');
+    if (!grid) {
+        renderSidebarScreenshot();
+        return;
+    }
+
+    if (!stockScreenshots.length) {
+        grid.innerHTML = '<div class="text-center text-muted" style="grid-column: 1/-1; padding:3rem 1rem;">ไม่มีรูปภาพพอร์ตแนบไว้</div>';
+        renderSidebarScreenshot();
+        return;
+    }
+
+    grid.innerHTML = stockScreenshots.map(s => {
+        const dateStr = formatDateTime(s.created_at);
+        const imgSrc = BASE_URL + '/uploads/' + s.file_path;
+        return `
+            <div class="stk-screenshot-card">
+                <div class="stk-screenshot-img-wrap" onclick="viewLightbox(${s.id})">
+                    <img class="stk-screenshot-img" src="${imgSrc}" alt="${escHtmlStk(s.name)}">
+                    <div class="stk-screenshot-overlay">
+                        <button class="stk-screenshot-btn btn-del mode-readonly-hide" onclick="event.stopPropagation(); deleteScreenshot(${s.id})" title="ลบรูปภาพ">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="stk-screenshot-info">
+                    <div class="stk-screenshot-name" title="${escHtmlStk(s.name)}">${escHtmlStk(s.name)}</div>
+                    <div class="stk-screenshot-desc">${escHtmlStk(s.description || 'ไม่มีคำอธิบาย')}</div>
+                    <div class="stk-screenshot-date">อัปโหลดเมื่อ ${escHtmlStk(dateStr)}</div>
+                </div>
+            </div>`;
+    }).join('');
+
+    renderSidebarScreenshot();
+}
+
+function renderSidebarScreenshot() {
+    const container = document.getElementById('sideScreenshotContainer');
+    if (!container) return;
+
+    if (!stockScreenshots.length) {
+        container.innerHTML = '<div class="text-center text-muted py-6">ไม่มีรูปภาพพอร์ตแนบไว้</div>';
+        return;
+    }
+
+    const s = stockScreenshots[0];
+    const imgSrc = BASE_URL + '/uploads/' + s.file_path;
+    const dateStr = formatDateTime(s.created_at);
+
+    if (IS_READ_ONLY) {
+        container.innerHTML = `
+            <div class="stk-share-img-wrap">
+                <img class="stk-share-img" src="${imgSrc}" alt="${escHtmlStk(s.name)}">
+            </div>
+            <div class="mt-4" style="text-align: left;">
+                <div class="stk-screenshot-name" style="font-size:0.9rem;" title="${escHtmlStk(s.name)}">${escHtmlStk(s.name)}</div>
+                <div class="stk-screenshot-desc" style="font-size:0.8rem; height:auto; margin-bottom:4px; white-space: pre-wrap;">${escHtmlStk(s.description || 'ไม่มีคำอธิบาย')}</div>
+                <div class="text-xs text-muted">อัปโหลดเมื่อ ${escHtmlStk(dateStr)}</div>
+            </div>
+        `;
+    } else {
+        container.innerHTML = `
+            <div class="stk-sidebar-thumb-wrap" onclick="viewLightbox(${s.id})">
+                <img class="stk-sidebar-thumb" src="${imgSrc}" alt="${escHtmlStk(s.name)}">
+                <div class="stk-sidebar-thumb-overlay">
+                    <span>คลิกเพื่อดูรูปภาพขนาดเต็ม</span>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="stk-screenshot-name" style="font-size:0.85rem;" title="${escHtmlStk(s.name)}">${escHtmlStk(s.name)}</div>
+                <div class="stk-screenshot-desc" style="font-size:0.75rem; height:auto; margin-bottom:4px;">${escHtmlStk(s.description || 'ไม่มีคำอธิบาย')}</div>
+                <div class="text-xs text-muted">อัปโหลดเมื่อ ${escHtmlStk(dateStr)}</div>
+            </div>
+        `;
+    }
+}
+
+async function uploadScreenshot(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    let description = '';
+    if (window.Swal) {
+        const { value: text } = await Swal.fire({
+            title: 'คำอธิบายรูปภาพ',
+            input: 'text',
+            inputLabel: 'กรอกคำอธิบายสำหรับภาพนี้ (ไม่ระบุก็ได้)',
+            inputPlaceholder: 'เช่น พอร์ตประจำเดือนมิถุนายน, Dime พอร์ตแรก...',
+            showCancelButton: true,
+            confirmButtonText: 'อัปโหลด',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#8b5cf6',
+        });
+        if (text === undefined) {
+            input.value = '';
+            return;
+        }
+        description = text || '';
+    } else {
+        description = prompt('กรอกคำอธิบายสำหรับรูปภาพนี้:') || '';
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('description', description);
+
+    try {
+        const res = await apiFetch(BASE_URL + '/api/stocks/screenshots', {
+            method: 'POST',
+            body: formData
+        });
+        toast('อัปโหลดสำเร็จ');
+        await loadScreenshots();
+    } catch (err) {
+        toast(err.message || 'เกิดข้อผิดพลาดในการอัปโหลด', 'danger');
+    } finally {
+        input.value = '';
+    }
+}
+
+async function deleteScreenshot(id) {
+    if (!await confirmAction('ต้องการลบรูปภาพนี้?', 'ลบ')) return;
+    try {
+        await apiFetch(BASE_URL + '/api/stocks/screenshots/' + id, { method: 'DELETE' });
+        await loadScreenshots();
+        toast('ลบรูปภาพสำเร็จ');
+    } catch (err) {
+        toast(err.message || 'ลบรูปภาพไม่สำเร็จ', 'danger');
+    }
+}
+
+function viewLightbox(id) {
+    const s = stockScreenshots.find(x => x.id === id);
+    if (!s) return;
+    const title = document.getElementById('lightboxTitle');
+    const img = document.getElementById('lightboxImage');
+    const desc = document.getElementById('lightboxDesc');
+    
+    if (title) title.textContent = s.name;
+    if (img) img.src = BASE_URL + '/uploads/' + s.file_path;
+    if (desc) desc.textContent = s.description || 'ไม่มีคำอธิบาย';
+    
+    openModal('screenshotLightboxModal');
+}
+
+function initDropzone() {
+    const dropzone = document.getElementById('stkDropzone');
+    if (!dropzone) return;
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            dropzone.classList.add('active');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('active');
+        }, false);
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        const fileInput = document.getElementById('stkFileSelect');
+        if (files.length && fileInput) {
+            // Programmatically assign files to input
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(files[0]);
+            fileInput.files = dataTransfer.files;
+            uploadScreenshot(fileInput);
+        }
+    }, false);
+}
+

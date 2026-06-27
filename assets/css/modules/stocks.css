@@ -1033,3 +1033,344 @@ td.stk-num { font-variant-numeric: tabular-nums; text-align: right; }
     font-weight: 700;
 }
 
+/* ── Capital Flow Dashboard & Cards ── */
+.stk-capital-dashboard {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-5);
+}
+@media (max-width: 768px) {
+    .stk-capital-dashboard {
+        grid-template-columns: 1fr;
+    }
+}
+.stk-cap-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    border-top: 3px solid var(--color-accent);
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition), box-shadow var(--transition);
+}
+.stk-cap-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+.stk-cap-card:nth-child(1) { border-top-color: #0ea5e9; } /* THB */
+.stk-cap-card:nth-child(2) { border-top-color: #8b5cf6; } /* USD */
+
+.stk-cap-header {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-text);
+    margin-bottom: var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: var(--space-2);
+}
+
+.stk-cap-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+}
+
+.stk-cap-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stk-cap-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    letter-spacing: 0.05em;
+}
+
+.stk-cap-val {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-text);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Screenshot Uploader & Gallery ── */
+.stk-dropzone {
+    border: 2px dashed var(--color-border);
+    background: var(--color-surface);
+    border-radius: var(--radius-xl);
+    padding: var(--space-8) var(--space-5);
+    text-align: center;
+    cursor: pointer;
+    transition: border-color var(--transition), background-color var(--transition);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.stk-dropzone:hover {
+    border-color: var(--color-accent);
+    background: var(--color-surface-2, rgba(0,0,0,0.01));
+}
+.stk-dropzone-text {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 4px;
+}
+.stk-dropzone-text span {
+    color: var(--color-accent);
+    text-decoration: underline;
+}
+.stk-dropzone-sub {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+}
+
+.stk-screenshots-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--space-5);
+}
+
+.stk-screenshot-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    position: relative;
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+    display: flex;
+    flex-direction: column;
+}
+.stk-screenshot-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-border-2);
+}
+
+.stk-screenshot-img-wrap {
+    width: 100%;
+    height: 180px;
+    background: #1e1e24;
+    overflow: hidden;
+    position: relative;
+}
+
+.stk-screenshot-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+    cursor: pointer;
+}
+.stk-screenshot-card:hover .stk-screenshot-img {
+    transform: scale(1.05);
+}
+
+.stk-screenshot-overlay {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    background: rgba(0,0,0,0.4);
+    opacity: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s ease;
+    gap: var(--space-3);
+    pointer-events: none; /* Make overlay click-through so image click works */
+}
+.stk-screenshot-img-wrap:hover .stk-screenshot-overlay {
+    opacity: 1;
+}
+
+/* Enable pointer events specifically for the delete button inside the overlay */
+.stk-screenshot-overlay button {
+    pointer-events: auto;
+}
+
+.stk-screenshot-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: white;
+    color: #1d1d1f;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+.stk-screenshot-btn:hover {
+    transform: scale(1.1);
+}
+.stk-screenshot-btn.btn-del {
+    background: #ef4444;
+    color: white;
+}
+
+.stk-screenshot-info {
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.stk-screenshot-name {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.stk-screenshot-desc {
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    line-height: 1.4;
+    margin-bottom: 8px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    height: 2.8em;
+}
+
+.stk-screenshot-date {
+    font-size: 0.7rem;
+    color: var(--color-muted);
+    margin-top: auto;
+    border-top: 1px solid var(--color-border);
+    padding-top: var(--space-2);
+}
+
+/* ── Main Layout with Sidebar ── */
+.stk-main-layout {
+    display: grid;
+    grid-template-columns: 2.8fr 1.2fr;
+    gap: var(--space-6);
+    align-items: start;
+    margin-bottom: var(--space-8);
+}
+
+.stk-main-content {
+    min-width: 0; /* Prevents flex/grid children from overflow */
+}
+
+.stk-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+    .stk-main-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Sidebar Specific Styles */
+.stk-sidebar-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.stk-sidebar-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-muted);
+}
+.stk-sidebar-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-text);
+    font-variant-numeric: tabular-nums;
+}
+.stk-sidebar-value.stk-day-pos {
+    color: #16a34a;
+}
+.stk-sidebar-value.stk-day-neg {
+    color: #dc2626;
+}
+
+/* Sidebar Screenshot Thumbnail styling */
+.stk-sidebar-thumb-wrap {
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: #1e1e24;
+    height: 200px;
+    cursor: pointer;
+    border: 1px solid var(--color-border);
+    transition: transform var(--transition), box-shadow var(--transition);
+}
+.stk-sidebar-thumb-wrap:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+.stk-sidebar-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+.stk-sidebar-thumb-wrap:hover .stk-sidebar-thumb {
+    transform: scale(1.03);
+}
+.stk-sidebar-thumb-overlay {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    background: rgba(0,0,0,0.3);
+    opacity: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: opacity 0.2s ease;
+}
+.stk-sidebar-thumb-wrap:hover .stk-sidebar-thumb-overlay {
+    opacity: 1;
+}
+
+/* ── Shared Mode Layout ── */
+.stk-share-layout {
+    min-width: 0;
+}
+.stk-share-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1.8fr;
+    gap: var(--space-6);
+    align-items: start;
+    margin-bottom: var(--space-8);
+}
+@media (max-width: 1024px) {
+    .stk-share-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.stk-share-img-wrap {
+    width: 100%;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+    background: #1e1e24;
+    box-shadow: var(--shadow-sm);
+}
+.stk-share-img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+

@@ -643,4 +643,173 @@ class StocksController
         if (!is_array($data)) throw new \RuntimeException('ตอบกลับไม่ใช่ JSON');
         return $data;
     }
+
+    // ============================================================
+    // CAPITAL FLOWS
+    // ============================================================
+
+    public function apiCapitalList(): void
+    {
+        $userId = Auth::userId();
+        Response::json(['flows' => Stock::listCapitalFlows($userId)]);
+    }
+
+    public function apiCapitalCreate(): void
+    {
+        $userId = Auth::userId();
+        $data   = $this->validateCapitalData();
+        if (isset($data['error'])) Response::json(['error' => $data['error']], 422);
+
+        $id   = Stock::createCapitalFlow($userId, $data);
+        $flow = Stock::getCapitalFlowById($id, $userId);
+        Response::json(['ok' => true, 'flow' => $flow], 201);
+    }
+
+    public function apiCapitalUpdate(string $id): void
+    {
+        $userId = Auth::userId();
+        $flowId = (int)$id;
+        $flow   = Stock::getCapitalFlowById($flowId, $userId);
+        if (!$flow) Response::json(['error' => 'ไม่พบรายการ'], 404);
+
+        $data = $this->validateCapitalData();
+        if (isset($data['error'])) Response::json(['error' => $data['error']], 422);
+
+        Stock::updateCapitalFlow($flowId, $userId, $data);
+        Response::json(['ok' => true]);
+    }
+
+    public function apiCapitalDelete(string $id): void
+    {
+        $userId = Auth::userId();
+        if (!Stock::deleteCapitalFlow((int)$id, $userId)) {
+            Response::json(['error' => 'ไม่พบรายการ'], 404);
+        }
+        Response::json(['ok' => true]);
+    }
+
+    private function validateCapitalData(): array
+    {
+        $type     = Request::input('flow_type', 'deposit');
+        $amount   = (float)Request::input('amount', 0);
+        $currency = strtoupper(trim((string)Request::input('currency', 'THB')));
+        $date     = Request::input('flow_date', date('Y-m-d'));
+        $notes    = Request::input('notes', '');
+
+        if (!in_array($type, ['deposit', 'withdrawal'], true)) {
+            return ['error' => 'ประเภทรายการไม่ถูกต้อง'];
+        }
+        if ($amount <= 0) {
+            return ['error' => 'กรุณากรอกจำนวนเงินที่มากกว่า 0'];
+        }
+        if (!in_array($currency, ['THB', 'USD'], true)) {
+            return ['error' => 'สกุลเงินต้องเป็น THB หรือ USD เท่านั้น'];
+        }
+        if (!$date) {
+            return ['error' => 'กรุณาเลือกวันที่'];
+        }
+
+        return [
+            'flow_type' => $type,
+            'amount'    => $amount,
+            'currency'  => $currency,
+            'flow_date' => $date,
+            'notes'     => $notes !== '' ? $notes : null,
+        ];
+    }
+
+    // ============================================================
+    // SCREENSHOTS
+    // ============================================================
+
+    public function apiScreenshotList(): void
+    {
+        $userId = Auth::userId();
+        Response::json(['screenshots' => Stock::listScreenshots($userId)]);
+    }
+
+    public function apiScreenshotUpload(): void
+    {
+        $userId = Auth::userId();
+        $file = $_FILES['file'] ?? null;
+        if (!$file || $file['error'] !== UPLOAD_ERR_OK) {
+            Response::json(['error' => 'อัปโหลดไฟล์ไม่สำเร็จ'], 400);
+        }
+
+        $origName = $file['name'];
+        $mimeType = $file['type'];
+        $size     = $file['size'];
+        $desc     = Request::input('description', '');
+
+        if (!preg_match('/^image\/(jpeg|png|webp|gif)$/i', $mimeType)) {
+            Response::json(['error' => 'อนุญาตเฉพาะไฟล์รูปภาพ (JPG, PNG, WEBP, GIF) เท่านั้น'], 422);
+        }
+
+        if ($size > MAX_UPLOAD_BYTES) {
+            Response::json(['error' => 'ขนาดไฟล์เกินที่กำหนด (สูงสุด ' . ($this->formatBytes(MAX_UPLOAD_BYTES)) . ')'], 422);
+        }
+
+        // Fetch existing screenshots and delete them to enforce single image restriction
+        $existing = Stock::listScreenshots($userId);
+        foreach ($existing as $scr) {
+            Stock::deleteScreenshot((int)$scr['id'], $userId);
+            $oldFullPath = UPLOAD_DIR . $scr['file_path'];
+            if (is_file($oldFullPath)) {
+                @unlink($oldFullPath);
+            }
+        }
+
+        $ext = pathinfo($origName, PATHINFO_EXTENSION);
+        if (!$ext) {
+            $ext = ($mimeType === 'image/png') ? 'png' : (($mimeType === 'image/webp') ? 'webp' : 'jpg');
+        }
+
+        $storageName = uuid4() . '.' . $ext;
+        $subDir      = 'stocks/' . $userId;
+        $fullDir     = UPLOAD_DIR . $subDir;
+
+        if (!is_dir($fullDir)) {
+            mkdir($fullDir, 0755, true);
+        }
+
+        $fullPath = $fullDir . '/' . $storageName;
+        $relPath  = $subDir . '/' . $storageName;
+
+        if (!move_uploaded_file($file['tmp_name'], $fullPath)) {
+            Response::json(['error' => 'บันทึกไฟล์ไม่สำเร็จ'], 500);
+        }
+
+        $id = Stock::createScreenshot($userId, $origName, $relPath, $size, $mimeType, $desc);
+        $screenshot = Stock::getScreenshotById($id, $userId);
+        Response::json(['ok' => true, 'screenshot' => $screenshot], 201);
+    }
+
+    public function apiScreenshotDelete(string $id): void
+    {
+        $userId = Auth::userId();
+        $scrId  = (int)$id;
+        $scr    = Stock::getScreenshotById($scrId, $userId);
+        if (!$scr) {
+            Response::json(['error' => 'ไม่พบรูปภาพ'], 404);
+        }
+
+        // Delete from DB
+        Stock::deleteScreenshot($scrId, $userId);
+
+        // Delete from file system
+        $fullPath = UPLOAD_DIR . $scr['file_path'];
+        if (is_file($fullPath)) {
+            @unlink($fullPath);
+        }
+
+        Response::json(['ok' => true]);
+    }
+
+    private function formatBytes(int $bytes): string
+    {
+        if ($bytes >= 1073741824) return round($bytes / 1073741824, 2) . ' GB';
+        if ($bytes >= 1048576)    return round($bytes / 1048576, 2) . ' MB';
+        if ($bytes >= 1024)       return round($bytes / 1024, 2) . ' KB';
+        return $bytes . ' B';
+    }
 }

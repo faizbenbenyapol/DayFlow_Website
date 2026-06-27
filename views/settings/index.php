@@ -575,6 +575,25 @@ window.dashboardLayout = <?= json_encode($layout, JSON_UNESCAPED_UNICODE) ?>;
                     <label class="flex items-center gap-2" style="cursor:pointer;"><input type="checkbox" name="tg_events[]" value="subscription" <?= $isTgEnabled('subscription') ? 'checked' : '' ?> style="width:18px;height:18px;"> การแจ้งเตือน (เมื่อสร้างใหม่)</label>
                 </div>
             </div>
+            
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--color-border);">
+            
+            <div class="form-group">
+                <label class="form-label">การตั้งค่า Cron Job (แจ้งเตือนอัตโนมัติ)</label>
+                <p class="form-hint mb-3" style="font-size:0.8rem">เพื่อให้ระบบส่งแจ้งเตือนงานและแพลนเนอร์โดยอัตโนมัติทุกวัน คุณสามารถตั้งค่า Cron Job บนเซิร์ฟเวอร์ของคุณได้ดังนี้:</p>
+                
+                <div style="background: var(--color-bg-alt, #f9f9f9); padding: 12px; border-radius: var(--radius-md, 6px); border: 1px solid var(--color-border, #e0e0e0); font-size: 0.8rem; margin-bottom: 12px; word-break: break-all;">
+                    <strong style="display:block; margin-bottom:4px; font-size:0.85rem">วิธีที่ 1: เรียกผ่าน Web URL (แนะนำสำหรับ Shared Hosting)</strong>
+                    ตั้งค่าให้เซิร์ฟเวอร์เรียกลิงก์ด้านล่างนี้ (เช่น ทุก 1 ชั่วโมง หรือวันละครั้ง):<br>
+                    <code style="display:inline-block; margin-top:6px; color: var(--color-primary, #e05c4b); font-weight:600;"><?= APP_URL ?>/cron.php?token=<?= hash('sha256', appKey() . 'cron') ?></code>
+                </div>
+                
+                <div style="background: var(--color-bg-alt, #f9f9f9); padding: 12px; border-radius: var(--radius-md, 6px); border: 1px solid var(--color-border, #e0e0e0); font-size: 0.8rem; word-break: break-all;">
+                    <strong style="display:block; margin-bottom:4px; font-size:0.85rem">วิธีที่ 2: เรียกผ่าน CLI (สำหรับ VPS / Dedicated Server)</strong>
+                    ตั้งค่าคำสั่ง Crontab บนเซิร์ฟเวอร์:<br>
+                    <code style="display:inline-block; margin-top:6px; color: var(--color-primary, #e05c4b); font-weight:600;">php <?= ROOT ?>/cron.php</code>
+                </div>
+            </div>
         </div>
         <div class="modal-footer" style="border-top:1px solid var(--color-border); justify-content: space-between;">
             <div>

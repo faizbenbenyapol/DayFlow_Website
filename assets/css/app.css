@@ -465,6 +465,24 @@ hr {
     background: var(--color-surface-2);
 }
 
+.topbar-home-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius);
+    transition: background var(--transition);
+}
+
+.topbar-home-btn:hover {
+    background: var(--color-surface-2);
+}
+
 .topbar-menu-btn span {
     display: block;
     width: 20px;

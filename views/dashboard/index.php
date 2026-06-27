@@ -26,7 +26,7 @@ usort($layout, fn($a, $b) => $a['position'] <=> $b['position']);
 <!-- Quick stat strip -->
 <div class="dash-strip">
     <?php if (showMenu('tasks')): ?>
-    <div class="dash-strip-card" id="ds-tasks">
+    <div class="dash-strip-card" id="ds-tasks" onclick="window.location.href = '<?= APP_URL ?>/tasks';">
         <div class="dash-strip-icon-wrap">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         </div>
@@ -37,7 +37,7 @@ usort($layout, fn($a, $b) => $a['position'] <=> $b['position']);
     </div>
     <?php endif; ?>
     <?php if (showMenu('finance')): ?>
-    <div class="dash-strip-card" id="ds-balance">
+    <div class="dash-strip-card" id="ds-balance" onclick="window.location.href = '<?= APP_URL ?>/finance';">
         <div class="dash-strip-icon-wrap">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
         </div>
@@ -48,7 +48,7 @@ usort($layout, fn($a, $b) => $a['position'] <=> $b['position']);
     </div>
     <?php endif; ?>
     <?php if (showMenu('exercise')): ?>
-    <div class="dash-strip-card" id="ds-workout">
+    <div class="dash-strip-card" id="ds-workout" onclick="window.location.href = '<?= APP_URL ?>/exercise';">
         <div class="dash-strip-icon-wrap">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767 1.768a2 2 0 1 1-2.829-2.829l6.364-6.364a2 2 0 1 1 2.829 2.829l-1.768 1.767a2 2 0 1 1 2.828 2.829z"/></svg>
         </div>
@@ -59,7 +59,7 @@ usort($layout, fn($a, $b) => $a['position'] <=> $b['position']);
     </div>
     <?php endif; ?>
     <?php if (showMenu('subscriptions')): ?>
-    <div class="dash-strip-card" id="ds-subs">
+    <div class="dash-strip-card" id="ds-subs" onclick="window.location.href = '<?= APP_URL ?>/subscriptions';">
         <div class="dash-strip-icon-wrap">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
         </div>
@@ -74,7 +74,20 @@ usort($layout, fn($a, $b) => $a['position'] <=> $b['position']);
 <!-- Widget grid -->
 <div class="dashboard-grid" id="dashboardGrid">
 
-    <?php foreach ($layout as $widget):
+    <?php 
+    $widgetUrlMap = [
+        'tasks' => APP_URL . '/tasks',
+        'calendar' => APP_URL . '/planner',
+        'finance' => APP_URL . '/finance',
+        'workout' => APP_URL . '/exercise',
+        'subscriptions' => APP_URL . '/subscriptions',
+        'projects' => APP_URL . '/projects',
+        'notes' => APP_URL . '/notes',
+        'stocks' => APP_URL . '/stocks',
+        'transfer' => APP_URL . '/transfer'
+    ];
+
+    foreach ($layout as $widget):
         if (!$widget['is_visible']) continue;
         
         $widgetMenuMap = [
@@ -90,8 +103,10 @@ usort($layout, fn($a, $b) => $a['position'] <=> $b['position']);
         ];
         $menuKey = $widgetMenuMap[$widget['widget_key']] ?? null;
         if ($menuKey && !showMenu($menuKey)) continue;
+
+        $clickUrl = $widgetUrlMap[$widget['widget_key']] ?? '#';
     ?>
-    <div class="widget" data-widget="<?= h($widget['widget_key']) ?>">
+    <div class="widget" data-widget="<?= h($widget['widget_key']) ?>" style="cursor: pointer;" onclick="if (!event.target.closest('a') && !event.target.closest('.drag-handle') && !event.target.closest('.btn-copy-code') && !event.target.closest('.widget-note-item')) window.location.href = '<?= $clickUrl ?>';">
         <?php switch ($widget['widget_key']):
             case 'tasks': ?>
                 <div class="widget-header">

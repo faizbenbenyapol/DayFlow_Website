@@ -373,4 +373,33 @@ CREATE TABLE IF NOT EXISTS `stock_watchlists` (
   FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- =====================================================
+-- 20. STOCK CAPITAL FLOWS & SCREENSHOTS
+-- =====================================================
+CREATE TABLE IF NOT EXISTS `stock_capital_flows` (
+  `id`           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `user_id`      INT UNSIGNED NOT NULL,
+  `flow_type`    ENUM('deposit', 'withdrawal') NOT NULL DEFAULT 'deposit',
+  `amount`       DECIMAL(18,4) NOT NULL,
+  `currency`     CHAR(3) NOT NULL DEFAULT 'THB',
+  `flow_date`    DATE NOT NULL,
+  `notes`        VARCHAR(500) DEFAULT NULL,
+  `created_at`   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  KEY `idx_scf_user_date` (`user_id`, `flow_date`),
+  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `stock_screenshots` (
+  `id`           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `user_id`      INT UNSIGNED NOT NULL,
+  `name`         VARCHAR(255) NOT NULL,
+  `file_path`    VARCHAR(500) NOT NULL,
+  `file_size`    INT UNSIGNED NOT NULL,
+  `mime_type`    VARCHAR(100) DEFAULT NULL,
+  `description`  VARCHAR(500) DEFAULT NULL,
+  `created_at`   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  KEY `idx_ss_user` (`user_id`),
+  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;

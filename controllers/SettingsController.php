@@ -180,7 +180,7 @@ class SettingsController
     {
         ob_start();
         try {
-            require_once ROOT . '/cron.php';
+            require ROOT . '/cron.php';
             $output = ob_get_clean();
             Response::json(['ok' => true, 'output' => $output]);
         } catch (\Throwable $e) {

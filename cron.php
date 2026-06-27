@@ -10,6 +10,20 @@ require_once ROOT . '/config/config.php';
 require_once ROOT . '/config/database.php';
 require_once ROOT . '/core/TelegramService.php';
 
+// Security check: Only allow CLI, logged-in session, or with a valid token
+$isCli = (php_sapi_name() === 'cli');
+if (!$isCli) {
+    require_once ROOT . '/config/session.php';
+}
+$isLoggedIn = isset($_SESSION['user_id']);
+$token = $_GET['token'] ?? '';
+$expectedToken = hash('sha256', appKey() . 'cron');
+
+if (!$isCli && !$isLoggedIn && $token !== $expectedToken) {
+    http_response_code(403);
+    die("Access Denied. Invalid or missing token.\n");
+}
+
 echo "Starting DayFlow Cron Job...\n";
 
 // 1. Auto-migrate if table doesn't exist
@@ -18,14 +32,20 @@ try {
 } catch (Exception $e) {
     $sqlFile = ROOT . '/sql/migrate_telegram_cron.sql';
     if (file_exists($sqlFile)) {
-        DB::conn()->exec(file_get_contents($sqlFile));
-        echo "Created telegram_cron_logs table.\n";
+        try {
+            DB::conn()->exec(file_get_contents($sqlFile));
+            echo "Created telegram_cron_logs table.\n";
+        } catch (Exception $ex) {
+            echo "Error running migration: " . $ex->getMessage() . "\n";
+        }
+    } else {
+        echo "Migration file not found: {$sqlFile}\n";
     }
 }
 
 // 2. Fetch users with valid Telegram settings
 $users = DB::run("
-    SELECT user_id, telegram_bot_token, telegram_chat_id, telegram_notify_events 
+    SELECT user_id, telegram_bot_token, telegram_chat_id, telegram_notify_events, timezone 
     FROM user_settings 
     WHERE telegram_bot_token != '' AND telegram_chat_id != ''
 ")->fetchAll();
@@ -35,8 +55,6 @@ if (empty($users)) {
     return;
 }
 
-$today = date('Y-m-d');
-$tomorrow = date('Y-m-d', strtotime('+1 day'));
 $sentCount = 0;
 
 foreach ($users as $u) {
@@ -49,6 +67,21 @@ foreach ($users as $u) {
     $notifyTask = !isset($events['task']) || $events['task'];
     $notifySub = !isset($events['subscription']) || $events['subscription'];
 
+    // Get user's timezone (fallback to system default if not set/invalid)
+    $tzName = $u['timezone'] ?: 'Asia/Bangkok';
+    try {
+        $tz = new DateTimeZone($tzName);
+    } catch (Exception $e) {
+        $tz = new DateTimeZone('Asia/Bangkok');
+    }
+
+    $userTodayObj = new DateTime('now', $tz);
+    $today = $userTodayObj->format('Y-m-d');
+
+    $userTomorrowObj = clone $userTodayObj;
+    $userTomorrowObj->modify('+1 day');
+    $tomorrow = $userTomorrowObj->format('Y-m-d');
+
     // --- A. Planner Events (calendar_events) ---
     if ($notifyPlanner) {
         $evs = DB::run("
@@ -56,13 +89,12 @@ foreach ($users as $u) {
             FROM calendar_events 
             WHERE user_id = ? AND DATE(start_datetime) IN (?, ?)
         ", [$userId, $today, $tomorrow])->fetchAll();
-
         foreach ($evs as $ev) {
-            $date = date('Y-m-d', strtotime($ev['start_datetime']));
+            $date = substr($ev['start_datetime'], 0, 10);
             $isToday = ($date === $today);
             $dayLabel = $isToday ? 'วันนี้' : 'พรุ่งนี้';
             
-            if (shouldNotify($userId, 'event', $ev['id'], $date)) {
+            if (shouldNotify($userId, 'planner', $ev['id'], $date)) {
                 $timeStr = TelegramService::formatThaiDateTime($ev['start_datetime']);
                 $msg = TelegramService::formatMessage(
                     "📅 กิจกรรม{$dayLabel}",
@@ -72,7 +104,7 @@ foreach ($users as $u) {
                     ]
                 );
                 TelegramService::sendMessage($u['telegram_bot_token'], $u['telegram_chat_id'], $msg);
-                logNotification($userId, 'event', $ev['id'], $date);
+                logNotification($userId, 'planner', $ev['id'], $date);
                 $sentCount++;
             }
         }
@@ -177,17 +209,21 @@ foreach ($users as $u) {
 echo "Done! Sent {$sentCount} notifications.\n";
 
 // --- Helpers ---
-function shouldNotify(int $userId, string $type, int $id, string $refDate): bool {
-    $exists = DB::run("
-        SELECT 1 FROM telegram_cron_logs 
-        WHERE item_type = ? AND item_id = ? AND reference_date = ?
-    ", [$type, $id, $refDate])->fetchColumn();
-    return !$exists;
+if (!function_exists('shouldNotify')) {
+    function shouldNotify(int $userId, string $type, int $id, string $refDate): bool {
+        $exists = DB::run("
+            SELECT 1 FROM telegram_cron_logs 
+            WHERE item_type = ? AND item_id = ? AND reference_date = ?
+        ", [$type, $id, $refDate])->fetchColumn();
+        return !$exists;
+    }
 }
 
-function logNotification(int $userId, string $type, int $id, string $refDate): void {
-    DB::run("
-        INSERT IGNORE INTO telegram_cron_logs (user_id, item_type, item_id, reference_date) 
-        VALUES (?, ?, ?, ?)
-    ", [$userId, $type, $id, $refDate]);
+if (!function_exists('logNotification')) {
+    function logNotification(int $userId, string $type, int $id, string $refDate): void {
+        DB::run("
+            INSERT IGNORE INTO telegram_cron_logs (user_id, item_type, item_id, reference_date) 
+            VALUES (?, ?, ?, ?)
+        ", [$userId, $type, $id, $refDate]);
+    }
 }

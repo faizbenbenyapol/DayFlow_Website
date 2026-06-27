@@ -310,6 +310,10 @@
             .auth-brand   { padding: 1.8rem 1.6rem 0; }
             .auth-tabs    { margin: 1.4rem 1.6rem 0; }
             .auth-body    { padding: 1.5rem 1.6rem 1.8rem; }
+            #googleBtnLogin iframe, #googleBtnReg iframe {
+                max-width: 100% !important;
+                margin: 0 auto;
+            }
             .auth-footer-note { padding: 0 1.6rem 1.4rem; }
         }
     </style>
@@ -418,7 +422,7 @@
     </div><!-- /.auth-body -->
 
     <div class="auth-footer-note">
-        v1.0.0
+        v1.1.1
     </div>
 
 </div><!-- /.auth-card -->
@@ -608,12 +612,18 @@ window.addEventListener('DOMContentLoaded', () => {
                 callback: handleCredentialResponse
             });
             
+            // Dynamically calculate width for Google Buttons based on container width
+            const bodyWidth = document.querySelector('.auth-body')?.clientWidth || 350;
+            const fallbackWidth = bodyWidth - (window.innerWidth <= 480 ? 50 : 70);
+            const containerWidth = document.getElementById('googleBtnLogin')?.offsetWidth || 0;
+            const btnWidth = Math.min(350, Math.max(200, containerWidth || fallbackWidth));
+            
             const loginBtn = document.getElementById('googleBtnLogin');
             if (loginBtn) {
                 google.accounts.id.renderButton(loginBtn, {
                     theme: 'outline',
                     size: 'large',
-                    width: '350',
+                    width: btnWidth,
                     text: 'signin_with',
                     locale: 'th'
                 });
@@ -624,7 +634,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 google.accounts.id.renderButton(regBtn, {
                     theme: 'outline',
                     size: 'large',
-                    width: '350',
+                    width: btnWidth,
                     text: 'signup_with',
                     locale: 'th'
                 });

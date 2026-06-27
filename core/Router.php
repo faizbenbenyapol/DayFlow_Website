@@ -227,6 +227,15 @@ class Router
         $this->add('GET',    '/api/stocks/watchlists',        'StocksController', 'apiWatchlists', true);
         $this->add('POST',   '/api/stocks/watchlists/toggle', 'StocksController', 'apiWatchlistToggle', true);
 
+        // --- API: Stocks Capital & Screenshots ---
+        $this->add('GET',    '/api/stocks/capital',           'StocksController', 'apiCapitalList',   true);
+        $this->add('POST',   '/api/stocks/capital',           'StocksController', 'apiCapitalCreate', true);
+        $this->add('PUT',    '/api/stocks/capital/{id}',      'StocksController', 'apiCapitalUpdate', true);
+        $this->add('DELETE', '/api/stocks/capital/{id}',      'StocksController', 'apiCapitalDelete', true);
+        $this->add('GET',    '/api/stocks/screenshots',       'StocksController', 'apiScreenshotList', true);
+        $this->add('POST',   '/api/stocks/screenshots',       'StocksController', 'apiScreenshotUpload', true);
+        $this->add('DELETE', '/api/stocks/screenshots/{id}',   'StocksController', 'apiScreenshotDelete', true);
+
         // --- API: Stocks API keys ---
         $this->add('GET',    '/api/stocks/keys',              'StocksController', 'apiKeysList',   true);
         $this->add('POST',   '/api/stocks/keys',              'StocksController', 'apiKeysSave',   true);

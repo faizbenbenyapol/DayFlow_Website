@@ -125,39 +125,32 @@ async function toggleTask(id, isDone) {
     }
 }
 
-/* --- Add Task (quick-add inline) --- */
+/* --- Add Task (modal-based add) --- */
 function openAddTask(quadrant) {
-    const form  = document.getElementById('q' + quadrant + '-form');
-    const input = document.getElementById('q' + quadrant + '-input');
-    if (!form || !input) return;
-
-    form.style.display = 'block';
-    input.value = '';
-    input.focus();
-
-    input.onkeydown = function(e) {
-        if (e.key === 'Enter' && input.value.trim()) {
-            submitAddTask(quadrant, input.value.trim());
-        } else if (e.key === 'Escape') {
-            form.style.display = 'none';
-        }
-    };
-
-    input.onblur = function() {
-        setTimeout(() => {
-            if (!input.value.trim()) form.style.display = 'none';
-        }, 200);
-    };
+    document.getElementById('addTaskTitle').value = '';
+    document.getElementById('addTaskDesc').value = '';
+    document.getElementById('addTaskQuadrant').value = quadrant;
+    document.getElementById('addTaskDue').value = '';
+    openModal('addTaskModal');
 }
 
-async function submitAddTask(quadrant, title) {
-    const form = document.getElementById('q' + quadrant + '-form');
+async function saveAddTask() {
+    const title = document.getElementById('addTaskTitle').value.trim();
+    const desc = document.getElementById('addTaskDesc').value.trim();
+    const quadrant = parseInt(document.getElementById('addTaskQuadrant').value);
+    const due = document.getElementById('addTaskDue').value;
+
+    if (!title) {
+        toast('กรุณากรอกชื่องาน', 'danger');
+        return;
+    }
+
     try {
         await apiFetch(BASE_URL + '/api/tasks', {
             method: 'POST',
-            body:   JSON.stringify({ title, quadrant })
+            body:   JSON.stringify({ title, description: desc, quadrant, due_date: due })
         });
-        form.style.display = 'none';
+        closeModal('addTaskModal');
         await loadTasks();
         toast('เพิ่มงานแล้ว');
     } catch (err) {
