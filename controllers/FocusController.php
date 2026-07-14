@@ -75,6 +75,13 @@ class FocusController
         $taskId = Request::input('task_id');
         $title = trim(Request::input('title', ''));
 
+        if (!in_array($type, ['work', 'short_break', 'long_break'], true) || $duration < 1 || $duration > 1440) {
+            Response::json(['error' => 'ประเภทหรือระยะเวลา Focus ไม่ถูกต้อง'], 422);
+        }
+        if ($taskId !== null && $taskId !== '' && !Task::getById((int)$taskId, $userId)) {
+            Response::json(['error' => 'ไม่พบงานที่เลือก'], 422);
+        }
+
         if (!$title) {
             if ($type === 'work') {
                 $title = 'โฟกัสรอบการทำงาน';
@@ -85,6 +92,7 @@ class FocusController
             }
         }
 
+        $title = mb_substr($title, 0, 255);
         $data = [
             'task_id' => $taskId ? (int)$taskId : null,
             'title' => $title,

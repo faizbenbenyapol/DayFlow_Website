@@ -5,6 +5,11 @@
 
 class DashboardLayout
 {
+    private const ALLOWED_WIDGETS = [
+        'tasks', 'calendar', 'finance', 'workout', 'subscriptions',
+        'projects', 'notes', 'stocks', 'transfer',
+    ];
+
     private const DEFAULTS = [
         ['widget_key' => 'tasks',         'position' => 0, 'is_visible' => 1],
         ['widget_key' => 'calendar',      'position' => 1, 'is_visible' => 1],
@@ -36,13 +41,30 @@ class DashboardLayout
     public static function saveLayout(int $userId, array $widgets): void
     {
         // $widgets = [['widget_key' => 'tasks', 'position' => 0, 'is_visible' => 1], ...]
+        $clean = [];
+        $seen = [];
+        foreach ($widgets as $widget) {
+            if (!is_array($widget)) continue;
+            $key = (string)($widget['widget_key'] ?? '');
+            if (!in_array($key, self::ALLOWED_WIDGETS, true) || isset($seen[$key])) continue;
+            $seen[$key] = true;
+            $clean[] = [
+                'widget_key' => $key,
+                'position' => max(0, min(99, (int)($widget['position'] ?? count($clean)))),
+                'is_visible' => !empty($widget['is_visible']) ? 1 : 0,
+            ];
+        }
+        if (empty($clean)) {
+            throw new InvalidArgumentException('Invalid dashboard layout');
+        }
+
         $db = DB::conn();
         $stmt = $db->prepare(
             'INSERT INTO dashboard_layout (user_id, widget_key, position, is_visible)
              VALUES (?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE position = VALUES(position), is_visible = VALUES(is_visible)'
         );
-        foreach ($widgets as $w) {
+        foreach ($clean as $w) {
             $stmt->execute([
                 $userId,
                 $w['widget_key'],

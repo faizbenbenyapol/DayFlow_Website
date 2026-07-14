@@ -6,6 +6,9 @@ $theme = Auth::theme();
 
 $isReadOnly = Auth::isReadOnly();
 $sharedMenus = $isReadOnly ? Auth::getSharedMenus() : [];
+$shareToken = $isReadOnly ? (string)($_SESSION['app_share_token'] ?? '') : '';
+$shareQuery = $shareToken !== '' ? '?share=' . rawurlencode($shareToken) : '';
+$shareHomeUrl = $shareToken !== '' ? APP_URL . '/shared/' . rawurlencode($shareToken) : APP_URL . '/';
 
 function showMenu(string $menu): bool
 {
@@ -31,7 +34,7 @@ function showMenu(string $menu): bool
 $showManage = showMenu('tasks') || showMenu('notes') || showMenu('planner') || showMenu('projects') || showMenu('focus');
 $showTrack = showMenu('exercise') || showMenu('food-notes') || showMenu('finance') || showMenu('subscriptions') || showMenu('stocks');
 $showTools = showMenu('ai') || showMenu('file-tools') || showMenu('transfer');
-$showOthers = showMenu('files') || !$isReadOnly;
+$showOthers = showMenu('files') || showMenu('quick-notes') || showMenu('bookmarks') || !$isReadOnly;
 
 function isActive(string $path): string
 {
@@ -50,6 +53,10 @@ function isActive(string $path): string
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
     <meta name="csrf-token" content="<?= h(Csrf::token()) ?>">
+    <meta name="theme-color" content="#111827">
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="<?= h(APP_URL . '/manifest.json') ?>">
     <title><?= isset($pageTitle) ? h($pageTitle) . ' — ' : '' ?><?= h(APP_NAME) ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -80,13 +87,13 @@ if ($isReadOnly || $isGuest):
             <div style="display:flex; gap:16px; overflow-x:auto; flex:1; justify-content:center;">
                 <?php 
                 $menuLabels = [
-                    'tasks' => 'งาน', 'notes' => 'โน้ต', 'planner' => 'แพลนเนอร์', 'focus' => 'โฟกัส',
+                    'tasks' => 'งาน', 'notes' => 'โน้ต', 'planner' => 'แพลนเนอร์', 'focus' => 'โฟกัส', 'habits' => 'นิสัยประจำวัน',
                     'exercise' => 'ออกกำลังกาย', 'food-notes' => 'อาหาร',
                     'finance' => 'การเงิน', 'subscriptions' => 'แจ้งเตือน', 'stocks' => 'หุ้น'
                 ];
                 foreach ($sharedMenus as $m): 
                 ?>
-                    <a href="<?= APP_URL ?>/<?= $m ?>" style="white-space:nowrap; text-decoration:none;color:<?= isActive('/'.$m) ? 'var(--color-primary)' : 'var(--color-text)' ?>;font-weight:<?= isActive('/'.$m) ? '600' : '400' ?>;border-bottom: <?= isActive('/'.$m) ? '2px solid var(--color-primary)' : 'none' ?>;padding:18px 8px;"><?= $menuLabels[$m] ?? $m ?></a>
+                    <a href="<?= h(APP_URL . '/' . $m . $shareQuery) ?>" style="white-space:nowrap; text-decoration:none;color:<?= isActive('/'.$m) ? 'var(--color-primary)' : 'var(--color-text)' ?>;font-weight:<?= isActive('/'.$m) ? '600' : '400' ?>;border-bottom: <?= isActive('/'.$m) ? '2px solid var(--color-primary)' : 'none' ?>;padding:18px 8px;"><?= h($menuLabels[$m] ?? $m) ?></a>
                 <?php endforeach; ?>
             </div>
             <div style="flex-shrink:0; display:flex; align-items:center; gap:12px;">
@@ -173,7 +180,7 @@ if ($isReadOnly || $isGuest):
     </style>
     <main class="app-main" style="padding-top:80px; padding-bottom:40px;">
         <div class="app-content">
-            <div class="toast-container" id="toastContainer"></div>
+            <div class="toast-container" id="toastContainer" role="status" aria-live="polite" aria-atomic="true"></div>
 <?php else: ?>
 
 
@@ -184,7 +191,7 @@ if ($isReadOnly || $isGuest):
             <a href="<?= APP_URL ?>/" class="topbar-home-btn" aria-label="แดชบอร์ด">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
             </a>
-            <button class="topbar-menu-btn" id="menuToggle" aria-label="เมนู">
+            <button class="topbar-menu-btn" id="menuToggle" aria-label="เมนู" aria-controls="appSidebar" aria-expanded="false">
                 <span></span>
                 <span></span>
                 <span></span>
@@ -204,6 +211,64 @@ if ($isReadOnly || $isGuest):
             </div>
             <?php endif; ?>
 
+            <?php
+            $defaultSidebarOrder = ['projects', 'tasks', 'notes', 'planner', 'focus', 'exercise', 'food-notes', 'finance', 'subscriptions', 'stocks', 'ai', 'file-tools', 'transfer', 'files', 'quick-notes', 'bookmarks'];
+            $sidebarSettings = [];
+            if (!$isReadOnly) {
+                require_once ROOT . '/models/User.php';
+                $sidebarSettings = User::getSettings(Auth::userId());
+            }
+            $savedSidebarOrder = !empty($sidebarSettings['menu_order']) ? json_decode($sidebarSettings['menu_order'], true) : [];
+            if (!is_array($savedSidebarOrder)) $savedSidebarOrder = [];
+            $sidebarOrder = array_values(array_unique(array_merge(
+                array_values(array_intersect($savedSidebarOrder, $defaultSidebarOrder)),
+                $defaultSidebarOrder
+            )));
+            $sidebarMenus = [
+                'projects' => ['group' => 'จัดการ', 'label' => 'โปรเจค', 'path' => '/projects'],
+                'tasks' => ['group' => 'จัดการ', 'label' => 'งาน', 'path' => '/tasks'],
+                'notes' => ['group' => 'จัดการ', 'label' => 'โน้ต', 'path' => '/notes'],
+                'planner' => ['group' => 'จัดการ', 'label' => 'แพลนเนอร์', 'path' => '/planner'],
+                'focus' => ['group' => 'จัดการ', 'label' => 'โฟกัส (Focus)', 'path' => '/focus'],
+                'exercise' => ['group' => 'ติดตาม', 'label' => 'ออกกำลังกาย', 'path' => '/exercise'],
+                'food-notes' => ['group' => 'ติดตาม', 'label' => 'อาหาร-เครื่องดื่ม', 'path' => '/food-notes'],
+                'finance' => ['group' => 'ติดตาม', 'label' => 'การเงิน', 'path' => '/finance'],
+                'subscriptions' => ['group' => 'ติดตาม', 'label' => 'การแจ้งเตือน', 'path' => '/subscriptions'],
+                'stocks' => ['group' => 'ติดตาม', 'label' => 'ระบบหุ้น (Stocks)', 'path' => '/stocks'],
+                'ai' => ['group' => 'เครื่องมือ', 'label' => 'ผู้ช่วยอัจฉริยะ (AI)', 'path' => '/ai'],
+                'file-tools' => ['group' => 'เครื่องมือ', 'label' => 'เครื่องมือจัดการไฟล์', 'path' => '/file-tools'],
+                'transfer' => ['group' => 'เครื่องมือ', 'label' => 'ย้ายไฟล์', 'path' => '/transfer'],
+                'files' => ['group' => 'อื่น ๆ', 'label' => 'ไฟล์', 'path' => '/files'],
+                'quick-notes' => ['group' => 'อื่น ๆ', 'label' => 'จดด่วน', 'path' => '/quick-notes'],
+                'bookmarks' => ['group' => 'อื่น ๆ', 'label' => 'ลิงก์สำคัญ', 'path' => '/bookmarks'],
+            ];
+            $currentSidebarGroup = null;
+            foreach ($sidebarOrder as $menuKey):
+                if (!isset($sidebarMenus[$menuKey]) || !showMenu($menuKey)) continue;
+                $menu = $sidebarMenus[$menuKey];
+                if ($currentSidebarGroup !== $menu['group']):
+                    if ($currentSidebarGroup !== null) echo '</div>';
+                    $currentSidebarGroup = $menu['group'];
+                    echo '<div class="sidebar-section"><div class="sidebar-section-label">' . h($currentSidebarGroup) . '</div>';
+                endif;
+            ?>
+                <a href="<?= APP_URL . h($menu['path']) ?>" class="nav-item <?= isActive($menu['path']) ?>" data-menu-key="<?= h($menuKey) ?>" style="display:flex;align-items:center;gap:8px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+                    <span><?= h($menu['label']) ?></span>
+                </a>
+            <?php endforeach; if ($currentSidebarGroup !== null) echo '</div>'; ?>
+
+            <?php if (!$isReadOnly): ?>
+            <div class="sidebar-section">
+                <div class="sidebar-section-label">อื่น ๆ</div>
+                <a href="<?= APP_URL ?>/settings" class="nav-item <?= isActive('/settings') ?>" data-menu-key="settings" style="display:flex;align-items:center;gap:8px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <span>ตั้งค่า</span>
+                </a>
+            </div>
+            <?php endif; ?>
+
+            <?php if (false): // Legacy static menu markup retained for safe rollback during migration ?>
             <?php if ($showManage): ?>
             <div class="sidebar-section">
                 <div class="sidebar-section-label">จัดการ</div>
@@ -235,6 +300,12 @@ if ($isReadOnly || $isGuest):
                 <a href="<?= APP_URL ?>/focus" class="nav-item <?= isActive('/focus') ?>" style="display: flex; align-items: center; gap: 8px;">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     <span>โฟกัส (Focus)</span>
+                </a>
+                <?php endif; ?>
+                <?php if (false): // Habits menu retired from the primary navigation ?>
+                <a href="<?= APP_URL ?>/habits" class="nav-item <?= isActive('/habits') ?>" style="display: flex; align-items: center; gap: 8px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 17h14"/><circle cx="12" cy="7" r="2"/><circle cx="12" cy="17" r="2"/></svg>
+                    <span>นิสัยประจำวัน</span>
                 </a>
                 <?php endif; ?>
             </div>
@@ -309,6 +380,18 @@ if ($isReadOnly || $isGuest):
                     <span>ไฟล์</span>
                 </a>
                 <?php endif; ?>
+                <?php if (showMenu('quick-notes')): ?>
+                <a href="<?= APP_URL ?>/quick-notes" class="nav-item <?= isActive('/quick-notes') ?>" style="display:flex;align-items:center;gap:8px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+                    <span>จดด่วน</span>
+                </a>
+                <?php endif; ?>
+                <?php if (showMenu('bookmarks')): ?>
+                <a href="<?= APP_URL ?>/bookmarks" class="nav-item <?= isActive('/bookmarks') ?>" style="display:flex;align-items:center;gap:8px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                    <span>ลิงก์สำคัญ</span>
+                </a>
+                <?php endif; ?>
                 <?php if (!$isReadOnly): ?>
                 <a href="<?= APP_URL ?>/settings" class="nav-item <?= isActive('/settings') ?>" style="display: flex; align-items: center; gap: 8px;">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -316,6 +399,7 @@ if ($isReadOnly || $isGuest):
                 </a>
                 <?php endif; ?>
             </div>
+            <?php endif; ?>
             <?php endif; ?>
         </nav>
 
@@ -337,7 +421,13 @@ if ($isReadOnly || $isGuest):
         <div class="app-content">
 
             <!-- Toast container -->
-            <div class="toast-container" id="toastContainer"></div>
+
+            <div class="toast-container" id="toastContainer" role="status" aria-live="polite" aria-atomic="true"></div>
+            <div class="global-search" id="globalSearch" role="search">
+                <svg class="global-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input id="globalSearchInput" type="search" autocomplete="off" placeholder="ค้นหางาน โน้ต โปรเจค ไฟล์..." aria-label="ค้นหาทั้งระบบ">
+                <kbd>/</kbd>
+                <div class="global-search-results" id="globalSearchResults" hidden></div>
+            </div>
 
 <?php endif; ?>
-

@@ -1,0 +1,10 @@
+.git
+.gitignore
+.claude
+.antigravity
+.vscode
+uploads/*
+storage/logs/*
+storage/ratelimit/*
+.env
+*.sql.bak

@@ -7,6 +7,21 @@ require_once ROOT . '/models/DashboardLayout.php';
 
 class DashboardController
 {
+    /**
+     * Dashboard is an aggregation endpoint: one optional module must not take
+     * the whole dashboard down when its table/migration is unavailable.
+     */
+    private function safeModule(string $name, callable $callback, array &$warnings, mixed $fallback): mixed
+    {
+        try {
+            return $callback();
+        } catch (Throwable $e) {
+            $warnings[] = $name;
+            error_log('Dashboard module failed [' . $name . ']: ' . $e->getMessage());
+            return $fallback;
+        }
+    }
+
     public function index(): void
     {
         $pageTitle = 'แดชบอร์ด';
@@ -24,9 +39,10 @@ class DashboardController
     public function summary(): void
     {
         $userId = Auth::userId();
+        $warnings = [];
 
         // Tasks: upcoming and overdue
-        $tasks = DB::run(
+        $tasks = $this->safeModule('tasks', fn() => DB::run(
             'SELECT id, title, due_date, status, quadrant
              FROM tasks
              WHERE user_id = ? AND status = "open"
@@ -35,49 +51,49 @@ class DashboardController
              ORDER BY due_date ASC
              LIMIT 5',
             [$userId]
-        )->fetchAll();
+        )->fetchAll(), $warnings, []);
 
-        $overdueCount = (int)DB::run(
+        $overdueCount = (int)$this->safeModule('tasks', fn() => DB::run(
             'SELECT COUNT(*) FROM tasks
              WHERE user_id = ? AND status = "open" AND due_date < CURDATE()',
             [$userId]
-        )->fetchColumn();
+        )->fetchColumn(), $warnings, 0);
 
         // Calendar: today's events
-        $calEvents = DB::run(
+        $calEvents = $this->safeModule('calendar', fn() => DB::run(
             'SELECT id, title, start_datetime, end_datetime, is_all_day
              FROM calendar_events
              WHERE user_id = ? AND DATE(start_datetime) = CURDATE()
              ORDER BY start_datetime ASC
              LIMIT 8',
             [$userId]
-        )->fetchAll();
+        )->fetchAll(), $warnings, []);
 
         // Finance: current month summary
         $month = date('Y-m');
-        $finStmt = DB::run(
+        $finStmt = $this->safeModule('finance', fn() => DB::run(
             'SELECT
                SUM(CASE WHEN type="income"  THEN amount ELSE 0 END) AS income,
                SUM(CASE WHEN type="expense" THEN amount ELSE 0 END) AS expense
              FROM finances
              WHERE user_id = ? AND DATE_FORMAT(txn_date, "%Y-%m") = ?',
             [$userId, $month]
-        )->fetch();
+        )->fetch(), $warnings, []);
         $finIncome  = (float)($finStmt['income']  ?? 0);
         $finExpense = (float)($finStmt['expense'] ?? 0);
 
         // Workout: last session
-        $lastWorkout = DB::run(
+        $lastWorkout = $this->safeModule('exercise', fn() => DB::run(
             'SELECT id, workout_date, type, duration_min
              FROM workouts
              WHERE user_id = ?
              ORDER BY workout_date DESC, id DESC
              LIMIT 1',
             [$userId]
-        )->fetch() ?: null;
+        )->fetch() ?: null, $warnings, null);
 
         // Subscriptions: upcoming (within 7 days)
-        $upcomingSubs = DB::run(
+        $upcomingSubs = $this->safeModule('subscriptions', fn() => DB::run(
             'SELECT id, name, amount, next_due_date, alert_days
              FROM subscriptions
              WHERE user_id = ? AND is_active = 1
@@ -85,12 +101,11 @@ class DashboardController
              ORDER BY next_due_date ASC
              LIMIT 5',
             [$userId]
-        )->fetchAll();
+        )->fetchAll(), $warnings, []);
 
         // Projects: Top 3 recently updated active projects
-        $projects = [];
-        try {
-            $projects = DB::run(
+        $projects = $this->safeModule('projects', function () use ($userId) {
+            return DB::run(
                 'SELECT p.id, p.name, p.status, p.priority, p.due_date,
                         COUNT(DISTINCT t.id) AS total_tasks,
                         COUNT(DISTINCT CASE WHEN t.status = "Done" THEN t.id END) AS completed_tasks
@@ -103,14 +118,11 @@ class DashboardController
                  LIMIT 3',
                 [$userId, $userId, $userId]
             )->fetchAll();
-        } catch (PDOException $e) {
-            $projects = [];
-        }
+        }, $warnings, []);
 
         // Notes: Top 3 recently updated notes
-        $notes = [];
-        try {
-            $notes = DB::run(
+        $notes = $this->safeModule('notes', function () use ($userId) {
+            return DB::run(
                 'SELECT n.id, n.title, n.is_encrypted, n.pinned, n.updated_at,
                         (SELECT content FROM note_blocks WHERE note_id = n.id AND type = "text"
                          ORDER BY position ASC LIMIT 1) AS preview,
@@ -124,15 +136,13 @@ class DashboardController
                  LIMIT 3',
                 [$userId]
             )->fetchAll();
-        } catch (PDOException $e) {
-            $notes = [];
-        }
+        }, $warnings, []);
 
         // Stocks: Top 4 watchlisted stocks or portfolio holdings
-        $stocks = [];
-        try {
+        $stocks = $this->safeModule('stocks', function () use ($userId) {
             require_once ROOT . '/models/Stock.php';
             require_once ROOT . '/models/StockPriceCache.php';
+            $stocks = [];
             $watchlist = Stock::getWatchlistsForUser($userId);
             if (!empty($watchlist)) {
                 $stocks = array_slice($watchlist, 0, 4);
@@ -142,13 +152,11 @@ class DashboardController
                     $stocks = array_slice($portfolio['holdings'], 0, 4);
                 }
             }
-        } catch (Exception $e) {
-            $stocks = [];
-        }
+            return $stocks;
+        }, $warnings, []);
 
         // File transfers: Top 3 recently created transfers
-        $transfers = [];
-        try {
+        $transfers = $this->safeModule('transfer', function () use ($userId) {
             $transfers = DB::run(
                 'SELECT id, code, token, files_json, total_size, download_count, expires_at, created_at
                  FROM file_transfers
@@ -160,11 +168,15 @@ class DashboardController
             foreach ($transfers as &$t) {
                 $t['is_expired'] = strtotime($t['expires_at']) <= time();
             }
-        } catch (PDOException $e) {
-            $transfers = [];
-        }
+            return $transfers;
+        }, $warnings, []);
 
         Response::json([
+            'meta' => [
+                'generated_at' => gmdate('c'),
+                'partial' => !empty($warnings),
+                'warnings' => array_values(array_unique($warnings)),
+            ],
             'tasks' => [
                 'overdue' => $overdueCount,
                 'items'   => $tasks,
@@ -206,7 +218,11 @@ class DashboardController
             Response::json(['error' => 'ข้อมูลไม่ถูกต้อง'], 422);
         }
 
-        DashboardLayout::saveLayout(Auth::userId(), $widgets);
+        try {
+            DashboardLayout::saveLayout(Auth::userId(), $widgets);
+        } catch (InvalidArgumentException $e) {
+            Response::json(['error' => 'รูปแบบการจัดวาง Dashboard ไม่ถูกต้อง'], 422);
+        }
         Response::json(['ok' => true]);
     }
 }

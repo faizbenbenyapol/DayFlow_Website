@@ -1,0 +1,11 @@
+{
+  "name": "DayFlow",
+  "short_name": "DayFlow",
+  "description": "พื้นที่จัดการงาน โน้ต การเงิน และกิจวัตรส่วนตัว",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#eef2f7",
+  "theme_color": "#111827",
+  "lang": "th",
+  "dir": "ltr"
+}

@@ -8,6 +8,8 @@ require_once ROOT . '/core/TelegramService.php';
 
 class SubscriptionController
 {
+    private const BILLING_CYCLES = ['weekly', 'monthly', 'yearly', 'one_time'];
+
     public function index(): void
     {
         $pageTitle  = 'การแจ้งเตือน';
@@ -87,12 +89,21 @@ class SubscriptionController
         if (!$name) return ['error' => 'กรุณากรอกชื่อรายการ'];
         if (!$date) return ['error' => 'กรุณากรอกวันที่ครบกำหนดถัดไป'];
 
+        $name = trim($name);
+        $dateObj = DateTime::createFromFormat('Y-m-d', (string)$date);
+        $amount = (float)Request::input('amount', 0);
+        $cycle = Request::input('billing_cycle', 'monthly');
+        $alert = (int)Request::input('alert_days', 3);
+        if ($name === '' || mb_strlen($name) > 255 || !$dateObj || $dateObj->format('Y-m-d') !== $date) return ['error' => 'ข้อมูลการแจ้งเตือนไม่ถูกต้อง'];
+        if ($amount < 0 || $amount > 999999999.99 || !is_finite($amount)) return ['error' => 'จำนวนเงินไม่ถูกต้อง'];
+        if (!in_array($cycle, self::BILLING_CYCLES, true) || $alert < 0 || $alert > 365) return ['error' => 'รอบบิลหรือจำนวนวันแจ้งเตือนไม่ถูกต้อง'];
+
         return [
             'name'          => $name,
-            'amount'        => Request::input('amount', 0),
-            'billing_cycle' => Request::input('billing_cycle', 'monthly'),
+            'amount'        => $amount,
+            'billing_cycle' => $cycle,
             'next_due_date' => $date,
-            'alert_days'    => (int)Request::input('alert_days', 3),
+            'alert_days'    => $alert,
             'is_active'     => (int)Request::input('is_active', 1),
             'notes'         => Request::input('notes', ''),
         ];

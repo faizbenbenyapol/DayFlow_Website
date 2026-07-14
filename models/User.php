@@ -138,13 +138,38 @@ class User
         );
     }
 
+    public static function updateMenuOrder(int $userId, string $menuOrder): void
+    {
+        DB::run(
+            'INSERT INTO user_settings (user_id, menu_order) VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE menu_order = VALUES(menu_order)',
+            [$userId, $menuOrder]
+        );
+    }
+
     public static function updateTelegramSettings(int $userId, ?string $botToken, ?string $chatId, ?string $notifyEvents): void
     {
+        if ($botToken === null || trim($botToken) === '') {
+            $existing = self::getSettings($userId);
+            $botToken = (string)($existing['telegram_bot_token'] ?? '');
+        } else {
+            $botToken = 'tg1:' . appEncrypt(trim($botToken));
+        }
         DB::run(
             'INSERT INTO user_settings (user_id, telegram_bot_token, telegram_chat_id, telegram_notify_events) VALUES (?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE telegram_bot_token = VALUES(telegram_bot_token), telegram_chat_id = VALUES(telegram_chat_id), telegram_notify_events = VALUES(telegram_notify_events)',
             [$userId, $botToken, $chatId, $notifyEvents]
         );
+    }
+
+    public static function decryptTelegramToken(?string $stored): string
+    {
+        if (!$stored) return '';
+        if (str_starts_with($stored, 'tg1:')) {
+            return appDecrypt(substr($stored, 4));
+        }
+        // Backward compatibility for tokens saved before encryption was added.
+        return $stored;
     }
 
     public static function deleteAccount(int $userId): bool
@@ -158,6 +183,8 @@ class User
     {
         $user = self::findById($userId);
         $settings = self::getSettings($userId);
+        // Never include integration credentials in a portable export.
+        unset($settings['telegram_bot_token'], $settings['telegram_chat_id']);
         $tables = [
             'tasks', 'notes', 'note_blocks', 'note_tags', 'note_tag_relations',
             'calendar_events', 'daily_todos', 'workouts',

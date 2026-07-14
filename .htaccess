@@ -10,6 +10,8 @@ RewriteRule ^models(/|$) - [F,L]
 RewriteRule ^controllers(/|$) - [F,L]
 RewriteRule ^sql(/|$) - [F,L]
 RewriteRule ^views(/|$) - [F,L]
+RewriteRule ^install(/|$) - [F,L]
+RewriteRule ^config/.*\.php$ - [F,L]
 
 # Allow access to assets and uploads directly
 RewriteCond %{REQUEST_FILENAME} -f [OR]
@@ -19,12 +21,14 @@ RewriteRule ^ - [L]
 # Route everything else through index.php
 RewriteRule ^ index.php [QSA,L]
 
-# Security headers
+# Security headers are emitted by core/Security.php to avoid duplicate values.
+
+# Static asset caching. Query-string filemtime versions are already used by
+# the templates, so immutable caching is safe for these files.
 <IfModule mod_headers.c>
-    Header always set X-Frame-Options "DENY"
-    Header always set X-Content-Type-Options "nosniff"
-    Header always set Referrer-Policy "same-origin"
-    Header always set X-XSS-Protection "1; mode=block"
+    <FilesMatch "\.(css|js|png|jpg|jpeg|gif|webp|svg|ico|woff2)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
 </IfModule>
 
 # PHP settings (if mod_php)

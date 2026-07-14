@@ -21,7 +21,7 @@ class ExerciseController
     public function apiList(): void
     {
         $userId = Auth::userId();
-        $limit  = (int)Request::query('limit', 50);
+        $limit  = max(1, min(200, (int)Request::query('limit', 50)));
         $month  = Request::query('month', '');
         $data   = Workout::listForUser($userId, $limit, $month);
         Response::json(['workouts' => $data]);
@@ -102,20 +102,28 @@ class ExerciseController
 
     private function validateData(): array
     {
-        $type = Request::input('type', '');
+        $type = trim(Request::input('type', ''));
         $date = Request::input('workout_date', date('Y-m-d'));
 
         if (!$type) return ['error' => 'กรุณากรอกประเภทการออกกำลังกาย'];
         if (!$date) return ['error' => 'กรุณากรอกวันที่'];
 
+        $parsed = DateTime::createFromFormat('Y-m-d', (string)$date);
+        if (!$date || !$parsed || $parsed->format('Y-m-d') !== $date) return ['error' => 'วันที่ไม่ถูกต้อง'];
+        $duration = (int)Request::input('duration_min', 0);
+        $sets = (int)Request::input('sets', 0);
+        $reps = (int)Request::input('reps', 0);
+        $weight = (float)Request::input('weight_kg', 0);
+        if ($duration < 0 || $duration > 1440 || $sets < 0 || $sets > 1000 || $reps < 0 || $reps > 10000 || $weight < 0 || $weight > 10000) return ['error' => 'ค่าการออกกำลังกายไม่ถูกต้อง'];
+
         return [
             'workout_date' => $date,
             'type'         => $type,
-            'duration_min' => Request::input('duration_min', ''),
-            'sets'         => Request::input('sets', ''),
-            'reps'         => Request::input('reps', ''),
-            'weight_kg'    => Request::input('weight_kg', ''),
-            'notes'        => Request::input('notes', ''),
+            'duration_min' => $duration,
+            'sets'         => $sets,
+            'reps'         => $reps,
+            'weight_kg'    => $weight,
+            'notes'        => mb_substr(Request::input('notes', ''), 0, 2000),
         ];
     }
 }

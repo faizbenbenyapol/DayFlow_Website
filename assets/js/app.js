@@ -82,6 +82,8 @@ function toast(message, type = 'success', duration = 3000) {
 
     const el = document.createElement('div');
     el.className = 'toast toast-' + type;
+    el.setAttribute('role', type === 'danger' || type === 'error' ? 'alert' : 'status');
+    el.setAttribute('aria-live', type === 'danger' || type === 'error' ? 'assertive' : 'polite');
     el.textContent = message;
     container.appendChild(el);
 
@@ -99,10 +101,15 @@ function toast(message, type = 'success', duration = 3000) {
 /* =====================================================
    Modal Helpers
 ===================================================== */
+let lastModalFocus = null;
+
 function openModal(id) {
     const modal = document.getElementById(id);
     if (!modal) return;
+    lastModalFocus = document.activeElement;
     modal.classList.add('active');
+    document.body.classList.add('modal-open');
+    modal.setAttribute('aria-hidden', 'false');
     // Focus first input
     const input = modal.querySelector('input:not([type="hidden"]), textarea, select');
     if (input) setTimeout(() => input.focus(), 50);
@@ -110,13 +117,18 @@ function openModal(id) {
 
 function closeModal(id) {
     const el = document.getElementById(id);
-    if (el) el.classList.remove('active');
+    if (el) {
+        el.classList.remove('active');
+        el.setAttribute('aria-hidden', 'true');
+        if (!document.querySelector('.modal-backdrop.active')) document.body.classList.remove('modal-open');
+        if (lastModalFocus && typeof lastModalFocus.focus === 'function') lastModalFocus.focus();
+    }
 }
 
 // Close modal on backdrop click
 document.addEventListener('click', function (e) {
     if (e.target.classList.contains('modal-backdrop')) {
-        e.target.classList.remove('active');
+        closeModal(e.target.id);
     }
 });
 
@@ -124,7 +136,7 @@ document.addEventListener('click', function (e) {
 document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
         document.querySelectorAll('.modal-backdrop.active').forEach(m => {
-            m.classList.remove('active');
+            closeModal(m.id);
         });
     }
 });
@@ -133,7 +145,7 @@ document.addEventListener('keydown', function (e) {
 document.addEventListener('click', function (e) {
     if (e.target.classList.contains('modal-close') || 'closeModal' in e.target.dataset) {
         const modal = e.target.closest('.modal-backdrop');
-        if (modal) modal.classList.remove('active');
+        if (modal) closeModal(modal.id);
     }
 });
 
@@ -232,3 +244,71 @@ function debounce(fn, delay) {
         timer = setTimeout(() => fn.apply(this, args), delay);
     };
 }
+
+/* =====================================================
+   Global Search
+===================================================== */
+(function initGlobalSearch() {
+    const input = document.getElementById('globalSearchInput');
+    const results = document.getElementById('globalSearchResults');
+    if (!input || !results) return;
+
+    const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    }[ch]));
+
+    const render = items => {
+        if (!items.length) {
+            results.innerHTML = '<div class="global-search-empty">ไม่พบข้อมูลที่ตรงกัน</div>';
+        } else {
+            results.innerHTML = items.map((item, index) => `
+                <a class="global-search-item" role="option" data-search-index="${index}" href="${escapeHtml(item.url)}">
+                    <span class="global-search-type">${escapeHtml(item.type)}</span>
+                    <span class="global-search-copy"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.subtitle)}</small></span>
+                </a>`).join('');
+        }
+        results.hidden = false;
+    };
+
+    const search = debounce(async () => {
+        const q = input.value.trim();
+        if (q.length < 2) { results.hidden = true; return; }
+        try {
+            const data = await apiFetch(`${BASE_URL}/api/search?q=${encodeURIComponent(q)}`);
+            render(data.results || []);
+        } catch (error) {
+            results.innerHTML = '<div class="global-search-empty">ค้นหาไม่สำเร็จ ลองใหม่อีกครั้ง</div>';
+            results.hidden = false;
+        }
+    }, 220);
+
+    input.addEventListener('input', search);
+    input.addEventListener('focus', search);
+    input.addEventListener('keydown', event => {
+        if (results.hidden) return;
+        const items = Array.from(results.querySelectorAll('.global-search-item'));
+        if (!items.length) return;
+        const current = items.findIndex(item => item.classList.contains('keyboard-focus'));
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            const next = event.key === 'ArrowDown' ? (current + 1) % items.length : (current - 1 + items.length) % items.length;
+            items.forEach(item => item.classList.remove('keyboard-focus'));
+            items[next].classList.add('keyboard-focus');
+            items[next].scrollIntoView({ block: 'nearest' });
+        }
+        if (event.key === 'Enter' && current >= 0) {
+            event.preventDefault();
+            items[current].click();
+        }
+    });
+    document.addEventListener('keydown', event => {
+        const tag = document.activeElement?.tagName;
+        if (event.key === '/' && document.activeElement !== input && !['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) {
+            event.preventDefault(); input.focus();
+        }
+        if (event.key === 'Escape') { input.value = ''; results.hidden = true; input.blur(); }
+    });
+    document.addEventListener('click', event => {
+        if (!event.target.closest('#globalSearch')) results.hidden = true;
+    });
+})();

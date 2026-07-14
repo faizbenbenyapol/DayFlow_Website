@@ -26,8 +26,10 @@ document.addEventListener('DOMContentLoaded', async function () {
         renderStocksWidget(data.stocks);
         renderTransferWidget(data.transfer);
         updateLastTimestamp();
+        showDashboardWarnings(data);
     } catch (err) {
         console.error('Dashboard load error:', err);
+        showDashboardError('โหลดข้อมูล Dashboard ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
     }
 
     // Live Clock in Dashboard Header
@@ -60,8 +62,10 @@ document.addEventListener('DOMContentLoaded', async function () {
                 renderStocksWidget(data.stocks);
                 renderTransferWidget(data.transfer);
                 updateLastTimestamp();
+                showDashboardWarnings(data);
             } catch (err) {
                 console.error('Manual refresh error:', err);
+                showDashboardError('รีเฟรชข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
             } finally {
                 setTimeout(() => refreshBtn.classList.remove('loading-spin'), 800);
             }
@@ -83,6 +87,19 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
     }
 });
+
+function showDashboardWarnings(data) {
+    const warnings = data?.meta?.warnings || [];
+    if (warnings.length && typeof toast === 'function') {
+        toast('บางโมดูลยังโหลดข้อมูลไม่ได้: ' + warnings.join(', '), 'warning');
+    }
+}
+
+function showDashboardError(message) {
+    if (typeof toast === 'function') {
+        toast(message, 'error');
+    }
+}
 
 function saveLayout() {
     const grid = document.getElementById('dashboardGrid');

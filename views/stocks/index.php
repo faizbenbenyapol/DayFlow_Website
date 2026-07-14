@@ -270,10 +270,10 @@
                 </div>
                 <div class="stk-chart-grid">
                     <div class="chart-wrap">
-                        <canvas id="stkValueChart"></canvas>
+                        <canvas id="stkValueChart" role="img" aria-label="กราฟมูลค่าหุ้น"></canvas>
                     </div>
                     <div class="chart-wrap">
-                        <canvas id="stkPlChart"></canvas>
+                        <canvas id="stkPlChart" role="img" aria-label="กราฟกำไรขาดทุนหุ้น"></canvas>
                     </div>
                 </div>
             </div>
@@ -464,4 +464,3 @@
         </div>
     </div>
 </div>
-

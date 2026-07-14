@@ -69,6 +69,7 @@ class FoodNoteController
         $name = trim(Request::input('name', ''));
         if (!$name) return ['error' => 'กรุณากรอกชื่ออาหาร/เครื่องดื่ม'];
 
+        if (mb_strlen($name) > 255) return ['error' => 'ชื่อรายการยาวเกินไป'];
         $type     = Request::input('type', 'food');
         $reaction = Request::input('reaction', 'avoid');
         $severity = Request::input('severity', 'moderate');
@@ -86,8 +87,8 @@ class FoodNoteController
             'type'     => $type,
             'reaction' => $reaction,
             'severity' => $severity,
-            'symptoms' => trim(Request::input('symptoms', '')) ?: null,
-            'notes'    => trim(Request::input('notes', ''))    ?: null,
+            'symptoms' => mb_substr(trim(Request::input('symptoms', '')), 0, 2000) ?: null,
+            'notes'    => mb_substr(trim(Request::input('notes', '')), 0, 2000) ?: null,
         ];
     }
 }

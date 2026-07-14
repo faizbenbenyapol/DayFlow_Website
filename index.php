@@ -13,6 +13,11 @@ require_once ROOT . '/core/Request.php';
 require_once ROOT . '/core/Response.php';
 require_once ROOT . '/core/Auth.php';
 require_once ROOT . '/core/Router.php';
+require_once ROOT . '/core/Security.php';
+require_once ROOT . '/core/RateLimiter.php';
+require_once ROOT . '/core/RememberToken.php';
+
+Security::headers();
 
 // Dispatch request
 $router = new Router();

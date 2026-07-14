@@ -9,6 +9,27 @@ require_once ROOT . '/core/TelegramService.php';
 
 class NoteController
 {
+    private const BLOCK_TYPES = ['text', 'link', 'checklist'];
+
+    private function validateTitle($title): string
+    {
+        $title = trim((string)$title);
+        if ($title === '') $title = 'ไม่มีชื่อ';
+        if (mb_strlen($title) > 255) Response::json(['error' => 'ชื่อโน้ตยาวเกิน 255 ตัวอักษร'], 422);
+        return $title;
+    }
+
+    private function validateBlock(string $type, $content): array
+    {
+        if (!in_array($type, self::BLOCK_TYPES, true)) Response::json(['error' => 'ประเภทบล็อกไม่ถูกต้อง'], 422);
+        if (is_array($content) || is_object($content)) {
+            $content = json_encode($content, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+        $content = (string)$content;
+        if (mb_strlen($content) > 1000000) Response::json(['error' => 'เนื้อหาโน้ตใหญ่เกินไป'], 422);
+        return [$type, $content];
+    }
+
     public function index(): void
     {
         $pageTitle  = 'โน้ต';
@@ -54,6 +75,7 @@ class NoteController
     {
         $userId    = Auth::userId();
         $title     = Request::input('title', 'ไม่มีชื่อ');
+        $title     = $this->validateTitle($title);
         $encrypted = (bool)Request::input('is_encrypted', false);
         $password  = Request::rawInput('password', '');
 
@@ -84,8 +106,8 @@ class NoteController
 
         $data = [];
         $body = Request::json();
-        if (array_key_exists('title', $body))  $data['title']  = $body['title'];
-        if (array_key_exists('pinned', $body)) $data['pinned'] = $body['pinned'];
+        if (array_key_exists('title', $body))  $data['title']  = $this->validateTitle($body['title']);
+        if (array_key_exists('pinned', $body)) $data['pinned'] = !empty($body['pinned']) ? 1 : 0;
 
         Note::update($noteId, $userId, $data);
 
@@ -185,11 +207,14 @@ class NoteController
         $note    = Note::getById($noteId, $userId);
         if (!$note) Response::json(['error' => 'ไม่พบโน้ต'], 404);
 
-        $type    = Request::input('type', 'text');
-        $content = Request::rawInput('content', '');
+        [$type, $content] = $this->validateBlock(
+            (string)Request::input('type', 'text'),
+            Request::rawInput('content', '')
+        );
 
         if ($note['is_encrypted']) {
             $password = Request::rawInput('password', '');
+            if ($password === '') Response::json(['error' => 'กรุณาใส่รหัสผ่านของโน้ต'], 422);
             $content  = NoteBlock::encrypt($content, $password, $note['encrypt_salt']);
         }
 
@@ -205,11 +230,14 @@ class NoteController
         $note    = Note::getById($noteId, $userId);
         if (!$note) Response::json(['error' => 'ไม่พบโน้ต'], 404);
 
-        $type    = Request::input('type', 'text');
-        $content = Request::rawInput('content', '');
+        [$type, $content] = $this->validateBlock(
+            (string)Request::input('type', 'text'),
+            Request::rawInput('content', '')
+        );
 
         if ($note['is_encrypted']) {
             $password = Request::rawInput('password', '');
+            if ($password === '') Response::json(['error' => 'กรุณาใส่รหัสผ่านของโน้ต'], 422);
             $content  = NoteBlock::encrypt($content, $password, $note['encrypt_salt']);
         }
 

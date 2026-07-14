@@ -501,6 +501,20 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     background: var(--color-success);
 }
 
+.toast.toast-warning {
+    background: var(--color-warning, #d97706);
+}
+
+.toast.toast-error {
+    background: var(--color-danger, #dc2626);
+}
+
+.toast.toast-info {
+    background: var(--color-accent, #2563eb);
+}
+
+body.modal-open { overflow: hidden; }
+
 /* --- Tables --- */
 .table-wrap {
     overflow-x: auto;

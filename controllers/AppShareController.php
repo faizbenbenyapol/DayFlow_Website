@@ -25,7 +25,7 @@ class AppShareController
         $_SESSION['app_share_token'] = $token;
 
         // Redirect to the first allowed menu
-        $menus = json_decode($share['menus'], true) ?: [];
+        $menus = AppShare::sanitizeMenus(json_decode($share['menus'], true) ?: []);
         if (empty($menus)) {
             Response::abort(403, 'ไม่มีเมนูที่ถูกแชร์');
         }
@@ -71,6 +71,8 @@ class AppShareController
 
         if (empty($label)) Response::json(['error' => 'กรุณาระบุชื่อลิงก์แชร์'], 422);
         if (empty($menus) || !is_array($menus)) Response::json(['error' => 'กรุณาเลือกอย่างน้อย 1 เมนู'], 422);
+        $menus = AppShare::sanitizeMenus($menus);
+        if (empty($menus)) Response::json(['error' => 'เมนูที่เลือกไม่ถูกต้อง'], 422);
 
         // Validate expires_at format
         $expiresClean = null;

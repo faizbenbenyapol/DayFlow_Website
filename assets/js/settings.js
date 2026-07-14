@@ -31,6 +31,94 @@
         } catch (_) {}
     }
 
+    // ---------- Remembered devices ----------
+    function initDevices() {
+        const list = $('#deviceList');
+        if (!list) return;
+        let loaded = false;
+
+        const formatDate = value => {
+            if (!value) return 'ยังไม่มีข้อมูล';
+            const date = new Date(String(value).replace(' ', 'T'));
+            return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('th-TH', {
+                dateStyle: 'medium', timeStyle: 'short'
+            });
+        };
+        const deviceName = ua => {
+            const value = String(ua || '');
+            if (!value) return 'ไม่ทราบอุปกรณ์';
+            if (/iphone|ipad/i.test(value)) return 'iPhone / iPad';
+            if (/android/i.test(value)) return 'Android';
+            if (/windows/i.test(value)) return 'Windows';
+            if (/macintosh|mac os/i.test(value)) return 'Mac';
+            if (/linux/i.test(value)) return 'Linux';
+            return 'เว็บเบราว์เซอร์';
+        };
+        const browserName = ua => {
+            const value = String(ua || '');
+            if (/edg\//i.test(value)) return 'Microsoft Edge';
+            if (/chrome\//i.test(value)) return 'Google Chrome';
+            if (/firefox\//i.test(value)) return 'Mozilla Firefox';
+            if (/safari\//i.test(value) && !/chrome\//i.test(value)) return 'Safari';
+            return 'เบราว์เซอร์อื่น';
+        };
+        const render = devices => {
+            if (!devices.length) {
+                list.innerHTML = '<div class="empty-state"><div class="empty-state-title">ยังไม่มีอุปกรณ์ที่จำไว้</div><div class="empty-state-text">ครั้งถัดไปที่เข้าสู่ระบบ ให้เลือก “จดจำอุปกรณ์นี้”</div></div>';
+                return;
+            }
+            list.innerHTML = devices.map(device => `
+                <div class="device-row ${device.is_current ? 'is-current' : ''}">
+                    <div class="device-icon" aria-hidden="true">⌁</div>
+                    <div class="device-main">
+                        <div class="device-title">${escHtml(deviceName(device.user_agent))} <span class="device-browser">${escHtml(browserName(device.user_agent))}</span>${device.is_current ? '<span class="device-current">อุปกรณ์นี้</span>' : ''}</div>
+                        <div class="device-meta">IP ${escHtml(device.ip_address || 'ไม่ทราบ')} · ใช้งานล่าสุด ${escHtml(formatDate(device.last_used_at || device.created_at))}</div>
+                        <div class="device-meta">หมดอายุ ${escHtml(formatDate(device.expires_at))}</div>
+                    </div>
+                    <button class="btn btn-ghost btn-sm device-revoke" type="button" data-device-id="${Number(device.id)}">ยกเลิก</button>
+                </div>
+            `).join('');
+            $$('.device-revoke', list).forEach(button => button.addEventListener('click', async () => {
+                const ok = await confirmAction('อุปกรณ์นี้จะต้องเข้าสู่ระบบใหม่ในครั้งถัดไป', 'ยกเลิกอุปกรณ์', 'ยืนยันการยกเลิก');
+                if (!ok) return;
+                button.disabled = true;
+                try {
+                    await apiFetch(BASE_URL + '/api/settings/devices/' + encodeURIComponent(button.dataset.deviceId), { method: 'DELETE' });
+                    toast('ยกเลิกอุปกรณ์แล้ว');
+                    loaded = false;
+                    await load();
+                } catch (err) {
+                    button.disabled = false;
+                    toast(err.message || 'ยกเลิกอุปกรณ์ไม่สำเร็จ', 'danger');
+                }
+            }));
+        };
+        const load = async () => {
+            list.innerHTML = '<div class="loading-state">กำลังโหลดรายการอุปกรณ์…</div>';
+            try {
+                const data = await apiFetch(BASE_URL + '/api/settings/devices');
+                render(Array.isArray(data.devices) ? data.devices : []);
+                loaded = true;
+            } catch (err) {
+                list.innerHTML = '<div class="empty-state"><div class="empty-state-title">โหลดรายการไม่สำเร็จ</div><button class="btn btn-ghost btn-sm" id="btnRetryDevices" type="button">ลองใหม่</button></div>';
+                $('#btnRetryDevices')?.addEventListener('click', load);
+            }
+        };
+        $$('.settings-tab').forEach(tab => tab.addEventListener('click', () => {
+            if (tab.dataset.tab === 'devices' && !loaded) load();
+        }));
+        $('#btnRevokeOtherDevices')?.addEventListener('click', async () => {
+            const ok = await confirmAction('อุปกรณ์อื่นทั้งหมดจะต้องเข้าสู่ระบบใหม่ โดยอุปกรณ์นี้จะยังใช้งานต่อได้', 'ออกจากอุปกรณ์อื่น', 'ยืนยัน');
+            if (!ok) return;
+            try {
+                const data = await apiFetch(BASE_URL + '/api/settings/devices/revoke-others', { method: 'POST' });
+                toast(`ยกเลิกอุปกรณ์อื่นแล้ว ${Number(data.revoked || 0)} รายการ`);
+                loaded = false;
+                await load();
+            } catch (err) { toast(err.message || 'ดำเนินการไม่สำเร็จ', 'danger'); }
+        });
+    }
+
     // ---------- Profile ----------
     async function saveProfile() {
         const body = {
@@ -779,14 +867,73 @@
 
     // ---------- Manage Menus ----------
     function initMenus() {
+        const list = $('#menuVisibilityList');
+        if (!list) return;
+
+        const rows = $$('input[name="visible_menus[]"]', list).map(input => {
+            const row = input.closest('label');
+            if (!row) return null;
+            row.classList.add('menu-order-item');
+            row.dataset.menuKey = input.value;
+            row.setAttribute('draggable', 'true');
+            if (!row.querySelector('.menu-drag-handle')) {
+                const handle = document.createElement('span');
+                handle.className = 'menu-drag-handle';
+                handle.textContent = '⋮⋮';
+                handle.setAttribute('aria-hidden', 'true');
+                row.prepend(handle);
+            }
+            if (!row.querySelector('[data-menu-move="up"]')) {
+                const actions = document.createElement('span');
+                actions.className = 'menu-order-actions';
+                actions.innerHTML = '<button type="button" class="menu-move-btn" data-menu-move="up" aria-label="เลื่อนเมนูขึ้น">↑</button><button type="button" class="menu-move-btn" data-menu-move="down" aria-label="เลื่อนเมนูลง">↓</button>';
+                row.append(actions);
+            }
+            return row;
+        }).filter(Boolean);
+
+        try {
+            const savedOrder = JSON.parse(list.dataset.menuOrder || '[]');
+            const rank = new Map(savedOrder.map((key, index) => [key, index]));
+            rows.sort((a, b) => (rank.get(a.dataset.menuKey) ?? 999) - (rank.get(b.dataset.menuKey) ?? 999));
+            rows.forEach(row => list.append(row));
+        } catch (_) {}
+
+        if (window.Sortable && !list.dataset.sortableReady) {
+            window.Sortable.create(list, {
+                animation: 180,
+                handle: '.menu-drag-handle',
+                ghostClass: 'sortable-ghost'
+            });
+            list.dataset.sortableReady = '1';
+        }
+
+        list.addEventListener('click', event => {
+            const button = event.target.closest('[data-menu-move]');
+            if (!button) return;
+            const row = button.closest('.menu-order-item');
+            if (!row) return;
+            const target = button.dataset.menuMove === 'up' ? row.previousElementSibling : row.nextElementSibling;
+            if (!target) return;
+            if (button.dataset.menuMove === 'up') list.insertBefore(row, target);
+            else list.insertBefore(target, row);
+        });
+
         $('#btnSaveMenus')?.addEventListener('click', async () => {
+            const saveButton = $('#btnSaveMenus');
             const checkedBoxes = $$('input[name="visible_menus[]"]:checked');
             const visibleMenus = checkedBoxes.map(cb => cb.value);
+            const order = $$('.menu-order-item', list).map(row => row.dataset.menuKey);
 
             try {
+                if (saveButton) {
+                    saveButton.disabled = true;
+                    saveButton.dataset.originalText = saveButton.textContent;
+                    saveButton.textContent = 'กำลังบันทึก...';
+                }
                 await apiFetch(BASE_URL + '/api/settings/menus', {
                     method: 'POST',
-                    body: JSON.stringify({ menus: visibleMenus })
+                    body: JSON.stringify({ menus: visibleMenus, order })
                 });
                 
                 if (window.Swal) {
@@ -808,6 +955,12 @@
                 }
             } catch (err) {
                 toast(err.message || 'บันทึกการตั้งค่าเมนูไม่สำเร็จ', 'danger');
+            }
+            finally {
+                if (saveButton) {
+                    saveButton.disabled = false;
+                    saveButton.textContent = saveButton.dataset.originalText || 'บันทึกการตั้งค่าเมนู';
+                }
             }
         });
     }
@@ -973,6 +1126,7 @@
         initLocalStorage();
         initImportData();
         initDangerZone();
+        initDevices();
         initCategories();
         initStockKeys();
         initMenus();

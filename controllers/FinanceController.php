@@ -95,6 +95,9 @@ class FinanceController
 
         if (!$name) Response::json(['error' => 'กรุณากรอกชื่อหมวดหมู่'], 422);
 
+        $name = trim($name);
+        if (!$name || mb_strlen($name) > 100) Response::json(['error' => 'ชื่อหมวดหมู่ไม่ถูกต้อง'], 422);
+        if (!in_array($type, ['income', 'expense'], true)) Response::json(['error' => 'ประเภทไม่ถูกต้อง'], 422);
         $id = FinanceCategory::create($userId, $name, $type);
         Response::json(['ok' => true, 'id' => $id], 201);
     }
@@ -110,6 +113,8 @@ class FinanceController
             Response::json(['error' => 'ประเภทไม่ถูกต้อง'], 422);
         }
 
+        $name = trim($name);
+        if (!$name || mb_strlen($name) > 100) Response::json(['error' => 'ชื่อหมวดหมู่ไม่ถูกต้อง'], 422);
         FinanceCategory::update((int)$id, $userId, $name, $type);
         Response::json(['ok' => true]);
     }
@@ -131,11 +136,15 @@ class FinanceController
         if ($amount <= 0) return ['error' => 'กรุณากรอกจำนวนเงิน'];
         if (!$date) return ['error' => 'กรุณากรอกวันที่'];
 
+        if ($amount <= 0 || $amount > 999999999.99 || !is_finite($amount)) return ['error' => 'จำนวนเงินไม่ถูกต้อง'];
+        $parsedDate = DateTime::createFromFormat('Y-m-d', (string)$date);
+        if (!$date || !$parsedDate || $parsedDate->format('Y-m-d') !== $date) return ['error' => 'วันที่ไม่ถูกต้อง'];
+
         return [
             'type'        => $type,
             'amount'      => $amount,
             'category_id' => (int)Request::input('category_id', 0),
-            'description' => Request::input('description', ''),
+            'description' => mb_substr(Request::input('description', ''), 0, 1000),
             'txn_date'    => $date,
         ];
     }

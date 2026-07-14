@@ -1,0 +1,107 @@
+services:
+  app:
+    build: .
+    container_name: dayflow-app
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    environment:
+      APP_ENV: development
+      APP_URL: http://localhost:8080
+      DB_HOST: db
+      DB_NAME: dayflow
+      DB_USER: dayflow_app
+      DB_PASS: dayflow_dev_password
+      TIMEZONE: Asia/Bangkok
+      MAX_UPLOAD_BYTES: 20971520
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+    volumes:
+      - ./uploads:/var/www/html/uploads
+      - ./storage:/var/www/html/storage
+    restart: unless-stopped
+
+  cron:
+    build: .
+    container_name: dayflow-cron
+    profiles: ["worker"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_ENV: development
+      DB_HOST: db
+      DB_NAME: dayflow
+      DB_USER: dayflow_app
+      DB_PASS: dayflow_dev_password
+      TIMEZONE: Asia/Bangkok
+    volumes:
+      - ./uploads:/var/www/html/uploads
+      - ./storage:/var/www/html/storage
+    command: ["sh", "-c", "while true; do php /var/www/html/cron.php; sleep 300; done"]
+    restart: unless-stopped
+
+  backup:
+    image: mariadb:11.4
+    container_name: dayflow-backup
+    profiles: ["backup"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MARIADB_DATABASE: dayflow
+      MARIADB_USER: dayflow_app
+      MARIADB_PASSWORD: dayflow_dev_password
+      MARIADB_ROOT_PASSWORD: dayflow_root_dev_password
+    volumes:
+      - ./backups:/backup
+    entrypoint: ["sh", "-c"]
+    command: ["mariadb-dump -h db -u root -p$$MARIADB_ROOT_PASSWORD --single-transaction --routines --events $$MARIADB_DATABASE > /backup/dayflow-$$(date +%Y%m%d-%H%M%S).sql"]
+
+  backup-files:
+    image: alpine:3.20
+    container_name: dayflow-backup-files
+    profiles: ["backup"]
+    volumes:
+      - ./uploads:/source/uploads:ro
+      - ./storage:/source/storage:ro
+      - ./backups:/backup
+    entrypoint: ["sh", "-c"]
+    command: ["tar -czf /backup/dayflow-files-$$(date +%Y%m%d-%H%M%S).tar.gz -C /source uploads storage"]
+
+  db:
+    image: mariadb:11.4
+    container_name: dayflow-db
+    environment:
+      MARIADB_DATABASE: dayflow
+      MARIADB_USER: dayflow_app
+      MARIADB_PASSWORD: dayflow_dev_password
+      MARIADB_ROOT_PASSWORD: dayflow_root_dev_password
+    volumes:
+      - dayflow_db:/var/lib/mysql
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+      - ./sql/migrate_ai.sql:/docker-entrypoint-initdb.d/010-migrate-ai.sql:ro
+      - ./sql/migrate_app_shares.sql:/docker-entrypoint-initdb.d/020-migrate-app-shares.sql:ro
+      - ./sql/migrate_file_transfer.sql:/docker-entrypoint-initdb.d/030-migrate-file-transfer.sql:ro
+      - ./sql/migrate_focus.sql:/docker-entrypoint-initdb.d/040-migrate-focus.sql:ro
+      - ./sql/migrate_projects.sql:/docker-entrypoint-initdb.d/050-migrate-projects.sql:ro
+      - ./sql/migrate_project_collab.sql:/docker-entrypoint-initdb.d/060-migrate-project-collab.sql:ro
+      - ./sql/migrate_project_share.sql:/docker-entrypoint-initdb.d/070-migrate-project-share.sql:ro
+      - ./sql/migrate_shares.sql:/docker-entrypoint-initdb.d/080-migrate-shares.sql:ro
+      - ./sql/migrate_skills.sql:/docker-entrypoint-initdb.d/090-migrate-skills.sql:ro
+      - ./sql/migrate_stock_watchlists.sql:/docker-entrypoint-initdb.d/100-migrate-stock-watchlists.sql:ro
+      - ./sql/migrate_telegram_cron.sql:/docker-entrypoint-initdb.d/110-migrate-telegram-cron.sql:ro
+      - ./sql/migrate_remember_tokens.sql:/docker-entrypoint-initdb.d/120-migrate-remember-tokens.sql:ro
+      - ./sql/migrate_habits.sql:/docker-entrypoint-initdb.d/130-migrate-habits.sql:ro
+      - ./sql/migrate_quick_capture.sql:/docker-entrypoint-initdb.d/140-migrate-quick-capture.sql:ro
+      - ./sql/migrate_menu_order.sql:/docker-entrypoint-initdb.d/150-migrate-menu-order.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -u root -p$$MARIADB_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  dayflow_db:

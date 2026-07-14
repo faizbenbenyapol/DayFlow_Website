@@ -9,19 +9,14 @@ if (!defined('ROOT')) define('ROOT', __DIR__);
 require_once ROOT . '/config/config.php';
 require_once ROOT . '/config/database.php';
 require_once ROOT . '/core/TelegramService.php';
+require_once ROOT . '/models/User.php';
 
-// Security check: Only allow CLI, logged-in session, or with a valid token
+// Security check: production is CLI-only. The web endpoint is intentionally
+// disabled because this job sends private Telegram notifications.
 $isCli = (php_sapi_name() === 'cli');
 if (!$isCli) {
-    require_once ROOT . '/config/session.php';
-}
-$isLoggedIn = isset($_SESSION['user_id']);
-$token = $_GET['token'] ?? '';
-$expectedToken = hash('sha256', appKey() . 'cron');
-
-if (!$isCli && !$isLoggedIn && $token !== $expectedToken) {
     http_response_code(403);
-    die("Access Denied. Invalid or missing token.\n");
+    die("Cron is CLI-only.\n");
 }
 
 echo "Starting DayFlow Cron Job...\n";
@@ -58,6 +53,8 @@ if (empty($users)) {
 $sentCount = 0;
 
 foreach ($users as $u) {
+    $u['telegram_bot_token'] = User::decryptTelegramToken($u['telegram_bot_token']);
+    if ($u['telegram_bot_token'] === '') continue;
     $userId = (int)$u['user_id'];
     $eventsStr = $u['telegram_notify_events'] ?: '{}';
     $events = json_decode($eventsStr, true) ?: [];

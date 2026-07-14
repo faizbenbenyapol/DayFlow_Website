@@ -25,7 +25,14 @@ Desktop.ini
 # --- Environment and Sensitive Configuration ---
 # Ignore the auto-generated application encryption key (VERY IMPORTANT for public repos)
 /config/.app_key
-config/config.php
+# config/config.php is intentionally tracked: it contains only safe defaults.
+# Put real credentials in .env (which remains ignored).
+/storage/logs/*
+!/storage/logs/.gitkeep
+/storage/ratelimit/*
+!/storage/ratelimit/.gitkeep
+/backups/*
+!/backups/.gitkeep
 
 # Ignore any local environment files or backups
 .env
@@ -34,6 +41,14 @@ config/config.php
 *.env
 *.bak
 *.config
+client_secret*.json
+*service-account*.json
+credentials*.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
 
 # --- Uploads and User Assets ---
 # Ignore all uploaded files, but keep the directory and security .htaccess file
@@ -41,9 +56,12 @@ config/config.php
 !/uploads/.htaccess
 
 # --- Database & SQL Backups ---
-# Ignore database dumps or migrations that shouldn't be public
+# Ignore database dumps, but keep application migrations public because the
+# Docker image and migration runner need them on a fresh server.
 *.sql
 !/sql/
+!/sql/**/*.sql
+!/sql/*.sql
 
 # --- Server Logs & Caches ---
 *.log

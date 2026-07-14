@@ -4,6 +4,7 @@
 // =====================================================
 
 require_once ROOT . '/models/User.php';
+require_once ROOT . '/core/RememberToken.php';
 
 class SettingsController
 {
@@ -33,7 +34,29 @@ class SettingsController
         $userId   = Auth::userId();
         $user     = User::findById($userId);
         $settings = User::getSettings($userId);
+        $settings['telegram_bot_token'] = !empty($settings['telegram_bot_token']) ? '••••••••' : '';
         Response::json(['user' => $user, 'settings' => $settings]);
+    }
+
+    public function apiDevices(): void
+    {
+        Response::json(['devices' => RememberToken::listForUser(Auth::userId())]);
+    }
+
+    public function apiDeviceRevoke(string $id): void
+    {
+        $tokenId = filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if (!$tokenId) Response::json(['error' => 'อุปกรณ์ไม่ถูกต้อง'], 422);
+
+        $revoked = RememberToken::revokeForUser((int)$tokenId, Auth::userId());
+        if (!$revoked) Response::json(['error' => 'ไม่พบอุปกรณ์นี้'], 404);
+        Response::json(['ok' => true]);
+    }
+
+    public function apiDevicesRevokeOthers(): void
+    {
+        $count = RememberToken::revokeOthers(Auth::userId());
+        Response::json(['ok' => true, 'revoked' => $count]);
     }
 
     public function apiProfile(): void
@@ -83,6 +106,9 @@ class SettingsController
         }
 
         User::updatePassword($userId, $newPw);
+        // A password change invalidates every remembered login on other devices.
+        RememberToken::revokeAll($userId);
+        setcookie(RememberToken::COOKIE, '', ['expires' => time() - 3600, 'path' => '/', 'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off', 'httponly' => true, 'samesite' => 'Lax']);
         Response::json(['ok' => true]);
     }
 
@@ -117,12 +143,15 @@ class SettingsController
     {
         $userId = Auth::userId();
         $menus  = Request::input('menus', []);
+        $order  = Request::input('order', []);
 
-        if (!is_array($menus)) {
+        if (!is_array($menus) || !is_array($order)) {
             Response::json(['error' => 'รูปแบบข้อมูลไม่ถูกต้อง'], 422);
         }
 
-        $allowedMenus = ['tasks', 'notes', 'planner', 'exercise', 'food-notes', 'finance', 'subscriptions', 'stocks', 'ai', 'file-tools', 'files', 'transfer', 'focus'];
+        $allowedMenus = ['projects', 'tasks', 'notes', 'planner', 'focus', 'exercise', 'food-notes', 'finance', 'subscriptions', 'stocks', 'ai', 'file-tools', 'transfer', 'files', 'quick-notes', 'bookmarks'];
+        $menus = array_map('strval', $menus);
+        $order = array_map('strval', $order);
         $hiddenMenus = [];
         foreach ($allowedMenus as $m) {
             if (!in_array($m, $menus)) {
@@ -130,10 +159,34 @@ class SettingsController
             }
         }
 
-        $json = json_encode($hiddenMenus);
-        User::updateHiddenMenus($userId, $json);
+        $normalizedOrder = [];
+        foreach ($order as $menu) {
+            if (in_array($menu, $allowedMenus, true) && !in_array($menu, $normalizedOrder, true)) {
+                $normalizedOrder[] = $menu;
+            }
+        }
+        foreach ($allowedMenus as $menu) {
+            if (!in_array($menu, $normalizedOrder, true)) {
+                $normalizedOrder[] = $menu;
+            }
+        }
 
-        Response::json(['ok' => true, 'hidden_menus' => $hiddenMenus]);
+        $json = json_encode($hiddenMenus);
+        $orderJson = json_encode($normalizedOrder);
+        $db = DB::conn();
+        try {
+            $db->beginTransaction();
+            User::updateHiddenMenus($userId, $json);
+            User::updateMenuOrder($userId, $orderJson);
+            $db->commit();
+        } catch (Throwable $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            Response::json(['error' => 'บันทึกการตั้งค่าเมนูไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'], 500);
+        }
+
+        Response::json(['ok' => true, 'hidden_menus' => $hiddenMenus, 'menu_order' => $normalizedOrder]);
     }
 
     public function apiTelegram(): void
@@ -153,6 +206,11 @@ class SettingsController
     {
         $botToken = Request::input('telegram_bot_token', '');
         $chatId = Request::input('telegram_chat_id', '');
+
+        if (empty($botToken)) {
+            $saved = User::getSettings(Auth::userId());
+            $botToken = User::decryptTelegramToken($saved['telegram_bot_token'] ?? '');
+        }
 
         if (empty($botToken) || empty($chatId)) {
             Response::json(['error' => 'กรุณากรอก Bot Token และ Chat ID ก่อนทดสอบ'], 422);
@@ -178,15 +236,7 @@ class SettingsController
 
     public function apiCronTest(): void
     {
-        ob_start();
-        try {
-            require ROOT . '/cron.php';
-            $output = ob_get_clean();
-            Response::json(['ok' => true, 'output' => $output]);
-        } catch (\Throwable $e) {
-            ob_end_clean();
-            Response::json(['error' => 'Cron Error: ' . $e->getMessage()], 500);
-        }
+        Response::json(['error' => 'งานแจ้งเตือนทำงานผ่าน Docker worker เท่านั้น'], 410);
     }
 
     public function apiExport(): void
@@ -234,7 +284,8 @@ class SettingsController
             User::importAllData($userId, $data);
             Response::json(['ok' => true]);
         } catch (\Throwable $e) {
-            Response::json(['error' => 'นำเข้าข้อมูลไม่สำเร็จ: ' . $e->getMessage()], 500);
+            error_log($e->getMessage());
+            Response::json(['error' => 'นำเข้าข้อมูลไม่สำเร็จ'], 500);
         }
     }
 

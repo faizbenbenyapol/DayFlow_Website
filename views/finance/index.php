@@ -83,7 +83,7 @@
     </div>
     <div class="card-body">
         <div class="chart-wrap">
-            <canvas id="financeChart"></canvas>
+            <canvas id="financeChart" role="img" aria-label="กราฟสรุปการเงิน"></canvas>
         </div>
     </div>
 </div>

@@ -75,9 +75,9 @@ class ShareController
             Response::abort(404, 'ไม่พบไฟล์บนเซิร์ฟเวอร์');
         }
 
-        $filename = addslashes($file['name']);
+        $filename = downloadFilename((string)$file['name'], 'download');
         header('Content-Type: ' . ($file['mime_type'] ?: 'application/octet-stream'));
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Disposition: attachment; filename="' . addslashes($filename) . '"; filename*=UTF-8\'\'' . rawurlencode($filename));
         header('Content-Length: ' . filesize($fullPath));
         header('X-Content-Type-Options: nosniff');
         header('Cache-Control: no-store');

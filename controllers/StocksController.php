@@ -86,6 +86,7 @@ class StocksController
     {
         $userId = Auth::userId();
         $year   = (int)Request::query('year', (int)date('Y'));
+        if ($year < 2000 || $year > 2100) Response::json(['error' => 'ปีไม่ถูกต้อง'], 422);
         Response::json([
             'year' => $year,
             'series' => Stock::monthlyValueSeries($userId, $year),
@@ -141,6 +142,7 @@ class StocksController
             }
         }
         $tickers = array_values(array_unique(array_filter(array_map('strtoupper', $tickers))));
+        if (count($tickers) > 50) Response::json(['error' => 'ขอข้อมูลหุ้นได้ไม่เกิน 50 สัญลักษณ์ต่อครั้ง'], 422);
         if (!$tickers) Response::json(['ok' => true, 'updated' => [], 'skipped' => [], 'errors' => []]);
 
         $keyInfo = StockApiKey::getFirstAvailable($userId);

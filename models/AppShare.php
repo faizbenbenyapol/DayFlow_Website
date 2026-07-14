@@ -5,6 +5,20 @@
 
 class AppShare
 {
+    public static function allowedMenus(): array
+    {
+        return ['tasks', 'notes', 'planner', 'focus', 'exercise', 'food-notes',
+                'finance', 'subscriptions', 'stocks'];
+    }
+
+    public static function sanitizeMenus(array $menus): array
+    {
+        $menus = array_map('strval', $menus);
+        return array_values(array_unique(array_filter(
+            $menus,
+            fn(string $menu): bool => in_array($menu, self::allowedMenus(), true)
+        )));
+    }
     // ------------------------------------------------------------------ //
     // Create a new app share link
     // ------------------------------------------------------------------ //
@@ -15,7 +29,7 @@ class AppShare
         ?string $expiresAt
     ): string {
         $token = bin2hex(random_bytes(32)); // 64-char hex token
-        $menusJson = json_encode($menus);
+        $menusJson = json_encode(self::sanitizeMenus($menus), JSON_THROW_ON_ERROR);
 
         DB::run(
             'INSERT INTO app_shares (user_id, token, label, menus, expires_at)

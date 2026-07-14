@@ -152,7 +152,7 @@
         <div class="card-header"><span class="card-title">API Keys</span></div>
         <div class="card-body">
             <p class="form-hint" style="margin-bottom:1rem">
-                API Key ของคุณจะถูกเข้ารหัสก่อนเก็บลงฐานข้อมูล (AES-256-CBC + HMAC) และไม่มีใครเข้าถึงได้นอกจากบัญชีของคุณ
+                API Key ของคุณจะถูกเข้ารหัสก่อนเก็บลงฐานข้อมูล และไม่มีใครเข้าถึงได้โดยตรงจากหน้าจอ
             </p>
             <div id="aiKeysList"></div>
         </div>

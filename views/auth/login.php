@@ -77,6 +77,7 @@
 
         /* ── Tabs ── */
         .auth-tabs {
+            position: relative;
             display: grid;
             grid-template-columns: 1fr 1fr;
             margin: 1.8rem 2.2rem 0;
@@ -90,6 +91,8 @@
         }
 
         .auth-tab {
+            position: relative;
+            z-index: 1;
             padding: 0.6rem;
             font-size: 0.875rem;
             font-weight: 600;
@@ -104,9 +107,7 @@
         }
 
         .auth-tab.active {
-            background: var(--surface);
             color: var(--text);
-            box-shadow: var(--shadow-sm);
         }
 
         /* ── Forms ── */
@@ -163,6 +164,59 @@
             color: var(--muted-2);
             margin-top: 0.3rem;
         }
+
+        .remember-device {
+            display: flex;
+            align-items: center;
+            gap: .65rem;
+            margin: -.35rem 0 1.2rem;
+            padding: .65rem .75rem;
+            border: none;
+            border-radius: 10px;
+            background: var(--bg);
+            box-shadow: var(--shadow-recessed);
+            color: var(--muted);
+            font-size: .82rem;
+            cursor: pointer;
+            user-select: none;
+            transition: box-shadow .2s, color .2s;
+        }
+        .remember-device:hover {
+            color: var(--text);
+            box-shadow: var(--shadow-recessed), 0 0 0 3px color-mix(in srgb, var(--accent) 8%, transparent);
+        }
+        .remember-device:focus-within {
+            box-shadow: var(--shadow-recessed), 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+        }
+        .remember-device input {
+            width: 18px;
+            height: 18px;
+            flex: 0 0 18px;
+            margin: 0;
+            background: var(--bg);
+            border: none;
+            border-radius: 6px;
+            box-shadow: var(--shadow-recessed);
+        }
+
+        .auth-tabs::before {
+            content: "";
+            position: absolute;
+            z-index: 0;
+            top: 4px;
+            bottom: 4px;
+            left: 4px;
+            width: calc(50% - 6px);
+            border-radius: 8px;
+            background: var(--surface);
+            box-shadow: var(--shadow-sm);
+            transition: transform .38s cubic-bezier(.22, 1, .36, 1);
+        }
+
+        .auth-tabs.register-active::before {
+            transform: translateX(calc(100% + 4px));
+        }
+        .remember-device span { line-height: 1.4; }
 
         /* Password wrapper */
         .pw-wrap {
@@ -328,9 +382,9 @@
     </div>
 
     <!-- Tabs -->
-    <div class="auth-tabs">
-        <button class="auth-tab active" id="tabLogin"    onclick="switchTab('login')">เข้าสู่ระบบ</button>
-        <button class="auth-tab"        id="tabRegister" onclick="switchTab('register')">สมัครสมาชิก</button>
+    <div class="auth-tabs" id="authTabs" role="tablist" aria-label="ประเภทการเข้าใช้งาน">
+        <button class="auth-tab active" id="tabLogin" role="tab" aria-selected="true" aria-controls="paneLogin" onclick="switchTab('login')">เข้าสู่ระบบ</button>
+        <button class="auth-tab" id="tabRegister" role="tab" aria-selected="false" aria-controls="paneRegister" onclick="switchTab('register')">สมัครสมาชิก</button>
     </div>
 
     <div class="auth-body">
@@ -357,6 +411,10 @@
                 </div>
             </div>
 
+            <label class="remember-device">
+                <input type="checkbox" id="rememberDevice">
+                <span>จดจำอุปกรณ์นี้ 30 วัน</span>
+            </label>
             <button class="btn-submit" id="loginBtn" onclick="doLogin()">เข้าสู่ระบบ</button>
             <div class="auth-divider">หรือ</div>
             <div style="display: flex; justify-content: center; width: 100%;">
@@ -422,7 +480,7 @@
     </div><!-- /.auth-body -->
 
     <div class="auth-footer-note">
-        v1.1.1
+        v1.2.0
     </div>
 
 </div><!-- /.auth-card -->
@@ -437,10 +495,14 @@ const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
 // ── Tab switching ──────────────────────────────────────
 function switchTab(tab) {
+    const tabs = document.getElementById('authTabs');
     document.getElementById('paneLogin').classList.toggle('active', tab === 'login');
     document.getElementById('paneRegister').classList.toggle('active', tab === 'register');
     document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
     document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+    tabs?.classList.toggle('register-active', tab === 'register');
+    document.getElementById('tabLogin').setAttribute('aria-selected', tab === 'login' ? 'true' : 'false');
+    document.getElementById('tabRegister').setAttribute('aria-selected', tab === 'register' ? 'true' : 'false');
     clearAlerts();
     // Auto-focus first field
     setTimeout(() => {
@@ -541,7 +603,7 @@ async function doLogin() {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
-            body: JSON.stringify({ identifier, password })
+            body: JSON.stringify({ identifier, password, remember_device: document.getElementById('rememberDevice')?.checked === true })
         });
         const data = await res.json();
 

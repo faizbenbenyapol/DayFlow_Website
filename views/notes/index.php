@@ -61,7 +61,7 @@
             <div class="form-group" id="createNotePwGroup" style="display:none">
                 <label class="form-label">รหัสผ่าน</label>
                 <input type="password" class="form-control" id="createNotePw" placeholder="รหัสผ่านสำหรับโน้ตนี้">
-                <p class="form-hint">โน้ตที่เข้ารหัสจะใช้ AES-256-CBC ปกป้องข้อมูล</p>
+                <p class="form-hint">โน้ตที่เข้ารหัสใช้ authenticated encryption เพื่อช่วยตรวจจับข้อมูลที่ถูกแก้ไข</p>
             </div>
         </div>
         <div class="modal-footer">

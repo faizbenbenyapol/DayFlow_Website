@@ -4,6 +4,14 @@ require_once dirname(__DIR__) . '/models/SkillLog.php';
 
 class SkillController
 {
+    private function validateSkill(string $name, int $targetHours, string $color): void
+    {
+        if ($name === '' || mb_strlen($name) > 255 || $targetHours < 1 || $targetHours > 100000
+            || !preg_match('/^#[0-9a-fA-F]{6}$/', $color)) {
+            Response::json(['error' => 'ข้อมูลทักษะไม่ถูกต้อง'], 422);
+        }
+    }
+
     public function index()
     {
         $pageTitle = 'เป้าหมายเวลา';
@@ -33,6 +41,7 @@ class SkillController
         if (!$name) {
             Response::json(['error' => 'กรุณาระบุชื่อทักษะ / เป้าหมาย'], 400);
         }
+        $this->validateSkill($name, $targetHours, $color);
 
         $id = Skill::create($userId, $name, $targetHours, $color);
         Response::json(['success' => true, 'id' => $id]);
@@ -51,6 +60,7 @@ class SkillController
         if (!$name) {
             Response::json(['error' => 'กรุณาระบุชื่อทักษะ / เป้าหมาย'], 400);
         }
+        $this->validateSkill($name, $targetHours, $color);
 
         Skill::update($id, $userId, $name, $targetHours, $color);
         Response::json(['success' => true]);
@@ -94,7 +104,8 @@ class SkillController
             Response::json(['error' => 'กรุณาเลือกทักษะที่ต้องการจับเวลา'], 400);
         }
 
-        SkillLog::startTimer($userId, $skillId, $notes);
+        if (!Skill::find($skillId, $userId)) Response::json(['error' => 'ไม่พบทักษะที่เลือก'], 422);
+        SkillLog::startTimer($userId, $skillId, mb_substr($notes, 0, 2000));
         Response::json(['success' => true]);
     }
 

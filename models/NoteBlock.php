@@ -5,15 +5,13 @@
 
 class NoteBlock
 {
-    /**
-     * Encrypt block content using AES-256-CBC
-     */
+    /** Encrypt new blocks with authenticated encryption. */
     public static function encrypt(string $content, string $password, string $salt): string
     {
-        $key = openssl_pbkdf2($password, $salt, 10000, 32, 'sha256');
-        $iv  = random_bytes(16);
-        $enc = openssl_encrypt($content, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv);
-        return base64_encode($iv . $enc);
+        $key = openssl_pbkdf2($password, $salt, SODIUM_CRYPTO_SECRETBOX_KEYBYTES, 100000, 'sha256');
+        $nonce = random_bytes(SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
+        $cipher = sodium_crypto_secretbox($content, $nonce, $key);
+        return 'v2:' . base64_encode($nonce . $cipher);
     }
 
     /**
@@ -22,8 +20,20 @@ class NoteBlock
     public static function decrypt(string $encrypted, string $password, string $salt): ?string
     {
         try {
+            if (str_starts_with($encrypted, 'v2:')) {
+                $key = openssl_pbkdf2($password, $salt, SODIUM_CRYPTO_SECRETBOX_KEYBYTES, 100000, 'sha256');
+                $raw = base64_decode(substr($encrypted, 3), true);
+                if ($raw === false || strlen($raw) <= SODIUM_CRYPTO_SECRETBOX_NONCEBYTES + SODIUM_CRYPTO_SECRETBOX_MACBYTES) return null;
+                $nonce = substr($raw, 0, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
+                $cipher = substr($raw, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
+                $plain = sodium_crypto_secretbox_open($cipher, $nonce, $key);
+                return $plain === false ? null : $plain;
+            }
+
+            // Legacy format kept only for decrypting existing notes.
             $key    = openssl_pbkdf2($password, $salt, 10000, 32, 'sha256');
-            $raw    = base64_decode($encrypted);
+            $raw    = base64_decode($encrypted, true);
+            if ($raw === false) return null;
             $iv     = substr($raw, 0, 16);
             $data   = substr($raw, 16);
             $result = openssl_decrypt($data, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv);

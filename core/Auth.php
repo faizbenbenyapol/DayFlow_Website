@@ -40,6 +40,10 @@ class Auth
         }
 
         if (empty($_SESSION['user_id'])) {
+            self::restoreRemembered();
+        }
+
+        if (empty($_SESSION['user_id'])) {
             if (Request::isApi()) {
                 Response::json(['error' => 'กรุณาเข้าสู่ระบบ'], 401);
             }
@@ -77,6 +81,7 @@ class Auth
 
     public static function logout(): void
     {
+        if (class_exists('RememberToken')) RememberToken::revokeCurrent();
         $_SESSION = [];
         if (ini_get('session.use_cookies')) {
             $p = session_get_cookie_params();
@@ -85,6 +90,17 @@ class Auth
         }
         session_destroy();
         self::$cachedUser = null;
+    }
+
+    public static function restoreRemembered(): bool
+    {
+        if (!empty($_SESSION['user_id']) || !class_exists('RememberToken')) return !empty($_SESSION['user_id']);
+        $value = $_COOKIE[RememberToken::COOKIE] ?? '';
+        if ($value === '') return false;
+        $user = RememberToken::consume($value);
+        if (!$user) return false;
+        self::login($user);
+        return true;
     }
 
     public static function check(): bool

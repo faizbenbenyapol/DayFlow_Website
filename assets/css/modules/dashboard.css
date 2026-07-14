@@ -69,7 +69,7 @@
 }
 
 .dash-strip-card {
-    background: var(--color-surface);
+    background: linear-gradient(145deg, color-mix(in srgb, var(--color-surface) 96%, white), var(--color-surface));
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     padding: var(--space-4) var(--space-5);
@@ -161,7 +161,7 @@
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: var(--space-5);
+    gap: clamp(14px, 1.6vw, 22px);
 }
 
 @media (max-width: 900px) {
@@ -204,9 +204,9 @@
 }
 
 .widget {
-    background: var(--color-surface);
+    background: linear-gradient(145deg, color-mix(in srgb, var(--color-surface) 96%, white), var(--color-surface));
     border: 1px solid var(--color-border);
-    border-top: 3px solid var(--wc, var(--color-border));
+    border-top: 1px solid color-mix(in srgb, var(--wc, var(--color-border)) 58%, var(--color-border));
     border-radius: var(--radius-lg);
     padding: 0;
     min-height: 220px;
@@ -214,14 +214,14 @@
     flex-direction: column;
     cursor: default;
     overflow: hidden;
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 8px 22px -18px rgba(0, 0, 0, .7), var(--shadow-sm);
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
         box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
         border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .widget:hover {
-    transform: translateY(-4px) scale(1.005);
+    transform: translateY(-3px);
     border-color: color-mix(in srgb, var(--wc) 40%, var(--color-border));
     box-shadow: 0 12px 24px -10px color-mix(in srgb, var(--wc) 15%, transparent),
         0 4px 12px -5px color-mix(in srgb, var(--wc) 10%, transparent);
@@ -233,7 +233,7 @@
     justify-content: space-between;
     padding: var(--space-3) var(--space-5);
     border-bottom: 1px solid var(--color-border);
-    background: color-mix(in srgb, var(--wc, transparent) 5%, var(--color-surface));
+    background: color-mix(in srgb, var(--wc, transparent) 3%, var(--color-surface));
 }
 
 .widget-header-right {
@@ -296,7 +296,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--space-6) 0;
+    min-height: 126px;
+    padding: var(--space-4) 0;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
     color: var(--color-muted-2);
     font-size: 0.82rem;
     text-align: center;
@@ -310,8 +314,19 @@
 }
 
 .widget-empty-content svg {
-    color: var(--color-muted-2);
-    opacity: 0.4;
+    width: 24px;
+    height: 24px;
+    padding: 10px;
+    box-sizing: content-box;
+    border-radius: 12px;
+    color: color-mix(in srgb, var(--wc, var(--color-muted)) 70%, var(--color-text));
+    background: color-mix(in srgb, var(--wc, var(--color-muted)) 8%, var(--color-surface-2));
+    opacity: 0.78;
+}
+
+.widget-empty-content span {
+    color: var(--color-muted);
+    font-size: .78rem;
 }
 
 /* ── Loading ── */

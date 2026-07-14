@@ -7,6 +7,22 @@ require_once ROOT . '/models/File.php';
 
 class FileController
 {
+    private function validateName($name, string $kind = 'ไฟล์'): string
+    {
+        $name = trim(basename((string)$name));
+        if ($name === '' || $name === '.' || $name === '..' || mb_strlen($name) > 255) {
+            Response::json(['error' => 'ชื่อ' . $kind . 'ไม่ถูกต้อง'], 422);
+        }
+        return $name;
+    }
+
+    private function validateParent(int $userId, ?int $parentId): void
+    {
+        if ($parentId === null) return;
+        $parent = FileModel::getById($parentId, $userId);
+        if (!$parent || $parent['type'] !== 'folder') Response::json(['error' => 'โฟลเดอร์ปลายทางไม่ถูกต้อง'], 422);
+    }
+
     public function index(): void
     {
         $pageTitle  = 'ไฟล์';
@@ -54,6 +70,8 @@ class FileController
 
         if (empty($name)) Response::json(['error' => 'กรุณากรอกชื่อโฟลเดอร์'], 422);
 
+        $name = $this->validateName($name, 'โฟลเดอร์');
+        $this->validateParent($userId, $parentId);
         $id = FileModel::createFolder($userId, $name, $parentId);
         Response::json(['ok' => true, 'id' => $id], 201);
     }
@@ -64,11 +82,16 @@ class FileController
         $parentId = Request::input('parent_id');
         $parentId = ($parentId !== null && $parentId !== '') ? (int)$parentId : null;
 
+        $this->validateParent($userId, $parentId);
+
         if (empty($_FILES['file'])) {
             Response::json(['error' => 'ไม่พบไฟล์'], 422);
         }
 
         $file = $_FILES['file'];
+        if (!is_uploaded_file($file['tmp_name'])) {
+            Response::json(['error' => 'ไฟล์อัปโหลดไม่ถูกต้อง'], 422);
+        }
 
         if ($file['error'] !== UPLOAD_ERR_OK) {
             Response::json(['error' => 'อัปโหลดไม่สำเร็จ: ' . $file['error']], 422);
@@ -80,7 +103,7 @@ class FileController
 
         // Validate MIME type using finfo (not trusting client)
         $finfo    = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_file($finfo, $file['tmp_name']);
+        $mimeType = finfo_file($finfo, $file['tmp_name']) ?: 'application/octet-stream';
         finfo_close($finfo);
 
         // Block dangerous types
@@ -129,6 +152,7 @@ class FileController
 
         if (!$newName) Response::json(['error' => 'กรุณากรอกชื่อใหม่'], 422);
 
+        $newName = $this->validateName($newName, 'ไฟล์');
         $file = FileModel::getById($fileId, $userId);
         if (!$file) Response::json(['error' => 'ไม่พบไฟล์'], 404);
 
@@ -142,6 +166,7 @@ class FileController
         $fileId      = (int)$id;
         $rawParent   = Request::input('parent_id');
         $newParentId = ($rawParent !== null && $rawParent !== '') ? (int)$rawParent : null;
+        $this->validateParent($userId, $newParentId);
 
         $file = FileModel::getById($fileId, $userId);
         if (!$file) Response::json(['error' => 'ไม่พบไฟล์'], 404);
@@ -174,8 +199,10 @@ class FileController
             Response::abort(404, 'ไม่พบไฟล์');
         }
 
-        $fullPath = UPLOAD_DIR . $file['file_path'];
-        if (!file_exists($fullPath)) {
+        $rootPath = realpath(UPLOAD_DIR);
+        $fullPath = realpath(UPLOAD_DIR . $file['file_path']);
+        if (!$rootPath || !$fullPath || !is_file($fullPath)
+            || strncmp($fullPath, $rootPath . DIRECTORY_SEPARATOR, strlen($rootPath . DIRECTORY_SEPARATOR)) !== 0) {
             Response::abort(404, 'ไม่พบไฟล์บนเซิร์ฟเวอร์');
         }
 

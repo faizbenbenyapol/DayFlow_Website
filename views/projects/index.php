@@ -249,7 +249,7 @@
                 </div>
             </div>
             <div class="analytics-chart-container">
-                <canvas id="projectDoughnutChart"></canvas>
+                <canvas id="projectDoughnutChart" role="img" aria-label="กราฟความก้าวหน้าโครงการ"></canvas>
             </div>
         </div>
 

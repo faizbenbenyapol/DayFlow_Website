@@ -43,6 +43,7 @@
     btn.addEventListener('click', function() {
         const isOpen = sidebar.classList.toggle('open');
         btn.classList.toggle('active', isOpen);
+        btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
     });
 
     // Close sidebar when nav item clicked on mobile
@@ -50,6 +51,7 @@
         el.addEventListener('click', function() {
             sidebar.classList.remove('open');
             btn.classList.remove('active');
+            btn.setAttribute('aria-expanded', 'false');
         });
     });
 
@@ -59,6 +61,7 @@
         if (!sidebar.contains(e.target) && !btn.contains(e.target)) {
             sidebar.classList.remove('open');
             btn.classList.remove('active');
+            btn.setAttribute('aria-expanded', 'false');
         }
     });
 
@@ -78,7 +81,9 @@
 
 <?php if (Auth::isReadOnly()): ?>
 <script>
-// Auto-refresh every 30 seconds for real-time feel in Shared Mode
+// Shared links keep their token in the URL/session. The native mobile Back
+// action is intentionally left untouched so a shortcut can close back to the
+// phone home screen; reopening the shortcut restores share mode automatically.
 setTimeout(() => {
     window.location.reload();
 }, 30000);

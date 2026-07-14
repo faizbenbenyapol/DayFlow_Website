@@ -29,6 +29,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
     <button class="btn btn-ghost btn-sm settings-tab" data-tab="menus">จัดการเมนู</button>
     <button class="btn btn-ghost btn-sm settings-tab" data-tab="dashboard-config">ปรับแต่งแดชบอร์ด</button>
     <button class="btn btn-ghost btn-sm settings-tab" data-tab="account">ข้อมูลบัญชี</button>
+    <button class="btn btn-ghost btn-sm settings-tab" data-tab="devices">อุปกรณ์ที่จำไว้</button>
     <button class="btn btn-ghost btn-sm settings-tab" data-tab="categories">หมวดหมู่</button>
     <button class="btn btn-ghost btn-sm settings-tab" data-tab="stock-api">API หุ้น</button>
     <button class="btn btn-ghost btn-sm settings-tab" data-tab="app-shares">แชร์เมนู</button>
@@ -36,6 +37,24 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
     <button class="btn btn-ghost btn-sm settings-tab" data-tab="data">ข้อมูล</button>
     <button class="btn btn-ghost btn-sm settings-tab" data-tab="telegram">Telegram</button>
     <button class="btn btn-ghost btn-sm settings-tab" data-tab="danger">เขตอันตราย</button>
+</div>
+
+<!-- REMEMBERED DEVICES -->
+<div id="tab-devices" class="settings-pane" style="display:none">
+    <div class="card devices-card">
+        <div class="card-header devices-card-header">
+            <div>
+                <span class="card-title">อุปกรณ์ที่จำไว้</span>
+                <p class="form-hint">จัดการอุปกรณ์ที่เลือก “จดจำอุปกรณ์นี้” ไว้ ระบบจะเข้าสู่ระบบให้อัตโนมัติภายใน 30 วัน</p>
+            </div>
+            <button class="btn btn-ghost btn-sm" id="btnRevokeOtherDevices" type="button">ออกจากอุปกรณ์อื่นทั้งหมด</button>
+        </div>
+        <div class="card-body">
+            <div id="deviceList" class="device-list" aria-live="polite">
+                <div class="empty-state">กำลังโหลดรายการอุปกรณ์…</div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- PROFILE -->
@@ -240,11 +259,24 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
             if (!is_array($hiddenMenus)) {
                 $hiddenMenus = [];
             }
+            $defaultMenuOrder = ['projects', 'tasks', 'notes', 'planner', 'focus', 'exercise', 'food-notes', 'finance', 'subscriptions', 'stocks', 'ai', 'file-tools', 'transfer', 'files', 'quick-notes', 'bookmarks'];
+            $savedMenuOrder = !empty($settings['menu_order']) ? json_decode($settings['menu_order'], true) : [];
+            if (!is_array($savedMenuOrder)) {
+                $savedMenuOrder = [];
+            }
+            $menuOrder = array_values(array_unique(array_merge(
+                array_values(array_intersect($savedMenuOrder, $defaultMenuOrder)),
+                $defaultMenuOrder
+            )));
             $isMenuVisible = function(string $menu) use ($hiddenMenus) {
                 return !in_array($menu, $hiddenMenus);
             };
             ?>
-            <div style="display:flex; flex-direction:column; gap:12px;" id="menuVisibilityList">
+            <div class="menu-order-list" id="menuVisibilityList" data-menu-order="<?= h(json_encode($menuOrder, JSON_UNESCAPED_UNICODE)) ?>">
+                <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
+                    <input type="checkbox" name="visible_menus[]" value="projects" style="width:18px; height:18px;" <?= $isMenuVisible('projects') ? 'checked' : '' ?>>
+                    <span>Projects</span>
+                </label>
                 <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
                     <input type="checkbox" name="visible_menus[]" value="tasks" style="width:18px; height:18px;" <?= $isMenuVisible('tasks') ? 'checked' : '' ?>>
                     <span>งาน (Tasks)</span>
@@ -296,6 +328,14 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
                 <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
                     <input type="checkbox" name="visible_menus[]" value="files" style="width:18px; height:18px;" <?= $isMenuVisible('files') ? 'checked' : '' ?>>
                     <span>ไฟล์ (Files)</span>
+                </label>
+                <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
+                    <input type="checkbox" name="visible_menus[]" value="quick-notes" style="width:18px; height:18px;" <?= $isMenuVisible('quick-notes') ? 'checked' : '' ?>>
+                    <span>จดด่วน (Quick Notes)</span>
+                </label>
+                <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
+                    <input type="checkbox" name="visible_menus[]" value="bookmarks" style="width:18px; height:18px;" <?= $isMenuVisible('bookmarks') ? 'checked' : '' ?>>
+                    <span>ลิงก์สำคัญ (Bookmarks)</span>
                 </label>
             </div>
         </div>
@@ -552,7 +592,7 @@ window.dashboardLayout = <?= json_encode($layout, JSON_UNESCAPED_UNICODE) ?>;
             <p class="form-hint mb-4">รับการแจ้งเตือนจากระบบผ่าน Telegram</p>
             <div class="form-group">
                 <label class="form-label">Bot Token</label>
-                <input type="text" class="form-control" id="telegramBotToken" value="<?= h($settings['telegram_bot_token'] ?? '') ?>" placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11">
+                <input type="text" class="form-control" id="telegramBotToken" value="" placeholder="เว้นว่างเพื่อคง Token เดิม หรือกรอก Token ใหม่">
             </div>
             <div class="form-group">
                 <label class="form-label">Chat ID</label>
@@ -582,23 +622,22 @@ window.dashboardLayout = <?= json_encode($layout, JSON_UNESCAPED_UNICODE) ?>;
                 <label class="form-label">การตั้งค่า Cron Job (แจ้งเตือนอัตโนมัติ)</label>
                 <p class="form-hint mb-3" style="font-size:0.8rem">เพื่อให้ระบบส่งแจ้งเตือนงานและแพลนเนอร์โดยอัตโนมัติทุกวัน คุณสามารถตั้งค่า Cron Job บนเซิร์ฟเวอร์ของคุณได้ดังนี้:</p>
                 
-                <div style="background: var(--color-bg-alt, #f9f9f9); padding: 12px; border-radius: var(--radius-md, 6px); border: 1px solid var(--color-border, #e0e0e0); font-size: 0.8rem; margin-bottom: 12px; word-break: break-all;">
-                    <strong style="display:block; margin-bottom:4px; font-size:0.85rem">วิธีที่ 1: เรียกผ่าน Web URL (แนะนำสำหรับ Shared Hosting)</strong>
-                    ตั้งค่าให้เซิร์ฟเวอร์เรียกลิงก์ด้านล่างนี้ (เช่น ทุก 1 ชั่วโมง หรือวันละครั้ง):<br>
-                    <code style="display:inline-block; margin-top:6px; color: var(--color-primary, #e05c4b); font-weight:600;"><?= APP_URL ?>/cron.php?token=<?= hash('sha256', appKey() . 'cron') ?></code>
+                <div class="cron-command-card">
+                    <strong>วิธีที่ 1: เรียกผ่าน Docker Worker (แนะนำสำหรับ VPS)</strong>
+                    เปิด worker ให้ทำงานเบื้องหลัง:<br>
+                    <code>docker compose --profile prod-worker up -d cron</code>
                 </div>
                 
-                <div style="background: var(--color-bg-alt, #f9f9f9); padding: 12px; border-radius: var(--radius-md, 6px); border: 1px solid var(--color-border, #e0e0e0); font-size: 0.8rem; word-break: break-all;">
-                    <strong style="display:block; margin-bottom:4px; font-size:0.85rem">วิธีที่ 2: เรียกผ่าน CLI (สำหรับ VPS / Dedicated Server)</strong>
+                <div class="cron-command-card">
+                    <strong>วิธีที่ 2: เรียกผ่าน CLI (สำหรับ VPS / Dedicated Server)</strong>
                     ตั้งค่าคำสั่ง Crontab บนเซิร์ฟเวอร์:<br>
-                    <code style="display:inline-block; margin-top:6px; color: var(--color-primary, #e05c4b); font-weight:600;">php <?= ROOT ?>/cron.php</code>
+                    <code>php <?= h(ROOT) ?>/cron.php</code>
                 </div>
             </div>
         </div>
         <div class="modal-footer" style="border-top:1px solid var(--color-border); justify-content: space-between;">
             <div>
                 <button class="btn btn-ghost" id="btnTestTelegram">ทดสอบส่งข้อความ</button>
-                <button class="btn btn-ghost" id="btnTestCron" style="color:var(--color-primary)">ทดสอบรัน Cron</button>
             </div>
             <button class="btn btn-primary" id="btnSaveTelegram">บันทึกตั้งค่า Telegram</button>
         </div>

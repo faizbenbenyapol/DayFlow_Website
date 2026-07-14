@@ -24,8 +24,14 @@ class AuthController
 
     public function apiLogin(): void
     {
+        $rateKey = 'login:' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+        if (!RateLimiter::hit($rateKey, 10, 900)) {
+            Response::json(['error' => 'มีการลองเข้าสู่ระบบมากเกินไป กรุณารอประมาณ 15 นาที'], 429);
+        }
+
         $identifier = Request::rawInput('identifier', ''); // username or email
         $password   = Request::rawInput('password',   '');
+        $remember   = filter_var(Request::rawInput('remember_device', false), FILTER_VALIDATE_BOOLEAN);
 
         if (!$identifier || !$password) {
             Response::json(['error' => 'กรุณากรอกข้อมูลให้ครบ'], 422);
@@ -40,6 +46,8 @@ class AuthController
 
         unset($_SESSION['app_share_token']);
         Auth::login($user);
+        if ($remember) RememberToken::issue((int)$user['id']);
+        RateLimiter::clear($rateKey);
         Response::json(['ok' => true, 'redirect' => APP_URL . '/']);
     }
 
@@ -156,7 +164,8 @@ class AuthController
                 $userId = User::create($username, $email, $password, $name ?: $username);
                 $user = User::findById($userId);
             } catch (\Throwable $e) {
-                Response::json(['error' => 'เกิดข้อผิดพลาดในการลงทะเบียน: ' . $e->getMessage()], 500);
+                error_log($e->getMessage());
+                Response::json(['error' => 'เกิดข้อผิดพลาดในการลงทะเบียน'], 500);
             }
         }
 

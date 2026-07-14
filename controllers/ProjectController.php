@@ -12,6 +12,25 @@ require_once ROOT . '/core/TelegramService.php';
 
 class ProjectController
 {
+    private const PROJECT_STATUSES = ['Planning', 'In Progress', 'Review', 'Completed'];
+    private const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
+
+    private function validateProjectData(array $data, bool $create = false): array
+    {
+        if ($create || array_key_exists('name', $data)) {
+            $data['name'] = trim((string)($data['name'] ?? ''));
+            if ($data['name'] === '' || mb_strlen($data['name']) > 255) Response::json(['error' => 'ชื่อโปรเจคไม่ถูกต้อง'], 422);
+        }
+        if (array_key_exists('description', $data)) $data['description'] = mb_substr((string)$data['description'], 0, 5000);
+        if (array_key_exists('status', $data) && !in_array($data['status'], self::PROJECT_STATUSES, true)) Response::json(['error' => 'สถานะโปรเจคไม่ถูกต้อง'], 422);
+        if (array_key_exists('priority', $data) && !in_array($data['priority'], self::PRIORITIES, true)) Response::json(['error' => 'ความสำคัญโปรเจคไม่ถูกต้อง'], 422);
+        if (array_key_exists('due_date', $data) && $data['due_date'] !== '') {
+            $date = DateTime::createFromFormat('Y-m-d', (string)$data['due_date']);
+            if (!$date || $date->format('Y-m-d') !== $data['due_date']) Response::json(['error' => 'วันครบกำหนดไม่ถูกต้อง'], 422);
+        }
+        return $data;
+    }
+
     /**
      * โหลดหน้าวางแผนโปรเจค (Project Planner Page)
      * พร้อมระบบตรวจสอบและรันสคริปต์สร้างตารางอัตโนมัติหากเข้าใช้งานครั้งแรก
@@ -106,13 +125,15 @@ class ProjectController
             Response::json(['error' => 'กรุณาระบุชื่อโปรเจค'], 422);
         }
 
-        $data = [
+        $status  = Request::input('status', 'Planning');
+        $priority = Request::input('priority', 'Medium');
+        $data = $this->validateProjectData([
             'name'        => $name,
             'description' => Request::input('description', ''),
             'status'      => $status,
             'priority'    => $priority,
             'due_date'    => Request::input('due_date', '')
-        ];
+        ], true);
 
         $projectId = Project::create($userId, $data);
         ProjectActivity::log($projectId, $userId, 'สร้างโปรเจคใหม่: "' . $name . '"');
@@ -157,6 +178,7 @@ class ProjectController
             }
         }
 
+        $data = $this->validateProjectData($data);
         if (empty($data)) {
             Response::json(['error' => 'ไม่มีข้อมูลสำหรับแก้ไข'], 400);
         }

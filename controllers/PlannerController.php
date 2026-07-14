@@ -9,6 +9,13 @@ require_once ROOT . '/core/TelegramService.php';
 
 class PlannerController
 {
+    private function validDate(string $value, bool $dateTime = false): bool
+    {
+        $format = $dateTime ? 'Y-m-d H:i:s' : 'Y-m-d';
+        $parsed = DateTime::createFromFormat($format, $value);
+        return $parsed && $parsed->format($format) === $value;
+    }
+
     public function index(): void
     {
         $pageTitle  = 'แพลนเนอร์';
@@ -28,6 +35,7 @@ class PlannerController
         $year   = (int)Request::query('year', (int)date('Y'));
         $month  = (int)Request::query('month', (int)date('n'));
 
+        if ($year < 2000 || $year > 2100 || $month < 1 || $month > 12) Response::json(['error' => 'ช่วงเดือนไม่ถูกต้อง'], 422);
         $events = CalendarEvent::getForMonth($userId, $year, $month);
         Response::json(['events' => $events]);
     }
@@ -84,11 +92,16 @@ class PlannerController
         if (!$title) return ['error' => 'กรุณากรอกชื่อกิจกรรม'];
         if (!$start) return ['error' => 'กรุณากรอกวันที่เริ่มต้น'];
 
+        $title = trim($title);
+        $end = Request::input('end_datetime', '');
+        if (mb_strlen($title) > 255 || !$this->validDate($start, true)) return ['error' => 'ข้อมูลกิจกรรมไม่ถูกต้อง'];
+        if ($end !== '' && (!$this->validDate($end, true) || strtotime($end) < strtotime($start))) return ['error' => 'เวลาสิ้นสุดไม่ถูกต้อง'];
+
         return [
             'title'          => $title,
-            'description'    => Request::input('description', ''),
+            'description'    => mb_substr(Request::input('description', ''), 0, 2000),
             'start_datetime' => $start,
-            'end_datetime'   => Request::input('end_datetime', ''),
+            'end_datetime'   => $end,
             'is_all_day'     => (int)Request::input('is_all_day', 0),
             'color'          => Request::input('color', '#555555'),
         ];
@@ -112,6 +125,8 @@ class PlannerController
 
         if (!$title) Response::json(['error' => 'กรุณากรอกรายการ'], 422);
 
+        $title = trim($title);
+        if (mb_strlen($title) > 255 || !$this->validDate($date)) Response::json(['error' => 'ข้อมูลรายการประจำวันไม่ถูกต้อง'], 422);
         $id   = DailyTodo::create($userId, $date, $title);
         $todo = DailyTodo::getById($id, $userId);
         Response::json(['ok' => true, 'todo' => $todo], 201);

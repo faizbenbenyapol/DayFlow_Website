@@ -39,10 +39,11 @@ class FileTransferController
         // Fixed expiry: 10 minutes
         $expiryMinutes = 10;
 
-        $maxDownloads = max(0, (int) Request::input('max_downloads', 0));
+        $maxDownloads = max(0, min(10000, (int) Request::input('max_downloads', 0)));
 
-        // 2 GB limit per file (displayed as 1 GB in UI)
-        $maxFileSize = 2 * 1024 * 1024 * 1024; // 2 GB
+        // Keep the transfer limit aligned with PHP's configured upload limit.
+        // This prevents the UI/API from promising a size PHP will reject.
+        $maxFileSize = MAX_UPLOAD_BYTES;
 
         $files = $_FILES['files'];
         $uploaded = [];
@@ -65,8 +66,11 @@ class FileTransferController
         $errors   = is_array($files['error']) ? $files['error'] : [$files['error']];
         $sizes    = is_array($files['size']) ? $files['size'] : [$files['size']];
 
+        if (count($names) > 50) Response::json(['error' => 'ส่งไฟล์ได้ไม่เกิน 50 ไฟล์ต่อครั้ง'], 422);
+
         for ($i = 0; $i < count($names); $i++) {
             if ($errors[$i] !== UPLOAD_ERR_OK) continue;
+            if (!is_uploaded_file($tmpNames[$i])) continue;
 
             $origName = basename($names[$i]);
             $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
@@ -241,14 +245,16 @@ class FileTransferController
         if (count($files) === 1) {
             // Single file: stream directly
             $f = $files[0];
-            $fullPath = UPLOAD_DIR . $f['path'];
-            if (!is_file($fullPath)) {
+            $rootPath = realpath(UPLOAD_DIR);
+            $fullPath = realpath(UPLOAD_DIR . $f['path']);
+            if (!$rootPath || !$fullPath || !is_file($fullPath)
+                || strncmp($fullPath, $rootPath . DIRECTORY_SEPARATOR, strlen($rootPath . DIRECTORY_SEPARATOR)) !== 0) {
                 Response::abort(404, 'ไม่พบไฟล์บนเซิร์ฟเวอร์');
             }
 
-            $filename = addslashes($f['name']);
+            $filename = downloadFilename((string)$f['name'], 'download');
             header('Content-Type: ' . ($f['mime'] ?: 'application/octet-stream'));
-            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Content-Disposition: attachment; filename="' . addslashes($filename) . '"; filename*=UTF-8\'\'' . rawurlencode($filename));
             header('Content-Length: ' . filesize($fullPath));
             header('X-Content-Type-Options: nosniff');
             header('Cache-Control: no-store');
@@ -264,8 +270,10 @@ class FileTransferController
         }
 
         foreach ($files as $f) {
-            $fullPath = UPLOAD_DIR . $f['path'];
-            if (is_file($fullPath)) {
+            $rootPath = realpath(UPLOAD_DIR);
+            $fullPath = realpath(UPLOAD_DIR . $f['path']);
+            if ($rootPath && $fullPath && is_file($fullPath)
+                && strncmp($fullPath, $rootPath . DIRECTORY_SEPARATOR, strlen($rootPath . DIRECTORY_SEPARATOR)) === 0) {
                 $zip->addFile($fullPath, $f['name']);
             }
         }

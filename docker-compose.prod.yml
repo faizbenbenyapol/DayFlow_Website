@@ -1,0 +1,66 @@
+services:
+  db:
+    environment:
+      MARIADB_DATABASE: ${MARIADB_DATABASE:?Set MARIADB_DATABASE in the production .env}
+      MARIADB_USER: ${MARIADB_USER:?Set MARIADB_USER in the production .env}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:?Set MARIADB_PASSWORD in the production .env}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?Set MARIADB_ROOT_PASSWORD in the production .env}
+
+  app:
+    ports: !reset []
+    environment:
+      APP_ENV: production
+      APP_URL: ${APP_URL:?Set APP_URL in the production .env}
+      APP_KEY: ${APP_KEY:?Set APP_KEY in the production .env}
+      CRON_TOKEN: ${CRON_TOKEN:?Set CRON_TOKEN in the production .env}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?Set GOOGLE_CLIENT_ID in the production .env}
+      DB_HOST: db
+      DB_NAME: ${MARIADB_DATABASE:?Set MARIADB_DATABASE in the production .env}
+      DB_USER: ${MARIADB_USER:?Set MARIADB_USER in the production .env}
+      DB_PASS: ${MARIADB_PASSWORD:?Set MARIADB_PASSWORD in the production .env}
+      TIMEZONE: ${TIMEZONE:-Asia/Bangkok}
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: dayflow-caddy
+    profiles: ["prod"]
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
+  cron:
+    build: .
+    container_name: dayflow-cron
+    profiles: ["prod-worker"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_ENV: production
+      APP_KEY: ${APP_KEY:?Set APP_KEY in the production .env}
+      CRON_TOKEN: ${CRON_TOKEN:?Set CRON_TOKEN in the production .env}
+      DB_HOST: db
+      DB_NAME: ${MARIADB_DATABASE:?Set MARIADB_DATABASE in the production .env}
+      DB_USER: ${MARIADB_USER:?Set DB_USER in the production .env}
+      DB_PASS: ${MARIADB_PASSWORD:?Set MARIADB_PASSWORD in the production .env}
+      TIMEZONE: ${TIMEZONE:-Asia/Bangkok}
+    volumes:
+      - ./uploads:/var/www/html/uploads
+      - ./storage:/var/www/html/storage
+    command: ["sh", "-c", "while true; do php /var/www/html/cron.php; sleep 300; done"]
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

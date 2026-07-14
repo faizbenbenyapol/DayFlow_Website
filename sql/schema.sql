@@ -34,6 +34,8 @@ CREATE TABLE IF NOT EXISTS `user_settings` (
   `telegram_bot_token` VARCHAR(255) DEFAULT NULL,
   `telegram_chat_id` VARCHAR(100) DEFAULT NULL,
   `telegram_notify_events` JSON DEFAULT NULL,
+  `hidden_menus` JSON DEFAULT NULL,
+  `menu_order` JSON DEFAULT NULL,
   FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

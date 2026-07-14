@@ -19,6 +19,7 @@ class Router
     private function registerRoutes(): void
     {
         // --- Auth ---
+        $this->add('GET',  '/health',    'HealthController', 'index',       false);
         $this->add('GET',  '/login',    'AuthController', 'showLogin',  false);
         $this->add('GET',  '/register', 'AuthController', 'showLogin',  false);
         $this->add('GET',  '/logout',   'AuthController', 'logout',     true);
@@ -50,6 +51,7 @@ class Router
         // --- API: Dashboard ---
         $this->add('GET',  '/api/dashboard/summary', 'DashboardController', 'summary', true);
         $this->add('POST', '/api/dashboard/layout',  'DashboardController', 'layout',  true);
+        $this->add('GET',  '/api/search',              'SearchController',    'apiSearch', true);
 
         // --- API: Tasks ---
         $this->add('GET',    '/api/tasks',         'TaskController', 'apiList',    true);
@@ -167,6 +169,9 @@ class Router
 
         // --- API: Settings ---
         $this->add('GET',  '/api/settings',          'SettingsController', 'apiGet',      true);
+        $this->add('GET',  '/api/settings/devices',  'SettingsController', 'apiDevices',  true);
+        $this->add('DELETE', '/api/settings/devices/{id}', 'SettingsController', 'apiDeviceRevoke', true);
+        $this->add('POST', '/api/settings/devices/revoke-others', 'SettingsController', 'apiDevicesRevokeOthers', true);
         $this->add('POST', '/api/settings/profile',  'SettingsController', 'apiProfile',  true);
         $this->add('POST', '/api/settings/password', 'SettingsController', 'apiPassword', true);
         $this->add('POST', '/api/settings/theme',    'SettingsController', 'apiTheme',    true);
@@ -206,9 +211,24 @@ class Router
 
         // --- Page & API: Pomodoro Focus ---
         $this->add('GET',    '/focus',                        'FocusController', 'index',          true);
+        $this->add('GET',    '/habits',                       'HabitController', 'index',          true);
+        $this->add('GET',    '/quick-notes',                  'QuickController', 'index',          true);
+        $this->add('GET',    '/bookmarks',                    'BookmarkController', 'index',        true);
         $this->add('GET',    '/api/focus',                    'FocusController', 'apiList',        true);
         $this->add('POST',   '/api/focus',                    'FocusController', 'apiCreate',      true);
         $this->add('DELETE', '/api/focus/{id}',              'FocusController', 'apiDelete',      true);
+        $this->add('GET',    '/api/habits',                  'HabitController', 'apiList',        true);
+        $this->add('POST',   '/api/habits',                  'HabitController', 'apiCreate',      true);
+        $this->add('PUT',    '/api/habits/{id}',             'HabitController', 'apiUpdate',      true);
+        $this->add('POST',   '/api/habits/{id}/toggle',      'HabitController', 'apiToggle',      true);
+        $this->add('DELETE', '/api/habits/{id}',              'HabitController', 'apiDelete',      true);
+        $this->add('GET',    '/api/quick-items',              'QuickController', 'apiList',        true);
+        $this->add('POST',   '/api/quick-items',              'QuickController', 'apiCreate',      true);
+        $this->add('POST',   '/api/quick-items/{id}/toggle',  'QuickController', 'apiToggle',      true);
+        $this->add('DELETE', '/api/quick-items/{id}',         'QuickController', 'apiDelete',      true);
+        $this->add('GET',    '/api/bookmarks',                'BookmarkController', 'apiList',     true);
+        $this->add('POST',   '/api/bookmarks',                'BookmarkController', 'apiCreate',   true);
+        $this->add('DELETE', '/api/bookmarks/{id}',            'BookmarkController', 'apiDelete',  true);
 
         // --- Page: Stocks ---
         $this->add('GET',    '/stocks',                       'StocksController', 'index',         true);
@@ -277,6 +297,17 @@ class Router
         $method = Request::method();
         $path   = Request::path();
 
+        // A shared menu URL can carry its token so mobile shortcuts and
+        // browser back/forward navigation can restore read-only mode safely.
+        $shareQueryToken = (string)Request::query('share', '');
+        if ($shareQueryToken !== '' && preg_match('/^[a-f0-9]{64}$/i', $shareQueryToken)) {
+            require_once dirname(__DIR__) . '/models/AppShare.php';
+            $queryShare = AppShare::getByToken($shareQueryToken);
+            if ($queryShare && AppShare::isValid($queryShare)) {
+                $_SESSION['app_share_token'] = $shareQueryToken;
+            }
+        }
+
         // Check for App Share Token in session
         if (!empty($_SESSION['app_share_token'])) {
             require_once dirname(__DIR__) . '/models/AppShare.php';
@@ -289,8 +320,10 @@ class Router
             }
         }
 
-        // Apply Read-Only restrictions
-        if (Auth::isReadOnly()) {
+        // Apply Read-Only restrictions. Authentication must remain available
+        // so a guest can leave share mode and sign in normally.
+        $isAuthTransition = in_array($path, ['/login', '/register', '/api/auth/login', '/api/auth/register', '/api/auth/google'], true);
+        if (Auth::isReadOnly() && !$isAuthTransition) {
             if (!in_array($method, ['GET', 'OPTIONS'])) {
                 if (Request::isApi()) Response::json(['error' => 'โหมดแชร์ดูได้เท่านั้น (Read-only)'], 403);
                 Response::abort(403, 'โหมดแชร์ดูได้เท่านั้น (Read-only)');

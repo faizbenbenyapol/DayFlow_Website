@@ -138,6 +138,12 @@ class AiController
         if ($keyword === '') {
             Response::json(['error' => 'กรุณากรอกหัวข้อ/คีย์เวิร์ด'], 422);
         }
+        if (mb_strlen($keyword) > 500 || mb_strlen($extraPrompt) > 3000
+            || !in_array($platform, ['tiktok', 'shorts'], true)
+            || !in_array($style, ['informative', 'funny', 'inspiring', 'educational', 'storytelling'], true)
+            || $duration < 5 || $duration > 600) {
+            Response::json(['error' => 'ข้อมูลสร้างสคริปต์ไม่ถูกต้อง'], 422);
+        }
         $apiKey = AiKey::get($userId, $provider);
         if ($apiKey === '') {
             Response::json(['error' => 'ยังไม่ได้ตั้งค่า API key ของ ' . $provider], 422);

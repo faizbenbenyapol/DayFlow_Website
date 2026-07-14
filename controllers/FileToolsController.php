@@ -28,6 +28,7 @@ class FileToolsController
         }
 
         $file = $_FILES['file'];
+        if (!is_uploaded_file($file['tmp_name'])) Response::json(['error' => 'ไฟล์อัปโหลดไม่ถูกต้อง'], 422);
         if ($file['error'] !== UPLOAD_ERR_OK) {
             Response::json(['error' => 'อัปโหลดไม่สำเร็จ'], 422);
         }
@@ -51,6 +52,10 @@ class FileToolsController
         $src    = $this->gdLoad($file['tmp_name'], $mimeType);
         if (!$src) {
             Response::json(['error' => 'ไม่สามารถอ่านไฟล์รูปภาพได้'], 422);
+        }
+        if (imagesx($src) > 12000 || imagesy($src) > 12000) {
+            imagedestroy($src);
+            Response::json(['error' => 'รูปภาพมีขนาดใหญ่เกินไป'], 422);
         }
 
         $origName = pathinfo(basename($file['name']), PATHINFO_FILENAME);
