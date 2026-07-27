@@ -420,6 +420,10 @@
             <div style="display: flex; justify-content: center; width: 100%;">
                 <div id="googleBtnLogin" style="width: 100%;"></div>
             </div>
+            <a class="btn-submit" href="<?= h(APP_URL) ?>/demo"
+               style="background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); text-align: center; text-decoration: none; box-sizing: border-box;">
+                Demo
+            </a>
         </div>
 
         <!-- ─── Register Pane ─── -->
@@ -480,7 +484,7 @@
     </div><!-- /.auth-body -->
 
     <div class="auth-footer-note">
-        v1.2.0
+        v1.3.0
     </div>
 
 </div><!-- /.auth-card -->

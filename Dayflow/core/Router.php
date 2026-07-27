@@ -22,6 +22,7 @@ class Router
         $this->add('GET',  '/health',    'HealthController', 'index',       false);
         $this->add('GET',  '/login',    'AuthController', 'showLogin',  false);
         $this->add('GET',  '/register', 'AuthController', 'showLogin',  false);
+        $this->add('GET',  '/demo',     'AuthController', 'demo',       false);
         $this->add('GET',  '/logout',   'AuthController', 'logout',     true);
 
         // --- Pages ---

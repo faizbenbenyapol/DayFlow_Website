@@ -30,8 +30,11 @@ class AppShareController
             Response::abort(403, 'ไม่มีเมนูที่ถูกแชร์');
         }
 
+        // Carry the token in the URL (not just the session) so that a link
+        // saved as a mobile home-screen shortcut can restore share mode on
+        // its own, even if the session cookie was cleared in the meantime.
         $firstMenu = $menus[0];
-        Response::redirect('/' . $firstMenu);
+        Response::redirect('/' . $firstMenu . '?share=' . rawurlencode($token));
     }
 
     // ------------------------------------------------------------------ //

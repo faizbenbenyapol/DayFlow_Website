@@ -2,7 +2,7 @@
 
 ระบบบริหารจัดการประสิทธิภาพการทำงานแบบครบวงจร (All-in-One Productivity Platform) พัฒนาด้วย **Custom PHP MVC Framework** ออกแบบภายใต้แนวคิด **Neumorphism & Soft UI** รองรับการแสดงผลทุกขนาดหน้าจออย่างสมบูรณ์
 
-**เวอร์ชัน: v1.2.0** &nbsp;|&nbsp; **PHP 8.2** &nbsp;|&nbsp; **MariaDB 11.4**
+**เวอร์ชัน: v1.3.0** &nbsp;|&nbsp; **PHP 8.2** &nbsp;|&nbsp; **MariaDB 11.4**
 
 > [!WARNING]
 > สถานะการพัฒนา: ระบบนี้กำลังอยู่ในช่วงการพัฒนาอย่างต่อเนื่อง (Active Development) ฟังก์ชันการทำงานบางส่วนอาจมีการเปลี่ยนแปลงหรือปรับปรุงเพื่อความเสถียรยิ่งขึ้น
@@ -139,7 +139,8 @@ DayFlow เป็นเว็บแอปพลิเคชันที่สร
 ### 🔗 19. Share Links (แบ่งปันข้อมูล)
 - สร้าง Public Link สำหรับแบ่งปันไฟล์/บันทึกแก่บุคคลภายนอก
 - กำหนดวันหมดอายุและจำนวนครั้งดาวน์โหลดสูงสุด
-- **App Shares** — แบ่งปัน Module ทั้งหมด (เช่น Notes, Finance) ผ่าน Token (`/shared/{token}`)
+- **App Shares** — แบ่งปัน Module ทั้งหมด (เช่น Notes, Finance) ผ่าน Token (`/shared/{token}`) โดยไม่ต้องล็อกอิน และคงสถานะได้แม้ถูกบันทึกเป็น Shortcut บนมือถือ
+- **Demo Account** — ปุ่ม "Demo" ในหน้าล็อกอิน พาผู้เยี่ยมชมเข้าดูตัวอย่างระบบแบบอ่านอย่างเดียวผ่านกลไก App Shares โดยไม่ต้องสมัครสมาชิก (`/demo`)
 
 ### 🔍 20. Search (ค้นหาทั่วระบบ)
 - ค้นหาแบบ Global ครอบคลุมโน้ต, งาน, ไฟล์
@@ -296,6 +297,7 @@ DayFlowV.2/
 | `/settings` | GET | Settings |
 | `/share/{token}` | GET | Public File Share |
 | `/shared/{token}` | GET | Public App Share |
+| `/demo` | GET | Public Demo (Read-only Preview) |
 | `/project/shared/{token}` | GET | Public Project View |
 | `/login` | GET | Login / Register |
 | `/health` | GET | Health Check (JSON) |
@@ -449,6 +451,8 @@ docker compose --profile backup run --rm backup-files
 | `migrate_skills.sql` | Skills & Time Logs |
 | `migrate_stock_watchlists.sql` | Stock Watchlists |
 | `migrate_telegram_cron.sql` | Telegram Cron Logs |
+| `migrate_theme_colors.sql` | ขยาย Theme ENUM ให้รองรับทั้ง 6 ธีม |
+| `migrate_demo_account.sql` | ตั้งค่าบัญชี Demo สำหรับปุ่ม "Demo" หน้าล็อกอิน |
 
 ---
 

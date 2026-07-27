@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `password_hash` VARCHAR(255) NOT NULL,
   `display_name`  VARCHAR(100) NOT NULL DEFAULT '',
   `avatar_path`   VARCHAR(255) DEFAULT NULL,
+  `is_demo`       TINYINT(1) NOT NULL DEFAULT 0,
   `created_at`    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at`    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY `uq_username` (`username`),
@@ -28,7 +29,7 @@ CREATE TABLE IF NOT EXISTS `users` (
 -- =====================================================
 CREATE TABLE IF NOT EXISTS `user_settings` (
   `user_id`   INT UNSIGNED PRIMARY KEY,
-  `theme`     ENUM('light','dark') NOT NULL DEFAULT 'light',
+  `theme`     ENUM('light','dark','soft','lavender','ocean','peach') NOT NULL DEFAULT 'light',
   `language`  VARCHAR(10) NOT NULL DEFAULT 'th',
   `timezone`  VARCHAR(50) NOT NULL DEFAULT 'Asia/Bangkok',
   `telegram_bot_token` VARCHAR(255) DEFAULT NULL,

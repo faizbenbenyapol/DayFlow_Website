@@ -22,6 +22,28 @@ class AuthController
         Response::redirect('/login');
     }
 
+    // Public "preview" entry point — sends visitors into the read-only demo
+    // account via the existing app-share flow (no registration/login needed).
+    public function demo(): void
+    {
+        if (!empty($_SESSION['user_id'])) {
+            Response::redirect('/');
+            return;
+        }
+
+        $demoUser = User::findDemo();
+        $share = $demoUser
+            ? DB::run('SELECT token FROM app_shares WHERE user_id = ? ORDER BY id ASC LIMIT 1', [$demoUser['id']])->fetch()
+            : null;
+
+        if (!$share) {
+            Response::redirect('/login');
+            return;
+        }
+
+        Response::redirect('/shared/' . $share['token']);
+    }
+
     public function apiLogin(): void
     {
         $rateKey = 'login:' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
@@ -40,7 +62,8 @@ class AuthController
         // Try email first, then username
         $user = User::findByEmail($identifier) ?? User::findByUsername($identifier);
 
-        if (!$user || !User::verifyPassword($password, $user['password_hash'])) {
+        // Demo account is public read-only via /demo — never a normal login target.
+        if (!$user || !empty($user['is_demo']) || !User::verifyPassword($password, $user['password_hash'])) {
             Response::json(['error' => 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'], 401);
         }
 
@@ -138,6 +161,10 @@ class AuthController
 
         // Check if user already exists
         $user = User::findByEmail($email);
+
+        if ($user && !empty($user['is_demo'])) {
+            Response::json(['error' => 'อีเมลนี้ถูกใช้งานแล้ว'], 422);
+        }
 
         if (!$user) {
             // Register a new user

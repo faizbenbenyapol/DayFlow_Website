@@ -22,6 +22,8 @@ $files = [
     'sql/migrate_habits.sql',
     'sql/migrate_quick_capture.sql',
     'sql/migrate_menu_order.sql',
+    'sql/migrate_theme_colors.sql',
+    'sql/migrate_demo_account.sql',
 ];
 
 foreach ($files as $relative) {

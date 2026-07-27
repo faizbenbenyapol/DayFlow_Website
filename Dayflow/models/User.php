@@ -32,6 +32,12 @@ class User
         return $stmt->fetch() ?: null;
     }
 
+    public static function findDemo(): ?array
+    {
+        $stmt = DB::run('SELECT id FROM users WHERE is_demo = 1 LIMIT 1');
+        return $stmt->fetch() ?: null;
+    }
+
     public static function create(string $username, string $email, string $password, string $displayName = ''): int
     {
         $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
