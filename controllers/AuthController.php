@@ -22,8 +22,8 @@ class AuthController
         Response::redirect('/login');
     }
 
-    // Public "preview" entry point — sends visitors into the read-only demo
-    // account via the existing app-share flow (no registration/login needed).
+    // Public "preview" entry point — logs visitors straight into the demo
+    // account as a normal session (no registration, no read-only share mode).
     public function demo(): void
     {
         if (!empty($_SESSION['user_id'])) {
@@ -32,16 +32,15 @@ class AuthController
         }
 
         $demoUser = User::findDemo();
-        $share = $demoUser
-            ? DB::run('SELECT token FROM app_shares WHERE user_id = ? ORDER BY id ASC LIMIT 1', [$demoUser['id']])->fetch()
-            : null;
+        $user = $demoUser ? User::findById($demoUser['id']) : null;
 
-        if (!$share) {
+        if (!$user) {
             Response::redirect('/login');
             return;
         }
 
-        Response::redirect('/shared/' . $share['token']);
+        Auth::login($user);
+        Response::redirect('/');
     }
 
     public function apiLogin(): void
