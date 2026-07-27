@@ -34,9 +34,9 @@ EXECUTE is_demo_stmt;
 DEALLOCATE PREPARE is_demo_stmt;
 
 -- 2) ตั้งค่าบัญชีที่ระบุให้เป็นบัญชีตัวอย่าง
-UPDATE users SET is_demo = 1 WHERE username = @demo_username;
+UPDATE users SET is_demo = 1 WHERE username = @demo_username COLLATE utf8mb4_unicode_ci;
 
-SET @demo_user_id := (SELECT id FROM users WHERE username = @demo_username LIMIT 1);
+SET @demo_user_id := (SELECT id FROM users WHERE username = @demo_username COLLATE utf8mb4_unicode_ci LIMIT 1);
 
 -- 3) สร้างลิงก์แชร์แบบอ่านอย่างเดียวให้บัญชีตัวอย่าง (ถ้ายังไม่มี)
 INSERT INTO app_shares (user_id, token, label, menus, expires_at)
