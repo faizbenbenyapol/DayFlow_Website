@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    name: PHP syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      # A parse error anywhere is a guaranteed 500 in production.
+      - name: Lint every PHP file
+        run: |
+          set -e
+          find . -path ./.git -prune -o -name '*.php' -print \
+            | xargs -P 4 -n 1 php -l
+
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, openssl
+          coverage: none
+
+      - name: Run unit suite
+        run: php tests/run.php
+
+  integration:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Brings up the app and a throwaway MariaDB with the schema and every
+      # migration applied, exactly as a fresh install would be.
+      - name: Start the stack
+        run: docker compose up -d --build
+
+      - name: Wait for the app to answer
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/health | grep -q '"ok":true'; then
+              echo "app is up"; exit 0
+            fi
+            sleep 2
+          done
+          echo "app did not become healthy in time"
+          docker compose logs --tail 100
+          exit 1
+
+      - name: Run unit + integration suites
+        run: docker compose exec -T app php /var/www/html/tests/run.php http://localhost
+
+      - name: Run smoke scripts
+        run: |
+          set -e
+          for script in smoke route-smoke security-smoke rate-limit-smoke quick-bookmark-smoke; do
+            echo "--- $script ---"
+            docker compose exec -T app php "/var/www/html/scripts/$script.php" http://localhost
+          done
+
+      - name: Show app logs on failure
+        if: failure()
+        run: docker compose logs --tail 200
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
