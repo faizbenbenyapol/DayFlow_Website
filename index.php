@@ -6,6 +6,12 @@
 define('ROOT', __DIR__);
 
 require_once ROOT . '/config/config.php';
+
+// Registered before anything else can fail, so an unexpected throwable is
+// logged with its request context instead of reaching the browser raw.
+require_once ROOT . '/core/ErrorHandler.php';
+ErrorHandler::register();
+
 require_once ROOT . '/config/database.php';
 require_once ROOT . '/config/session.php';
 
