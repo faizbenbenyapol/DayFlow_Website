@@ -15,6 +15,51 @@ class ProjectController
     private const PROJECT_STATUSES = ['Planning', 'In Progress', 'Review', 'Completed'];
     private const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
 
+    /**
+     * Loads a project the caller may see, or stops with a 404.
+     *
+     * Project::getById() already scopes to the owner, the members, and a guest
+     * holding the share token, and it returns `user_role` and `is_owner` for
+     * the checks below.
+     */
+    private function loadProject(int $projectId): array
+    {
+        $project = Project::getById($projectId, Auth::userId());
+        if (!$project) {
+            Response::json(['error' => 'ไม่พบข้อมูลโปรเจค'], 404);
+        }
+        return $project;
+    }
+
+    /**
+     * Stops unless the caller may change project content.
+     *
+     * Viewer is the read-only role, and it is what a public share link hands a
+     * guest. This used to be written out at each task endpoint and missing from
+     * the others, which let a Viewer post into the project chat.
+     */
+    private function requireEditor(array $project, string $action): void
+    {
+        if (($project['user_role'] ?? '') === 'Viewer') {
+            Response::json(['error' => 'คุณมีสิทธิ์ดูเท่านั้น ไม่สามารถ' . $action . 'ได้'], 403);
+        }
+    }
+
+    /**
+     * Stops unless the caller owns the project.
+     *
+     * Renaming, deleting, managing members and share links are the owner's
+     * alone. The model's WHERE clause already refused to touch another
+     * person's row, but the endpoints reported that as success or as a 500
+     * rather than as a refusal.
+     */
+    private function requireOwner(array $project, string $action): void
+    {
+        if (empty($project['is_owner'])) {
+            Response::json(['error' => 'เฉพาะเจ้าของโครงการเท่านั้นที่' . $action . 'ได้'], 403);
+        }
+    }
+
     private function validateProjectData(array $data, bool $create = false): array
     {
         if ($create || array_key_exists('name', $data)) {
@@ -159,10 +204,8 @@ class ProjectController
         $userId    = Auth::userId();
         $projectId = (int)$id;
 
-        $project = Project::getById($projectId, $userId);
-        if (!$project) {
-            Response::json(['error' => 'ไม่พบข้อมูลโปรเจค'], 404);
-        }
+        $project = $this->loadProject($projectId);
+        $this->requireOwner($project, 'แก้ไขรายละเอียดโครงการ');
 
         $data = [];
         $allowed = ['name', 'description', 'status', 'priority', 'due_date'];
@@ -201,10 +244,8 @@ class ProjectController
         $userId    = Auth::userId();
         $projectId = (int)$id;
 
-        $project = Project::getById($projectId, $userId);
-        if (!$project) {
-            Response::json(['error' => 'ไม่พบข้อมูลโปรเจค'], 404);
-        }
+        $project = $this->loadProject($projectId);
+        $this->requireOwner($project, 'ลบโครงการ');
 
         if (Project::delete($projectId, $userId)) {
             Response::json(['ok' => true]);
@@ -260,9 +301,7 @@ class ProjectController
             Response::json(['error' => 'ไม่พบข้อมูลโปรเจค'], 404);
         }
 
-        if ($project['user_role'] === 'Viewer') {
-            Response::json(['error' => 'คุณมีสิทธิ์ดูเท่านั้น ไม่สามารถเพิ่มงานได้'], 403);
-        }
+        $this->requireEditor($project, 'เพิ่มงาน');
 
         $title = trim(Request::input('title', ''));
         if (!$title) {
@@ -303,9 +342,7 @@ class ProjectController
             Response::json(['error' => 'คุณไม่มีสิทธิ์เข้าถึงโครงการนี้'], 403);
         }
 
-        if ($project['user_role'] === 'Viewer') {
-            Response::json(['error' => 'คุณมีสิทธิ์ดูเท่านั้น ไม่สามารถแก้ไขงานได้'], 403);
-        }
+        $this->requireEditor($project, 'แก้ไขงาน');
 
         $data = [];
         $allowed = ['title', 'status', 'priority', 'due_date', 'category', 'assignee', 'checklist'];
@@ -372,9 +409,7 @@ class ProjectController
             Response::json(['error' => 'คุณไม่มีสิทธิ์เข้าถึงโครงการนี้'], 403);
         }
 
-        if ($project['user_role'] === 'Viewer') {
-            Response::json(['error' => 'คุณมีสิทธิ์ดูเท่านั้น ไม่สามารถลบงานได้'], 403);
-        }
+        $this->requireEditor($project, 'ลบงาน');
 
         if (ProjectTask::delete($taskId)) {
             ProjectActivity::log($task['project_id'], $userId, 'ลบงานย่อย: "' . $task['title'] . '"');
@@ -404,9 +439,7 @@ class ProjectController
             Response::json(['error' => 'ไม่พบข้อมูลโปรเจค'], 404);
         }
 
-        if ($project['user_role'] === 'Viewer') {
-            Response::json(['error' => 'คุณมีสิทธิ์ดูเท่านั้น ไม่สามารถจัดเรียงงานได้'], 403);
-        }
+        $this->requireEditor($project, 'จัดเรียงงาน');
 
         ProjectTask::reorder($projectId, $items);
         ProjectActivity::log($projectId, $userId, 'จัดตำแหน่งลำดับบอร์ดคัมบังใหม่');
@@ -448,10 +481,7 @@ class ProjectController
             Response::json(['error' => 'ไม่พบข้อมูลโปรเจค'], 404);
         }
 
-        // ต้องเป็นเจ้าของโครงการ (Owner) เท่านั้นจึงจะเพิ่มผู้ร่วมทีมได้
-        if (!$project['is_owner']) {
-            Response::json(['error' => 'คุณไม่มีสิทธิ์ในการเชิญผู้อื่นเข้าร่วมโครงการนี้'], 403);
-        }
+        $this->requireOwner($project, 'เชิญผู้อื่นเข้าร่วมโครงการ');
 
         $emailOrUsername = trim(Request::input('email_or_username', ''));
         $role            = Request::input('role', 'Editor');
@@ -554,10 +584,8 @@ class ProjectController
         $userId    = Auth::userId();
         $projectId = (int)$id;
 
-        $project = Project::getById($projectId, $userId);
-        if (!$project) {
-            Response::json(['error' => 'ไม่พบข้อมูลโปรเจค'], 404);
-        }
+        $project = $this->loadProject($projectId);
+        $this->requireEditor($project, 'ส่งข้อความ');
 
         $message = trim(Request::input('message', ''));
         if ($message === '') {
@@ -617,9 +645,7 @@ class ProjectController
             Response::json(['error' => 'ไม่พบข้อมูลโปรเจค'], 404);
         }
 
-        if (!$project['is_owner']) {
-            Response::json(['error' => 'เฉพาะเจ้าของโครงการเท่านั้นที่สามารถเปิดลิงก์สาธารณะได้'], 403);
-        }
+        $this->requireOwner($project, 'เปิดลิงก์สาธารณะ');
 
         $shareRole = Request::input('share_role', 'Viewer');
         
@@ -655,9 +681,7 @@ class ProjectController
             Response::json(['error' => 'ไม่พบข้อมูลโปรเจค'], 404);
         }
 
-        if (!$project['is_owner']) {
-            Response::json(['error' => 'เฉพาะเจ้าของโครงการเท่านั้นที่สามารถปิดลิงก์สาธารณะได้'], 403);
-        }
+        $this->requireOwner($project, 'ปิดลิงก์สาธารณะ');
 
         DB::run(
             'UPDATE projects SET share_token = NULL WHERE id = ?',
@@ -673,6 +697,12 @@ class ProjectController
      */
     public function apiSetGuestName(): void
     {
+        // Only a visitor who came in through a project share link has a guest
+        // name to set; a signed-in member is shown by their own display name.
+        if (empty($_SESSION['active_project_share_token'])) {
+            Response::json(['error' => 'ใช้ได้เฉพาะผู้เยี่ยมชมผ่านลิงก์แชร์'], 403);
+        }
+
         $name = trim(Request::input('name', ''));
         if ($name === '') {
             Response::json(['error' => 'กรุณากรอกชื่อของคุณ'], 422);
