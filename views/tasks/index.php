@@ -102,6 +102,23 @@
                     <input type="date" class="form-control" id="editTaskDue">
                 </div>
             </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">ทำซ้ำ</label>
+                    <select class="form-control" id="editTaskRepeat">
+                        <option value="none">ไม่ทำซ้ำ</option>
+                        <option value="daily">ทุกวัน</option>
+                        <option value="weekly">ทุกสัปดาห์</option>
+                        <option value="monthly">ทุกเดือน</option>
+                        <option value="yearly">ทุกปี</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">ทำซ้ำถึงวันที่ <span class="text-muted text-xs">(ไม่ใส่ = ไม่สิ้นสุด)</span></label>
+                    <input type="date" class="form-control" id="editTaskRepeatUntil">
+                </div>
+            </div>
+            <p class="text-xs text-muted" style="margin-top:-6px">งานที่ทำซ้ำจะสร้างรอบถัดไปให้อัตโนมัติเมื่อติ๊กว่าเสร็จแล้ว</p>
         </div>
         <div class="modal-footer">
             <button class="btn btn-ghost" type="button" data-close-modal>ยกเลิก</button>
@@ -141,6 +158,23 @@
                     <input type="date" class="form-control" id="addTaskDue">
                 </div>
             </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">ทำซ้ำ</label>
+                    <select class="form-control" id="addTaskRepeat">
+                        <option value="none">ไม่ทำซ้ำ</option>
+                        <option value="daily">ทุกวัน</option>
+                        <option value="weekly">ทุกสัปดาห์</option>
+                        <option value="monthly">ทุกเดือน</option>
+                        <option value="yearly">ทุกปี</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">ทำซ้ำถึงวันที่ <span class="text-muted text-xs">(ไม่ใส่ = ไม่สิ้นสุด)</span></label>
+                    <input type="date" class="form-control" id="addTaskRepeatUntil">
+                </div>
+            </div>
+            <p class="text-xs text-muted" style="margin-top:-6px">งานที่ทำซ้ำจะสร้างรอบถัดไปให้อัตโนมัติเมื่อติ๊กว่าเสร็จแล้ว</p>
         </div>
         <div class="modal-footer">
             <button class="btn btn-ghost" type="button" data-close-modal>ยกเลิก</button>

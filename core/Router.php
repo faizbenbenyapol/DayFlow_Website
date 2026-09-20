@@ -42,17 +42,34 @@ class Router
         $this->add('GET', '/food-notes',    'FoodNoteController',   'index',   true);
         $this->add('GET', '/calculator',    'CalculatorController', 'index',   true);
         $this->add('GET', '/ai',            'AiController',         'index',   true);
+        $this->add('GET', '/review',        'ReviewController',     'index',   true);
 
         // --- API: Auth ---
         $this->add('POST', '/api/auth/login',    'AuthController', 'apiLogin',    false);
         $this->add('POST', '/api/auth/logout',   'AuthController', 'apiLogout',   true);
         $this->add('POST', '/api/auth/register', 'AuthController', 'apiRegister', false);
         $this->add('POST', '/api/auth/google',   'AuthController', 'apiGoogleLogin', false);
+        $this->add('POST', '/api/auth/two-factor', 'AuthController', 'apiTwoFactor', false);
+
+        // --- API: Two-factor setup (inside a signed-in session) ---
+        $this->add('GET',    '/api/settings/two-factor',         'SettingsController', 'apiTwoFactorStatus',  true);
+        $this->add('POST',   '/api/settings/two-factor/begin',   'SettingsController', 'apiTwoFactorBegin',   true);
+        $this->add('POST',   '/api/settings/two-factor/confirm', 'SettingsController', 'apiTwoFactorConfirm', true);
+        $this->add('POST',   '/api/settings/two-factor/recovery','SettingsController', 'apiTwoFactorRecovery',true);
+        $this->add('DELETE', '/api/settings/two-factor',         'SettingsController', 'apiTwoFactorDisable', true);
 
         // --- API: Dashboard ---
         $this->add('GET',  '/api/dashboard/summary', 'DashboardController', 'summary', true);
         $this->add('POST', '/api/dashboard/layout',  'DashboardController', 'layout',  true);
         $this->add('GET',  '/api/search',              'SearchController',    'apiSearch', true);
+        $this->add('GET',  '/api/review',              'ReviewController',    'apiSummary', true);
+
+        // --- API: Browser notifications ---
+        $this->add('GET',    '/api/push/config',      'PushController', 'apiConfig',      true);
+        $this->add('POST',   '/api/push/subscribe',   'PushController', 'apiSubscribe',   true);
+        $this->add('POST',   '/api/push/unsubscribe', 'PushController', 'apiUnsubscribe', true);
+        $this->add('GET',    '/api/push/pending',     'PushController', 'apiPending',     true);
+        $this->add('POST',   '/api/push/test',        'PushController', 'apiTest',        true);
 
         // --- API: Tasks ---
         $this->add('GET',    '/api/tasks',         'TaskController', 'apiList',    true);
@@ -82,6 +99,8 @@ class Router
         $this->add('POST',   '/api/planner/events',      'PlannerController', 'apiEventCreate',  true);
         $this->add('PUT',    '/api/planner/events/{id}', 'PlannerController', 'apiEventUpdate',  true);
         $this->add('DELETE', '/api/planner/events/{id}', 'PlannerController', 'apiEventDelete',  true);
+        $this->add('GET',    '/api/planner/events/export.ics', 'PlannerController', 'apiEventsExport', true);
+        $this->add('POST',   '/api/planner/events/import',     'PlannerController', 'apiEventsImport', true);
         $this->add('GET',    '/api/planner/todos',       'PlannerController', 'apiTodosList',    true);
         $this->add('POST',   '/api/planner/todos',       'PlannerController', 'apiTodoCreate',   true);
         $this->add('PUT',    '/api/planner/todos/{id}',  'PlannerController', 'apiTodoUpdate',   true);
@@ -364,6 +383,16 @@ class Router
             // Auth check
             if ($requiresAuth) {
                 Auth::requireLogin();
+            }
+
+            // PHP holds an exclusive lock on the session file for the whole
+            // request. A page that fires several XHRs would have them queue up
+            // behind each other instead of running side by side. Every session
+            // write happens before this point (share token, remember-me login)
+            // or in a non-GET handler, so read-only API calls can drop the lock
+            // here. $_SESSION stays readable — only further writes are dropped.
+            if ($method === 'GET' && Request::isApi() && session_status() === PHP_SESSION_ACTIVE) {
+                session_write_close();
             }
 
             // Load and dispatch controller

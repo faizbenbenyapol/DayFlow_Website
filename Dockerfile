@@ -4,8 +4,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libfreetype6-dev libjpeg62-turbo-dev libpng-dev libzip-dev curl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j"$(nproc)" pdo_mysql mysqli gd zip \
-    && a2enmod rewrite headers expires \
+    && docker-php-ext-install -j"$(nproc)" pdo_mysql mysqli gd zip opcache \
+    && a2enmod rewrite headers expires deflate \
     && printf 'ServerName localhost\n' > /etc/apache2/conf-available/dayflow-servername.conf \
     && a2enconf dayflow-servername \
     && rm -rf /var/lib/apt/lists/*

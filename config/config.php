@@ -61,6 +61,13 @@ define('TIMEZONE', envValue('TIMEZONE', 'Asia/Bangkok'));
 
 // --- Google Sign-In ---
 define('GOOGLE_CLIENT_ID', envValue('GOOGLE_CLIENT_ID', ''));
+
+// --- Web Push (VAPID) ---
+// Generate once with: php scripts/generate-vapid-keys.php
+// Leaving these empty simply disables browser notifications.
+define('VAPID_PUBLIC_KEY',  envValue('VAPID_PUBLIC_KEY', ''));
+define('VAPID_PRIVATE_KEY', envValue('VAPID_PRIVATE_KEY', ''));
+define('VAPID_SUBJECT',     envValue('VAPID_SUBJECT', ''));
 define('APP_KEY_ENV', envValue('APP_KEY', ''));
 define('CRON_TOKEN', envValue('CRON_TOKEN', ''));
 
@@ -90,9 +97,17 @@ function h(string $s): string
     return htmlspecialchars($s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 }
 
+/**
+ * Sanitises a name for a Content-Disposition header: strips control
+ * characters, quotes and path separators.
+ *
+ * The delimiter is ~ rather than / — with a / delimiter the slash inside the
+ * character class closed the pattern early, preg_replace returned null, and
+ * every download came out named "download" with no extension.
+ */
 function downloadFilename(string $name, string $fallback = 'download'): string
 {
-    $name = preg_replace('/[\x00-\x1F\x7F"\\\/]+/u', '_', $name) ?? '';
+    $name = preg_replace('~[\x00-\x1F\x7F"\\\\/]+~u', '_', $name) ?? '';
     $name = trim($name, " .\t\r\n");
     return $name !== '' ? $name : $fallback;
 }
@@ -195,4 +210,27 @@ function thaiDate(string $date): string
     $m = $months[(int)date('n', $ts) - 1];
     $y = (int)date('Y', $ts) + 543;
     return "$d $m $y";
+}
+
+/**
+ * Half-open [start, end) day bounds for a "YYYY-MM" month.
+ *
+ * Wrapping a column in DATE_FORMAT()/YEAR() makes MySQL evaluate it row by row,
+ * so any index on that column is ignored and the query degrades into a full
+ * scan. Comparing the bare column against a range keeps the index usable.
+ */
+function monthBounds(string $month): array
+{
+    if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month)) $month = date('Y-m');
+    $start = new DateTimeImmutable($month . '-01');
+    return [$start->format('Y-m-d'), $start->modify('+1 month')->format('Y-m-d')];
+}
+
+/**
+ * Half-open [start, end) day bounds for a calendar year. See monthBounds().
+ */
+function yearBounds(int $year): array
+{
+    if ($year < 1970 || $year > 9999) $year = (int)date('Y');
+    return [sprintf('%04d-01-01', $year), sprintf('%04d-01-01', $year + 1)];
 }

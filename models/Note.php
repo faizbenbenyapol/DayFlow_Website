@@ -32,12 +32,29 @@ class Note
         return DB::run($sql, $params)->fetchAll();
     }
 
+    /**
+     * The row carries the note's password hash and salt, which the encrypt and
+     * decrypt paths need. Anything heading for a response must go through
+     * publicFields() first.
+     */
     public static function getById(int $id, int $userId): ?array
     {
         return DB::run(
-            'SELECT * FROM notes WHERE id = ? AND user_id = ?',
+            'SELECT id, user_id, title, is_encrypted, password_hash, encrypt_salt,
+                    pinned, created_at, updated_at
+             FROM notes WHERE id = ? AND user_id = ?',
             [$id, $userId]
         )->fetch() ?: null;
+    }
+
+    /**
+     * Strip the secrets before a note row is sent to a browser. The bcrypt hash
+     * of a note password is offline-crackable once it leaves the server.
+     */
+    public static function publicFields(array $note): array
+    {
+        unset($note['password_hash'], $note['encrypt_salt']);
+        return $note;
     }
 
     public static function create(int $userId, string $title, bool $encrypted, string $password = ''): int

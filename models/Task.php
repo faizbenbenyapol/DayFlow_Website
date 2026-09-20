@@ -8,7 +8,8 @@ class Task
     public static function getAllForUser(int $userId): array
     {
         return DB::run(
-            'SELECT id, title, description, quadrant, status, due_date, position
+            'SELECT id, title, description, quadrant, status, due_date,
+                    repeat_rule, repeat_until, position
              FROM tasks
              WHERE user_id = ?
              ORDER BY quadrant ASC, position ASC, id ASC',
@@ -32,8 +33,9 @@ class Task
         )->fetchColumn();
 
         DB::run(
-            'INSERT INTO tasks (user_id, title, description, quadrant, status, due_date, position)
-             VALUES (?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO tasks (user_id, title, description, quadrant, status, due_date,
+                                repeat_rule, repeat_until, position)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 $userId,
                 $data['title'],
@@ -41,6 +43,8 @@ class Task
                 (int)($data['quadrant'] ?? 1),
                 $data['status'] ?? 'open',
                 $data['due_date'] ?: null,
+                Recurrence::normalise($data['repeat_rule'] ?? 'none'),
+                $data['repeat_until'] ?: null,
                 $maxPos + 1
             ]
         );
@@ -76,6 +80,14 @@ class Task
             $fields[] = 'position = ?';
             $params[] = (int)$data['position'];
         }
+        if (array_key_exists('repeat_rule', $data)) {
+            $fields[] = 'repeat_rule = ?';
+            $params[] = Recurrence::normalise($data['repeat_rule']);
+        }
+        if (array_key_exists('repeat_until', $data)) {
+            $fields[] = 'repeat_until = ?';
+            $params[] = $data['repeat_until'] ?: null;
+        }
 
         if (empty($fields)) return false;
 
@@ -94,6 +106,47 @@ class Task
     {
         $stmt = DB::run('DELETE FROM tasks WHERE id = ? AND user_id = ?', [$id, $userId]);
         return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Schedules the next occurrence of a repeating task once one is completed,
+     * the same roll-forward a subscription uses when it renews. The finished
+     * task stays put as history.
+     *
+     * Returns the new task's id, or null when nothing was scheduled: the task
+     * does not repeat, has no due date, or the series has run out.
+     */
+    public static function scheduleNextOccurrence(array $task, int $userId): ?int
+    {
+        $rule = Recurrence::normalise($task['repeat_rule'] ?? 'none');
+        if ($rule === 'none' || empty($task['due_date'])) return null;
+
+        $next = Recurrence::next((string)$task['due_date'], $rule);
+        if ($next === null) return null;
+
+        $until = $task['repeat_until'] ?? null;
+        if ($until && $next > substr((string)$until, 0, 10)) return null;
+
+        // A repeating task that is completed several cycles late should come
+        // back on the next date that is still ahead, not pile up behind.
+        $today = date('Y-m-d');
+        $guard = 0;
+        while ($next !== null && $next < $today && $guard++ < 500) {
+            $candidate = Recurrence::next($next, $rule);
+            if ($candidate === null || $candidate <= $next) break;
+            if ($until && $candidate > substr((string)$until, 0, 10)) return null;
+            $next = $candidate;
+        }
+
+        return self::create($userId, [
+            'title'        => $task['title'],
+            'description'  => $task['description'] ?? null,
+            'quadrant'     => (int)($task['quadrant'] ?? 1),
+            'status'       => 'open',
+            'due_date'     => $next,
+            'repeat_rule'  => $rule,
+            'repeat_until' => $until,
+        ]);
     }
 
     public static function reorder(int $userId, array $items): void

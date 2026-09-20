@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ออฟไลน์ — DayFlow</title>
+    <link rel="stylesheet" href="assets/css/fonts.css">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', 'IBM Plex Sans Thai', 'Noto Sans Thai', -apple-system, sans-serif;
+            background: #eef2f7;
+            color: #1e293b;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            text-align: center;
+        }
+        .card {
+            background: #eef2f7;
+            border-radius: 16px;
+            padding: 40px 32px;
+            max-width: 380px;
+            box-shadow: 6px 6px 12px rgba(163, 177, 198, 0.6), -6px -6px 12px rgba(255, 255, 255, 0.8);
+        }
+        svg { color: #94a3b8; margin-bottom: 20px; }
+        h1 { font-size: 1.15rem; font-weight: 600; margin-bottom: 10px; }
+        p { font-size: 0.9rem; color: #64748b; line-height: 1.6; margin-bottom: 24px; }
+        button {
+            font: inherit;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #eef2f7;
+            background: #0f172a;
+            border: 0;
+            border-radius: 10px;
+            padding: 11px 26px;
+            cursor: pointer;
+        }
+        button:active { transform: translateY(1px); }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 1l22 22"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+            <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/>
+            <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+            <line x1="12" y1="20" x2="12.01" y2="20"/>
+        </svg>
+        <h1>ไม่มีการเชื่อมต่ออินเทอร์เน็ต</h1>
+        <p>DayFlow เก็บข้อมูลของคุณไว้บนเซิร์ฟเวอร์ จึงต้องต่ออินเทอร์เน็ตเพื่อเปิดใช้งาน<br>ลองเชื่อมต่อใหม่แล้วกดปุ่มด้านล่าง</p>
+        <button onclick="location.reload()">ลองอีกครั้ง</button>
+    </div>
+</body>
+</html>

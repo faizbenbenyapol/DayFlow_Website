@@ -120,7 +120,76 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
             <button class="btn btn-primary" id="btnChangePassword">เปลี่ยนรหัสผ่าน</button>
         </div>
     </div>
+
+    <!-- TWO-FACTOR AUTHENTICATION -->
+    <div class="card mb-6" style="max-width:540px; margin-top: var(--space-6);">
+        <div class="card-header">
+            <span class="card-title">การยืนยันตัวตนสองชั้น (2FA)</span>
+            <span class="badge" id="tfaBadge" style="font-size:0.7rem">กำลังตรวจสอบ...</span>
+        </div>
+        <div class="card-body">
+            <p class="text-xs text-muted" style="margin-bottom: var(--space-4);">
+                เพิ่มขั้นยืนยันด้วยแอป Authenticator (Google Authenticator, Authy, 1Password)
+                หลังกรอกรหัสผ่าน ทำให้แค่รหัสผ่านหลุดก็ยังเข้าบัญชีไม่ได้
+            </p>
+
+            <!-- State: off -->
+            <div id="tfaOff">
+                <div class="form-group">
+                    <label class="form-label">ยืนยันรหัสผ่านของคุณ</label>
+                    <input type="password" class="form-control" id="tfaBeginPassword" autocomplete="current-password">
+                </div>
+                <button class="btn btn-primary btn-sm" id="btnTfaBegin">เริ่มตั้งค่า</button>
+            </div>
+
+            <!-- State: mid-enrolment -->
+            <div id="tfaEnrol" style="display:none">
+                <p class="text-sm" style="margin-bottom: var(--space-3);">1. สแกน QR นี้ด้วยแอป Authenticator</p>
+                <div id="tfaQr" style="background:#fff; padding:12px; border-radius:10px; display:inline-block;"></div>
+                <p class="text-xs text-muted" style="margin:var(--space-3) 0;">
+                    หรือกรอกรหัสนี้เอง: <code id="tfaSecret" style="user-select:all; font-size:0.85rem;"></code>
+                </p>
+                <div class="form-group" style="margin-top: var(--space-4);">
+                    <label class="form-label">2. กรอกรหัส 6 หลักที่แอปแสดง</label>
+                    <input type="text" class="form-control" id="tfaConfirmCode"
+                           inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code">
+                </div>
+                <div class="flex gap-2">
+                    <button class="btn btn-primary btn-sm" id="btnTfaConfirm">เปิดใช้งาน</button>
+                    <button class="btn btn-ghost btn-sm" id="btnTfaCancel">ยกเลิก</button>
+                </div>
+            </div>
+
+            <!-- State: on -->
+            <div id="tfaOn" style="display:none">
+                <p class="text-sm" style="margin-bottom: var(--space-3);">
+                    เปิดใช้งานอยู่ • เหลือรหัสสำรอง <strong id="tfaCodesLeft">-</strong> ชุด
+                </p>
+                <div class="form-group">
+                    <label class="form-label">ยืนยันรหัสผ่านเพื่อดำเนินการ</label>
+                    <input type="password" class="form-control" id="tfaManagePassword" autocomplete="current-password">
+                </div>
+                <div class="flex gap-2" style="flex-wrap:wrap">
+                    <button class="btn btn-ghost btn-sm" id="btnTfaRegenerate">สร้างรหัสสำรองใหม่</button>
+                    <button class="btn btn-danger btn-sm" id="btnTfaDisable">ปิดการใช้งาน</button>
+                </div>
+            </div>
+
+            <!-- Recovery codes, shown once -->
+            <div id="tfaRecovery" style="display:none; margin-top: var(--space-5);">
+                <p class="text-sm" style="font-weight:600; margin-bottom: var(--space-2);">
+                    รหัสสำรอง — เก็บไว้ในที่ปลอดภัย จะแสดงครั้งเดียวเท่านั้น
+                </p>
+                <p class="text-xs text-muted" style="margin-bottom: var(--space-3);">
+                    ใช้แทนรหัสจากแอปได้เมื่อทำอุปกรณ์หาย แต่ละชุดใช้ได้ครั้งเดียว
+                </p>
+                <pre id="tfaRecoveryList" style="background:var(--color-surface-2); padding:12px; border-radius:8px; font-size:0.85rem; line-height:1.8; user-select:all;"></pre>
+                <button class="btn btn-ghost btn-sm" id="btnTfaCopyCodes">คัดลอกทั้งหมด</button>
+            </div>
+        </div>
+    </div>
 </div>
+
 
 <!-- APPEARANCE + TIMEZONE -->
 <div id="tab-appearance" class="settings-pane" style="display:none">
@@ -128,6 +197,22 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
         <div class="card-header"><span class="card-title">ธีม</span></div>
         <div class="card-body">
             <div class="flex gap-4 theme-cards-container" style="flex-wrap:wrap">
+                <label class="theme-card-option" style="cursor:pointer; min-width:140px;">
+                    <input type="radio" name="theme" value="auto"
+                           <?= ($settings['theme'] ?? 'light') === 'auto' ? 'checked' : '' ?>
+                           class="sr-only">
+                    <div class="theme-card-preview theme-auto-preview">
+                        <div class="preview-header"></div>
+                        <div class="preview-body">
+                            <div class="preview-line-1"></div>
+                            <div class="preview-line-2"></div>
+                        </div>
+                    </div>
+                    <span class="theme-card-label">
+                        <span class="theme-card-dot"></span>
+                        ตามระบบ (Auto)
+                    </span>
+                </label>
                 <label class="theme-card-option" style="cursor:pointer; min-width:140px;">
                     <input type="radio" name="theme" value="light"
                            <?= ($settings['theme'] ?? 'light') === 'light' ? 'checked' : '' ?>
@@ -586,6 +671,37 @@ window.dashboardLayout = <?= json_encode($layout, JSON_UNESCAPED_UNICODE) ?>;
 
 <!-- TELEGRAM -->
 <div id="tab-telegram" class="settings-pane" style="display:none">
+    <!-- BROWSER NOTIFICATIONS -->
+    <div class="card" style="max-width:540px; margin-bottom:24px">
+        <div class="card-header">
+            <span class="card-title">แจ้งเตือนผ่านเบราว์เซอร์</span>
+            <span class="badge" id="pushBadge" style="font-size:0.7rem">กำลังตรวจสอบ...</span>
+        </div>
+        <div class="card-body">
+            <p class="form-hint mb-4">
+                แจ้งเตือนงานที่ครบกำหนด กิจกรรม และรายการที่ใกล้ถึงรอบชำระ
+                ตรงไปที่เบราว์เซอร์หรือแอปที่ติดตั้งไว้ โดยไม่ต้องตั้งค่า Bot
+                <br>
+                <span class="text-xs">เนื้อหาการแจ้งเตือนถูกดึงจากเซิร์ฟเวอร์ของคุณเอง ไม่ได้ส่งผ่านบริการ Push ของผู้ให้บริการ</span>
+            </p>
+
+            <div id="pushUnavailable" style="display:none">
+                <p class="text-sm text-muted" id="pushUnavailableReason"></p>
+            </div>
+
+            <div id="pushControls" style="display:none">
+                <p class="text-sm" style="margin-bottom:var(--space-3)">
+                    อุปกรณ์ที่เปิดแจ้งเตือนไว้: <strong id="pushDeviceCount">-</strong>
+                </p>
+                <div class="flex gap-2" style="flex-wrap:wrap">
+                    <button class="btn btn-primary btn-sm" id="btnPushEnable">เปิดแจ้งเตือนบนอุปกรณ์นี้</button>
+                    <button class="btn btn-ghost btn-sm" id="btnPushDisable" style="display:none">ปิดบนอุปกรณ์นี้</button>
+                    <button class="btn btn-ghost btn-sm" id="btnPushTest" style="display:none">ทดสอบส่ง</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="card" style="max-width:540px">
         <div class="card-header"><span class="card-title">Telegram Bot Integration</span></div>
         <div class="card-body">

@@ -4,9 +4,6 @@
    Font: IBM Plex Sans Thai + Inter
 ===================================================== */
 
-/* --- Google Font Import --- */
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
-
 /* --- CSS Custom Properties --- */
 :root {
     --color-bg:         #eef2f7; /* Pure neomorphic background color */

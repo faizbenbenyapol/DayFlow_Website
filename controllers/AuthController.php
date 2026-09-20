@@ -66,10 +66,68 @@ class AuthController
             Response::json(['error' => 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'], 401);
         }
 
+        // With 2FA on, the password alone does not open a session: the user id
+        // is parked as a pending challenge until a valid code arrives.
+        if (TwoFactor::isEnabled((int)$user['id'])) {
+            session_regenerate_id(true);
+            $_SESSION['pending_2fa_user'] = (int)$user['id'];
+            $_SESSION['pending_2fa_since'] = time();
+            $_SESSION['pending_2fa_remember'] = $remember;
+            Response::json(['ok' => true, 'two_factor_required' => true]);
+        }
+
         unset($_SESSION['app_share_token']);
         Auth::login($user);
         if ($remember) RememberToken::issue((int)$user['id']);
         RateLimiter::clear($rateKey);
+        Response::json(['ok' => true, 'redirect' => APP_URL . '/']);
+    }
+
+    /**
+     * POST /api/auth/two-factor — second step of a login.
+     *
+     * Only reachable while a password challenge is pending, and that pending
+     * state expires so an abandoned half-login cannot be resumed later.
+     */
+    public function apiTwoFactor(): void
+    {
+        $pendingUserId = (int)($_SESSION['pending_2fa_user'] ?? 0);
+        $since         = (int)($_SESSION['pending_2fa_since'] ?? 0);
+
+        if ($pendingUserId < 1 || $since < 1 || (time() - $since) > 300) {
+            unset($_SESSION['pending_2fa_user'], $_SESSION['pending_2fa_since'], $_SESSION['pending_2fa_remember']);
+            Response::json(['error' => 'หมดเวลายืนยันตัวตน กรุณาเข้าสู่ระบบใหม่'], 401);
+        }
+
+        // Brute force here is guessing a six-digit code, so the limit is tight.
+        $rateKey = '2fa:' . $pendingUserId . ':' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+        if (!RateLimiter::hit($rateKey, 8, 900)) {
+            Response::json(['error' => 'ลองยืนยันตัวตนมากเกินไป กรุณารอประมาณ 15 นาที'], 429);
+        }
+
+        $code = (string)Request::rawInput('code', '');
+        if ($code === '') {
+            Response::json(['error' => 'กรุณากรอกรหัสยืนยัน'], 422);
+        }
+
+        if (!TwoFactor::verifyChallenge($pendingUserId, $code)) {
+            Response::json(['error' => 'รหัสยืนยันไม่ถูกต้อง'], 401);
+        }
+
+        $user = User::findById($pendingUserId);
+        if (!$user) {
+            Response::json(['error' => 'ไม่พบบัญชีผู้ใช้'], 401);
+        }
+
+        $remember = !empty($_SESSION['pending_2fa_remember']);
+        unset($_SESSION['pending_2fa_user'], $_SESSION['pending_2fa_since'], $_SESSION['pending_2fa_remember']);
+        unset($_SESSION['app_share_token']);
+
+        Auth::login($user);
+        if ($remember) RememberToken::issue((int)$user['id']);
+        RateLimiter::clear($rateKey);
+        RateLimiter::clear('login:' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
+
         Response::json(['ok' => true, 'redirect' => APP_URL . '/']);
     }
 

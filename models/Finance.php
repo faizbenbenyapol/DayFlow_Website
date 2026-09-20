@@ -15,8 +15,10 @@ class Finance
         $params = [$userId];
 
         if ($month) {
-            $sql .= ' AND DATE_FORMAT(f.txn_date, "%Y-%m") = ?';
-            $params[] = $month;
+            [$monthStart, $monthEnd] = monthBounds($month);
+            $sql .= ' AND f.txn_date >= ? AND f.txn_date < ?';
+            $params[] = $monthStart;
+            $params[] = $monthEnd;
         }
         if ($startDate) {
             $sql .= ' AND f.txn_date >= ?';
@@ -84,12 +86,13 @@ class Finance
 
     public static function getMonthlySummary(int $userId, string $month): array
     {
+        [$monthStart, $monthEnd] = monthBounds($month);
         $row = DB::run(
             'SELECT
                SUM(CASE WHEN type="income"  THEN amount ELSE 0 END) AS income,
                SUM(CASE WHEN type="expense" THEN amount ELSE 0 END) AS expense
-             FROM finances WHERE user_id = ? AND DATE_FORMAT(txn_date, "%Y-%m") = ?',
-            [$userId, $month]
+             FROM finances WHERE user_id = ? AND txn_date >= ? AND txn_date < ?',
+            [$userId, $monthStart, $monthEnd]
         )->fetch();
 
         $income  = (float)($row['income']  ?? 0);
@@ -104,9 +107,9 @@ class Finance
                     SUM(CASE WHEN type="income"  THEN amount ELSE 0 END) AS income,
                     SUM(CASE WHEN type="expense" THEN amount ELSE 0 END) AS expense
              FROM finances
-             WHERE user_id = ? AND YEAR(txn_date) = ?
+             WHERE user_id = ? AND txn_date >= ? AND txn_date < ?
              GROUP BY month ORDER BY month ASC',
-            [$userId, $year]
+            array_merge([$userId], yearBounds($year))
         )->fetchAll();
 
         // Fill all 12 months

@@ -757,9 +757,7 @@ async function generatePdfReport() {
 <head>
     <meta charset="UTF-8">
     <title>รายงานการเงิน — ${escHtml(periodText)}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="${BASE_URL}/assets/css/fonts.css" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {

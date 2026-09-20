@@ -29,6 +29,11 @@ RewriteRule ^ index.php [QSA,L]
     <FilesMatch "\.(css|js|png|jpg|jpeg|gif|webp|svg|ico|woff2)$">
         Header set Cache-Control "public, max-age=31536000, immutable"
     </FilesMatch>
+    # The service worker and the manifest are fetched by URL with no ?v= to
+    # bust, so they must stay revalidated or a deploy would never reach clients.
+    <FilesMatch "^(sw\.js|manifest\.json|offline\.html)$">
+        Header set Cache-Control "public, max-age=0, must-revalidate"
+    </FilesMatch>
 </IfModule>
 
 # PHP settings (if mod_php)
@@ -41,4 +46,17 @@ RewriteRule ^ index.php [QSA,L]
     php_value upload_max_filesize 20M
     php_value post_max_size 22M
     php_value max_execution_time 60
+</IfModule>
+
+# Response compression. Caddy already compresses in the tunnel/VPS setup, but a
+# plain Apache deployment (XAMPP, DirectAdmin) has no proxy in front of it.
+<IfModule mod_deflate.c>
+    <IfModule mod_filter.c>
+        AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript
+        AddOutputFilterByType DEFLATE application/javascript application/x-javascript
+        AddOutputFilterByType DEFLATE application/json application/manifest+json
+        AddOutputFilterByType DEFLATE image/svg+xml application/xml
+    </IfModule>
+    # Already-compressed payloads only get bigger.
+    SetEnvIfNoCase Request_URI \.(?:gz|zip|rar|7z|png|jpe?g|webp|gif|ico|woff2?|mp4|webm|pdf)$ no-gzip dont-vary
 </IfModule>

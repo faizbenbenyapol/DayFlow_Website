@@ -257,3 +257,14 @@
 .add-task-submit-btn:active {
     transform: scale(0.9);
 }
+
+/* Repeat marker on a task card, shown next to the due date. */
+.task-repeat {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: 8px;
+    font-size: 0.72rem;
+    color: var(--color-muted);
+    white-space: nowrap;
+}

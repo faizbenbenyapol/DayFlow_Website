@@ -12,8 +12,10 @@ class Workout
         $params = [$userId];
 
         if ($month) {
-            $sql .= ' AND DATE_FORMAT(workout_date, "%Y-%m") = ?';
-            $params[] = $month;
+            [$monthStart, $monthEnd] = monthBounds($month);
+            $sql .= ' AND workout_date >= ? AND workout_date < ?';
+            $params[] = $monthStart;
+            $params[] = $monthEnd;
         }
 
         $sql .= ' ORDER BY workout_date DESC, id DESC LIMIT ?';
@@ -78,19 +80,19 @@ class Workout
 
     public static function getStats(int $userId): array
     {
-        // Stats for current month
-        $month = date('Y-m');
+        // Stats for current month. Session count and total minutes come from the
+        // same rows, so they are one aggregate rather than two scans.
+        [$monthStart, $monthEnd] = monthBounds(date('Y-m'));
 
-        $monthSessions = (int)DB::run(
-            'SELECT COUNT(*) FROM workouts WHERE user_id = ? AND DATE_FORMAT(workout_date, "%Y-%m") = ?',
-            [$userId, $month]
-        )->fetchColumn();
+        $monthRow = DB::run(
+            'SELECT COUNT(*) AS sessions, COALESCE(SUM(duration_min), 0) AS total_min
+             FROM workouts
+             WHERE user_id = ? AND workout_date >= ? AND workout_date < ?',
+            [$userId, $monthStart, $monthEnd]
+        )->fetch();
 
-        $totalMin = (int)DB::run(
-            'SELECT COALESCE(SUM(duration_min), 0) FROM workouts
-             WHERE user_id = ? AND DATE_FORMAT(workout_date, "%Y-%m") = ?',
-            [$userId, $month]
-        )->fetchColumn();
+        $monthSessions = (int)($monthRow['sessions'] ?? 0);
+        $totalMin      = (int)($monthRow['total_min'] ?? 0);
 
         // Per-type breakdown (all time)
         $byType = DB::run(

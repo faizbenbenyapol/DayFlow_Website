@@ -1,6 +1,18 @@
 <div class="page-header flex items-center justify-between">
     <h1 class="page-title">แพลนเนอร์</h1>
-    <button class="btn btn-primary btn-sm" onclick="openAddEvent()">+ เพิ่มกิจกรรม</button>
+    <div class="flex items-center gap-2">
+        <a class="btn btn-ghost btn-sm" href="<?= APP_URL ?>/api/planner/events/export.ics"
+           title="ดาวน์โหลดปฏิทินเป็นไฟล์ .ics เพื่อนำเข้า Google Calendar หรือ Apple Calendar">
+            ส่งออก .ics
+        </a>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="document.getElementById('icsFile').click()"
+                title="นำเข้ากิจกรรมจากไฟล์ .ics">
+            นำเข้า .ics
+        </button>
+        <input type="file" id="icsFile" accept=".ics,text/calendar" style="display:none"
+               onchange="importIcs(this)">
+        <button class="btn btn-primary btn-sm" onclick="openAddEvent()">+ เพิ่มกิจกรรม</button>
+    </div>
 </div>
 
 <div class="planner-layout">
@@ -88,6 +100,25 @@
                     <input type="date" class="form-control" id="eventDate">
                 </div>
             </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">ทำซ้ำ</label>
+                    <select class="form-control" id="eventRepeat">
+                        <option value="none">ไม่ทำซ้ำ</option>
+                        <option value="daily">ทุกวัน</option>
+                        <option value="weekly">ทุกสัปดาห์</option>
+                        <option value="monthly">ทุกเดือน</option>
+                        <option value="yearly">ทุกปี</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">ทำซ้ำถึงวันที่ <span class="text-muted text-xs">(ไม่ใส่ = ไม่สิ้นสุด)</span></label>
+                    <input type="date" class="form-control" id="eventRepeatUntil">
+                </div>
+            </div>
+            <p class="text-xs text-muted" id="eventRepeatHint" style="margin-top:-6px;display:none">
+                แก้ไขหรือลบจะมีผลกับทุกครั้งในชุดนี้
+            </p>
         </div>
         <div class="modal-footer">
             <button class="btn btn-danger btn-sm" id="deleteEventBtn" style="margin-right:auto;display:none" onclick="deleteEvent()">ลบกิจกรรม</button>

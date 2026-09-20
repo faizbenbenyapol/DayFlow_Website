@@ -8,14 +8,16 @@ define('ROOT', __DIR__);
 require_once ROOT . '/config/config.php';
 require_once ROOT . '/config/database.php';
 require_once ROOT . '/config/session.php';
-require_once ROOT . '/core/Csrf.php';
+
+// Classes in core/, models/ and controllers/ load on first use. Only the
+// pieces every single request needs are pulled in eagerly below.
+require_once ROOT . '/core/Autoloader.php';
+Autoloader::register();
+
 require_once ROOT . '/core/Request.php';
 require_once ROOT . '/core/Response.php';
 require_once ROOT . '/core/Auth.php';
 require_once ROOT . '/core/Router.php';
-require_once ROOT . '/core/Security.php';
-require_once ROOT . '/core/RateLimiter.php';
-require_once ROOT . '/core/RememberToken.php';
 
 Security::headers();
 

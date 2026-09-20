@@ -806,3 +806,32 @@
     .menu-order-actions { gap: 2px; }
     .menu-move-btn { width: 26px; height: 26px; }
 }
+
+/* Auto Theme Card Preview Mock
+   Split down the middle: light on the left, dark on the right, to show that
+   the palette follows whatever the operating system is set to. */
+.theme-auto-preview {
+    background: linear-gradient(to right, #ffffff 0%, #ffffff 50%, #0d0d0f 50%, #0d0d0f 100%);
+}
+.theme-auto-preview .preview-header {
+    height: 10px;
+    background: linear-gradient(to right, #f1f3f5 0%, #f1f3f5 50%, #27272a 50%, #27272a 100%);
+    border-radius: 3px;
+    width: 45%;
+}
+.theme-auto-preview .preview-body {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1;
+}
+.theme-auto-preview .preview-line-1,
+.theme-auto-preview .preview-line-2 {
+    height: 18px;
+    border-radius: 4px;
+    background: linear-gradient(to right, #f8f9fa 0%, #f8f9fa 50%, #18181b 50%, #18181b 100%);
+    border: 1px solid;
+    border-image: linear-gradient(to right, #e9ecef 0%, #e9ecef 50%, #3f3f46 50%, #3f3f46 100%) 1;
+}
+.theme-auto-preview .preview-line-1 { width: 100%; }
+.theme-auto-preview .preview-line-2 { width: 75%; }

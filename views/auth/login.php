@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
     <meta name="csrf-token" content="<?= h(Csrf::token()) ?>">
     <title><?= h($pageTitle ?? 'เข้าสู่ระบบ') ?> — <?= h(APP_NAME) ?></title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+        href="<?= APP_URL ?>/assets/fonts/sarabun-thai-400.woff2">
+    <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/fonts.css?v=<?= @filemtime(ROOT . '/assets/css/fonts.css') ?>">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -416,7 +416,23 @@
                 <span>จดจำอุปกรณ์นี้ 30 วัน</span>
             </label>
             <button class="btn-submit" id="loginBtn" onclick="doLogin()">เข้าสู่ระบบ</button>
-            <div class="auth-divider">หรือ</div>
+
+            <!-- Shown only once the server says the account has 2FA on. -->
+            <div id="twoFactorStep" style="display:none">
+                <div class="form-group" style="margin-top:18px">
+                    <label class="form-label">รหัสยืนยัน 6 หลัก</label>
+                    <input class="form-control" type="text" id="twoFactorCode"
+                           inputmode="numeric" autocomplete="one-time-code"
+                           placeholder="123456" maxlength="11"
+                           onkeydown="if (event.key === 'Enter') doTwoFactor()">
+                    <p class="text-xs" style="margin-top:6px; color: var(--muted);">
+                        เปิดแอป Authenticator เพื่อดูรหัส หรือกรอกรหัสสำรองที่เก็บไว้
+                    </p>
+                </div>
+                <button class="btn-submit" id="twoFactorBtn" onclick="doTwoFactor()">ยืนยัน</button>
+            </div>
+
+            <div class="auth-divider" id="loginDivider">หรือ</div>
             <div style="display: flex; justify-content: center; width: 100%;">
                 <div id="googleBtnLogin" style="width: 100%;"></div>
             </div>
@@ -611,7 +627,12 @@ async function doLogin() {
         });
         const data = await res.json();
 
-        if (res.ok) {
+        if (res.ok && data.two_factor_required) {
+            // The password checked out but the session is still pending; swap
+            // the form over to the code step rather than navigating anywhere.
+            showTwoFactorStep();
+            setLoading('loginBtn', false);
+        } else if (res.ok) {
             document.getElementById('loginBtn').innerHTML = '<span class="btn-spinner"></span>กำลังเข้าสู่ระบบ...';
             window.location.href = data.redirect || BASE_URL + '/';
         } else {
@@ -623,6 +644,56 @@ async function doLogin() {
         showAlert('loginAlert', 'ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่', 'error');
         setLoading('loginBtn', false);
         document.getElementById('loginBtn').textContent = 'เข้าสู่ระบบ';
+    }
+}
+
+// ── Two-factor challenge ───────────────────────────────
+function showTwoFactorStep() {
+    ['loginIdentifier', 'loginPassword'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = true;
+    });
+    document.getElementById('loginBtn').style.display = 'none';
+    const divider = document.getElementById('loginDivider');
+    if (divider) divider.style.display = 'none';
+    const google = document.getElementById('googleBtnLogin');
+    if (google) google.parentElement.style.display = 'none';
+
+    document.getElementById('twoFactorStep').style.display = 'block';
+    document.getElementById('twoFactorCode').focus();
+}
+
+async function doTwoFactor() {
+    clearAlerts();
+    const code = document.getElementById('twoFactorCode').value.trim();
+    if (!code) {
+        showAlert('loginAlert', 'กรุณากรอกรหัสยืนยัน', 'error');
+        return;
+    }
+
+    setLoading('twoFactorBtn', true);
+    try {
+        const res = await fetch(BASE_URL + '/api/auth/two-factor', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+            body: JSON.stringify({ code })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            document.getElementById('twoFactorBtn').innerHTML = '<span class="btn-spinner"></span>กำลังเข้าสู่ระบบ...';
+            window.location.href = data.redirect || BASE_URL + '/';
+        } else {
+            showAlert('loginAlert', data.error || 'รหัสยืนยันไม่ถูกต้อง', 'error');
+            setLoading('twoFactorBtn', false);
+            document.getElementById('twoFactorBtn').textContent = 'ยืนยัน';
+            document.getElementById('twoFactorCode').select();
+        }
+    } catch {
+        showAlert('loginAlert', 'ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่', 'error');
+        setLoading('twoFactorBtn', false);
+        document.getElementById('twoFactorBtn').textContent = 'ยืนยัน';
     }
 }
 

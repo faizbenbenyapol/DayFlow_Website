@@ -3,6 +3,21 @@
 ===================================================== */
 
 document.addEventListener('DOMContentLoaded', async function () {
+    // Only ask the server for the widgets this page actually rendered. Hidden
+    // widgets are not in the DOM at all, and the stat strip needs a few modules
+    // even when their widget is switched off.
+    const summaryUrl = () => {
+        const mods = new Set();
+        document.querySelectorAll('#dashboardGrid [data-widget]').forEach(el => {
+            if (el.dataset.widget) mods.add(el.dataset.widget);
+        });
+        const strip = { 'ds-tasks': 'tasks', 'ds-balance': 'finance', 'ds-workout': 'workout', 'ds-subs': 'subscriptions' };
+        Object.entries(strip).forEach(([id, mod]) => {
+            if (document.getElementById(id)) mods.add(mod);
+        });
+        return BASE_URL + '/api/dashboard/summary?modules=' + encodeURIComponent([...mods].join(','));
+    };
+
     // Last update timestamp helper
     const updateLastTimestamp = () => {
         const lastUpdateEl = document.getElementById('headerLastUpdate');
@@ -14,7 +29,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // Initial Load
     try {
-        const data = await apiFetch(BASE_URL + '/api/dashboard/summary');
+        const data = await apiFetch(summaryUrl());
         renderStatStrip(data);
         renderTasksWidget(data.tasks);
         renderCalendarWidget(data.calendar);
@@ -50,7 +65,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (refreshBtn.classList.contains('loading-spin')) return;
             refreshBtn.classList.add('loading-spin');
             try {
-                const data = await apiFetch(BASE_URL + '/api/dashboard/summary');
+                const data = await apiFetch(summaryUrl());
                 renderStatStrip(data);
                 renderTasksWidget(data.tasks);
                 renderCalendarWidget(data.calendar);

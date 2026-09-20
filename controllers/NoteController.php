@@ -94,7 +94,7 @@ class NoteController
         );
         TelegramService::sendNotification($userId, 'note', $msg);
 
-        Response::json(['ok' => true, 'note' => $note], 201);
+        Response::json(['ok' => true, 'note' => Note::publicFields($note)], 201);
     }
 
     public function apiUpdate(string $id): void

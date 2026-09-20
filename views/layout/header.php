@@ -45,12 +45,27 @@ function isActive(string $path): string
         return 'active';
     return '';
 }
+
+// "auto" is a preference, not a palette. The server picks light as the safe
+// default and the script below swaps in the real answer before the first paint.
+$themeAttr = $theme === 'auto' ? 'light' : $theme;
 ?>
 <!DOCTYPE html>
-<html lang="th" data-theme="<?= h($theme) ?>">
+<html lang="th" data-theme="<?= h($themeAttr) ?>" data-theme-pref="<?= h($theme) ?>">
 
 <head>
     <meta charset="UTF-8">
+    <script>
+    // Runs while the head is parsed, so the page never flashes the wrong theme.
+    (function () {
+        var root = document.documentElement;
+        if (root.dataset.themePref !== 'auto') return;
+        var mq = window.matchMedia('(prefers-color-scheme: dark)');
+        var apply = function () { root.setAttribute('data-theme', mq.matches ? 'dark' : 'light'); };
+        apply();
+        mq.addEventListener('change', apply);
+    })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
     <meta name="csrf-token" content="<?= h(Csrf::token()) ?>">
     <meta name="theme-color" content="#111827">
@@ -58,10 +73,16 @@ function isActive(string $path): string
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="<?= h(APP_URL . '/manifest.json') ?>">
     <title><?= isset($pageTitle) ? h($pageTitle) . ' — ' : '' ?><?= h(APP_NAME) ?></title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet">
+    <?php
+    // Fonts are self-hosted and declared in fonts.css, so there is no remote
+    // stylesheet to block the first paint. The two faces below cover almost
+    // all body text, so they are fetched in parallel with the CSS rather than
+    // after it.
+    foreach (['plexthai-thai-400', 'inter-latin-400'] as $criticalFont): ?>
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+        href="<?= APP_URL ?>/assets/fonts/<?= $criticalFont ?>.woff2">
+    <?php endforeach; ?>
+    <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/fonts.css?v=<?= @filemtime(ROOT . '/assets/css/fonts.css') ?>">
     <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/app.css?v=<?= @filemtime(ROOT . '/assets/css/app.css') ?>">
     <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/components.css?v=<?= @filemtime(ROOT . '/assets/css/components.css') ?>">
     <?php if (isset($pageStyle)): ?>
@@ -207,6 +228,10 @@ if ($isReadOnly || $isGuest):
                 <a href="<?= APP_URL ?>/" class="nav-item <?= isActive('/') ?>" style="display: flex; align-items: center; gap: 8px;">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
                     <span>แดชบอร์ด</span>
+                </a>
+                <a href="<?= APP_URL ?>/review" class="nav-item <?= isActive('/review') ?>" style="display: flex; align-items: center; gap: 8px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6" rx="1"/><rect x="12" y="8" width="3" height="10" rx="1"/><rect x="17" y="4" width="3" height="14" rx="1"/></svg>
+                    <span>สรุปผล</span>
                 </a>
             </div>
             <?php endif; ?>
@@ -427,6 +452,10 @@ if ($isReadOnly || $isGuest):
                 <svg class="global-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                 <input id="globalSearchInput" type="search" autocomplete="off" placeholder="ค้นหางาน โน้ต โปรเจค ไฟล์..." aria-label="ค้นหาทั้งระบบ">
                 <kbd>/</kbd>
+                <button type="button" class="global-search-cmdk" aria-label="เปิดแถบคำสั่ง"
+                        onclick="window.openCommandPalette && window.openCommandPalette()">
+                    <kbd>Ctrl</kbd><kbd>K</kbd>
+                </button>
                 <div class="global-search-results" id="globalSearchResults" hidden></div>
             </div>
 

@@ -54,6 +54,13 @@ function renderTaskItem(task) {
         dueHtml = '<span class="' + dueCls + '">' + escHtml(dueLabel) + '</span>';
     }
 
+    // A repeating task is easy to mistake for a duplicate, so it says so.
+    const REPEAT_LABELS = { daily: 'ทุกวัน', weekly: 'ทุกสัปดาห์', monthly: 'ทุกเดือน', yearly: 'ทุกปี' };
+    const repeatLabel = REPEAT_LABELS[task.repeat_rule];
+    if (repeatLabel) {
+        dueHtml += '<span class="task-repeat" title="งานที่ทำซ้ำ">↻ ' + escHtml(repeatLabel) + '</span>';
+    }
+
     return '<div class="task-item' + (isDone ? ' done' : '') + '" data-id="' + task.id + '" data-quadrant="' + task.quadrant + '">'
         + '<input type="checkbox" class="task-checkbox" ' + (isDone ? 'checked' : '') + ' onchange="toggleTask(' + task.id + ', this.checked)">'
         + '<div class="task-content">'
@@ -114,11 +121,14 @@ function handleDragEnd(evt) {
 /* --- Toggle done/open --- */
 async function toggleTask(id, isDone) {
     try {
-        await apiFetch(BASE_URL + '/api/tasks/' + id, {
+        const result = await apiFetch(BASE_URL + '/api/tasks/' + id, {
             method: 'PUT',
             body:   JSON.stringify({ status: isDone ? 'done' : 'open' })
         });
         await loadTasks();
+        if (result && result.next_task) {
+            toast('สร้างรอบถัดไปแล้ว: ' + formatDate(result.next_task.due_date));
+        }
     } catch {
         toast('อัปเดตสถานะไม่สำเร็จ', 'danger');
         await loadTasks(); // restore
@@ -131,6 +141,8 @@ function openAddTask(quadrant) {
     document.getElementById('addTaskDesc').value = '';
     document.getElementById('addTaskQuadrant').value = quadrant;
     document.getElementById('addTaskDue').value = '';
+    document.getElementById('addTaskRepeat').value = 'none';
+    document.getElementById('addTaskRepeatUntil').value = '';
     openModal('addTaskModal');
 }
 
@@ -139,16 +151,25 @@ async function saveAddTask() {
     const desc = document.getElementById('addTaskDesc').value.trim();
     const quadrant = parseInt(document.getElementById('addTaskQuadrant').value);
     const due = document.getElementById('addTaskDue').value;
+    const repeatRule  = document.getElementById('addTaskRepeat').value;
+    const repeatUntil = document.getElementById('addTaskRepeatUntil').value;
 
     if (!title) {
         toast('กรุณากรอกชื่องาน', 'danger');
+        return;
+    }
+    if (repeatRule !== 'none' && !due) {
+        toast('งานที่ทำซ้ำต้องมีวันครบกำหนด', 'danger');
         return;
     }
 
     try {
         await apiFetch(BASE_URL + '/api/tasks', {
             method: 'POST',
-            body:   JSON.stringify({ title, description: desc, quadrant, due_date: due })
+            body:   JSON.stringify({
+                title, description: desc, quadrant, due_date: due,
+                repeat_rule: repeatRule, repeat_until: repeatUntil
+            })
         });
         closeModal('addTaskModal');
         await loadTasks();
@@ -172,6 +193,8 @@ function openEditTask(id) {
     document.getElementById('editTaskDesc').value    = task.description || '';
     document.getElementById('editTaskQuadrant').value = task.quadrant;
     document.getElementById('editTaskDue').value     = task.due_date || '';
+    document.getElementById('editTaskRepeat').value  = task.repeat_rule || 'none';
+    document.getElementById('editTaskRepeatUntil').value = task.repeat_until || '';
 
     openModal('editTaskModal');
 }
@@ -182,13 +205,22 @@ async function saveEditTask() {
     const desc     = document.getElementById('editTaskDesc').value.trim();
     const quadrant = parseInt(document.getElementById('editTaskQuadrant').value);
     const due      = document.getElementById('editTaskDue').value;
+    const repeatRule  = document.getElementById('editTaskRepeat').value;
+    const repeatUntil = document.getElementById('editTaskRepeatUntil').value;
 
     if (!title) { toast('กรุณากรอกชื่องาน', 'danger'); return; }
+    if (repeatRule !== 'none' && !due) {
+        toast('งานที่ทำซ้ำต้องมีวันครบกำหนด', 'danger');
+        return;
+    }
 
     try {
         await apiFetch(BASE_URL + '/api/tasks/' + id, {
             method: 'PUT',
-            body:   JSON.stringify({ title, description: desc, quadrant, due_date: due })
+            body:   JSON.stringify({
+                title, description: desc, quadrant, due_date: due,
+                repeat_rule: repeatRule, repeat_until: repeatUntil
+            })
         });
         closeModal('editTaskModal');
         await loadTasks();

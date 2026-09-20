@@ -41,21 +41,21 @@ class FocusSession
 
     public static function getStats(int $userId): array
     {
-        $today = date('Y-m-d');
+        $today    = date('Y-m-d');
+        $tomorrow = date('Y-m-d', strtotime($today . ' +1 day'));
 
-        // Today's total work minutes
-        $todayWorkMinutes = (int)DB::run(
-            'SELECT COALESCE(SUM(duration_min), 0) FROM focus_sessions
-             WHERE user_id = ? AND DATE(completed_at) = ? AND type = "work"',
-            [$userId, $today]
-        )->fetchColumn();
+        // Today's work minutes and session count — same rows, one aggregate.
+        // The range comparison lets the index on completed_at do the filtering
+        // instead of DATE() running over every row.
+        $todayRow = DB::run(
+            'SELECT COALESCE(SUM(duration_min), 0) AS total_min, COUNT(*) AS sessions
+             FROM focus_sessions
+             WHERE user_id = ? AND completed_at >= ? AND completed_at < ? AND type = "work"',
+            [$userId, $today, $tomorrow]
+        )->fetch();
 
-        // Today's completed work sessions count
-        $todayWorkSessions = (int)DB::run(
-            'SELECT COUNT(*) FROM focus_sessions
-             WHERE user_id = ? AND DATE(completed_at) = ? AND type = "work"',
-            [$userId, $today]
-        )->fetchColumn();
+        $todayWorkMinutes  = (int)($todayRow['total_min'] ?? 0);
+        $todayWorkSessions = (int)($todayRow['sessions'] ?? 0);
 
         // Total completed sessions (all types)
         $totalSessionsCount = (int)DB::run(

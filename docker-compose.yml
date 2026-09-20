@@ -18,8 +18,12 @@ services:
       MAX_UPLOAD_BYTES: 20971520
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     volumes:
+      # The source is bind-mounted so edits are live without a rebuild; the dev
+      # ini re-enables OPcache timestamp checks to match.
+      - .:/var/www/html
       - ./uploads:/var/www/html/uploads
       - ./storage:/var/www/html/storage
+      - ./docker/php.dev.ini:/usr/local/etc/php/conf.d/zz-dayflow-dev.ini:ro
     restart: unless-stopped
 
   cron:
@@ -96,6 +100,13 @@ services:
       - ./sql/migrate_habits.sql:/docker-entrypoint-initdb.d/130-migrate-habits.sql:ro
       - ./sql/migrate_quick_capture.sql:/docker-entrypoint-initdb.d/140-migrate-quick-capture.sql:ro
       - ./sql/migrate_menu_order.sql:/docker-entrypoint-initdb.d/150-migrate-menu-order.sql:ro
+      - ./sql/migrate_theme_colors.sql:/docker-entrypoint-initdb.d/160-migrate-theme-colors.sql:ro
+      - ./sql/migrate_demo_account.sql:/docker-entrypoint-initdb.d/170-migrate-demo-account.sql:ro
+      - ./sql/migrate_perf_indexes.sql:/docker-entrypoint-initdb.d/180-migrate-perf-indexes.sql:ro
+      - ./sql/migrate_theme_auto.sql:/docker-entrypoint-initdb.d/190-migrate-theme-auto.sql:ro
+      - ./sql/migrate_recurrence.sql:/docker-entrypoint-initdb.d/200-migrate-recurrence.sql:ro
+      - ./sql/migrate_two_factor.sql:/docker-entrypoint-initdb.d/210-migrate-two-factor.sql:ro
+      - ./sql/migrate_web_push.sql:/docker-entrypoint-initdb.d/220-migrate-web-push.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "mariadb-admin ping -h localhost -u root -p$$MARIADB_ROOT_PASSWORD --silent"]
       interval: 5s

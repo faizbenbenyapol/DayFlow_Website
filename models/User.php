@@ -85,6 +85,19 @@ class User
         return password_verify($password, $hash);
     }
 
+    /**
+     * The stored hash for one account, or null if there is none.
+     *
+     * findById() deliberately leaves the hash out — its result is handed to
+     * views and to Auth::login() — so callers that need to check a password
+     * ask for it explicitly.
+     */
+    public static function passwordHash(int $id): ?string
+    {
+        $hash = DB::run('SELECT password_hash FROM users WHERE id = ?', [$id])->fetchColumn();
+        return is_string($hash) && $hash !== '' ? $hash : null;
+    }
+
     public static function emailExists(string $email, int $excludeId = 0): bool
     {
         $stmt = DB::run(

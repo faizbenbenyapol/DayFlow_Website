@@ -237,6 +237,9 @@ function openAddEvent() {
     document.getElementById('eventAllDay').checked = false;
     document.getElementById('eventStart').value = selectedDate + 'T08:00';
     document.getElementById('eventEnd').value = '';
+    document.getElementById('eventRepeat').value = 'none';
+    document.getElementById('eventRepeatUntil').value = '';
+    document.getElementById('eventRepeatHint').style.display = 'none';
     document.getElementById('deleteEventBtn').style.display = 'none';
     
     // Set default color blue
@@ -272,13 +275,24 @@ function openEditEvent(id) {
         else d.classList.remove('active');
     });
 
+    // A repeating event is rendered once per occurrence, all sharing one id.
+    // Editing has to work from the series' own dates, or saving would drag the
+    // whole series onto the occurrence the user clicked.
+    const seriesStart = ev.series_start || ev.start_datetime;
+    const seriesEnd   = ev.series_start ? ev.series_end : ev.end_datetime;
+
+    document.getElementById('eventRepeat').value = ev.repeat_rule || 'none';
+    document.getElementById('eventRepeatUntil').value = ev.repeat_until || '';
+    document.getElementById('eventRepeatHint').style.display =
+        (ev.repeat_rule && ev.repeat_rule !== 'none') ? 'block' : 'none';
+
     if (ev.is_all_day) {
         toggleAllDay(true);
-        document.getElementById('eventDate').value = ev.start_datetime.slice(0, 10);
+        document.getElementById('eventDate').value = seriesStart.slice(0, 10);
     } else {
         toggleAllDay(false);
-        document.getElementById('eventStart').value = ev.start_datetime.replace(' ', 'T').slice(0, 16);
-        document.getElementById('eventEnd').value = ev.end_datetime ? ev.end_datetime.replace(' ', 'T').slice(0, 16) : '';
+        document.getElementById('eventStart').value = seriesStart.replace(' ', 'T').slice(0, 16);
+        document.getElementById('eventEnd').value = seriesEnd ? seriesEnd.replace(' ', 'T').slice(0, 16) : '';
     }
 
     openModal('eventModal');
@@ -306,12 +320,21 @@ async function saveEvent() {
         endDt   = document.getElementById('eventEnd').value ? document.getElementById('eventEnd').value.replace('T', ' ') + ':00' : '';
     }
 
+    const repeatRule  = document.getElementById('eventRepeat').value;
+    const repeatUntil = document.getElementById('eventRepeatUntil').value;
+    if (repeatUntil && repeatUntil < startDt.slice(0, 10)) {
+        toast('วันสิ้นสุดการทำซ้ำต้องไม่มาก่อนวันเริ่มต้น', 'danger');
+        return;
+    }
+
     const body = {
         title,
         description:    document.getElementById('eventDesc').value,
         start_datetime: startDt,
         end_datetime:   endDt,
         is_all_day:     isAllDay ? 1 : 0,
+        repeat_rule:    repeatRule,
+        repeat_until:   repeatUntil,
         color:          selectedColor
     };
 
@@ -336,7 +359,12 @@ async function saveEvent() {
 
 async function deleteEvent() {
     if (!editingEventId) return;
-    if (!await confirmAction('ต้องการลบกิจกรรมนี้?', 'ลบ')) return;
+    const editing = monthEvents.find(e => e.id === editingEventId);
+    const repeats = editing && editing.repeat_rule && editing.repeat_rule !== 'none';
+    const question = repeats
+        ? 'กิจกรรมนี้ทำซ้ำอยู่ การลบจะลบทุกครั้งในชุดนี้ ต้องการลบหรือไม่?'
+        : 'ต้องการลบกิจกรรมนี้?';
+    if (!await confirmAction(question, 'ลบ')) return;
     await apiFetch(BASE_URL + '/api/planner/events/' + editingEventId, { method: 'DELETE' });
     closeModal('eventModal');
     await loadMonth(currentYear, currentMonth);
@@ -347,4 +375,34 @@ async function deleteEvent() {
 function escHtml(str) {
     if (str == null) return '';
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* --- Calendar import (.ics) ---
+   Export is a plain link; import posts the file and reloads the month. */
+async function importIcs(input) {
+    const file = input.files && input.files[0];
+    input.value = ''; // let the same file be picked again after a failure
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+        toast('ไฟล์ใหญ่เกิน 2 MB', 'danger');
+        return;
+    }
+
+    const form = new FormData();
+    form.append('file', file);
+
+    try {
+        const result = await apiFetch(BASE_URL + '/api/planner/events/import', {
+            method: 'POST',
+            body: form
+        });
+        await loadMonth(currentYear, currentMonth);
+        loadDayPanel(selectedDate);
+
+        const skipped = result.skipped ? ' (ข้ามที่มีอยู่แล้ว ' + result.skipped + ')' : '';
+        toast('นำเข้า ' + result.imported + ' กิจกรรม' + skipped);
+    } catch (err) {
+        toast(err.message || 'นำเข้าไม่สำเร็จ', 'danger');
+    }
 }

@@ -1,7 +1,7 @@
 <?php
 // =====================================================
-// cron.php — Time-based Telegram Notifications
-// Run this file via CLI or Web URL (Cron Job)
+// cron.php — Time-based notifications (Telegram + Web Push)
+// Run this file via CLI (Cron Job)
 // =====================================================
 
 if (!defined('ROOT')) define('ROOT', __DIR__);
@@ -9,7 +9,10 @@ if (!defined('ROOT')) define('ROOT', __DIR__);
 require_once ROOT . '/config/config.php';
 require_once ROOT . '/config/database.php';
 require_once ROOT . '/core/TelegramService.php';
+require_once ROOT . '/core/WebPush.php';
+require_once ROOT . '/core/NotificationDigest.php';
 require_once ROOT . '/models/User.php';
+require_once ROOT . '/models/PushSubscription.php';
 
 // Security check: production is CLI-only. The web endpoint is intentionally
 // disabled because this job sends private Telegram notifications.
@@ -18,6 +21,30 @@ if (!$isCli) {
     http_response_code(403);
     die("Cron is CLI-only.\n");
 }
+
+// --- Helpers ---
+// Declared up here rather than at the bottom: these are conditional
+// declarations, which PHP does not hoist, and the push pass below calls
+// them.
+if (!function_exists('shouldNotify')) {
+    function shouldNotify(int $userId, string $type, int $id, string $refDate): bool {
+        $exists = DB::run("
+            SELECT 1 FROM telegram_cron_logs 
+            WHERE item_type = ? AND item_id = ? AND reference_date = ?
+        ", [$type, $id, $refDate])->fetchColumn();
+        return !$exists;
+    }
+}
+
+if (!function_exists('logNotification')) {
+    function logNotification(int $userId, string $type, int $id, string $refDate): void {
+        DB::run("
+            INSERT IGNORE INTO telegram_cron_logs (user_id, item_type, item_id, reference_date) 
+            VALUES (?, ?, ?, ?)
+        ", [$userId, $type, $id, $refDate]);
+    }
+}
+
 
 echo "Starting DayFlow Cron Job...\n";
 
@@ -38,7 +65,44 @@ try {
     }
 }
 
-// 2. Fetch users with valid Telegram settings
+// 2. Web Push digest.
+//
+// This runs before the Telegram section because that one returns early when no
+// account has a bot configured, and browser notifications do not depend on it.
+//
+// One digest per account per day: the cron fires every few minutes, and a
+// notification on every run would be unusable. The existing cron log gives the
+// per-day dedupe for free — item_type 'push' with the user id as item_id.
+if (WebPush::isConfigured()) {
+    $pushUsers = DB::run('SELECT DISTINCT user_id FROM push_subscriptions')->fetchAll(PDO::FETCH_COLUMN);
+    $pushSent = 0;
+
+    foreach ($pushUsers as $pushUserId) {
+        $pushUserId = (int)$pushUserId;
+        $today = date('Y-m-d');
+
+        if (!shouldNotify($pushUserId, 'push', $pushUserId, $today)) continue;
+        if (NotificationDigest::pendingFor($pushUserId) === []) continue;
+
+        $result = PushSubscription::notifyUser($pushUserId);
+        if ($result['sent'] > 0) {
+            logNotification($pushUserId, 'push', $pushUserId, $today);
+            $pushSent += $result['sent'];
+        }
+        if ($result['removed'] > 0) {
+            echo "Removed {$result['removed']} expired push subscription(s) for user {$pushUserId}.
+";
+        }
+    }
+
+    echo "Web push: {$pushSent} notification(s) sent.
+";
+} else {
+    echo "Web push: VAPID keys not configured, skipping.
+";
+}
+
+// 3. Fetch users with valid Telegram settings
 $users = DB::run("
     SELECT user_id, telegram_bot_token, telegram_chat_id, telegram_notify_events, timezone 
     FROM user_settings 
@@ -204,23 +268,3 @@ foreach ($users as $u) {
 }
 
 echo "Done! Sent {$sentCount} notifications.\n";
-
-// --- Helpers ---
-if (!function_exists('shouldNotify')) {
-    function shouldNotify(int $userId, string $type, int $id, string $refDate): bool {
-        $exists = DB::run("
-            SELECT 1 FROM telegram_cron_logs 
-            WHERE item_type = ? AND item_id = ? AND reference_date = ?
-        ", [$type, $id, $refDate])->fetchColumn();
-        return !$exists;
-    }
-}
-
-if (!function_exists('logNotification')) {
-    function logNotification(int $userId, string $type, int $id, string $refDate): void {
-        DB::run("
-            INSERT IGNORE INTO telegram_cron_logs (user_id, item_type, item_id, reference_date) 
-            VALUES (?, ?, ?, ?)
-        ", [$userId, $type, $id, $refDate]);
-    }
-}

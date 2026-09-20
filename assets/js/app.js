@@ -150,6 +150,40 @@ document.addEventListener('click', function (e) {
 });
 
 /* =====================================================
+   SweetAlert2 — fetched on first use
+   The library and its stylesheet are ~90KB, and most page views never open a
+   dialog. The shim keeps every existing `Swal.fire(...)` call site working: the
+   real library replaces window.Swal as soon as it lands.
+===================================================== */
+const SWAL_CSS = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+const SWAL_JS  = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js';
+
+let swalLoader = null;
+function loadSwal() {
+    if (swalLoader) return swalLoader;
+    swalLoader = new Promise((resolve, reject) => {
+        const css = document.createElement('link');
+        css.rel = 'stylesheet';
+        css.href = SWAL_CSS;
+        document.head.appendChild(css);
+
+        const js = document.createElement('script');
+        js.src = SWAL_JS;
+        js.onload = () => resolve(window.Swal);
+        js.onerror = () => {
+            swalLoader = null; // let a later dialog retry
+            reject(new Error('โหลด SweetAlert2 ไม่สำเร็จ'));
+        };
+        document.head.appendChild(js);
+    });
+    return swalLoader;
+}
+
+window.Swal = {
+    fire: (...args) => loadSwal().then(real => real.fire(...args)),
+};
+
+/* =====================================================
    Confirm Dialog (SweetAlert2)
 ===================================================== */
 function confirmAction(message, okLabel, title) {
@@ -270,15 +304,28 @@ function debounce(fn, delay) {
         results.hidden = false;
     };
 
+    // Typing fast queues several requests, and they do not necessarily come
+    // back in order — a slow early response would otherwise overwrite the
+    // results for what the user has actually typed.
+    let inFlight = null;
+
     const search = debounce(async () => {
         const q = input.value.trim();
-        if (q.length < 2) { results.hidden = true; return; }
+        if (inFlight) inFlight.abort();
+        if (q.length < 2) { results.hidden = true; inFlight = null; return; }
+
+        const controller = new AbortController();
+        inFlight = controller;
         try {
-            const data = await apiFetch(`${BASE_URL}/api/search?q=${encodeURIComponent(q)}`);
+            const data = await apiFetch(`${BASE_URL}/api/search?q=${encodeURIComponent(q)}`, { signal: controller.signal });
+            if (controller.signal.aborted) return;
             render(data.results || []);
         } catch (error) {
+            if (error.name === 'AbortError') return;
             results.innerHTML = '<div class="global-search-empty">ค้นหาไม่สำเร็จ ลองใหม่อีกครั้ง</div>';
             results.hidden = false;
+        } finally {
+            if (inFlight === controller) inFlight = null;
         }
     }, 220);
 
@@ -311,4 +358,163 @@ function debounce(fn, delay) {
     document.addEventListener('click', event => {
         if (!event.target.closest('#globalSearch')) results.hidden = true;
     });
+})();
+
+/* =====================================================
+   Command Palette (Ctrl/Cmd + K)
+   One keystroke to reach any of the app's twenty-odd modules, or anything
+   inside them. Navigation targets are read from the sidebar that the server
+   already rendered, so hidden menus and share mode are respected without
+   duplicating that logic here.
+===================================================== */
+(function initCommandPalette() {
+    const sidebar = document.getElementById('appSidebar');
+    if (!sidebar) return; // login, share and other chrome-less pages
+
+    const navCommands = Array.from(sidebar.querySelectorAll('a.nav-item'))
+        .map(link => ({
+            title: (link.querySelector('span')?.textContent || link.textContent || '').trim(),
+            url: link.href,
+            type: 'ไปที่',
+        }))
+        .filter(cmd => cmd.title !== '');
+
+    if (navCommands.length === 0) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'cmdk-backdrop';
+    overlay.hidden = true;
+    overlay.innerHTML = `
+        <div class="cmdk-panel" role="dialog" aria-modal="true" aria-label="แถบคำสั่ง">
+            <div class="cmdk-input-row">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" id="cmdkInput" autocomplete="off" spellcheck="false"
+                       placeholder="ไปที่หน้า หรือค้นหางาน โน้ต ไฟล์..." aria-label="พิมพ์เพื่อค้นหา">
+                <kbd>esc</kbd>
+            </div>
+            <div class="cmdk-list" id="cmdkList" role="listbox"></div>
+        </div>`;
+    document.body.appendChild(overlay);
+
+    const input = overlay.querySelector('#cmdkInput');
+    const list  = overlay.querySelector('#cmdkList');
+
+    let items = [];
+    let active = 0;
+    let inFlight = null;
+
+    const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    }[ch]));
+
+    const render = () => {
+        if (items.length === 0) {
+            list.innerHTML = '<div class="cmdk-empty">ไม่พบรายการที่ตรงกัน</div>';
+            return;
+        }
+        list.innerHTML = items.map((item, index) => `
+            <a class="cmdk-item${index === active ? ' is-active' : ''}" role="option"
+               aria-selected="${index === active}" data-index="${index}" href="${escapeHtml(item.url)}">
+                <span class="cmdk-item-type">${escapeHtml(item.type)}</span>
+                <span class="cmdk-item-title">${escapeHtml(item.title)}</span>
+                ${item.subtitle ? `<span class="cmdk-item-sub">${escapeHtml(item.subtitle)}</span>` : ''}
+            </a>`).join('');
+        list.querySelector('.is-active')?.scrollIntoView({ block: 'nearest' });
+    };
+
+    const matchNav = query => {
+        if (query === '') return navCommands;
+        const needle = query.toLowerCase();
+        return navCommands.filter(cmd => cmd.title.toLowerCase().includes(needle));
+    };
+
+    const update = async () => {
+        const query = input.value.trim();
+        items = matchNav(query);
+        active = 0;
+        render();
+
+        // Nav matches are local and instant; content search needs the server.
+        if (inFlight) inFlight.abort();
+        if (query.length < 2) { inFlight = null; return; }
+
+        const controller = new AbortController();
+        inFlight = controller;
+        try {
+            const data = await apiFetch(`${BASE_URL}/api/search?q=${encodeURIComponent(query)}`, { signal: controller.signal });
+            if (controller.signal.aborted) return;
+            items = matchNav(query).concat(data.results || []);
+            render();
+        } catch (error) {
+            if (error.name !== 'AbortError') console.warn('Command palette search failed:', error);
+        } finally {
+            if (inFlight === controller) inFlight = null;
+        }
+    };
+
+    const debouncedUpdate = debounce(update, 180);
+
+    const open = () => {
+        if (!overlay.hidden) return;
+        overlay.hidden = false;
+        document.body.classList.add('modal-open');
+        input.value = '';
+        items = navCommands;
+        active = 0;
+        render();
+        input.focus();
+    };
+
+    const close = () => {
+        if (overlay.hidden) return;
+        if (inFlight) { inFlight.abort(); inFlight = null; }
+        overlay.hidden = true;
+        document.body.classList.remove('modal-open');
+    };
+
+    const move = delta => {
+        if (items.length === 0) return;
+        active = (active + delta + items.length) % items.length;
+        render();
+    };
+
+    input.addEventListener('input', () => {
+        // Show the filtered nav list immediately, then fold in search results.
+        items = matchNav(input.value.trim());
+        active = 0;
+        render();
+        debouncedUpdate();
+    });
+
+    overlay.addEventListener('click', event => {
+        if (event.target === overlay) close();
+    });
+
+    list.addEventListener('mousemove', event => {
+        const el = event.target.closest('.cmdk-item');
+        if (el && Number(el.dataset.index) !== active) {
+            active = Number(el.dataset.index);
+            render();
+        }
+    });
+
+    overlay.addEventListener('keydown', event => {
+        if (event.key === 'Escape')    { event.preventDefault(); close(); }
+        if (event.key === 'ArrowDown') { event.preventDefault(); move(1); }
+        if (event.key === 'ArrowUp')   { event.preventDefault(); move(-1); }
+        if (event.key === 'Enter' && items[active]) {
+            event.preventDefault();
+            window.location.href = items[active].url;
+        }
+    });
+
+    document.addEventListener('keydown', event => {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+            event.preventDefault();
+            overlay.hidden ? open() : close();
+        }
+    });
+
+    // Let other code (a button, a shortcut hint) open it too.
+    window.openCommandPalette = open;
 })();

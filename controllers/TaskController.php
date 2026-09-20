@@ -30,6 +30,23 @@ class TaskController
                 Response::json(['error' => 'รูปแบบวันที่ไม่ถูกต้อง'], 422);
             }
         }
+        if (array_key_exists('repeat_rule', $data) && !Recurrence::isValid((string)$data['repeat_rule'])) {
+            Response::json(['error' => 'รูปแบบการทำซ้ำไม่ถูกต้อง'], 422);
+        }
+        if (array_key_exists('repeat_until', $data) && $data['repeat_until'] !== '') {
+            $until = DateTime::createFromFormat('Y-m-d', (string)$data['repeat_until']);
+            if (!$until || $until->format('Y-m-d') !== $data['repeat_until']) {
+                Response::json(['error' => 'รูปแบบวันสิ้นสุดการทำซ้ำไม่ถูกต้อง'], 422);
+            }
+        }
+        // A repeat needs a first date to count from. Only checked when the
+        // caller sends a due date, so a partial update that touches nothing but
+        // the rule still works on a task that already has one.
+        $rule = $data['repeat_rule'] ?? null;
+        if ($rule !== null && $rule !== 'none'
+            && array_key_exists('due_date', $data) && $data['due_date'] === '') {
+            Response::json(['error' => 'งานที่ทำซ้ำต้องมีวันครบกำหนด'], 422);
+        }
         return $data;
     }
 
@@ -71,11 +88,13 @@ class TaskController
         }
 
         $payload = $this->validatePayload([
-            'title'       => $title,
-            'description' => Request::input('description', ''),
-            'quadrant'    => (int)Request::input('quadrant', 1),
-            'status'      => 'open',
-            'due_date'    => Request::input('due_date', ''),
+            'title'        => $title,
+            'description'  => Request::input('description', ''),
+            'quadrant'     => (int)Request::input('quadrant', 1),
+            'status'       => 'open',
+            'due_date'     => Request::input('due_date', ''),
+            'repeat_rule'  => Request::input('repeat_rule', 'none'),
+            'repeat_until' => Request::input('repeat_until', ''),
         ], true);
         $id = Task::create($userId, $payload);
 
@@ -92,12 +111,14 @@ class TaskController
         if (!$task) Response::json(['error' => 'ไม่พบรายการ'], 404);
 
         $data = array_filter([
-            'title'       => Request::input('title'),
-            'description' => Request::rawInput('description'),
-            'quadrant'    => Request::input('quadrant') !== null ? (int)Request::input('quadrant') : null,
-            'status'      => Request::input('status'),
-            'due_date'    => Request::input('due_date'),
-            'position'    => Request::input('position') !== null ? (int)Request::input('position') : null,
+            'title'        => Request::input('title'),
+            'description'  => Request::rawInput('description'),
+            'quadrant'     => Request::input('quadrant') !== null ? (int)Request::input('quadrant') : null,
+            'status'       => Request::input('status'),
+            'due_date'     => Request::input('due_date'),
+            'position'     => Request::input('position') !== null ? (int)Request::input('position') : null,
+            'repeat_rule'  => Request::input('repeat_rule'),
+            'repeat_until' => Request::input('repeat_until'),
         ], fn($v) => $v !== null);
 
         // Allow explicit empty string for due_date
@@ -109,7 +130,13 @@ class TaskController
         Task::update($taskId, $userId, $data);
         $updated = Task::getById($taskId, $userId);
         
+        $nextTask = null;
         if (isset($data['status']) && $data['status'] === 'done' && $task['status'] !== 'done') {
+            // A repeating task schedules its next occurrence when it is ticked
+            // off, so the finished one stays as history.
+            $nextId   = Task::scheduleNextOccurrence($updated ?: $task, $userId);
+            $nextTask = $nextId !== null ? Task::getById($nextId, $userId) : null;
+
             $msg = TelegramService::formatMessage(
                 "✅ งานส่วนตัวเสร็จสมบูรณ์",
                 [
@@ -120,7 +147,11 @@ class TaskController
             TelegramService::sendNotification($userId, 'task', $msg);
         }
 
-        Response::json(['ok' => true, 'task' => $updated]);
+        Response::json(array_filter([
+            'ok'        => true,
+            'task'      => $updated,
+            'next_task' => $nextTask,
+        ], static fn($v) => $v !== null));
     }
 
     public function apiDelete(string $id): void

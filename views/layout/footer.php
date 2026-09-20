@@ -1,11 +1,15 @@
 </div><!-- /.app-content -->
 </main><!-- /.app-main -->
 
-<!-- CDN: SweetAlert2 -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
-<!-- CDN: Sortable.js -->
+<!-- SweetAlert2 is not loaded here: app.js fetches it the first time something
+     calls Swal.fire(), so page views that never open a dialog skip ~90KB. -->
+<!-- CDN: Sortable.js — only the pages with drag-and-drop lists need it -->
+<?php
+$sortablePages = ['dashboard', 'notes', 'projects', 'settings', 'tasks'];
+if (isset($pageScript) && in_array($pageScript, $sortablePages, true)):
+?>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<?php endif; ?>
 <!-- CDN: Chart.js (loaded only on finance page) -->
 <?php if (isset($loadChartJs) && $loadChartJs): ?>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -24,6 +28,19 @@
 
 <!-- Global JS -->
 <script src="<?= APP_URL ?>/assets/js/app.js?v=<?= @filemtime(ROOT . '/assets/js/app.js') ?>"></script>
+
+<script>
+// Service worker: caches the static shell only (CSS/JS/fonts), never pages or
+// API responses. Requires a secure context, so it is skipped on plain http
+// except on localhost.
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+        navigator.serviceWorker.register('<?= APP_URL ?>/sw.js').catch(function (err) {
+            console.warn('Service worker registration failed:', err);
+        });
+    });
+}
+</script>
 
 <!-- Page-specific JS -->
 <?php if (isset($pageScript)): ?>
@@ -84,9 +101,25 @@
 // Shared links keep their token in the URL/session. The native mobile Back
 // action is intentionally left untouched so a shortcut can close back to the
 // phone home screen; reopening the shortcut restores share mode automatically.
-setTimeout(() => {
-    window.location.reload();
-}, 30000);
+(function shareModeRefresh() {
+    const INTERVAL = 60000;
+    let due = false;
+
+    const shouldHold = () => document.hidden
+        || document.querySelector('.modal-backdrop.active')
+        || document.querySelector('.swal2-container');
+
+    // Reloading a tab nobody is looking at costs a full page render plus every
+    // query behind it, so a hidden or busy tab defers until it is back in use.
+    setInterval(function () {
+        if (shouldHold()) { due = true; return; }
+        window.location.reload();
+    }, INTERVAL);
+
+    document.addEventListener('visibilitychange', function () {
+        if (!document.hidden && due && !shouldHold()) window.location.reload();
+    });
+})();
 </script>
 <?php endif; ?>
 
