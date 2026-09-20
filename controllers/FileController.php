@@ -207,9 +207,8 @@ class FileController
         }
 
         // Stream file
-        $filename = addslashes($file['name']);
         header('Content-Type: ' . ($file['mime_type'] ?: 'application/octet-stream'));
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Disposition: ' . contentDisposition((string)$file['name']));
         header('Content-Length: ' . filesize($fullPath));
         header('X-Content-Type-Options: nosniff');
         header('Cache-Control: no-store');

@@ -109,7 +109,7 @@ class PlannerController
         $body = Ics::export($events, APP_NAME . ' — ปฏิทิน');
 
         header('Content-Type: text/calendar; charset=utf-8');
-        header('Content-Disposition: attachment; filename="dayflow-calendar.ics"');
+        header('Content-Disposition: ' . contentDisposition('dayflow-calendar.ics'));
         header('Content-Length: ' . strlen($body));
         header('Cache-Control: no-store, private');
         echo $body;

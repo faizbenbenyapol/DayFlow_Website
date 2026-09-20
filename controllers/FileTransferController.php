@@ -252,9 +252,8 @@ class FileTransferController
                 Response::abort(404, 'ไม่พบไฟล์บนเซิร์ฟเวอร์');
             }
 
-            $filename = downloadFilename((string)$f['name'], 'download');
             header('Content-Type: ' . ($f['mime'] ?: 'application/octet-stream'));
-            header('Content-Disposition: attachment; filename="' . addslashes($filename) . '"; filename*=UTF-8\'\'' . rawurlencode($filename));
+            header('Content-Disposition: ' . contentDisposition((string)$f['name']));
             header('Content-Length: ' . filesize($fullPath));
             header('X-Content-Type-Options: nosniff');
             header('Cache-Control: no-store');
@@ -281,7 +280,7 @@ class FileTransferController
 
         $zipSize = filesize($tmpZip);
         header('Content-Type: application/zip');
-        header('Content-Disposition: attachment; filename="transfer_' . $transfer['code'] . '.zip"');
+        header('Content-Disposition: ' . contentDisposition('transfer_' . $transfer['code'] . '.zip'));
         header('Content-Length: ' . $zipSize);
         header('X-Content-Type-Options: nosniff');
         header('Cache-Control: no-store');

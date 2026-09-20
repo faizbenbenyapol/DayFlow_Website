@@ -113,6 +113,33 @@ function downloadFilename(string $name, string $fallback = 'download'): string
 }
 
 /**
+ * Builds a Content-Disposition value that survives a non-ASCII filename.
+ *
+ * RFC 6266 reads a bare filename="..." as latin-1, so a Thai name sent that
+ * way is left to the browser to guess at and often arrives as mojibake. The
+ * real name goes in filename* as UTF-8; the plain parameter keeps an ASCII
+ * stand-in for anything too old to read it.
+ */
+function contentDisposition(string $name, string $fallback = 'download'): string
+{
+    $name = downloadFilename($name, $fallback);
+
+    $ascii = preg_replace('/[^\x20-\x7E]/', '_', $name) ?? '';
+    $ascii = str_replace(['"', '\\'], '_', $ascii);
+    $ascii = trim(preg_replace('/_+/', '_', $ascii) ?? '', '_ ');
+
+    // An all-Thai name leaves nothing but the extension, and ".txt" alone is a
+    // hidden file on unix. Fall back to a real stem and keep the extension so
+    // the file still opens with the right application.
+    if (preg_match('/[A-Za-z0-9]/', pathinfo($ascii, PATHINFO_FILENAME)) !== 1) {
+        $extension = preg_replace('/[^A-Za-z0-9]/', '', pathinfo($name, PATHINFO_EXTENSION)) ?? '';
+        $ascii = $fallback . ($extension !== '' ? '.' . $extension : '');
+    }
+
+    return 'attachment; filename="' . $ascii . '"; filename*=UTF-8\'\'' . rawurlencode($name);
+}
+
+/**
  * Generate a UUID v4
  */
 function uuid4(): string

@@ -346,7 +346,7 @@ class SettingsController
         $filename = 'my-data-' . $username . '-' . date('Ymd-His') . '.json';
 
         header('Content-Type: application/json; charset=utf-8');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Disposition: ' . contentDisposition($filename));
         echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         exit;
     }

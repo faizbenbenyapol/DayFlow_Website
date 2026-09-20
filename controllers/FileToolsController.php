@@ -126,7 +126,7 @@ class FileToolsController
         $data = ob_get_clean();
         imagedestroy($src);
         header('Content-Type: ' . $mime);
-        header('Content-Disposition: attachment; filename="' . addslashes($name . '.' . $ext) . '"');
+        header('Content-Disposition: ' . contentDisposition($name . '.' . $ext));
         header('Content-Length: ' . strlen($data));
         echo $data;
         exit;
@@ -253,7 +253,7 @@ class FileToolsController
         imagedestroy($img);
 
         header('Content-Type: ' . $mime);
-        header('Content-Disposition: attachment; filename="' . addslashes($name . '.' . $ext) . '"');
+        header('Content-Disposition: ' . contentDisposition($name . '.' . $ext));
         header('Content-Length: ' . strlen($data));
         echo $data;
         exit;
@@ -316,7 +316,7 @@ class FileToolsController
 
         $size = filesize($tmpZip);
         header('Content-Type: application/zip');
-        header('Content-Disposition: attachment; filename="' . addslashes($zipName . '.zip') . '"');
+        header('Content-Disposition: ' . contentDisposition($zipName . '.zip'));
         header('Content-Length: ' . $size);
         readfile($tmpZip);
         @unlink($tmpZip);
@@ -423,7 +423,7 @@ class FileToolsController
             $mime2    = $finfo2->buffer($data) ?: 'application/octet-stream';
 
             header('Content-Type: ' . $mime2);
-            header('Content-Disposition: attachment; filename="' . addslashes($filename) . '"');
+            header('Content-Disposition: ' . contentDisposition($filename));
             header('Content-Length: ' . strlen($data));
             echo $data;
             exit;
@@ -449,7 +449,7 @@ class FileToolsController
 
         $size = filesize($tmpZip);
         header('Content-Type: application/zip');
-        header('Content-Disposition: attachment; filename="extracted.zip"');
+        header('Content-Disposition: ' . contentDisposition('extracted.zip'));
         header('Content-Length: ' . $size);
         readfile($tmpZip);
         @unlink($tmpZip);
