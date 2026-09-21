@@ -76,8 +76,15 @@ class SubscriptionController
     public function apiRenew(string $id): void
     {
         $userId = Auth::userId();
+
+        // renew() returns false for two different reasons — the subscription
+        // is not yours, or it is a one-off that has no next cycle — and the
+        // caller deserves to be told which.
+        if (!Subscription::getById((int)$id, $userId)) {
+            Response::json(['error' => 'ไม่พบรายการ'], 404);
+        }
         if (!Subscription::renew((int)$id, $userId)) {
-            Response::json(['error' => 'ต่ออายุไม่สำเร็จ'], 400);
+            Response::json(['error' => 'รายการนี้เป็นแบบครั้งเดียว ต่ออายุไม่ได้'], 400);
         }
         Response::json(['ok' => true]);
     }

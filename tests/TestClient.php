@@ -117,6 +117,58 @@ final class TestClient
         return ['status' => $status, 'body' => substr($raw, $headerSize), 'headers' => substr($raw, 0, $headerSize)];
     }
 
+    /**
+     * Posts several files (and optional text fields) in one multipart request,
+     * the way a form with <input multiple> does.
+     *
+     * @param array<int, array{name: string, contents: string, type?: string}> $files
+     * @param array<string, string> $fields
+     */
+    public function uploadMany(string $path, string $field, array $files, array $fields = []): array
+    {
+        $temporary = [];
+        $payload   = $fields;
+
+        foreach ($files as $index => $file) {
+            $tmp = tempnam(sys_get_temp_dir(), 'dayflow-upload-');
+            file_put_contents($tmp, $file['contents']);
+            $temporary[] = $tmp;
+
+            // A field name ending in [] is how PHP builds $_FILES[...] as an
+            // array of entries rather than a single one.
+            $key = count($files) > 1 ? $field . '[' . $index . ']' : $field;
+            $payload[$key] = new CURLFile($tmp, $file['type'] ?? 'application/octet-stream', $file['name']);
+        }
+
+        $ch = curl_init($this->baseUrl . $path);
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $payload,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HEADER         => true,
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_COOKIEJAR      => $this->cookieJar,
+            CURLOPT_COOKIEFILE     => $this->cookieJar,
+            CURLOPT_HTTPHEADER     => ['Accept: application/json', 'X-CSRF-Token: ' . $this->csrf],
+            CURLOPT_TIMEOUT        => 30,
+        ]);
+
+        $raw = curl_exec($ch);
+        if ($raw === false) {
+            $error = curl_error($ch);
+            curl_close($ch);
+            foreach ($temporary as $tmp) @unlink($tmp);
+            throw new RuntimeException('Upload failed: ' . $error);
+        }
+
+        $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+        $status     = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        foreach ($temporary as $tmp) @unlink($tmp);
+
+        return ['status' => $status, 'body' => substr($raw, $headerSize), 'headers' => substr($raw, 0, $headerSize)];
+    }
+
     /** Decoded JSON body, or an empty array when the response was not JSON. */
     public function json(array $response): array
     {
