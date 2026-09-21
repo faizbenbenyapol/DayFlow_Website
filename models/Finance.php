@@ -147,6 +147,15 @@ class FinanceCategory
         return (int)DB::conn()->lastInsertId();
     }
 
+    /** Whether this category exists and belongs to the given account. */
+    public static function belongsTo(int $id, int $userId): bool
+    {
+        return (bool)DB::run(
+            'SELECT 1 FROM finance_categories WHERE id = ? AND user_id = ?',
+            [$id, $userId]
+        )->fetchColumn();
+    }
+
     public static function update(int $id, int $userId, string $name, string $type): bool
     {
         return DB::run(

@@ -25,10 +25,11 @@ class SkillLog
         return $id;
     }
     
-    public static function delete(string $id, int $userId): void
+    /** True when a row was actually removed. */
+    public static function delete(string $id, int $userId): bool
     {
         $sql = "DELETE FROM skill_logs WHERE id = ? AND user_id = ?";
-        DB::run($sql, [$id, $userId]);
+        return DB::run($sql, [$id, $userId])->rowCount() > 0;
     }
 
     // Active Timer functions

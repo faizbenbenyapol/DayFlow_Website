@@ -179,7 +179,9 @@ class NoteController
     public function apiTagDelete(string $id): void
     {
         $userId = Auth::userId();
-        NoteTag::delete((int)$id, $userId);
+        if (!NoteTag::delete((int)$id, $userId)) {
+            Response::json(['error' => 'ไม่พบแท็ก'], 404);
+        }
         Response::json(['ok' => true]);
     }
 

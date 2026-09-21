@@ -276,7 +276,13 @@ class AiController
     public function apiHistoryDelete(string $id): void
     {
         $userId = Auth::userId();
-        AiGeneration::delete((int)$id, $userId);
+
+        // The model scopes by user_id, so nothing of anyone else's was ever at
+        // risk — but reporting success for a row that was not removed leaves
+        // the UI showing it as gone until the next reload.
+        if (!AiGeneration::delete((int)$id, $userId)) {
+            Response::json(['error' => 'ไม่พบรายการ'], 404);
+        }
         Response::json(['ok' => true]);
     }
 

@@ -28,9 +28,19 @@ class Skill
         DB::run($sql, [$name, $targetHours, $color, $id, $userId]);
     }
 
-    public static function delete(string $id, int $userId): void
+    /** Whether this skill exists and belongs to the given account. */
+    public static function belongsTo(string $id, int $userId): bool
+    {
+        return (bool)DB::run(
+            'SELECT 1 FROM skills WHERE id = ? AND user_id = ?',
+            [$id, $userId]
+        )->fetchColumn();
+    }
+
+    /** True when a row was actually removed. */
+    public static function delete(string $id, int $userId): bool
     {
         $sql = "DELETE FROM skills WHERE id = ? AND user_id = ?";
-        DB::run($sql, [$id, $userId]);
+        return DB::run($sql, [$id, $userId])->rowCount() > 0;
     }
 }

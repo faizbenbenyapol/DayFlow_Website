@@ -62,6 +62,12 @@ class SkillController
         }
         $this->validateSkill($name, $targetHours, $color);
 
+        // An unchanged save affects no rows, so existence is checked rather
+        // than the update's own row count.
+        if (!Skill::belongsTo($id, $userId)) {
+            Response::json(['error' => 'ไม่พบทักษะ'], 404);
+        }
+
         Skill::update($id, $userId, $name, $targetHours, $color);
         Response::json(['success' => true]);
     }
@@ -69,7 +75,9 @@ class SkillController
     public function apiDelete(string $id)
     {
         $userId = Auth::userId();
-        Skill::delete($id, $userId);
+        if (!Skill::delete($id, $userId)) {
+            Response::json(['error' => 'ไม่พบทักษะ'], 404);
+        }
         Response::json(['success' => true]);
     }
 
@@ -128,7 +136,9 @@ class SkillController
     public function apiDeleteLog(string $id)
     {
         $userId = Auth::userId();
-        SkillLog::delete($id, $userId);
+        if (!SkillLog::delete($id, $userId)) {
+            Response::json(['error' => 'ไม่พบรายการบันทึก'], 404);
+        }
         Response::json(['success' => true]);
     }
 }

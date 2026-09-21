@@ -115,6 +115,11 @@ class FinanceController
 
         $name = trim($name);
         if (!$name || mb_strlen($name) > 100) Response::json(['error' => 'ชื่อหมวดหมู่ไม่ถูกต้อง'], 422);
+        // rowCount() cannot distinguish "not yours" from "saved without
+        // changing anything", so ownership is checked before the write.
+        if (!FinanceCategory::belongsTo((int)$id, $userId)) {
+            Response::json(['error' => 'ไม่พบหมวดหมู่'], 404);
+        }
         FinanceCategory::update((int)$id, $userId, $name, $type);
         Response::json(['ok' => true]);
     }
@@ -122,7 +127,9 @@ class FinanceController
     public function apiCategoryDelete(string $id): void
     {
         $userId = Auth::userId();
-        FinanceCategory::delete((int)$id, $userId);
+        if (!FinanceCategory::delete((int)$id, $userId)) {
+            Response::json(['error' => 'ไม่พบหมวดหมู่'], 404);
+        }
         Response::json(['ok' => true]);
     }
 
