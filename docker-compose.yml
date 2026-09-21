@@ -17,12 +17,21 @@ services:
       TIMEZONE: Asia/Bangkok
       MAX_UPLOAD_BYTES: 20971520
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      # Development only, and fixed on purpose. Without it appKey() falls back
+      # to writing config/.app_key, which the bind mount below makes unwritable
+      # for www-data: every request then invents a new key and anything already
+      # encrypted — AI keys, provider keys, two-factor secrets — stops decoding.
+      APP_KEY: ${APP_KEY:-6465765f6f6e6c795f6b65795f6e6f745f666f725f70726f64756374696f6e21}
     volumes:
       # The source is bind-mounted so edits are live without a rebuild; the dev
       # ini re-enables OPcache timestamp checks to match.
       - .:/var/www/html
-      - ./uploads:/var/www/html/uploads
-      - ./storage:/var/www/html/storage
+      # Named volumes, not bind mounts: these two are the only paths the app
+      # writes to, and a host directory arrives owned by the host user, which
+      # www-data inside the container cannot write. Reach the files with
+      # `docker compose cp app:/var/www/html/uploads/<name> .`
+      - dayflow_uploads:/var/www/html/uploads
+      - dayflow_storage:/var/www/html/storage
       - ./docker/php.dev.ini:/usr/local/etc/php/conf.d/zz-dayflow-dev.ini:ro
     restart: unless-stopped
 
@@ -40,9 +49,10 @@ services:
       DB_USER: dayflow_app
       DB_PASS: dayflow_dev_password
       TIMEZONE: Asia/Bangkok
+      APP_KEY: ${APP_KEY:-6465765f6f6e6c795f6b65795f6e6f745f666f725f70726f64756374696f6e21}
     volumes:
-      - ./uploads:/var/www/html/uploads
-      - ./storage:/var/www/html/storage
+      - dayflow_uploads:/var/www/html/uploads
+      - dayflow_storage:/var/www/html/storage
     command: ["sh", "-c", "while true; do php /var/www/html/cron.php; sleep 300; done"]
     restart: unless-stopped
 
@@ -68,8 +78,8 @@ services:
     container_name: dayflow-backup-files
     profiles: ["backup"]
     volumes:
-      - ./uploads:/source/uploads:ro
-      - ./storage:/source/storage:ro
+      - dayflow_uploads:/source/uploads:ro
+      - dayflow_storage:/source/storage:ro
       - ./backups:/backup
     entrypoint: ["sh", "-c"]
     command: ["tar -czf /backup/dayflow-files-$$(date +%Y%m%d-%H%M%S).tar.gz -C /source uploads storage"]
@@ -116,3 +126,5 @@ services:
 
 volumes:
   dayflow_db:
+  dayflow_uploads:
+  dayflow_storage:
