@@ -161,7 +161,7 @@ async function loadDayPanel(date) {
             return `<div class="day-event-item" style="--event-color: ${ev.color || '#3b82f6'}">
                 <span class="day-event-time">${escHtml(timeStr)}</span>
                 <span class="day-event-title">${escHtml(ev.title)}</span>
-                <button class="btn-link" onclick="openEditEvent(${ev.id})" style="padding: 2px 6px;">แก้ไข</button>
+                <button class="btn-link" data-act="openEditEvent" data-args="[${ev.id}]" style="padding: 2px 6px;">แก้ไข</button>
             </div>`;
         }).join('');
     }
@@ -192,9 +192,9 @@ function renderTodos() {
     el.innerHTML = todosCache.map(t =>
         `<div class="day-todo-item ${t.is_done ? 'done' : ''}" data-id="${t.id}">
             <input type="checkbox" ${t.is_done ? 'checked' : ''} style="accent-color:var(--color-text);cursor:pointer; width:16px; height:16px;"
-                   onchange="toggleTodo(${t.id}, this.checked)">
+                   data-act="toggleTodo" data-args="[${t.id}, this.checked]">
             <span class="day-todo-text">${escHtml(t.title)}</span>
-            <button class="btn-link" onclick="deleteTodo(${t.id})" style="margin-left:auto; color:var(--color-danger); padding: 2px 6px;">ลบ</button>
+            <button class="btn-link" data-act="deleteTodo" data-args="[${t.id}]" style="margin-left:auto; color:var(--color-danger); padding: 2px 6px;">ลบ</button>
         </div>`
     ).join('');
 }

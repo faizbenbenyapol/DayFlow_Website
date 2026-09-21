@@ -3,11 +3,11 @@
         <h1 class="page-title">โน้ต</h1>
     </div>
     <div class="flex gap-2" style="flex-wrap:wrap">
-        <button class="btn btn-ghost btn-sm" onclick="openCreateNote(false)">
+        <button class="btn btn-ghost btn-sm" data-act="openCreateNote" data-args="[false]">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             โน้ตใหม่
         </button>
-        <button class="btn btn-ghost btn-sm" onclick="openCreateNote(true)">
+        <button class="btn btn-ghost btn-sm" data-act="openCreateNote" data-args="[true]">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             โน้ตเข้ารหัส
         </button>
@@ -19,9 +19,9 @@
     <aside class="notes-sidebar">
         <div class="notes-sidebar-title">แท็ก</div>
         <div id="tagList">
-            <button class="tag active" data-tag-id="0" onclick="filterByTag(0, this)">ทั้งหมด</button>
+            <button class="tag active" data-tag-id="0" data-act="filterByTag" data-args="[0, &quot;$el&quot;]">ทั้งหมด</button>
             <?php foreach ($tags as $tag): ?>
-            <button class="tag" data-tag-id="<?= (int)$tag['id'] ?>" onclick="filterByTag(<?= (int)$tag['id'] ?>, this)">
+            <button class="tag" data-tag-id="<?= (int)$tag['id'] ?>" data-act="filterByTag" data-args="[<?= (int)$tag['id'] ?>,&quot;$el&quot;]">
                 <?= h($tag['name']) ?>
                 <span class="text-xs text-muted"><?= (int)$tag['note_count'] ?></span>
             </button>
@@ -34,7 +34,7 @@
         <div class="notes-search-wrap">
             <input type="text" class="form-control" id="noteSearch"
                    placeholder="ค้นหาโน้ต..."
-                   oninput="searchNotes(this.value)">
+                   data-act="searchNotes" data-args="[&quot;$value&quot;]" data-on="input">
         </div>
 
         <div id="notesGrid" class="notes-grid">
@@ -66,7 +66,7 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-ghost" data-close-modal>ยกเลิก</button>
-            <button class="btn btn-primary" onclick="submitCreateNote()">สร้าง</button>
+            <button class="btn btn-primary" data-act="submitCreateNote">สร้าง</button>
         </div>
     </div>
 </div>

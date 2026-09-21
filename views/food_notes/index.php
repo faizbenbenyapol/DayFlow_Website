@@ -3,7 +3,7 @@
         <h1 class="page-title">บันทึกอาหาร / เครื่องดื่ม</h1>
         <p class="page-subtitle">รายการอาหารและเครื่องดื่มที่แพ้หรือควรหลีกเลี่ยง </p>
     </div>
-    <button class="btn btn-ghost btn-sm" onclick="openAdd()">+ เพิ่ม</button>
+    <button class="btn btn-ghost btn-sm" data-act="openAdd">+ เพิ่ม</button>
 </div>
 
 <!-- Summary Badges -->
@@ -17,16 +17,16 @@
 <!-- Filters -->
 <div class="fn-filters">
     <div class="fn-filter-group">
-        <button class="fn-filter-btn active" data-filter="type" data-value="" onclick="setFilter('type','',this)">ทั้งหมด</button>
-        <button class="fn-filter-btn" data-filter="type" data-value="food" onclick="setFilter('type','food',this)">อาหาร</button>
-        <button class="fn-filter-btn" data-filter="type" data-value="drink" onclick="setFilter('type','drink',this)">เครื่องดื่ม</button>
+        <button class="fn-filter-btn active" data-filter="type" data-value="" data-act="setFilter" data-args="[&quot;type&quot;, &quot;&quot;, &quot;$el&quot;]">ทั้งหมด</button>
+        <button class="fn-filter-btn" data-filter="type" data-value="food" data-act="setFilter" data-args="[&quot;type&quot;, &quot;food&quot;, &quot;$el&quot;]">อาหาร</button>
+        <button class="fn-filter-btn" data-filter="type" data-value="drink" data-act="setFilter" data-args="[&quot;type&quot;, &quot;drink&quot;, &quot;$el&quot;]">เครื่องดื่ม</button>
     </div>
     <div class="fn-filter-group">
-        <button class="fn-filter-btn active" data-filter="reaction" data-value="" onclick="setFilter('reaction','',this)">ทุกประเภท</button>
-        <button class="fn-filter-btn" data-filter="reaction" data-value="allergy" onclick="setFilter('reaction','allergy',this)">แพ้รุนแรง</button>
-        <button class="fn-filter-btn" data-filter="reaction" data-value="intolerance" onclick="setFilter('reaction','intolerance',this)">แพ้แฝง / อาการไม่รุนแรง</button>
-        <button class="fn-filter-btn" data-filter="reaction" data-value="avoid" onclick="setFilter('reaction','avoid',this)">ควรหลีกเลี่ยง</button>
-        <button class="fn-filter-btn" data-filter="reaction" data-value="caution" onclick="setFilter('reaction','caution',this)">ควรระวัง</button>
+        <button class="fn-filter-btn active" data-filter="reaction" data-value="" data-act="setFilter" data-args="[&quot;reaction&quot;, &quot;&quot;, &quot;$el&quot;]">ทุกประเภท</button>
+        <button class="fn-filter-btn" data-filter="reaction" data-value="allergy" data-act="setFilter" data-args="[&quot;reaction&quot;, &quot;allergy&quot;, &quot;$el&quot;]">แพ้รุนแรง</button>
+        <button class="fn-filter-btn" data-filter="reaction" data-value="intolerance" data-act="setFilter" data-args="[&quot;reaction&quot;, &quot;intolerance&quot;, &quot;$el&quot;]">แพ้แฝง / อาการไม่รุนแรง</button>
+        <button class="fn-filter-btn" data-filter="reaction" data-value="avoid" data-act="setFilter" data-args="[&quot;reaction&quot;, &quot;avoid&quot;, &quot;$el&quot;]">ควรหลีกเลี่ยง</button>
+        <button class="fn-filter-btn" data-filter="reaction" data-value="caution" data-act="setFilter" data-args="[&quot;reaction&quot;, &quot;caution&quot;, &quot;$el&quot;]">ควรระวัง</button>
     </div>
 </div>
 
@@ -101,9 +101,9 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-danger btn-sm" id="fnDeleteBtn" style="margin-right:auto;display:none"
-                    onclick="deleteItem()">ลบ</button>
+                    data-act="deleteItem">ลบ</button>
             <button class="btn btn-ghost" data-close-modal>ยกเลิก</button>
-            <button class="btn btn-primary" onclick="saveItem()">บันทึก</button>
+            <button class="btn btn-primary" data-act="saveItem">บันทึก</button>
         </div>
     </div>
 </div>

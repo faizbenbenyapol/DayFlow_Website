@@ -90,7 +90,7 @@
 <!-- Upload zone -->
 <div class="upload-zone" id="uploadZone"
      ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)"
-     onclick="document.getElementById('fileInput').click()">
+     data-click="#fileInput">
     <div class="upload-zone-inner">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--color-muted);margin-bottom:.5rem"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <div class="upload-zone-text">ลากไฟล์มาวางที่นี่ หรือ <span class="upload-zone-click">คลิกเพื่อเลือก</span></div>
@@ -100,7 +100,7 @@
         <div class="upload-progress-bar" id="uploadBar"></div>
     </div>
 </div>
-<input type="file" id="fileInput" style="display:none" multiple onchange="uploadFiles(this.files)">
+<input type="file" id="fileInput" style="display:none" multiple data-act="uploadFiles" data-args="[&quot;$files&quot;]" data-on="change">
 
 <!-- Upload queue -->
 <div id="uploadQueue" class="upload-queue" style="display:none"></div>
@@ -163,9 +163,9 @@
 </div>
 
 <!-- Image Preview Modal -->
-<div class="preview-overlay" id="previewOverlay" style="display:none" onclick="closePreview()">
-    <div class="preview-box" onclick="event.stopPropagation()">
-        <button class="preview-close" onclick="closePreview()" aria-label="ปิด">&times;</button>
+<div class="preview-overlay" id="previewOverlay" style="display:none" data-act="closePreview">
+    <div class="preview-box" data-stop>
+        <button class="preview-close" data-act="closePreview" aria-label="ปิด">&times;</button>
         <img id="previewImg" src="" alt="" class="preview-img">
         <div class="preview-caption" id="previewCaption"></div>
     </div>
@@ -176,13 +176,13 @@
     <div class="modal-box">
         <div class="modal-header">
             <span class="modal-title">ย้ายไปยังโฟลเดอร์</span>
-            <button class="modal-close" onclick="closeMoveDialog()" aria-label="ปิด">&times;</button>
+            <button class="modal-close" data-act="closeMoveDialog" aria-label="ปิด">&times;</button>
         </div>
         <div class="modal-body">
             <div class="move-folder-list" id="moveFolderList"></div>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-ghost" onclick="closeMoveDialog()">ยกเลิก</button>
+            <button class="btn btn-ghost" data-act="closeMoveDialog">ยกเลิก</button>
             <button class="btn btn-primary" id="btnConfirmMove">ย้ายที่นี่</button>
         </div>
     </div>
@@ -193,7 +193,7 @@
     <div class="modal-box" style="max-width:480px">
         <div class="modal-header">
             <span class="modal-title">สร้างลิงก์แชร์</span>
-            <button class="modal-close" onclick="closeShareQuick()" aria-label="ปิด">&times;</button>
+            <button class="modal-close" data-act="closeShareQuick" aria-label="ปิด">&times;</button>
         </div>
         <div class="modal-body">
             <div class="form-group">
@@ -213,7 +213,7 @@
             </div>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-ghost" onclick="closeShareQuick()">ยกเลิก</button>
+            <button class="btn btn-ghost" data-act="closeShareQuick">ยกเลิก</button>
             <button class="btn btn-primary" id="btnCreateShare">สร้างลิงก์</button>
         </div>
     </div>
@@ -225,7 +225,7 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
         <input type="text" class="share-result-input" id="shareResultUrl" readonly>
         <button class="btn btn-primary btn-sm" id="btnCopyShareUrl">คัดลอก</button>
-        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('shareResultBar').style.display='none'">&#10005;</button>
+        <button class="btn btn-ghost btn-sm" data-act="hideElement" data-args="[&quot;shareResultBar&quot;]">&#10005;</button>
     </div>
 </div>
 
@@ -238,6 +238,6 @@
     </div>
 </div>
 
-<script>
+<script nonce="<?= h(Security::nonce()) ?>">
 window.INITIAL_PARENT_ID = <?= json_encode($parentId) ?>;
 </script>

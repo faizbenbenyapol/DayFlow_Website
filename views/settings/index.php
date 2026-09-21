@@ -472,7 +472,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
     </div>
 </div>
 
-<script>
+<script nonce="<?= h(Security::nonce()) ?>">
 window.dashboardLayout = <?= json_encode($layout, JSON_UNESCAPED_UNICODE) ?>;
 </script>
 
@@ -538,7 +538,7 @@ window.dashboardLayout = <?= json_encode($layout, JSON_UNESCAPED_UNICODE) ?>;
         <div class="card-body">
             <p class="form-hint mb-4">จัดการหมวดหมู่รายรับ/รายจ่ายที่ใช้ในเมนู "การเงิน"</p>
 
-            <form id="finCatForm" class="cat-add-row" onsubmit="event.preventDefault();" style="display:flex;gap:var(--space-2);margin-bottom:var(--space-4);flex-wrap:wrap;width:100%">
+            <form id="finCatForm" class="cat-add-row" data-prevent style="display:flex;gap:var(--space-2);margin-bottom:var(--space-4);flex-wrap:wrap;width:100%">
                 <input type="text" class="form-control" id="finCatNewName" placeholder="ชื่อหมวดหมู่ใหม่..." style="flex:1;min-width:180px">
                 <select class="form-control" id="finCatNewType" style="width:140px">
                     <option value="expense">รายจ่าย</option>
@@ -566,7 +566,7 @@ window.dashboardLayout = <?= json_encode($layout, JSON_UNESCAPED_UNICODE) ?>;
         <div class="card-body">
             <p class="form-hint mb-4">จัดการประเภท/หมวดหมู่การออกกำลังกายที่จะแสดงให้เลือกตอนบันทึก</p>
 
-            <form id="exCatForm" class="cat-add-row" onsubmit="event.preventDefault();" style="display:flex;gap:var(--space-2);margin-bottom:var(--space-4);flex-wrap:wrap;width:100%">
+            <form id="exCatForm" class="cat-add-row" data-prevent style="display:flex;gap:var(--space-2);margin-bottom:var(--space-4);flex-wrap:wrap;width:100%">
                 <input type="text" class="form-control" id="exCatNewName" placeholder="ชื่อหมวดหมู่การออกกำลังกายใหม่..." style="flex:1;min-width:180px">
                 <button class="btn btn-primary" id="btnExCatAdd" type="submit">+ เพิ่ม</button>
             </form>
@@ -583,7 +583,7 @@ window.dashboardLayout = <?= json_encode($layout, JSON_UNESCAPED_UNICODE) ?>;
         <div class="card-body">
             <p class="form-hint mb-4">จัดการแท็กที่ใช้จัดกลุ่มโน้ต</p>
 
-            <form id="noteTagForm" class="cat-add-row" onsubmit="event.preventDefault();" style="display:flex;gap:var(--space-2);margin-bottom:var(--space-4);flex-wrap:wrap;width:100%">
+            <form id="noteTagForm" class="cat-add-row" data-prevent style="display:flex;gap:var(--space-2);margin-bottom:var(--space-4);flex-wrap:wrap;width:100%">
                 <input type="text" class="form-control" id="noteTagNewName" placeholder="ชื่อแท็กใหม่..." style="flex:1;min-width:180px">
                 <button class="btn btn-primary" id="btnNoteTagAdd" type="submit">+ เพิ่ม</button>
             </form>
@@ -646,7 +646,7 @@ window.dashboardLayout = <?= json_encode($layout, JSON_UNESCAPED_UNICODE) ?>;
         <div class="card-body">
             <p class="form-hint">อัปโหลดไฟล์ข้อมูลสำรอง JSON ที่บันทึกไว้เพื่อนำกลับมาใช้ใหม่ <span class="text-xs" style="color:var(--color-danger);font-weight:600">คำเตือน: การนำเข้าจะเขียนทับและทดแทนข้อมูลชุดปัจจุบันทั้งหมดในระบบ</span></p>
             
-            <div class="settings-import-zone" id="settingsImportZone" onclick="document.getElementById('importFile').click()">
+            <div class="settings-import-zone" id="settingsImportZone" data-click="#importFile">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--color-muted)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 <div class="settings-import-text" id="importFileNameText">คลิกเพื่อเลือกไฟล์ข้อมูลสำรอง (.json)</div>
             </div>
@@ -887,13 +887,13 @@ window.dashboardLayout = <?= json_encode($layout, JSON_UNESCAPED_UNICODE) ?>;
             </div>
         </div>
         <div class="share-modal-footer">
-            <button class="btn btn-ghost" onclick="document.getElementById('shareModalOverlay').style.display='none'">ยกเลิก</button>
+            <button class="btn btn-ghost" data-act="hideElement" data-args="[&quot;shareModalOverlay&quot;]">ยกเลิก</button>
             <button class="btn btn-primary" id="btnSaveShare">บันทึก</button>
         </div>
     </div>
 </div>
 
-<script>
+<script nonce="<?= h(Security::nonce()) ?>">
 (function() {
     'use strict';
     const $ = s => document.querySelector(s);

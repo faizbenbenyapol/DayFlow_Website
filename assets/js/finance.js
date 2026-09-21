@@ -171,8 +171,8 @@ function renderTransactions(filteredList) {
             </td>
             <td>
                 <div class="flex gap-2 justify-end">
-                    <button class="btn-link" onclick="openEditTransaction(${t.id})" style="padding: 2px 6px;">แก้ไข</button>
-                    <button class="btn-link" style="color:var(--color-danger); padding: 2px 6px;" onclick="deleteTxn(${t.id})">ลบ</button>
+                    <button class="btn-link" data-act="openEditTransaction" data-args="[${t.id}]" style="padding: 2px 6px;">แก้ไข</button>
+                    <button class="btn-link" style="color:var(--color-danger); padding: 2px 6px;" data-act="deleteTxn" data-args="[${t.id}]">ลบ</button>
                 </div>
             </td>
         </tr>

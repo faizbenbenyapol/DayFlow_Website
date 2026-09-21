@@ -55,7 +55,7 @@ $themeAttr = $theme === 'auto' ? 'light' : $theme;
 
 <head>
     <meta charset="UTF-8">
-    <script>
+    <script nonce="<?= h(Security::nonce()) ?>">
     // Runs while the head is parsed, so the page never flashes the wrong theme.
     (function () {
         var root = document.documentElement;
@@ -453,7 +453,7 @@ if ($isReadOnly || $isGuest):
                 <input id="globalSearchInput" type="search" autocomplete="off" placeholder="ค้นหางาน โน้ต โปรเจค ไฟล์..." aria-label="ค้นหาทั้งระบบ">
                 <kbd>/</kbd>
                 <button type="button" class="global-search-cmdk" aria-label="เปิดแถบคำสั่ง"
-                        onclick="window.openCommandPalette && window.openCommandPalette()">
+                        data-act="openCommandPalette">
                     <kbd>Ctrl</kbd><kbd>K</kbd>
                 </button>
                 <div class="global-search-results" id="globalSearchResults" hidden></div>

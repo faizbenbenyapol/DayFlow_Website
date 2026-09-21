@@ -3,7 +3,7 @@
         <h1 class="page-title">การแจ้งเตือน / นับถอยหลัง</h1>
         <p class="page-subtitle">ค่าใช้จ่ายประจำและ Subscription ต่าง ๆ</p>
     </div>
-    <button class="btn btn-ghost btn-sm" onclick="openAddSub()">+ เพิ่ม</button>
+    <button class="btn btn-ghost btn-sm" data-act="openAddSub">+ เพิ่ม</button>
 </div>
 
 <div id="subGrid" class="grid-2">
@@ -64,9 +64,9 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-danger btn-sm" id="deleteSubBtn" style="margin-right:auto;display:none"
-                    onclick="deleteSub()">ลบ</button>
+                    data-act="deleteSub">ลบ</button>
             <button class="btn btn-ghost" data-close-modal>ยกเลิก</button>
-            <button class="btn btn-primary" onclick="saveSub()">บันทึก</button>
+            <button class="btn btn-primary" data-act="saveSub">บันทึก</button>
         </div>
     </div>
 </div>

@@ -50,7 +50,7 @@ function renderList(items) {
     }
 
     el.innerHTML = items.map(item => `
-        <div class="fn-card" onclick="openEdit(${item.id})">
+        <div class="fn-card" data-act="openEdit" data-args="[${item.id}]">
             <div class="fn-card-top">
                 <div class="fn-card-name">${escHtml(item.name)}</div>
                 <div class="fn-card-type">${TYPE_LABEL[item.type] || item.type}</div>

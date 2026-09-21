@@ -29,7 +29,7 @@ if (isset($pageScript) && in_array($pageScript, $sortablePages, true)):
 <!-- Global JS -->
 <script src="<?= APP_URL ?>/assets/js/app.js?v=<?= @filemtime(ROOT . '/assets/js/app.js') ?>"></script>
 
-<script>
+<script nonce="<?= h(Security::nonce()) ?>">
 // Service worker: caches the static shell only (CSS/JS/fonts), never pages or
 // API responses. Requires a secure context, so it is skipped on plain http
 // except on localhost.
@@ -50,7 +50,7 @@ if ('serviceWorker' in navigator) {
 <?php endif; ?>
 <?php endif; ?>
 
-<script>
+<script nonce="<?= h(Security::nonce()) ?>">
 // Mobile sidebar toggle and hamburger icon animation
 (function() {
     const btn     = document.getElementById('menuToggle');
@@ -97,7 +97,7 @@ if ('serviceWorker' in navigator) {
 </script>
 
 <?php if (Auth::isReadOnly()): ?>
-<script>
+<script nonce="<?= h(Security::nonce()) ?>">
 // Shared links keep their token in the URL/session. The native mobile Back
 // action is intentionally left untouched so a shortcut can close back to the
 // phone home screen; reopening the shortcut restores share mode automatically.

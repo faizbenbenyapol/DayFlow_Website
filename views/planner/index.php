@@ -5,13 +5,13 @@
            title="ดาวน์โหลดปฏิทินเป็นไฟล์ .ics เพื่อนำเข้า Google Calendar หรือ Apple Calendar">
             ส่งออก .ics
         </a>
-        <button class="btn btn-ghost btn-sm" type="button" onclick="document.getElementById('icsFile').click()"
+        <button class="btn btn-ghost btn-sm" type="button" data-click="#icsFile"
                 title="นำเข้ากิจกรรมจากไฟล์ .ics">
             นำเข้า .ics
         </button>
         <input type="file" id="icsFile" accept=".ics,text/calendar" style="display:none"
-               onchange="importIcs(this)">
-        <button class="btn btn-primary btn-sm" onclick="openAddEvent()">+ เพิ่มกิจกรรม</button>
+               data-act="importIcs" data-args="[&quot;$el&quot;]" data-on="change">
+        <button class="btn btn-primary btn-sm" data-act="openAddEvent">+ เพิ่มกิจกรรม</button>
     </div>
 </div>
 
@@ -19,9 +19,9 @@
     <!-- Calendar Card Grid -->
     <div class="card" style="padding: var(--space-5);">
         <div class="calendar-nav">
-            <button class="btn btn-ghost btn-sm" onclick="prevMonth()">&larr;</button>
+            <button class="btn btn-ghost btn-sm" data-act="prevMonth">&larr;</button>
             <span class="calendar-month-label" id="calMonthLabel"></span>
-            <button class="btn btn-ghost btn-sm" onclick="nextMonth()">&rarr;</button>
+            <button class="btn btn-ghost btn-sm" data-act="nextMonth">&rarr;</button>
         </div>
         <div id="calendarGrid"></div>
     </div>
@@ -37,7 +37,7 @@
 
         <div class="day-panel-section" style="border-top: 1px solid var(--color-border); padding-top: var(--space-5);">
             <div class="day-panel-section-title">รายการสิ่งที่ต้องทำ</div>
-            <form class="day-todo-add" onsubmit="event.preventDefault(); addTodo();">
+            <form class="day-todo-add" data-act="addTodo">
                 <input type="text" id="todoInput" placeholder="เพิ่มรายการสิ่งที่ต้องทำ..." maxlength="255">
                 <button class="btn btn-primary btn-sm" type="submit">เพิ่ม</button>
             </form>
@@ -80,7 +80,7 @@
 
             <div class="form-group" style="margin-top: var(--space-4);">
                 <label class="flex items-center gap-3" style="cursor:pointer; font-size: 0.9rem; font-weight: 500;">
-                    <input type="checkbox" id="eventAllDay" onchange="toggleAllDay(this.checked)" style="width: 16px; height: 16px;">
+                    <input type="checkbox" id="eventAllDay" data-act="toggleAllDay" data-args="[&quot;$checked&quot;]" data-on="change" style="width: 16px; height: 16px;">
                     <span>กิจกรรมทั้งวัน (All Day Event)</span>
                 </label>
             </div>
@@ -121,9 +121,9 @@
             </p>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-danger btn-sm" id="deleteEventBtn" style="margin-right:auto;display:none" onclick="deleteEvent()">ลบกิจกรรม</button>
+            <button class="btn btn-danger btn-sm" id="deleteEventBtn" style="margin-right:auto;display:none" data-act="deleteEvent">ลบกิจกรรม</button>
             <button class="btn btn-ghost" data-close-modal>ยกเลิก</button>
-            <button class="btn btn-primary" onclick="saveEvent()">บันทึก</button>
+            <button class="btn btn-primary" data-act="saveEvent">บันทึก</button>
         </div>
     </div>
 </div>

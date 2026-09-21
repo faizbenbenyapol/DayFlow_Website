@@ -1,4 +1,4 @@
-<script>
+<script nonce="<?= h(Security::nonce()) ?>">
     const IS_READ_ONLY = <?= Auth::isReadOnly() ? 'true' : 'false' ?>;
 </script>
 
@@ -62,8 +62,8 @@
         <h1 class="page-title">หุ้น</h1>
         <div class="flex items-center gap-3">
             <span class="text-sm text-muted" id="stkRefreshedAt"></span>
-            <button class="btn btn-ghost btn-sm" id="stkRefreshBtn" onclick="refreshPrices()" title="ดึงราคาล่าสุดจากผู้ให้บริการ"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:text-bottom"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v6h6"/></svg>รีเฟรชราคา</button>
-            <button class="btn btn-primary btn-sm mode-readonly-hide" onclick="openAddStock()">+ บันทึกรายการ</button>
+            <button class="btn btn-ghost btn-sm" id="stkRefreshBtn" data-act="refreshPrices" title="ดึงราคาล่าสุดจากผู้ให้บริการ"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:text-bottom"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v6h6"/></svg>รีเฟรชราคา</button>
+            <button class="btn btn-primary btn-sm mode-readonly-hide" data-act="openAddStock">+ บันทึกรายการ</button>
         </div>
     </div>
 
@@ -109,11 +109,11 @@
                         <th>Ticker</th>
                         <th style="text-align:right">ราคาล่าสุด</th>
                         <th style="text-align:right">เปลี่ยนแปลง</th>
-                        <th style="text-align:right" class="stk-clickable-header" onclick="showMetricExplain('pe')" title="คลิกดูคำอธิบาย P/E">P/E</th>
-                        <th style="text-align:right" class="stk-clickable-header" onclick="showMetricExplain('forward_pe')" title="คลิกดูคำอธิบาย Forward P/E">Forward P/E</th>
-                        <th style="text-align:right" class="stk-clickable-header" onclick="showMetricExplain('peg')" title="คลิกดูคำอธิบาย PEG">PEG</th>
-                        <th style="text-align:right" class="stk-clickable-header" onclick="showMetricExplain('p_fcf')" title="คลิกดูคำอธิบาย P/FCF">P/FCF</th>
-                        <th style="text-align:right" class="stk-clickable-header" onclick="showMetricExplain('eps')" title="คลิกดูคำอธิบาย EPS">EPS</th>
+                        <th style="text-align:right" class="stk-clickable-header" data-act="showMetricExplain" data-args="[&quot;pe&quot;]" title="คลิกดูคำอธิบาย P/E">P/E</th>
+                        <th style="text-align:right" class="stk-clickable-header" data-act="showMetricExplain" data-args="[&quot;forward_pe&quot;]" title="คลิกดูคำอธิบาย Forward P/E">Forward P/E</th>
+                        <th style="text-align:right" class="stk-clickable-header" data-act="showMetricExplain" data-args="[&quot;peg&quot;]" title="คลิกดูคำอธิบาย PEG">PEG</th>
+                        <th style="text-align:right" class="stk-clickable-header" data-act="showMetricExplain" data-args="[&quot;p_fcf&quot;]" title="คลิกดูคำอธิบาย P/FCF">P/FCF</th>
+                        <th style="text-align:right" class="stk-clickable-header" data-act="showMetricExplain" data-args="[&quot;eps&quot;]" title="คลิกดูคำอธิบาย EPS">EPS</th>
                         <th style="text-align:right" class="stk-col-portfolio">จำนวน</th>
                         <th style="text-align:right" class="stk-col-portfolio">ต้นทุนเฉลี่ย</th>
                         <th style="text-align:right" class="stk-col-portfolio">มูลค่าตลาด</th>
@@ -140,8 +140,8 @@
             </div>
             <div class="flex gap-3" id="stkTxnFilters">
                 <input type="text" class="form-control" id="stkTickerFilter" placeholder="กรอง Ticker"
-                       style="width:140px;text-transform:uppercase" oninput="loadStockTransactions()">
-                <select class="form-control" id="stkMarketFilter" style="width:auto" onchange="loadStockTransactions()">
+                       style="width:140px;text-transform:uppercase" data-act="loadStockTransactions" data-on="input">
+                <select class="form-control" id="stkMarketFilter" style="width:auto" data-act="loadStockTransactions" data-on="change">
                     <option value="">ทุกตลาด</option>
                     <option value="US">US</option>
                     <option value="SET">SET</option>
@@ -178,7 +178,7 @@
             <div class="card-body">
                 <div class="flex items-center justify-between mb-6">
                     <h3 class="stk-analysis-title" style="margin:0">สรุปเงินลงทุน & เงินสดคงเหลือ</h3>
-                    <button class="btn btn-primary btn-sm mode-readonly-hide" onclick="openAddCapital()">+ บันทึกเงินลงทุน</button>
+                    <button class="btn btn-primary btn-sm mode-readonly-hide" data-act="openAddCapital">+ บันทึกเงินลงทุน</button>
                 </div>
                 
                 <!-- Net capital and cash balance dashboards -->
@@ -242,11 +242,11 @@
 
                 <?php if (!Auth::isReadOnly()): ?>
                 <!-- Upload drag and drop zone -->
-                <div class="stk-dropzone mb-8" id="stkDropzone" onclick="document.getElementById('stkFileSelect').click()">
+                <div class="stk-dropzone mb-8" id="stkDropzone" data-click="#stkFileSelect">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-2" style="color:var(--color-accent)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                     <div class="stk-dropzone-text">ลากและวางรูปภาพตรงนี้ หรือ <span>คลิกเพื่อเลือกไฟล์</span></div>
                     <div class="stk-dropzone-sub">เฉพาะ JPG, PNG, WEBP, GIF (สูงสุด 20MB)</div>
-                    <input type="file" id="stkFileSelect" style="display:none" accept="image/*" onchange="uploadScreenshot(this)">
+                    <input type="file" id="stkFileSelect" style="display:none" accept="image/*" data-act="uploadScreenshot" data-args="[&quot;$el&quot;]" data-on="change">
                 </div>
                 <?php endif; ?>
 
@@ -262,7 +262,7 @@
             <div class="card-body">
                 <div class="flex items-center gap-3 mb-3">
                     <label class="form-label" style="margin:0">ปี</label>
-                    <select class="form-control" id="stkChartYear" style="width:auto" onchange="loadStockChart(this.value)">
+                    <select class="form-control" id="stkChartYear" style="width:auto" data-act="loadStockChart" data-args="[&quot;$value&quot;]" data-on="change">
                         <?php for ($y = (int)date('Y'); $y >= (int)date('Y') - 4; $y--): ?>
                         <option value="<?= $y ?>" <?= $y == (int)date('Y') ? 'selected' : '' ?>><?= $y + 543 ?></option>
                         <?php endfor; ?>
@@ -302,7 +302,7 @@
                             </select>
                         </div>
                         <div class="form-group mb-0 flex items-end">
-                            <button class="btn btn-ai-sparkle" id="stkAnalyzeBtn" onclick="runStockAnalysis()" style="width:100%;height:38px">
+                            <button class="btn btn-ai-sparkle" id="stkAnalyzeBtn" data-act="runStockAnalysis" style="width:100%;height:38px">
                                 <svg class="sparkle-svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right:6px;vertical-align:middle"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6C8.57 12.05 8 10.61 8 9c0-2.21 1.79-4 4-4s4 1.79 4 4c0 1.61-.57 3.05-2.15 4.1z"/></svg>
                                 วิเคราะห์ด้วย AI
                             </button>
@@ -346,7 +346,7 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">ตลาด</label>
-                    <select class="form-control" id="stkMarket" onchange="onStkMarketChange()">
+                    <select class="form-control" id="stkMarket" data-act="onStkMarketChange" data-on="change">
                         <option value="US">US</option>
                         <option value="SET">SET</option>
                         <option value="OTHER">อื่นๆ</option>
@@ -392,10 +392,10 @@
             </div>
         </div>
         <div class="modal-footer" style="justify-content:space-between">
-            <button class="btn btn-ghost" id="deleteStockBtn" onclick="deleteStock()" style="color:var(--color-danger);display:none">ลบ</button>
+            <button class="btn btn-ghost" id="deleteStockBtn" data-act="deleteStock" style="color:var(--color-danger);display:none">ลบ</button>
             <div class="flex gap-3" style="margin-left:auto">
                 <button class="btn btn-ghost" data-close-modal>ยกเลิก</button>
-                <button class="btn btn-primary" onclick="saveStock()">บันทึก</button>
+                <button class="btn btn-primary" data-act="saveStock">บันทึก</button>
             </div>
         </div>
     </div>
@@ -442,10 +442,10 @@
             </div>
         </div>
         <div class="modal-footer" style="justify-content:space-between">
-            <button class="btn btn-ghost" id="deleteCapitalBtn" onclick="deleteCapital()" style="color:var(--color-danger);display:none">ลบ</button>
+            <button class="btn btn-ghost" id="deleteCapitalBtn" data-act="deleteCapital" style="color:var(--color-danger);display:none">ลบ</button>
             <div class="flex gap-3" style="margin-left:auto">
                 <button class="btn btn-ghost" data-close-modal>ยกเลิก</button>
-                <button class="btn btn-primary" onclick="saveCapital()">บันทึก</button>
+                <button class="btn btn-primary" data-act="saveCapital">บันทึก</button>
             </div>
         </div>
     </div>

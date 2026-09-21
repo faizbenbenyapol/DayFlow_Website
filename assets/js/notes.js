@@ -52,12 +52,12 @@ function renderNotesList(notes) {
         const bookmarkFill = isPinned ? 'currentColor' : 'none';
 
         return `
-            <div class="note-card ${isPinned ? 'pinned' : ''}" onclick="window.location='${BASE_URL}/notes/${n.id}'">
+            <div class="note-card ${isPinned ? 'pinned' : ''}" data-nav="'${BASE_URL}/notes/${n.id}'">
                 <div class="note-card-actions">
-                    <button class="note-card-btn ${isPinned ? 'active' : ''}" onclick="event.stopPropagation();togglePin(${n.id}, ${n.pinned})" title="${pinTitle}">
+                    <button class="note-card-btn ${isPinned ? 'active' : ''}" data-act="togglePin" data-args="[${n.id}, ${n.pinned}]" data-stop title="${pinTitle}">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="${bookmarkFill}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
                     </button>
-                    <button class="note-card-btn danger" onclick="event.stopPropagation();deleteNote(${n.id})" title="ลบ">
+                    <button class="note-card-btn danger" data-act="deleteNote" data-args="[${n.id}]" data-stop title="ลบ">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                     </button>
                 </div>
@@ -72,10 +72,13 @@ function renderNotesList(notes) {
     }).join('');
 }
 
+// Exported below: a top-level const is not a window property, and the
+// declarative actions in the markup resolve their names through window.
 const searchNotes = debounce(function(val) {
     currentSearch = val;
     loadNotes();
 }, 400);
+window.searchNotes = searchNotes;
 
 function filterByTag(tagId, el) {
     currentTagId = tagId;
@@ -639,7 +642,7 @@ function renderTagWrap() {
         const span = document.createElement('span');
         span.className = 'tag active';
         span.dataset.tag = name;
-        span.innerHTML = escHtml(name) + ` <button onclick="removeTag('${escHtml(name)}')" style="background:none;border:none;cursor:pointer;margin-left:2px;font-size:0.7rem">&#10005;</button>`;
+        span.innerHTML = escHtml(name) + ` <button data-act="removeTag" data-args="[&quot;${escHtml(name)}&quot;]" style="background:none;border:none;cursor:pointer;margin-left:2px;font-size:0.7rem">&#10005;</button>`;
         wrap.insertBefore(span, document.getElementById('tagInput'));
     });
 }
@@ -660,4 +663,22 @@ function autoResize(el) {
 function escHtml(str) {
     if (str == null) return '';
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* --- Helpers named by the declarative actions in the editor markup --- */
+
+// The tag input submits on blur, but a click on the "add" button next to it
+// blurs the field first; the short wait lets that click land.
+function submitTagInputSoon(input) {
+    setTimeout(() => submitTagInput(input), 200);
+}
+
+function submitTagInputById(id) {
+    const input = document.getElementById(id);
+    if (input) submitTagInput(input);
+}
+
+function autoResizeAndSave(el) {
+    autoResize(el);
+    debouncedSaveTitle();
 }

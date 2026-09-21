@@ -50,8 +50,8 @@ function renderWorkouts() {
             <td>${w.weight_kg ? w.weight_kg + ' กก.' : '—'}</td>
             <td class="text-sm text-muted">${escHtml(w.notes || '')}</td>
             <td>
-                <button class="btn-link" onclick="openEditWorkout(${w.id})">แก้ไข</button>
-                <button class="btn-link" style="color:var(--color-danger)" onclick="deleteWorkout(${w.id})">ลบ</button>
+                <button class="btn-link" data-act="openEditWorkout" data-args="[${w.id}]">แก้ไข</button>
+                <button class="btn-link" style="color:var(--color-danger)" data-act="deleteWorkout" data-args="[${w.id}]">ลบ</button>
             </td>
         </tr>
     `).join('');

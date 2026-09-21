@@ -2,7 +2,7 @@
     <div>
         <h1 class="page-title">ออกกำลังกาย</h1>
     </div>
-    <button class="btn btn-ghost btn-sm" onclick="openAddWorkout()">+ บันทึก</button>
+    <button class="btn btn-ghost btn-sm" data-act="openAddWorkout">+ บันทึก</button>
 </div>
 
 <!-- Stats row -->
@@ -38,7 +38,7 @@
         <input type="month" class="form-control" id="monthFilter"
                value="<?= date('Y-m') ?>"
                style="width:auto"
-               onchange="filterByMonth(this.value)">
+               data-act="filterByMonth" data-args="[&quot;$value&quot;]" data-on="change">
     </div>
     <div class="table-wrap">
         <table class="table">
@@ -117,7 +117,7 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-ghost" data-close-modal>ยกเลิก</button>
-            <button class="btn btn-primary" onclick="saveWorkout()">บันทึก</button>
+            <button class="btn btn-primary" data-act="saveWorkout">บันทึก</button>
         </div>
     </div>
 </div>

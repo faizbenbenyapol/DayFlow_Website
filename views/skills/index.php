@@ -4,7 +4,7 @@
             <h1 class="page-title">ระบบติดตามเวลา (Time Tracker)</h1>
             <p class="page-subtitle">จับเวลาและติดตามการเรียนรู้ตามกฎ 10,000 ชั่วโมง</p>
         </div>
-        <button class="btn btn-primary" onclick="openSkillModal()">+ เพิ่มทักษะเป้าหมาย</button>
+        <button class="btn btn-primary" data-act="openSkillModal">+ เพิ่มทักษะเป้าหมาย</button>
     </div>
 
     <!-- Timer Widget (Toggl Style) -->
@@ -17,7 +17,7 @@
         </div>
         <div class="timer-display-wrapper" style="display:flex; align-items:center; gap: 1rem;">
             <div class="timer-display" id="timerDisplay">00:00:00</div>
-            <button class="btn-timer" id="btnTimerToggle" onclick="toggleTimer()">
+            <button class="btn-timer" id="btnTimerToggle" data-act="toggleTimer">
                 ▶
             </button>
         </div>
@@ -80,10 +80,10 @@
     <div class="modal">
         <div class="modal-header">
             <span class="modal-title" id="skillModalTitle">เพิ่มทักษะ / เป้าหมายใหม่</span>
-            <button class="modal-close" type="button" onclick="closeSkillModal()">&times;</button>
+            <button class="modal-close" type="button" data-act="closeSkillModal">&times;</button>
         </div>
         <div class="modal-body">
-            <form id="skillForm" onsubmit="saveSkill(event)">
+            <form id="skillForm" data-act="saveSkill" data-args="[&quot;$event&quot;]" data-on="submit">
                 <input type="hidden" id="skillId">
                 <div class="form-group">
                     <label class="form-label">ชื่อทักษะ (เช่น เขียนโปรแกรม, กีต้าร์)</label>
@@ -101,13 +101,13 @@
             </form>
         </div>
         <div class="modal-footer">
-            <button type="button" class="btn btn-ghost" onclick="closeSkillModal()">ยกเลิก</button>
+            <button type="button" class="btn btn-ghost" data-act="closeSkillModal">ยกเลิก</button>
             <button type="submit" form="skillForm" class="btn btn-primary">บันทึก</button>
         </div>
     </div>
 </div>
 
-<script>
+<script nonce="<?= h(Security::nonce()) ?>">
 let skills = [];
 let activeTimer = null;
 let timerInterval = null;
@@ -195,8 +195,8 @@ function renderSkillsProgress(skillsProgressData) {
                         ${s.name}
                     </span>
                     <div>
-                        <button class="btn btn-sm btn-ghost" onclick="editSkill('${s.id}')" title="แก้ไข" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">✎</button>
-                        <button class="btn btn-sm btn-ghost text-danger" onclick="deleteSkill('${s.id}')" title="ลบ">&times;</button>
+                        <button class="btn btn-sm btn-ghost" data-act="editSkill" data-args="[&quot;${s.id}&quot;]" title="แก้ไข" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">✎</button>
+                        <button class="btn btn-sm btn-ghost text-danger" data-act="deleteSkill" data-args="[&quot;${s.id}&quot;]" title="ลบ">&times;</button>
                     </div>
                 </div>
                 <div class="progress-container">
@@ -236,7 +236,7 @@ async function loadLogs() {
                 <td style="font-size:0.85rem">${date}<br/>${start} - ${end}</td>
                 <td><strong>${formatDurationHm(l.duration_seconds)}</strong></td>
                 <td>
-                    <button class="btn btn-sm btn-ghost text-danger" onclick="deleteLog('${l.id}')">&times;</button>
+                    <button class="btn btn-sm btn-ghost text-danger" data-act="deleteLog" data-args="[&quot;${l.id}&quot;]">&times;</button>
                 </td>
             </tr>
         `;

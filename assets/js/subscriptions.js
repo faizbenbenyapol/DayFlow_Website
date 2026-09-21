@@ -59,7 +59,7 @@ function renderSubs() {
                     <div class="sub-card-title">${escHtml(sub.name)}</div>
                     <div class="sub-card-meta"><span class="sub-cycle-badge ${cycleClass[sub.billing_cycle] || ''}">${cycleLabel[sub.billing_cycle] || sub.billing_cycle}</span>${sub.amount > 0 ? ' · ' + formatMoney(sub.amount) + ' บาท' : ''}</div>
                 </div>
-                <button class="btn btn-ghost btn-sm" onclick="openEditSub(${sub.id})">แก้ไข</button>
+                <button class="btn btn-ghost btn-sm" data-act="openEditSub" data-args="[${sub.id}]">แก้ไข</button>
             </div>
             <div class="sub-due-row" data-date="${sub.next_due_date}" data-alert="${sub.alert_days}">
                 <div>
@@ -69,7 +69,7 @@ function renderSubs() {
                 ${buildPill(days, sub.alert_days)}
             </div>
             ${sub.notes ? `<div class="sub-card-notes">${escHtml(sub.notes)}</div>` : ''}
-            ${sub.billing_cycle !== 'one_time' && sub.is_active ? `<button class="btn btn-ghost btn-sm" onclick="renewSub(${sub.id})">ต่ออายุ / ชำระแล้ว</button>` : ''}
+            ${sub.billing_cycle !== 'one_time' && sub.is_active ? `<button class="btn btn-ghost btn-sm" data-act="renewSub" data-args="[${sub.id}]">ต่ออายุ / ชำระแล้ว</button>` : ''}
         </div>`;
     }).join('');
 }

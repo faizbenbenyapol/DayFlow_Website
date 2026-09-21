@@ -1,11 +1,11 @@
 <div class="page-header flex items-center justify-between">
     <h1 class="page-title">การเงิน</h1>
     <div class="flex gap-2">
-        <button class="btn btn-ghost" onclick="openExportModal()" style="border-color: var(--color-border-2); display: flex; align-items: center; gap: 6px;">
+        <button class="btn btn-ghost" data-act="openExportModal" style="border-color: var(--color-border-2); display: flex; align-items: center; gap: 6px;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             <span>ส่งออก PDF</span>
         </button>
-        <button class="btn btn-primary" onclick="openAddTransaction()">+ บันทึกรายการ</button>
+        <button class="btn btn-primary" data-act="openAddTransaction">+ บันทึกรายการ</button>
     </div>
 </div>
 
@@ -40,12 +40,12 @@
 
 <!-- Quick Add Bar -->
 <div class="card mb-8" style="padding: 1.25rem; border-left: 3px solid var(--color-text);">
-    <form id="quickAddForm" class="flex gap-4 items-center justify-between" onsubmit="event.preventDefault(); saveQuickTransaction();" style="flex-wrap: wrap;">
+    <form id="quickAddForm" class="flex gap-4 items-center justify-between" data-act="saveQuickTransaction" style="flex-wrap: wrap;">
         <span style="font-weight: 600; font-size: 0.9rem; white-space: nowrap; display: flex; align-items: center; gap: 6px;">
             <span style="font-size: 1.2rem;"></span> บันทึกด่วน:
         </span>
         <div style="display: flex; gap: 10px; flex: 1; min-width: 280px; flex-wrap: wrap;">
-            <select class="form-control" id="qaType" style="width: auto; cursor: pointer;" onchange="filterQaCategoryOptions()">
+            <select class="form-control" id="qaType" style="width: auto; cursor: pointer;" data-act="filterQaCategoryOptions" data-on="change">
                 <option value="expense">รายจ่าย</option>
                 <option value="income">รายรับ</option>
             </select>
@@ -71,10 +71,10 @@
         <div class="flex items-center gap-3">
             <!-- Chart type segmented buttons -->
             <div class="segmented-control" id="chartTypeToggle">
-                <button class="segmented-btn active" data-chart-type="bar" onclick="changeChartType('bar')">แท่ง</button>
-                <button class="segmented-btn" data-chart-type="line" onclick="changeChartType('line')">พื้นที่</button>
+                <button class="segmented-btn active" data-chart-type="bar" data-act="changeChartType" data-args="[&quot;bar&quot;]">แท่ง</button>
+                <button class="segmented-btn" data-chart-type="line" data-act="changeChartType" data-args="[&quot;line&quot;]">พื้นที่</button>
             </div>
-            <select class="form-control" id="chartYear" style="width:auto; padding-top: 4px; padding-bottom: 4px; font-size: 0.85rem;" onchange="loadChart(this.value)">
+            <select class="form-control" id="chartYear" style="width:auto; padding-top: 4px; padding-bottom: 4px; font-size: 0.85rem;" data-act="loadChart" data-args="[&quot;$value&quot;]" data-on="change">
                 <?php for ($y = (int)date('Y'); $y >= (int)date('Y') - 3; $y--): ?>
                 <option value="<?= $y ?>" <?= $y == (int)date('Y') ? 'selected' : '' ?>><?= $y + 543 ?></option>
                 <?php endfor; ?>
@@ -95,14 +95,14 @@
         <div class="card-header flex items-center justify-between" style="flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-4);">
             <span class="card-title">ประวัติการทำรายการ</span>
             <div class="flex gap-2" style="flex-wrap: wrap; width: auto;">
-                <input type="text" class="form-control filter-input" id="searchFilter" placeholder="ค้นหารายการ..." style="width: 150px; font-size: 0.85rem;" oninput="filterTransactionsLocal()">
-                <input type="month" class="form-control" id="monthFilter" value="<?= date('Y-m') ?>" style="width: auto; font-size: 0.85rem;" onchange="loadTransactions()">
-                <select class="form-control" id="typeFilter" style="width: auto; font-size: 0.85rem;" onchange="loadTransactions()">
+                <input type="text" class="form-control filter-input" id="searchFilter" placeholder="ค้นหารายการ..." style="width: 150px; font-size: 0.85rem;" data-act="filterTransactionsLocal" data-on="input">
+                <input type="month" class="form-control" id="monthFilter" value="<?= date('Y-m') ?>" style="width: auto; font-size: 0.85rem;" data-act="loadTransactions" data-on="change">
+                <select class="form-control" id="typeFilter" style="width: auto; font-size: 0.85rem;" data-act="loadTransactions" data-on="change">
                     <option value="">ทั้งหมด</option>
                     <option value="income">รายรับ</option>
                     <option value="expense">รายจ่าย</option>
                 </select>
-                <select class="form-control" id="categoryFilter" style="width: auto; font-size: 0.85rem;" onchange="filterTransactionsLocal()">
+                <select class="form-control" id="categoryFilter" style="width: auto; font-size: 0.85rem;" data-act="filterTransactionsLocal" data-on="change">
                     <option value="">ทุกหมวดหมู่</option>
                     <?php foreach ($cats as $cat): ?>
                     <option value="<?= h($cat['name']) ?>"><?= h($cat['name']) ?></option>
@@ -205,7 +205,7 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-ghost" data-close-modal>ยกเลิก</button>
-            <button class="btn btn-primary" onclick="saveTransaction()">บันทึก</button>
+            <button class="btn btn-primary" data-act="saveTransaction">บันทึก</button>
         </div>
     </div>
 </div>
@@ -215,12 +215,12 @@
     <div class="modal" style="max-width: 440px;">
         <div class="modal-header">
             <span class="modal-title">ส่งออกรายงานการเงิน (PDF)</span>
-            <button class="modal-close" onclick="closeModal('exportPdfModal')">&times;</button>
+            <button class="modal-close" data-act="closeModal" data-args="[&quot;exportPdfModal&quot;]">&times;</button>
         </div>
         <div class="modal-body">
             <div class="segmented-control" id="exportTypeToggle" style="display: flex; width: 100%; margin-bottom: var(--space-4);">
-                <button class="segmented-btn active" data-type="month" onclick="setExportType('month')" style="flex: 1; text-align: center;">รายเดือน</button>
-                <button class="segmented-btn" data-type="range" onclick="setExportType('range')" style="flex: 1; text-align: center;">เลือกช่วงเวลาเอง</button>
+                <button class="segmented-btn active" data-type="month" data-act="setExportType" data-args="[&quot;month&quot;]" style="flex: 1; text-align: center;">รายเดือน</button>
+                <button class="segmented-btn" data-type="range" data-act="setExportType" data-args="[&quot;range&quot;]" style="flex: 1; text-align: center;">เลือกช่วงเวลาเอง</button>
             </div>
 
             <!-- Month Selection -->
@@ -244,8 +244,8 @@
             </div>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-ghost" onclick="closeModal('exportPdfModal')">ยกเลิก</button>
-            <button class="btn btn-primary" id="btnExportSubmit" onclick="generatePdfReport()">ดาวน์โหลด PDF</button>
+            <button class="btn btn-ghost" data-act="closeModal" data-args="[&quot;exportPdfModal&quot;]">ยกเลิก</button>
+            <button class="btn btn-primary" id="btnExportSubmit" data-act="generatePdfReport">ดาวน์โหลด PDF</button>
         </div>
     </div>
 </div>

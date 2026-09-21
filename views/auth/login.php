@@ -383,8 +383,8 @@
 
     <!-- Tabs -->
     <div class="auth-tabs" id="authTabs" role="tablist" aria-label="ประเภทการเข้าใช้งาน">
-        <button class="auth-tab active" id="tabLogin" role="tab" aria-selected="true" aria-controls="paneLogin" onclick="switchTab('login')">เข้าสู่ระบบ</button>
-        <button class="auth-tab" id="tabRegister" role="tab" aria-selected="false" aria-controls="paneRegister" onclick="switchTab('register')">สมัครสมาชิก</button>
+        <button class="auth-tab active" id="tabLogin" role="tab" aria-selected="true" aria-controls="paneLogin" data-act="switchTab" data-args="[&quot;login&quot;]">เข้าสู่ระบบ</button>
+        <button class="auth-tab" id="tabRegister" role="tab" aria-selected="false" aria-controls="paneRegister" data-act="switchTab" data-args="[&quot;register&quot;]">สมัครสมาชิก</button>
     </div>
 
     <div class="auth-body">
@@ -405,7 +405,7 @@
                 <div class="pw-wrap">
                     <input class="form-control" type="password" id="loginPassword"
                            placeholder="••••••••" autocomplete="current-password">
-                    <button class="pw-toggle" type="button" onclick="togglePw('loginPassword',this)" title="แสดง/ซ่อน">
+                    <button class="pw-toggle" type="button" data-act="togglePw" data-args="[&quot;loginPassword&quot;, &quot;$el&quot;]" title="แสดง/ซ่อน">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                     </button>
                 </div>
@@ -415,7 +415,7 @@
                 <input type="checkbox" id="rememberDevice">
                 <span>จดจำอุปกรณ์นี้ 30 วัน</span>
             </label>
-            <button class="btn-submit" id="loginBtn" onclick="doLogin()">เข้าสู่ระบบ</button>
+            <button class="btn-submit" id="loginBtn" data-act="doLogin">เข้าสู่ระบบ</button>
 
             <!-- Shown only once the server says the account has 2FA on. -->
             <div id="twoFactorStep" style="display:none">
@@ -424,12 +424,12 @@
                     <input class="form-control" type="text" id="twoFactorCode"
                            inputmode="numeric" autocomplete="one-time-code"
                            placeholder="123456" maxlength="11"
-                           onkeydown="if (event.key === 'Enter') doTwoFactor()">
+                           data-act="twoFactorKey" data-args="[&quot;$event&quot;]" data-on="keydown">
                     <p class="text-xs" style="margin-top:6px; color: var(--muted);">
                         เปิดแอป Authenticator เพื่อดูรหัส หรือกรอกรหัสสำรองที่เก็บไว้
                     </p>
                 </div>
-                <button class="btn-submit" id="twoFactorBtn" onclick="doTwoFactor()">ยืนยัน</button>
+                <button class="btn-submit" id="twoFactorBtn" data-act="doTwoFactor">ยืนยัน</button>
             </div>
 
             <div class="auth-divider" id="loginDivider">หรือ</div>
@@ -456,7 +456,7 @@
                 <label class="form-label">ชื่อผู้ใช้ <span style="color:var(--muted-2)">(ภาษาอังกฤษ)</span></label>
                 <input class="form-control" type="text" id="regUsername"
                        placeholder="เช่น myname123" maxlength="30"
-                       autocomplete="username" oninput="validateUsername(this)">
+                       autocomplete="username" data-act="validateUsername" data-args="[&quot;$el&quot;]" data-on="input">
                 <div class="form-hint" id="usernameHint"></div>
             </div>
 
@@ -471,8 +471,8 @@
                 <div class="pw-wrap">
                     <input class="form-control" type="password" id="regPassword"
                            placeholder="อย่างน้อย 8 ตัวอักษร" autocomplete="new-password"
-                           oninput="updateStrength(this.value)">
-                    <button class="pw-toggle" type="button" onclick="togglePw('regPassword',this)" title="แสดง/ซ่อน">
+                           data-act="updateStrength" data-args="[&quot;$value&quot;]" data-on="input">
+                    <button class="pw-toggle" type="button" data-act="togglePw" data-args="[&quot;regPassword&quot;, &quot;$el&quot;]" title="แสดง/ซ่อน">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                     </button>
                 </div>
@@ -484,13 +484,13 @@
                 <div class="pw-wrap">
                     <input class="form-control" type="password" id="regConfirm"
                            placeholder="••••••••" autocomplete="new-password">
-                    <button class="pw-toggle" type="button" onclick="togglePw('regConfirm',this)" title="แสดง/ซ่อน">
+                    <button class="pw-toggle" type="button" data-act="togglePw" data-args="[&quot;regConfirm&quot;, &quot;$el&quot;]" title="แสดง/ซ่อน">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                     </button>
                 </div>
             </div>
 
-            <button class="btn-submit" id="registerBtn" onclick="doRegister()">สมัครสมาชิก</button>
+            <button class="btn-submit" id="registerBtn" data-act="doRegister">สมัครสมาชิก</button>
             <div class="auth-divider">หรือ</div>
             <div style="display: flex; justify-content: center; width: 100%;">
                 <div id="googleBtnReg" style="width: 100%;"></div>
@@ -505,7 +505,7 @@
 
 </div><!-- /.auth-card -->
 
-<script>
+<script nonce="<?= h(Security::nonce()) ?>">
 const BASE_URL = (function() {
     const s = document.querySelector('script');
     return window.location.origin + window.location.pathname.replace(/\/(login|register)\/?$/, '');
@@ -648,6 +648,10 @@ async function doLogin() {
 }
 
 // ── Two-factor challenge ───────────────────────────────
+function twoFactorKey(event) {
+    if (event.key === 'Enter') doTwoFactor();
+}
+
 function showTwoFactorStep() {
     ['loginIdentifier', 'loginPassword'].forEach(id => {
         const el = document.getElementById(id);

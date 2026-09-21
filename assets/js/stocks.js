@@ -312,13 +312,13 @@ function renderUnifiedStocks() {
         const starColor = item.isWl ? 'var(--color-warning)' : 'var(--color-border)';
         const starFill = item.isWl ? 'var(--color-warning)' : 'none';
         
-        const aiBtn = `<button class="btn btn-ai-sparkle btn-sm" onclick="analyzeStockInstantly('${item.ticker}','${item.market}')" title="วิเคราะห์ด้วย AI" style="padding:0.25rem 0.5rem">
+        const aiBtn = `<button class="btn btn-ai-sparkle btn-sm" data-act="analyzeStockInstantly" data-args="["${item.ticker}","${item.market}"]" title="วิเคราะห์ด้วย AI" style="padding:0.25rem 0.5rem">
                 <svg class="sparkle-svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:2px"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6C8.57 12.05 8 10.61 8 9c0-2.21 1.79-4 4-4s4 1.79 4 4c0 1.61-.57 3.05-2.15 4.1z"/></svg> วิเคราะห์
             </button>`;
 
         let html = `<tr>
             <td style="text-align:center">
-                <svg onclick="toggleWatchlist('${item.ticker}', '${item.market}')" style="cursor:pointer;color:${starColor};fill:${starFill};transition:all 0.2s" width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg data-act="toggleWatchlist" data-args="["${item.ticker}", "${item.market}"]" style="cursor:pointer;color:${starColor};fill:${starFill};transition:all 0.2s" width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
             </td>
             <td>
                 <span class="stk-ticker">${escHtmlStk(item.ticker)}</span>
@@ -504,7 +504,7 @@ function renderStockTxnList() {
                 <td class="stk-num">${formatMoney(t.fee)}</td>
                 <td class="stk-num">${formatMoney(value)}</td>
                 <td class="mode-readonly-hide">
-                    <button class="btn-link" onclick="openEditStock(${t.id})">แก้ไข</button>
+                    <button class="btn-link" data-act="openEditStock" data-args="[${t.id}]">แก้ไข</button>
                 </td>
             </tr>`;
     }).join('');
@@ -1151,7 +1151,7 @@ function renderCapitalList() {
                 <td>${escHtmlStk(f.currency)}</td>
                 <td class="text-sm">${escHtmlStk(f.notes || '—')}</td>
                 <td class="mode-readonly-hide">
-                    <button class="btn-link" onclick="openEditCapital(${f.id})">แก้ไข</button>
+                    <button class="btn-link" data-act="openEditCapital" data-args="[${f.id}]">แก้ไข</button>
                 </td>
             </tr>`;
     }).join('');
@@ -1266,10 +1266,10 @@ function renderScreenshotsGrid() {
         const imgSrc = BASE_URL + '/uploads/' + s.file_path;
         return `
             <div class="stk-screenshot-card">
-                <div class="stk-screenshot-img-wrap" onclick="viewLightbox(${s.id})">
+                <div class="stk-screenshot-img-wrap" data-act="viewLightbox" data-args="[${s.id}]">
                     <img class="stk-screenshot-img" src="${imgSrc}" alt="${escHtmlStk(s.name)}">
                     <div class="stk-screenshot-overlay">
-                        <button class="stk-screenshot-btn btn-del mode-readonly-hide" onclick="event.stopPropagation(); deleteScreenshot(${s.id})" title="ลบรูปภาพ">
+                        <button class="stk-screenshot-btn btn-del mode-readonly-hide" data-act="deleteScreenshot" data-args="[${s.id}]" data-stop title="ลบรูปภาพ">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                         </button>
                     </div>
@@ -1311,7 +1311,7 @@ function renderSidebarScreenshot() {
         `;
     } else {
         container.innerHTML = `
-            <div class="stk-sidebar-thumb-wrap" onclick="viewLightbox(${s.id})">
+            <div class="stk-sidebar-thumb-wrap" data-act="viewLightbox" data-args="[${s.id}]">
                 <img class="stk-sidebar-thumb" src="${imgSrc}" alt="${escHtmlStk(s.name)}">
                 <div class="stk-sidebar-thumb-overlay">
                     <span>คลิกเพื่อดูรูปภาพขนาดเต็ม</span>

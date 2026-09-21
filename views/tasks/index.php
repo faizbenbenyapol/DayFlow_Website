@@ -17,7 +17,7 @@
             </div>
             <div class="quadrant-meta">
                 <span class="quadrant-count" id="q1-count">0 รายการ</span>
-                <button class="btn btn-ghost btn-sm" onclick="openAddTask(1)">+ เพิ่ม</button>
+                <button class="btn btn-ghost btn-sm" data-act="openAddTask" data-args="[1]">+ เพิ่ม</button>
             </div>
         </div>
         <div class="quadrant-body" id="q1-list" data-quadrant="1"></div>
@@ -32,7 +32,7 @@
             </div>
             <div class="quadrant-meta">
                 <span class="quadrant-count" id="q2-count">0 รายการ</span>
-                <button class="btn btn-ghost btn-sm" onclick="openAddTask(2)">+ เพิ่ม</button>
+                <button class="btn btn-ghost btn-sm" data-act="openAddTask" data-args="[2]">+ เพิ่ม</button>
             </div>
         </div>
         <div class="quadrant-body" id="q2-list" data-quadrant="2"></div>
@@ -47,7 +47,7 @@
             </div>
             <div class="quadrant-meta">
                 <span class="quadrant-count" id="q3-count">0 รายการ</span>
-                <button class="btn btn-ghost btn-sm" onclick="openAddTask(3)">+ เพิ่ม</button>
+                <button class="btn btn-ghost btn-sm" data-act="openAddTask" data-args="[3]">+ เพิ่ม</button>
             </div>
         </div>
         <div class="quadrant-body" id="q3-list" data-quadrant="3"></div>
@@ -62,7 +62,7 @@
             </div>
             <div class="quadrant-meta">
                 <span class="quadrant-count" id="q4-count">0 รายการ</span>
-                <button class="btn btn-ghost btn-sm" onclick="openAddTask(4)">+ เพิ่ม</button>
+                <button class="btn btn-ghost btn-sm" data-act="openAddTask" data-args="[4]">+ เพิ่ม</button>
             </div>
         </div>
         <div class="quadrant-body" id="q4-list" data-quadrant="4"></div>
@@ -122,7 +122,7 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-ghost" type="button" data-close-modal>ยกเลิก</button>
-            <button class="btn btn-primary" type="button" onclick="saveEditTask()">บันทึก</button>
+            <button class="btn btn-primary" type="button" data-act="saveEditTask">บันทึก</button>
         </div>
     </div>
 </div>
@@ -178,7 +178,7 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-ghost" type="button" data-close-modal>ยกเลิก</button>
-            <button class="btn btn-primary" type="button" onclick="saveAddTask()">บันทึก</button>
+            <button class="btn btn-primary" type="button" data-act="saveAddTask">บันทึก</button>
         </div>
     </div>
 </div>

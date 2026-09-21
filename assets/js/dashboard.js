@@ -238,7 +238,7 @@ function renderTasksWidget(data) {
 
         const qColor = QUADRANT_COLOR[task.quadrant] || 'var(--color-border-2)';
 
-        html += '<div class="widget-task-item" onclick="window.location.href=\'' + BASE_URL + '/tasks\'" style="cursor:pointer;">'
+        html += '<div class="widget-task-item" data-nav="\'' + BASE_URL + '/tasks\'" style="cursor:pointer;">'
             + '<span class="widget-task-dot" style="background:' + qColor + '"></span>'
             + '<span class="widget-task-title">' + escHtml(task.title) + '</span>'
             + badge
@@ -262,7 +262,7 @@ function renderCalendarWidget(data) {
     data.today_events.forEach(function (ev) {
         let timeStr = ev.is_all_day ? 'ทั้งวัน' : new Date(ev.start_datetime).toTimeString().slice(0, 5);
         const dot   = ev.color || '#6366f1';
-        html += '<div class="widget-event-item" onclick="window.location.href=\'' + BASE_URL + '/planner\'" style="cursor:pointer;">'
+        html += '<div class="widget-event-item" data-nav="\'' + BASE_URL + '/planner\'" style="cursor:pointer;">'
             + '<span class="widget-event-dot" style="background:' + escHtml(dot) + '"></span>'
             + '<span class="widget-event-time">' + escHtml(timeStr) + '</span>'
             + '<span class="widget-event-title" style="color:var(--color-text); font-weight:500;">' + escHtml(ev.title) + '</span>'
@@ -330,7 +330,7 @@ function renderWorkoutWidget(data) {
     if (session.weight_kg)           details += '<span>🏋️ ' + session.weight_kg + ' กก.</span>';
 
     el.innerHTML =
-        '<div class="widget-workout-card" onclick="window.location.href=\'' + BASE_URL + '/exercise\'" style="cursor:pointer; display:flex; flex-direction:column; gap:8px;">'
+        '<div class="widget-workout-card" data-nav="\'' + BASE_URL + '/exercise\'" style="cursor:pointer; display:flex; flex-direction:column; gap:8px;">'
         +   '<div class="widget-workout-top" style="display:flex; justify-content:space-between; align-items:center;">'
         +       '<span class="workout-type-badge" data-wtype="' + escHtml(session.type) + '" style="font-size:0.75rem; font-weight:700; background:rgba(34,197,94,0.12); color:#16a34a; padding:4px 10px; border-radius:8px;">' + escHtml(session.type) + '</span>'
         +       '<span class="widget-workout-ago" style="font-size:0.75rem; color:var(--color-muted);">' + daysAgo + '</span>'
@@ -360,7 +360,7 @@ function renderSubscriptionsWidget(data) {
         const daysLabel = days === 0 ? 'วันนี้' : days < 0 ? 'เกิน ' + Math.abs(days) + ' วัน' : 'อีก ' + days + ' วัน';
         const amtLabel  = sub.amount > 0 ? formatMoney(sub.amount) + ' บาท' : '';
 
-        html += '<div class="widget-sub-item" onclick="window.location.href=\'' + BASE_URL + '/subscriptions\'" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--color-border);">'
+        html += '<div class="widget-sub-item" data-nav="\'' + BASE_URL + '/subscriptions\'" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--color-border);">'
             + '<div class="widget-sub-info" style="display:flex; flex-direction:column; gap:2px;">'
             +   '<span class="widget-sub-name" style="font-weight:600; color:var(--color-text);">' + escHtml(sub.name) + '</span>'
             +   (amtLabel ? '<span class="widget-sub-amount" style="font-size:0.72rem; color:var(--color-muted);">' + amtLabel + '</span>' : '')
@@ -402,7 +402,7 @@ function renderProjectsWidget(data) {
         };
         const statusCls = badgeClasses[proj.status] || 'muted';
 
-        html += '<div class="widget-project-item" onclick="window.location.href=\'' + BASE_URL + '/projects\'" style="cursor:pointer; padding:12px 0; border-bottom:1px solid var(--color-border); display:flex; flex-direction:column; gap:8px;">'
+        html += '<div class="widget-project-item" data-nav="\'' + BASE_URL + '/projects\'" style="cursor:pointer; padding:12px 0; border-bottom:1px solid var(--color-border); display:flex; flex-direction:column; gap:8px;">'
             +   '  <div class="widget-project-top" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">'
             +   '    <span class="widget-project-name" style="font-weight:600; color:var(--color-text);">' + escHtml(proj.name) + '</span>'
             +   '    <span class="wdg-badge ' + statusCls + '">' + escHtml(proj.status) + '</span>'
@@ -445,7 +445,7 @@ function renderNotesWidget(data) {
         const previewText = note.is_encrypted ? 'เนื้อหานี้ได้รับการเข้ารหัสความปลอดภัย' : (note.preview || 'ไม่มีเนื้อหาหลัก');
         const pinDotHtml = note.pinned ? '<span class="widget-note-pinned-dot"></span>' : '';
 
-        html += '<div class="widget-note-item" onclick="window.location.href=\'' + BASE_URL + '/notes\'" style="cursor:pointer; display:flex; flex-direction:column; gap:4px; padding:10px 0; border-bottom:1px solid var(--color-border);">'
+        html += '<div class="widget-note-item" data-nav="\'' + BASE_URL + '/notes\'" style="cursor:pointer; display:flex; flex-direction:column; gap:4px; padding:10px 0; border-bottom:1px solid var(--color-border);">'
             +   '  <div class="widget-note-header" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">'
             +   '    <span class="widget-note-title" style="font-weight:600; color:var(--color-text); display:flex; align-items:center; gap:6px;">'
             +          pinDotHtml
@@ -492,7 +492,7 @@ function renderStocksWidget(data) {
         const symbol = stk.currency === 'THB' ? '฿' : '$';
         const canvasId = 'sparkline-' + idx;
 
-        html += '<div class="widget-stock-item" onclick="window.location.href=\'' + BASE_URL + '/stocks\'" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--color-border);">'
+        html += '<div class="widget-stock-item" data-nav="\'' + BASE_URL + '/stocks\'" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--color-border);">'
             +   '  <div class="widget-stock-left" style="min-width:70px;">'
             +   '    <span class="widget-stock-ticker" style="font-weight:700; font-size:0.95rem; color:var(--color-text);">' + escHtml(stk.ticker) + '</span>'
             +   '    <span class="widget-stock-market" style="font-size:0.68rem; color:var(--color-muted-2); text-transform:uppercase; display:block;">' + escHtml(stk.market) + '</span>'
@@ -668,16 +668,23 @@ function renderTransferWidget(data) {
         const copyText = BASE_URL + '/transfer?code=' + t.code;
 
         html += '<div class="widget-transfer-item" style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--color-border);">'
-            +   '  <div class="widget-transfer-left" onclick="window.location.href=\'' + BASE_URL + '/transfer\'" style="cursor:pointer; display:flex; flex-direction:column; gap:2px; overflow:hidden; flex:1;">'
+            +   '  <div class="widget-transfer-left" data-nav="\'' + BASE_URL + '/transfer\'" style="cursor:pointer; display:flex; flex-direction:column; gap:2px; overflow:hidden; flex:1;">'
             +   '    <span class="widget-transfer-code" style="font-weight:600; font-size:0.95rem; color:var(--color-text);">' + escHtml(t.code) + '</span>'
             +   '    <span class="widget-transfer-meta" style="font-size:0.75rem; color:var(--color-muted); white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">' + files.length + ' ไฟล์ · ' + sizeStr + ' · ดาวน์โหลด ' + t.download_count + ' ครั้ง</span>'
             +   '  </div>'
             +   '  <div class="widget-transfer-right" style="flex-shrink:0; display:flex; align-items:center; gap:8px;">'
-            +   '    <button class="btn-copy-code" onclick="event.stopPropagation(); navigator.clipboard.writeText(\'' + copyText + '\'); toast(\'คัดลอกลิงก์รับไฟล์แล้ว\', \'success\');">คัดลอกลิงก์</button>'
+            +   '    <button class="btn-copy-code" data-act="copyTransferLink" data-args="[&quot;' + copyText + '&quot;]" data-stop>คัดลอกลิงก์</button>'
             +        (isExpired ? '<span class="wdg-badge danger">หมดอายุ</span>' : '<span class="wdg-badge success">ใช้งานได้</span>')
             +   '  </div>'
             +   '</div>';
     });
 
     el.innerHTML = html;
+}
+
+/* Copying the transfer link used to be written out inline in the widget. */
+function copyTransferLink(url) {
+    navigator.clipboard.writeText(url)
+        .then(() => toast('คัดลอกลิงก์รับไฟล์แล้ว', 'success'))
+        .catch(() => toast('คัดลอกไม่สำเร็จ', 'danger'));
 }

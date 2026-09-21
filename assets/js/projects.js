@@ -109,7 +109,7 @@ function renderProjects() {
         return `
             <div class="project-card ${isActive ? 'active-project' : ''}" 
                  style="--pc-accent: ${prAccent}" 
-                 onclick="selectProject(${p.id})">
+                 data-act="selectProject" data-args="[${p.id}]">
                 <div class="project-card-header">
                     <span class="project-card-title truncate" title="${escHtml(p.name)}">${escHtml(p.name)}</span>
                     <span class="badge ${statusBadgeCls}" style="font-size:0.7rem; font-weight:600; padding:1px 6px;">${p.status}</span>
@@ -226,7 +226,7 @@ function renderProjectsList(list) {
         return `
             <div class="project-card ${isActive ? 'active-project' : ''}" 
                  style="--pc-accent: ${prAccent}" 
-                 onclick="selectProject(${p.id})">
+                 data-act="selectProject" data-args="[${p.id}]">
                 <div class="project-card-header">
                     <span class="project-card-title truncate" title="${escHtml(p.name)}">${escHtml(p.name)}</span>
                     <span class="badge ${statusBadgeCls}" style="font-size:0.7rem; font-weight:600; padding:1px 6px;">${p.status}</span>
@@ -393,7 +393,7 @@ function renderKanbanCards() {
                 `;
             } else {
                 listEl.innerHTML = `
-                    <div class="kanban-empty-placeholder" onclick="toggleQuickAddForm('${col}')" title="คลิกเพื่อเพิ่มงานย่อยในคอลัมน์นี้">
+                    <div class="kanban-empty-placeholder" data-act="toggleQuickAddForm" data-args="["${col}"]" title="คลิกเพื่อเพิ่มงานย่อยในคอลัมน์นี้">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom:6px; opacity:0.6;"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg>
                         <span>ไม่มีงานในคอลัมน์นี้</span>
                         <span style="font-size:0.68rem; opacity:0.6; margin-top:2px;">คลิกเพื่อเพิ่มงานด่วน</span>
@@ -479,15 +479,15 @@ function renderKanbanCardItem(task) {
     // ปุ่มแก้ไขสำหรับสิทธิ์ทั่วไป (ซ่อนเมื่อเป็น Viewer)
     const cardActionsHtml = isViewer ? '' : `
         <div style="position: absolute; right: 10px; top: 10px; display: flex; gap: 4px;">
-            <button onclick="openEditTask(${task.id})" style="background:none; border:none; cursor:pointer; color:var(--color-muted-2); font-size:0.8rem;" title="แก้ไขงาน">&#9998;</button>
-            <button onclick="deleteTask(${task.id})" style="background:none; border:none; cursor:pointer; color:var(--color-danger); font-size:0.8rem;" title="ลบงาน">&times;</button>
+            <button data-act="openEditTask" data-args="[${task.id}]" style="background:none; border:none; cursor:pointer; color:var(--color-muted-2); font-size:0.8rem;" title="แก้ไขงาน">&#9998;</button>
+            <button data-act="deleteTask" data-args="[${task.id}]" style="background:none; border:none; cursor:pointer; color:var(--color-danger); font-size:0.8rem;" title="ลบงาน">&times;</button>
         </div>
     `;
 
     return `
         <div class="kanban-card" data-id="${task.id}" style="border-left: 3.5px solid ${dotColor};">
             ${cardActionsHtml}
-            <div class="kanban-card-title font-medium" ${isViewer ? '' : `onclick="openEditTask(${task.id})"`} style="padding-right: 28px;">${escHtml(task.title)}</div>
+            <div class="kanban-card-title font-medium" ${isViewer ? '' : `data-act="openEditTask" data-args="[${task.id}]"`} style="padding-right: 28px;">${escHtml(task.title)}</div>
             <div class="kanban-card-meta">
                 <div class="kanban-card-left">
                     <span class="priority-tag priority-${task.priority.toLowerCase()}" style="font-size:0.62rem; padding: 0px 5px;">${prLabel}</span>
@@ -1066,10 +1066,10 @@ function renderChecklist() {
         return `
             <div class="checklist-item">
                 <div class="checklist-item-left">
-                    <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleChecklistItem(${idx}, this.checked)" style="width:15px; height:15px; cursor:pointer;">
-                    <input type="text" class="checklist-item-input ${item.done ? 'line-through' : ''}" value="${escHtml(item.text)}" onchange="updateChecklistItemText(${idx}, this.value)">
+                    <input type="checkbox" ${item.done ? 'checked' : ''} data-act="toggleChecklistItem" data-args="[${idx}, this.checked]" style="width:15px; height:15px; cursor:pointer;">
+                    <input type="text" class="checklist-item-input ${item.done ? 'line-through' : ''}" value="${escHtml(item.text)}" data-act="updateChecklistItemText" data-args="[${idx}, this.value]">
                 </div>
-                <button type="button" class="checklist-btn-del" onclick="deleteChecklistItem(${idx})">&times;</button>
+                <button type="button" class="checklist-btn-del" data-act="deleteChecklistItem" data-args="[${idx}]">&times;</button>
             </div>
         `;
     }).join('');
@@ -1374,10 +1374,10 @@ async function loadProjectMembers(shouldOpenModal = true) {
                         <div class="member-actions">
                             <span class="member-role-badge ${roleCls}">${m.role}</span>
                             ${showDelete ? `
-                                <button type="button" class="btn-remove-member" onclick="removeMember(${m.id})" title="ลบสมาชิกออกจากกลุ่ม">&#215;</button>
+                                <button type="button" class="btn-remove-member" data-act="removeMember" data-args="[${m.id}]" title="ลบสมาชิกออกจากกลุ่ม">&#215;</button>
                             ` : ''}
                             ${!isOwner && isMe && m.role !== 'Owner' ? `
-                                <button type="button" class="btn btn-danger btn-xs" onclick="removeMember(${m.id})" style="padding:2px 8px; font-size:0.7rem; border-radius:var(--radius-md);">ออกจากโครงการ</button>
+                                <button type="button" class="btn btn-danger btn-xs" data-act="removeMember" data-args="[${m.id}]" style="padding:2px 8px; font-size:0.7rem; border-radius:var(--radius-md);">ออกจากโครงการ</button>
                             ` : ''}
                         </div>
                     </div>
