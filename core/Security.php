@@ -47,7 +47,7 @@ class Security
         header(
             "Content-Security-Policy: default-src 'self'; "
             . "script-src 'self' 'nonce-{$nonce}' https://accounts.google.com https://cdn.jsdelivr.net; "
-            . "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi https://cdn.jsdelivr.net; "
+            . "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/ https://cdn.jsdelivr.net; "
             . "font-src 'self'; worker-src 'self'; img-src 'self' data: blob:; "
             . "connect-src 'self' https://accounts.google.com https://accounts.google.com/gsi/ "
             . "https://oauth2.googleapis.com https://generativelanguage.googleapis.com; "
