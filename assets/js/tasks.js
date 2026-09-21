@@ -62,14 +62,14 @@ function renderTaskItem(task) {
     }
 
     return '<div class="task-item' + (isDone ? ' done' : '') + '" data-id="' + task.id + '" data-quadrant="' + task.quadrant + '">'
-        + '<input type="checkbox" class="task-checkbox" ' + (isDone ? 'checked' : '') + ' data-act="toggleTask" data-args="[" + task.id + ", this.checked]">'
+        + '<input type="checkbox" class="task-checkbox" ' + (isDone ? 'checked' : '') + ' data-act="toggleTask" data-args="[' + task.id + ', &quot;$checked&quot;]" data-on="change">'
         + '<div class="task-content">'
-        + '<div class="task-title" data-act="openEditTask" data-args="[" + task.id + "]">' + escHtml(task.title) + '</div>'
+        + '<div class="task-title" data-act="openEditTask" data-args="[' + task.id + ']">' + escHtml(task.title) + '</div>'
         + (dueHtml ? '<div class="task-meta">' + dueHtml + '</div>' : '')
         + '</div>'
         + '<div class="task-actions">'
-        + '<button class="task-action-btn" data-act="openEditTask" data-args="[" + task.id + "]" title="แก้ไข">&#9998;</button>'
-        + '<button class="task-action-btn danger" data-act="deleteTask" data-args="[" + task.id + "]" title="ลบ">&#10005;</button>'
+        + '<button class="task-action-btn" data-act="openEditTask" data-args="[' + task.id + ']" title="แก้ไข">&#9998;</button>'
+        + '<button class="task-action-btn danger" data-act="deleteTask" data-args="[' + task.id + ']" title="ลบ">&#10005;</button>'
         + '</div>'
         + '</div>';
 }

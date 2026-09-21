@@ -312,13 +312,13 @@ function renderUnifiedStocks() {
         const starColor = item.isWl ? 'var(--color-warning)' : 'var(--color-border)';
         const starFill = item.isWl ? 'var(--color-warning)' : 'none';
         
-        const aiBtn = `<button class="btn btn-ai-sparkle btn-sm" data-act="analyzeStockInstantly" data-args="["${item.ticker}","${item.market}"]" title="วิเคราะห์ด้วย AI" style="padding:0.25rem 0.5rem">
+        const aiBtn = `<button class="btn btn-ai-sparkle btn-sm" data-act="analyzeStockInstantly" data-args="[&quot;${item.ticker}&quot;,&quot;${item.market}&quot;]" title="วิเคราะห์ด้วย AI" style="padding:0.25rem 0.5rem">
                 <svg class="sparkle-svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:2px"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6C8.57 12.05 8 10.61 8 9c0-2.21 1.79-4 4-4s4 1.79 4 4c0 1.61-.57 3.05-2.15 4.1z"/></svg> วิเคราะห์
             </button>`;
 
         let html = `<tr>
             <td style="text-align:center">
-                <svg data-act="toggleWatchlist" data-args="["${item.ticker}", "${item.market}"]" style="cursor:pointer;color:${starColor};fill:${starFill};transition:all 0.2s" width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg data-act="toggleWatchlist" data-args="[&quot;${item.ticker}&quot;, &quot;${item.market}&quot;]" style="cursor:pointer;color:${starColor};fill:${starFill};transition:all 0.2s" width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
             </td>
             <td>
                 <span class="stk-ticker">${escHtmlStk(item.ticker)}</span>

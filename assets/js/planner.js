@@ -192,7 +192,7 @@ function renderTodos() {
     el.innerHTML = todosCache.map(t =>
         `<div class="day-todo-item ${t.is_done ? 'done' : ''}" data-id="${t.id}">
             <input type="checkbox" ${t.is_done ? 'checked' : ''} style="accent-color:var(--color-text);cursor:pointer; width:16px; height:16px;"
-                   data-act="toggleTodo" data-args="[${t.id}, this.checked]">
+                   data-act="toggleTodo" data-args="[${t.id}, &quot;$checked&quot;]" data-on="change">
             <span class="day-todo-text">${escHtml(t.title)}</span>
             <button class="btn-link" data-act="deleteTodo" data-args="[${t.id}]" style="margin-left:auto; color:var(--color-danger); padding: 2px 6px;">ลบ</button>
         </div>`
