@@ -95,23 +95,57 @@ function updateFinancialRatio(income, expense) {
     }
 }
 
-async function loadTransactions() {
+// The list is read a page at a time: a few years of transactions is a lot of
+// rows to send and even more to put in the DOM at once.
+const TXN_PAGE_SIZE = 100;
+let txnPagination = null;
+
+async function loadTransactions(append = false) {
     const month = document.getElementById('monthFilter')?.value || '';
     const type = document.getElementById('typeFilter')?.value || '';
     const params = new URLSearchParams();
     if (month) params.set('month', month);
     if (type) params.set('type', type);
+    params.set('limit', TXN_PAGE_SIZE);
+    params.set('offset', append ? transactions.length : 0);
 
     try {
         const data = await apiFetch(BASE_URL + '/api/finance?' + params.toString());
-        transactions = data.transactions || [];
+        const page = data.transactions || [];
+        transactions = append ? transactions.concat(page) : page;
+        txnPagination = data.pagination || null;
 
         // Render view & summary
         renderTransactions();
-        loadSummary();
-        renderCategoryBreakdown();
+        renderLoadMore();
+        if (!append) {
+            loadSummary();
+            renderCategoryBreakdown();
+        }
     } catch { }
 }
+
+function renderLoadMore() {
+    const wrap = document.getElementById('txnLoadMoreWrap');
+    const count = document.getElementById('txnCount');
+    if (!wrap || !txnPagination) return;
+
+    wrap.style.display = txnPagination.has_more ? 'block' : 'none';
+    if (count && typeof txnPagination.total === 'number') {
+        count.textContent = 'แสดง ' + transactions.length + ' จาก ' + txnPagination.total + ' รายการ';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('txnLoadMore')?.addEventListener('click', async function (event) {
+        const button = event.currentTarget;
+        button.disabled = true;
+        button.textContent = 'กำลังโหลด...';
+        await loadTransactions(true);
+        button.disabled = false;
+        button.textContent = 'โหลดเพิ่ม';
+    });
+});
 
 function renderTransactions(filteredList) {
     const tbody = document.getElementById('transactionList');

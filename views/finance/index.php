@@ -126,6 +126,10 @@
                     <tr><td colspan="6" class="text-center text-muted" style="padding:2rem">กำลังโหลด...</td></tr>
                 </tbody>
             </table>
+            <div id="txnLoadMoreWrap" class="text-center" style="display:none; padding: var(--space-4) 0;">
+                <button class="btn btn-ghost btn-sm" id="txnLoadMore">โหลดเพิ่ม</button>
+                <p class="text-xs text-muted" id="txnCount" style="margin-top:6px"></p>
+            </div>
         </div>
     </div>
 

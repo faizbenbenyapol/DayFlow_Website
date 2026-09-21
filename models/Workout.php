@@ -5,7 +5,21 @@
 
 class Workout
 {
-    public static function listForUser(int $userId, int $limit = 50, string $month = ''): array
+    /** How many workouts match, so the page can say what it is showing. */
+    public static function countForUser(int $userId, string $month = ''): int
+    {
+        $sql = 'SELECT COUNT(*) FROM workouts WHERE user_id = ?';
+        $params = [$userId];
+        if ($month) {
+            [$monthStart, $monthEnd] = monthBounds($month);
+            $sql .= ' AND workout_date >= ? AND workout_date < ?';
+            $params[] = $monthStart;
+            $params[] = $monthEnd;
+        }
+        return (int)DB::run($sql, $params)->fetchColumn();
+    }
+
+    public static function listForUser(int $userId, int $limit = 50, string $month = '', int $offset = 0): array
     {
         $sql = 'SELECT id, workout_date, type, duration_min, sets, reps, weight_kg, notes
                 FROM workouts WHERE user_id = ?';
@@ -18,8 +32,8 @@ class Workout
             $params[] = $monthEnd;
         }
 
-        $sql .= ' ORDER BY workout_date DESC, id DESC LIMIT ?';
-        $params[] = $limit;
+        $sql .= ' ORDER BY workout_date DESC, id DESC'
+              . ' LIMIT ' . (int)$limit . ' OFFSET ' . (int)$offset;
 
         return DB::run($sql, $params)->fetchAll();
     }

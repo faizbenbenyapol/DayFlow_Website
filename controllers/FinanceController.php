@@ -29,8 +29,14 @@ class FinanceController
         $type      = Request::query('type', '');
         $startDate = Request::query('start_date', '');
         $endDate   = Request::query('end_date', '');
-        $data      = Finance::listForUser($userId, $month, $type, $startDate, $endDate);
-        Response::json(['transactions' => $data]);
+        $window = Paginator::fromRequest();
+        $data   = Finance::listForUser($userId, $month, $type, $startDate, $endDate, $window['limit'], $window['offset']);
+        $total  = Finance::countForUser($userId, $month, $type, $startDate, $endDate);
+
+        Response::json([
+            'transactions' => $data,
+            'pagination'   => Paginator::meta($window, count($data), $total),
+        ]);
     }
 
     public function apiCreate(): void

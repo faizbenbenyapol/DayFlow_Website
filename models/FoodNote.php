@@ -5,7 +5,17 @@
 
 class FoodNote
 {
-    public static function listForUser(int $userId, string $type = '', string $reaction = ''): array
+    /** How many entries match the filters. */
+    public static function countForUser(int $userId, string $type = '', string $reaction = ''): int
+    {
+        $sql = 'SELECT COUNT(*) FROM food_notes WHERE user_id = ?';
+        $params = [$userId];
+        if ($type)     { $sql .= ' AND type = ?';     $params[] = $type; }
+        if ($reaction) { $sql .= ' AND reaction = ?'; $params[] = $reaction; }
+        return (int)DB::run($sql, $params)->fetchColumn();
+    }
+
+    public static function listForUser(int $userId, string $type = '', string $reaction = '', int $limit = 100, int $offset = 0): array
     {
         $where  = 'WHERE user_id = ?';
         $params = [$userId];
@@ -23,7 +33,8 @@ class FoodNote
             "SELECT id, name, type, reaction, severity, symptoms, notes, created_at
              FROM food_notes
              $where
-             ORDER BY reaction ASC, severity DESC, name ASC",
+             ORDER BY reaction ASC, severity DESC, name ASC"
+             . ' LIMIT ' . (int)$limit . ' OFFSET ' . (int)$offset,
             $params
         )->fetchAll();
     }

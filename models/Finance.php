@@ -5,13 +5,15 @@
 
 class Finance
 {
-    public static function listForUser(int $userId, string $month = '', string $type = '', string $startDate = '', string $endDate = ''): array
+    /**
+     * Builds the shared WHERE clause for a filtered transaction list, so the
+     * listing and its count can never drift apart.
+     *
+     * @return array{0: string, 1: array}
+     */
+    private static function filterClause(int $userId, string $month, string $type, string $startDate, string $endDate): array
     {
-        $sql = 'SELECT f.id, f.type, f.amount, f.description, f.txn_date,
-                       c.name AS category_name, f.category_id
-                FROM finances f
-                LEFT JOIN finance_categories c ON c.id = f.category_id
-                WHERE f.user_id = ?';
+        $sql    = ' WHERE f.user_id = ?';
         $params = [$userId];
 
         if ($month) {
@@ -33,7 +35,31 @@ class Finance
             $params[] = $type;
         }
 
-        $sql .= ' ORDER BY f.txn_date DESC, f.id DESC LIMIT 1000';
+        return [$sql, $params];
+    }
+
+    /** How many transactions match the filters, for the page count. */
+    public static function countForUser(int $userId, string $month = '', string $type = '', string $startDate = '', string $endDate = ''): int
+    {
+        [$where, $params] = self::filterClause($userId, $month, $type, $startDate, $endDate);
+        return (int)DB::run('SELECT COUNT(*) FROM finances f' . $where, $params)->fetchColumn();
+    }
+
+    public static function listForUser(int $userId, string $month = '', string $type = '', string $startDate = '', string $endDate = '', int $limit = 1000, int $offset = 0): array
+    {
+        [$where, $params] = self::filterClause($userId, $month, $type, $startDate, $endDate);
+
+        $sql = 'SELECT f.id, f.type, f.amount, f.description, f.txn_date,
+                       c.name AS category_name, f.category_id
+                FROM finances f
+                LEFT JOIN finance_categories c ON c.id = f.category_id'
+             . $where
+             . ' ORDER BY f.txn_date DESC, f.id DESC'
+             // Bound values rather than placeholders: LIMIT/OFFSET are ints
+             // already cast by the caller, and binding them would force
+             // emulated prepares back on.
+             . ' LIMIT ' . (int)$limit . ' OFFSET ' . (int)$offset;
+
         return DB::run($sql, $params)->fetchAll();
     }
 

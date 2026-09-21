@@ -2,18 +2,23 @@
 
 class SkillLog
 {
-    public static function all(int $userId, int $limit = 50): array
+    /** How many log entries exist in total. */
+    public static function countForUser(int $userId): int
+    {
+        return (int)DB::run('SELECT COUNT(*) FROM skill_logs WHERE user_id = ?', [$userId])->fetchColumn();
+    }
+
+    public static function all(int $userId, int $limit = 50, int $offset = 0): array
     {
         $sql = "SELECT l.*, s.name as skill_name, s.color as skill_color 
                 FROM skill_logs l
                 JOIN skills s ON l.skill_id = s.id
                 WHERE l.user_id = ? 
-                ORDER BY l.start_time DESC LIMIT ?";
-        $stmt = DB::conn()->prepare($sql);
-        $stmt->bindValue(1, $userId, PDO::PARAM_INT);
-        $stmt->bindValue(2, $limit, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll();
+                ORDER BY l.start_time DESC"
+             . ' LIMIT ' . (int)$limit . ' OFFSET ' . (int)$offset;
+        // LIMIT/OFFSET are interpolated above, so the only placeholder left
+        // is the user id.
+        return DB::run($sql, [$userId])->fetchAll();
     }
 
     public static function create(int $userId, string $skillId, string $startTime, string $endTime, int $durationSeconds, string $notes): string

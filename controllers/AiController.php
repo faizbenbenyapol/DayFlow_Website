@@ -269,8 +269,13 @@ class AiController
     public function apiHistory(): void
     {
         $userId = Auth::userId();
-        $items  = AiGeneration::listForUser($userId, 50);
-        Response::json(['items' => $items]);
+        $window = Paginator::fromRequest(50);
+        $items  = AiGeneration::listForUser($userId, $window['limit'], $window['offset']);
+
+        Response::json([
+            'items'      => $items,
+            'pagination' => Paginator::meta($window, count($items), AiGeneration::countForUser($userId)),
+        ]);
     }
 
     public function apiHistoryDelete(string $id): void

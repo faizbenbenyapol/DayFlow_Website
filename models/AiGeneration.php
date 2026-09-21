@@ -64,11 +64,18 @@ class AiGeneration
         return $row;
     }
 
-    public static function listForUser(int $userId, int $limit = 30): array
+    /** How many generations this account has kept. */
+    public static function countForUser(int $userId): int
+    {
+        return (int)DB::run('SELECT COUNT(*) FROM ai_generations WHERE user_id = ?', [$userId])->fetchColumn();
+    }
+
+    public static function listForUser(int $userId, int $limit = 30, int $offset = 0): array
     {
         $stmt = DB::run(
             'SELECT id, kind, keyword, platform, style, status, video_url, created_at, result_json
-             FROM ai_generations WHERE user_id = ? ORDER BY created_at DESC LIMIT ' . (int)$limit,
+             FROM ai_generations WHERE user_id = ? ORDER BY created_at DESC'
+             . ' LIMIT ' . (int)$limit . ' OFFSET ' . (int)$offset,
             [$userId]
         );
         $out = [];

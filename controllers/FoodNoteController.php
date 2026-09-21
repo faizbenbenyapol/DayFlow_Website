@@ -23,10 +23,13 @@ class FoodNoteController
         $userId   = Auth::userId();
         $type     = Request::query('type', '');
         $reaction = Request::query('reaction', '');
-        $items    = FoodNote::listForUser($userId, $type, $reaction);
+        $window   = Paginator::fromRequest();
+        $items    = FoodNote::listForUser($userId, $type, $reaction, $window['limit'], $window['offset']);
+
         Response::json([
-            'items'   => $items,
-            'summary' => FoodNote::summary($userId),
+            'items'      => $items,
+            'summary'    => FoodNote::summary($userId),
+            'pagination' => Paginator::meta($window, count($items), FoodNote::countForUser($userId, $type, $reaction)),
         ]);
     }
 

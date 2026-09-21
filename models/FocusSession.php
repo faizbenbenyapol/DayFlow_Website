@@ -5,14 +5,21 @@
 
 class FocusSession
 {
-    public static function listForUser(int $userId, int $limit = 50): array
+    /** How many sessions have been logged in total. */
+    public static function countForUser(int $userId): int
+    {
+        return (int)DB::run('SELECT COUNT(*) FROM focus_sessions WHERE user_id = ?', [$userId])->fetchColumn();
+    }
+
+    public static function listForUser(int $userId, int $limit = 50, int $offset = 0): array
     {
         $sql = 'SELECT f.*, t.title as task_title 
                 FROM focus_sessions f
                 LEFT JOIN tasks t ON f.task_id = t.id
                 WHERE f.user_id = ?
-                ORDER BY f.completed_at DESC, f.id DESC LIMIT ?';
-        return DB::run($sql, [$userId, $limit])->fetchAll();
+                ORDER BY f.completed_at DESC, f.id DESC'
+              . ' LIMIT ' . (int)$limit . ' OFFSET ' . (int)$offset;
+        return DB::run($sql, [$userId])->fetchAll();
     }
 
     public static function create(int $userId, array $data): int

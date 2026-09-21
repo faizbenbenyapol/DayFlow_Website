@@ -21,10 +21,14 @@ class ExerciseController
     public function apiList(): void
     {
         $userId = Auth::userId();
-        $limit  = max(1, min(200, (int)Request::query('limit', 50)));
         $month  = Request::query('month', '');
-        $data   = Workout::listForUser($userId, $limit, $month);
-        Response::json(['workouts' => $data]);
+        $window = Paginator::fromRequest(50);
+        $data   = Workout::listForUser($userId, $window['limit'], $month, $window['offset']);
+
+        Response::json([
+            'workouts'   => $data,
+            'pagination' => Paginator::meta($window, count($data), Workout::countForUser($userId, $month)),
+        ]);
     }
 
     public function apiCreate(): void

@@ -53,13 +53,15 @@ class FocusController
      */
     public function apiList(): void
     {
-        $userId = Auth::userId();
-        $sessions = FocusSession::listForUser($userId);
-        $stats = FocusSession::getStats($userId);
+        $userId   = Auth::userId();
+        $window   = Paginator::fromRequest(50);
+        $sessions = FocusSession::listForUser($userId, $window['limit'], $window['offset']);
+        $stats    = FocusSession::getStats($userId);
 
         Response::json([
-            'sessions' => $sessions,
-            'stats' => $stats
+            'sessions'   => $sessions,
+            'stats'      => $stats,
+            'pagination' => Paginator::meta($window, count($sessions), FocusSession::countForUser($userId)),
         ]);
     }
 

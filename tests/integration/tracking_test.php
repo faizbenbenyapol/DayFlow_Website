@@ -295,3 +295,66 @@ test('these endpoints need a session', function (TestClient $_c): void {
         assertContains($anonymous->get($path)['status'], [401, 302], $path . ' must require a session');
     }
 });
+
+// =====================================================
+// Pagination, applied uniformly across the accumulating lists
+// =====================================================
+
+test('every accumulating list reports its window', function (TestClient $_c): void {
+    $client = trackClient('gym');
+
+    foreach (['/api/exercise', '/api/focus', '/api/food-notes', '/api/ai/history'] as $path) {
+        $data = $client->json($client->get($path . '?limit=5'));
+
+        assertArrayHasKey('pagination', $data, $path . ' should report its window');
+        assertSame(5, $data['pagination']['limit'], $path);
+        assertSame(0, $data['pagination']['offset'], $path);
+        assertArrayHasKey('total', $data['pagination'], $path . ' should say how many there are');
+    }
+});
+
+test('older records are reachable through the offset', function (TestClient $_c): void {
+    $client = trackClient('paging');
+
+    // Five workouts, read two at a time. Before pagination the endpoint
+    // returned a fixed most-recent slice and anything behind it was
+    // unreachable.
+    for ($day = 1; $day <= 5; $day++) {
+        $client->post('/api/exercise', [
+            'workout_date' => date('Y-m-d', strtotime("-{$day} days")),
+            'type' => 'รอบที่ ' . $day, 'duration_min' => 10 * $day,
+        ]);
+    }
+
+    $first  = $client->json($client->get('/api/exercise?limit=2&offset=0'));
+    $second = $client->json($client->get('/api/exercise?limit=2&offset=2'));
+    $third  = $client->json($client->get('/api/exercise?limit=2&offset=4'));
+
+    assertSame(5, $first['pagination']['total']);
+    assertSame(2, count($first['workouts']));
+    assertSame(2, count($second['workouts']));
+    assertSame(1, count($third['workouts']), 'the last page is partial');
+
+    assertTrue($first['pagination']['has_more']);
+    assertFalse($third['pagination']['has_more'], 'the final page is the end');
+
+    // Walking the pages must visit each record once and only once.
+    $ids = array_merge(
+        array_column($first['workouts'], 'id'),
+        array_column($second['workouts'], 'id'),
+        array_column($third['workouts'], 'id')
+    );
+    assertSame(5, count($ids));
+    assertSame(5, count(array_unique($ids)), 'pages must not overlap or skip');
+});
+
+test('the skill log reports its window in headers', function (TestClient $_c): void {
+    // That endpoint answers with a bare array the page already reads as one,
+    // so wrapping it would have broken the page.
+    $response = trackClient('gym')->get('/api/skills/logs?limit=5');
+
+    assertSame(200, $response['status']);
+    assertStringContains('X-Pagination-Total:', $response['headers']);
+    assertStringContains('X-Pagination-Has-More:', $response['headers']);
+    assertSame('[', substr(trim($response['body']), 0, 1), 'the body is still a bare array');
+});

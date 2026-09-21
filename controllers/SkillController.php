@@ -86,7 +86,16 @@ class SkillController
     public function apiLogsList()
     {
         $userId = Auth::userId();
-        $logs = SkillLog::all($userId);
+        $window = Paginator::fromRequest(50);
+        $logs   = SkillLog::all($userId, $window['limit'], $window['offset']);
+        $meta   = Paginator::meta($window, count($logs), SkillLog::countForUser($userId));
+
+        // The response is a bare array that the page already reads as one, so
+        // the window travels in headers instead of wrapping (and breaking) it.
+        header('X-Pagination-Total: ' . $meta['total']);
+        header('X-Pagination-Offset: ' . $meta['offset']);
+        header('X-Pagination-Has-More: ' . ($meta['has_more'] ? '1' : '0'));
+
         Response::json($logs);
     }
 
