@@ -27,6 +27,7 @@ if (isset($pageScript) && in_array($pageScript, $sortablePages, true)):
 <?php endif; ?>
 
 <!-- Global JS -->
+<script src="<?= APP_URL ?>/assets/js/actions.js?v=<?= @filemtime(ROOT . '/assets/js/actions.js') ?>"></script>
 <script src="<?= APP_URL ?>/assets/js/app.js?v=<?= @filemtime(ROOT . '/assets/js/app.js') ?>"></script>
 
 <script nonce="<?= h(Security::nonce()) ?>">
