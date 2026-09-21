@@ -17,7 +17,11 @@
 --     ล็อกอินแก้ไข แล้วค่อยรัน UPDATE users SET is_demo = 1 ... ซ้ำอีกครั้ง
 -- =====================================================
 
-SET @demo_username := 'demo';
+-- The introducer pins the variable to utf8mb4 so it matches users.username.
+-- Without it the variable takes the connection's character set, and the
+-- docker entrypoint connects as utf8mb3 — where utf8mb4_unicode_ci is not a
+-- valid collation, so the whole migration aborted and every later one with it.
+SET @demo_username := _utf8mb4'demo' COLLATE utf8mb4_unicode_ci;
 
 -- 1) เพิ่มคอลัมน์ is_demo ให้ users (ถ้ายังไม่มี)
 SET @has_is_demo := (
@@ -34,9 +38,9 @@ EXECUTE is_demo_stmt;
 DEALLOCATE PREPARE is_demo_stmt;
 
 -- 2) ตั้งค่าบัญชีที่ระบุให้เป็นบัญชีตัวอย่าง
-UPDATE users SET is_demo = 1 WHERE username = @demo_username COLLATE utf8mb4_unicode_ci;
+UPDATE users SET is_demo = 1 WHERE username = @demo_username;
 
-SET @demo_user_id := (SELECT id FROM users WHERE username = @demo_username COLLATE utf8mb4_unicode_ci LIMIT 1);
+SET @demo_user_id := (SELECT id FROM users WHERE username = @demo_username LIMIT 1);
 
 -- 3) สร้างลิงก์แชร์แบบอ่านอย่างเดียวให้บัญชีตัวอย่าง (ถ้ายังไม่มี)
 INSERT INTO app_shares (user_id, token, label, menus, expires_at)
