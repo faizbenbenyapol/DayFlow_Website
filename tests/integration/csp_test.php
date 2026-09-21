@@ -107,3 +107,56 @@ test('the policy shuts the other doors too', function (TestClient $client): void
         assertStringContains($directive, $headers, $why);
     }
 });
+
+test('every page that declares an action also loads the dispatcher', function (TestClient $client): void {
+    // data-act is inert markup on its own. The login page shipped without
+    // actions.js once and every button on it silently did nothing.
+    $pages = array_merge(CSP_PAGES, ['/login']);
+
+    foreach ($pages as $page) {
+        $response = $client->get($page);
+        if ($response['status'] !== 200) continue;
+        if (!str_contains($response['body'], 'data-act=')) continue;
+
+        assertStringContains('assets/js/actions.js', $response['body'],
+            $page . ' carries data-act markup but never loads the dispatcher');
+    }
+});
+
+test('every data-args the server sends is valid JSON', function (TestClient $client): void {
+    // The dispatcher parses this attribute; anything else drops the arguments
+    // on the floor and calls the handler with none.
+    foreach (array_merge(CSP_PAGES, ['/login']) as $page) {
+        $response = $client->get($page);
+        if ($response['status'] !== 200) continue;
+
+        preg_match_all('/data-args="([^"]*)"/', $response['body'], $matches);
+        foreach ($matches[1] as $raw) {
+            $decoded = html_entity_decode($raw, ENT_QUOTES, 'UTF-8');
+            assertTrue(json_decode($decoded, true) !== null || $decoded === 'null',
+                $page . ' has an unparseable data-args: ' . $raw);
+        }
+    }
+});
+
+test('the scripts write valid data-args too', function (TestClient $client): void {
+    // Markup built in JavaScript is where the quoting goes wrong: a bare " ends
+    // the attribute early, and `this.checked` was never JSON to begin with.
+    foreach (['actions', 'app', 'dashboard', 'notes', 'projects', 'finance', 'stocks',
+              'tasks', 'planner', 'files', 'transfer', 'settings', 'exercise',
+              'subscriptions', 'food_notes', 'calculator'] as $script) {
+        $response = $client->get('/assets/js/' . $script . '.js');
+        if ($response['status'] !== 200) continue;
+
+        preg_match_all('/data-args="([^"]*)"/', $response['body'], $matches);
+        foreach ($matches[1] as $raw) {
+            $decoded = html_entity_decode($raw, ENT_QUOTES, 'UTF-8');
+            // A template hole or a concatenated id stands in for its value.
+            $decoded = preg_replace('/\$\{[^}]*\}/', '0', $decoded);
+            $decoded = preg_replace("/'\s*\+.*?\+\s*'/", '0', $decoded);
+
+            assertTrue(json_decode($decoded, true) !== null,
+                $script . '.js writes an unparseable data-args: ' . $raw);
+        }
+    }
+});
