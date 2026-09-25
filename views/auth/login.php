@@ -824,5 +824,7 @@ async function handleCredentialResponse(response) {
     }
 }
 </script>
+<!-- The data-act dispatcher: without it none of the buttons above do anything. -->
+<script src="<?= APP_URL ?>/assets/js/actions.js?v=<?= @filemtime(ROOT . '/assets/js/actions.js') ?>"></script>
 </body>
 </html>
