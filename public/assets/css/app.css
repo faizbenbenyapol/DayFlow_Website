@@ -73,6 +73,38 @@
     --danger:      var(--color-danger);
 }
 
+/* Palette: the fixed colours the modules use for accents, badges and charts.
+   The same in every theme; theme-aware colours are the --color-* tokens. */
+:root {
+    --palette-blue-100: #dbeafe;
+    --palette-blue-500: #3b82f6;
+    --palette-blue-700: #1d4ed8;
+    --palette-sky-100: #e0f2fe;
+    --palette-cyan-500: #06b6d4;
+    --palette-cyan-600: #0891b2;
+    --palette-teal-500: #14b8a6;
+    --palette-emerald-400: #34d399;
+    --palette-emerald-500: #10b981;
+    --palette-emerald-600: #059669;
+    --palette-green-400: #4ade80;
+    --palette-green-500: #22c55e;
+    --palette-green-600: #16a34a;
+    --palette-amber-500: #f59e0b;
+    --palette-amber-600: #d97706;
+    --palette-orange-500: #f97316;
+    --palette-red-400: #f87171;
+    --palette-red-500: #ef4444;
+    --palette-red-600: #dc2626;
+    --palette-rose-100: #ffe4e6;
+    --palette-rose-500: #f43f5e;
+    --palette-indigo-500: #6366f1;
+    --palette-violet-100: #ede9fe;
+    --palette-violet-500: #8b5cf6;
+    --palette-purple-500: #a855f7;
+    --palette-gray-100: #f3f4f6;
+    --palette-gray-500: #6b7280;
+}
+
 /* --- Dark Mode Variables --- */
 [data-theme="dark"] {
     --color-bg:         #1d1f24; /* Matte deep dark gray for dark neomorphism */
@@ -340,20 +372,20 @@ hr {
 }
 
 /* ── Per-item pastel accent colors ── */
-.nav-item[href$="/"]              { --nc: #3b82f6; }
-.nav-item[href$="/tasks"]         { --nc: #f43f5e; }
-.nav-item[href$="/notes"]         { --nc: #f59e0b; }
-.nav-item[href$="/planner"]       { --nc: #6366f1; }
-.nav-item[href$="/projects"]      { --nc: #06b6d4; }
-.nav-item[href$="/exercise"]      { --nc: #22c55e; }
-.nav-item[href$="/food-notes"]    { --nc: #f97316; }
-.nav-item[href$="/finance"]       { --nc: #10b981; }
-.nav-item[href$="/subscriptions"] { --nc: #8b5cf6; }
+.nav-item[href$="/"]              { --nc: var(--palette-blue-500); }
+.nav-item[href$="/tasks"]         { --nc: var(--palette-rose-500); }
+.nav-item[href$="/notes"]         { --nc: var(--palette-amber-500); }
+.nav-item[href$="/planner"]       { --nc: var(--palette-indigo-500); }
+.nav-item[href$="/projects"]      { --nc: var(--palette-cyan-500); }
+.nav-item[href$="/exercise"]      { --nc: var(--palette-green-500); }
+.nav-item[href$="/food-notes"]    { --nc: var(--palette-orange-500); }
+.nav-item[href$="/finance"]       { --nc: var(--palette-emerald-500); }
+.nav-item[href$="/subscriptions"] { --nc: var(--palette-violet-500); }
 .nav-item[href$="/calculator"]    { --nc: #0ea5e9; }
-.nav-item[href$="/ai"]            { --nc: #a855f7; }
-.nav-item[href$="/file-tools"]    { --nc: #14b8a6; }
+.nav-item[href$="/ai"]            { --nc: var(--palette-purple-500); }
+.nav-item[href$="/file-tools"]    { --nc: var(--palette-teal-500); }
 .nav-item[href$="/files"]         { --nc: #64748b; }
-.nav-item[href$="/settings"]      { --nc: #6b7280; }
+.nav-item[href$="/settings"]      { --nc: var(--palette-gray-500); }
 
 .nav-item {
     display: flex;

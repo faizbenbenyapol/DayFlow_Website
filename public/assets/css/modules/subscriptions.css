@@ -9,8 +9,8 @@
 }
 
 .sub-card.urgency-ok     { border-left-color: var(--color-border); }
-.sub-card.urgency-warn   { border-left-color: #f59e0b; }
-.sub-card.urgency-danger { border-left-color: #ef4444; }
+.sub-card.urgency-warn   { border-left-color: var(--palette-amber-500); }
+.sub-card.urgency-danger { border-left-color: var(--palette-red-500); }
 
 /* Header row */
 .sub-card-header {
@@ -182,10 +182,10 @@
     margin-right: 2px;
 }
 
-.sub-cycle-monthly { background: #dbeafe; color: #1d4ed8; }
-.sub-cycle-yearly  { background: #ede9fe; color: #6d28d9; }
+.sub-cycle-monthly { background: var(--palette-blue-100); color: var(--palette-blue-700); }
+.sub-cycle-yearly  { background: var(--palette-violet-100); color: #6d28d9; }
 .sub-cycle-weekly  { background: #ccfbf1; color: #0f766e; }
-.sub-cycle-once    { background: #f3f4f6; color: #6b7280; }
+.sub-cycle-once    { background: var(--palette-gray-100); color: var(--palette-gray-500); }
 
 [data-theme="dark"] .sub-cycle-monthly { background: rgba(59,130,246,.15);  color: #93c5fd; }
 [data-theme="dark"] .sub-cycle-yearly  { background: rgba(139,92,246,.15);  color: #c4b5fd; }

@@ -196,8 +196,8 @@
 
 .note-card-btn.active {
     color: #e2a100;
-    background: color-mix(in srgb, #f59e0b 8%, var(--color-surface));
-    border-color: color-mix(in srgb, #f59e0b 30%, var(--color-border));
+    background: color-mix(in srgb, var(--palette-amber-500) 8%, var(--color-surface));
+    border-color: color-mix(in srgb, var(--palette-amber-500) 30%, var(--color-border));
 }
 
 .note-card-btn.danger:hover {
@@ -692,9 +692,9 @@
 
 /* ── Editor tag chips ── */
 #tagWrap .tag {
-    background: color-mix(in srgb, #6366f1 12%, transparent);
-    border-color: color-mix(in srgb, #6366f1 40%, transparent);
-    color: #6366f1;
+    background: color-mix(in srgb, var(--palette-indigo-500) 12%, transparent);
+    border-color: color-mix(in srgb, var(--palette-indigo-500) 40%, transparent);
+    color: var(--palette-indigo-500);
 }
 
 [data-theme="dark"] #tagWrap .tag {
@@ -704,14 +704,14 @@
 }
 
 /* ── Tag color cycling in sidebar ── */
-#tagList .tag:nth-child(8n+1) { --tc: #3b82f6; }  /* blue   */
-#tagList .tag:nth-child(8n+2) { --tc: #f59e0b; }  /* amber  */
-#tagList .tag:nth-child(8n+3) { --tc: #22c55e; }  /* green  */
-#tagList .tag:nth-child(8n+4) { --tc: #f43f5e; }  /* rose   */
-#tagList .tag:nth-child(8n+5) { --tc: #a855f7; }  /* purple */
-#tagList .tag:nth-child(8n+6) { --tc: #f97316; }  /* orange */
-#tagList .tag:nth-child(8n+7) { --tc: #14b8a6; }  /* teal   */
-#tagList .tag:nth-child(8n+8) { --tc: #6366f1; }  /* indigo */
+#tagList .tag:nth-child(8n+1) { --tc: var(--palette-blue-500); }  /* blue   */
+#tagList .tag:nth-child(8n+2) { --tc: var(--palette-amber-500); }  /* amber  */
+#tagList .tag:nth-child(8n+3) { --tc: var(--palette-green-500); }  /* green  */
+#tagList .tag:nth-child(8n+4) { --tc: var(--palette-rose-500); }  /* rose   */
+#tagList .tag:nth-child(8n+5) { --tc: var(--palette-purple-500); }  /* purple */
+#tagList .tag:nth-child(8n+6) { --tc: var(--palette-orange-500); }  /* orange */
+#tagList .tag:nth-child(8n+7) { --tc: var(--palette-teal-500); }  /* teal   */
+#tagList .tag:nth-child(8n+8) { --tc: var(--palette-indigo-500); }  /* indigo */
 
 #tagList .tag {
     color: var(--tc, var(--color-muted));

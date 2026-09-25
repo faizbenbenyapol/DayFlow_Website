@@ -502,11 +502,11 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 }
 
 .toast.toast-warning {
-    background: var(--color-warning, #d97706);
+    background: var(--color-warning, var(--palette-amber-600));
 }
 
 .toast.toast-error {
-    background: var(--color-danger, #dc2626);
+    background: var(--color-danger, var(--palette-red-600));
 }
 
 .toast.toast-info {
@@ -654,9 +654,9 @@ body.modal-open { overflow: hidden; }
 
 .workout-type-badge[data-wtype="วิ่ง"]          { background: #dcfce7; color: #15803d; }
 .workout-type-badge[data-wtype="ยกน้ำหนัก"]    { background: #fee2e2; color: #b91c1c; }
-.workout-type-badge[data-wtype="ว่ายน้ำ"]      { background: #dbeafe; color: #1d4ed8; }
+.workout-type-badge[data-wtype="ว่ายน้ำ"]      { background: var(--palette-blue-100); color: var(--palette-blue-700); }
 .workout-type-badge[data-wtype="ปั่นจักรยาน"]  { background: #ffedd5; color: #c2410c; }
-.workout-type-badge[data-wtype="โยคะ"]          { background: #ede9fe; color: #7c3aed; }
+.workout-type-badge[data-wtype="โยคะ"]          { background: var(--palette-violet-100); color: #7c3aed; }
 .workout-type-badge[data-wtype="HIIT"]           { background: #fce7f3; color: #be185d; }
 .workout-type-badge[data-wtype="เดิน"]          { background: #ccfbf1; color: #0f766e; }
 .workout-type-badge[data-wtype="กระโดดเชือก"]  { background: #f3e8ff; color: #7e22ce; }
