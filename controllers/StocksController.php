@@ -739,11 +739,14 @@ class StocksController
         }
 
         $origName = $file['name'];
-        $mimeType = $file['type'];
         $size     = $file['size'];
         $desc     = Request::input('description', '');
 
-        if (!preg_match('/^image\/(jpeg|png|webp|gif)$/i', $mimeType)) {
+        // The browser's Content-Type and filename are the uploader's to choose,
+        // so both come from the bytes instead: an .html sent as image/png was
+        // stored as .html and rendered as a page of this site.
+        $mimeType = self::detectedImageMime($file['tmp_name']);
+        if ($mimeType === null || @getimagesize($file['tmp_name']) === false) {
             Response::json(['error' => 'อนุญาตเฉพาะไฟล์รูปภาพ (JPG, PNG, WEBP, GIF) เท่านั้น'], 422);
         }
 
@@ -761,12 +764,7 @@ class StocksController
             }
         }
 
-        $ext = pathinfo($origName, PATHINFO_EXTENSION);
-        if (!$ext) {
-            $ext = ($mimeType === 'image/png') ? 'png' : (($mimeType === 'image/webp') ? 'webp' : 'jpg');
-        }
-
-        $storageName = uuid4() . '.' . $ext;
+        $storageName = uuid4() . '.' . self::IMAGE_TYPES[$mimeType];
         $subDir      = 'stocks/' . $userId;
         $fullDir     = UPLOAD_DIR . $subDir;
 
@@ -784,6 +782,55 @@ class StocksController
         $id = Stock::createScreenshot($userId, $origName, $relPath, $size, $mimeType, $desc);
         $screenshot = Stock::getScreenshotById($id, $userId);
         Response::json(['ok' => true, 'screenshot' => $screenshot], 201);
+    }
+
+    /**
+     * GET /api/stocks/screenshots/{id}/image
+     *
+     * uploads/ is closed to direct requests, so the image is streamed from
+     * here, scoped to its owner (or a share link covering stocks). The type
+     * is re-detected rather than read from the row: screenshots stored before
+     * uploads were checked carry whatever the uploader claimed.
+     */
+    public function apiScreenshotImage(string $id): void
+    {
+        $scr = Stock::getScreenshotById((int)$id, Auth::userId());
+        if (!$scr) Response::json(['error' => 'ไม่พบรูปภาพ'], 404);
+
+        $rootPath = realpath(UPLOAD_DIR);
+        $fullPath = realpath(UPLOAD_DIR . $scr['file_path']);
+        if (!$rootPath || !$fullPath || !is_file($fullPath)
+            || strncmp($fullPath, $rootPath . DIRECTORY_SEPARATOR, strlen($rootPath . DIRECTORY_SEPARATOR)) !== 0) {
+            Response::json(['error' => 'ไม่พบรูปภาพ'], 404);
+        }
+
+        $mimeType = self::detectedImageMime($fullPath);
+        if ($mimeType === null) Response::json(['error' => 'ไม่พบรูปภาพ'], 404);
+
+        header('Content-Type: ' . $mimeType);
+        header('Content-Length: ' . filesize($fullPath));
+        header('Content-Disposition: inline');
+        header('X-Content-Type-Options: nosniff');
+        header('Cache-Control: private, max-age=3600');
+        readfile($fullPath);
+        exit;
+    }
+
+    /** Image types a screenshot may be, with the extension each is stored under. */
+    private const IMAGE_TYPES = [
+        'image/jpeg' => 'jpg',
+        'image/png'  => 'png',
+        'image/webp' => 'webp',
+        'image/gif'  => 'gif',
+    ];
+
+    /** The file's real type when it is one of IMAGE_TYPES, otherwise null. */
+    private static function detectedImageMime(string $path): ?string
+    {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime  = $finfo ? finfo_file($finfo, $path) : false;
+        if ($finfo) finfo_close($finfo);
+        return is_string($mime) && isset(self::IMAGE_TYPES[$mime]) ? $mime : null;
     }
 
     public function apiScreenshotDelete(string $id): void

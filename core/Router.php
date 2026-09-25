@@ -273,6 +273,7 @@ class Router
         $this->add('PUT',    '/api/stocks/capital/{id}',      'StocksController', 'apiCapitalUpdate', true);
         $this->add('DELETE', '/api/stocks/capital/{id}',      'StocksController', 'apiCapitalDelete', true);
         $this->add('GET',    '/api/stocks/screenshots',       'StocksController', 'apiScreenshotList', true);
+        $this->add('GET',    '/api/stocks/screenshots/{id}/image', 'StocksController', 'apiScreenshotImage', true);
         $this->add('POST',   '/api/stocks/screenshots',       'StocksController', 'apiScreenshotUpload', true);
         $this->add('DELETE', '/api/stocks/screenshots/{id}',   'StocksController', 'apiScreenshotDelete', true);
 

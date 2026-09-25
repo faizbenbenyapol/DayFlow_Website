@@ -20,6 +20,10 @@ RewriteRule ^config/.*\.php$ - [F,L]
 RewriteRule (^|/)\.(?!well-known/) - [F,L]
 # Tooling, tests, runtime data and backups.
 RewriteRule ^(scripts|tests|storage|backups|docker)(/|$) - [F,L]
+# User uploads are only ever served by a controller, which checks ownership
+# and sends a safe Content-Type. Served directly, an uploaded .html or .svg
+# would run as a page of this site, and anyone with the path could read it.
+RewriteRule ^uploads(/|$) - [F,L]
 # Repository files at the root: docs, compose files, container and proxy config,
 # and the CLI-only cron job.
 RewriteRule ^[^/]+\.(md|ya?ml)$ - [F,L]
