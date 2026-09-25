@@ -5,24 +5,8 @@
 
 class StockPriceCache
 {
-    public static function checkSchema(): void
-    {
-        try {
-            DB::run("SELECT pe_ratio FROM stock_price_cache LIMIT 1");
-        } catch (\Throwable $e) {
-            try {
-                DB::run("ALTER TABLE `stock_price_cache` ADD COLUMN `pe_ratio` DECIMAL(10,2) DEFAULT NULL");
-                DB::run("ALTER TABLE `stock_price_cache` ADD COLUMN `forward_pe` DECIMAL(10,2) DEFAULT NULL");
-                DB::run("ALTER TABLE `stock_price_cache` ADD COLUMN `peg_ratio` DECIMAL(10,2) DEFAULT NULL");
-                DB::run("ALTER TABLE `stock_price_cache` ADD COLUMN `p_fcf_ratio` DECIMAL(10,2) DEFAULT NULL");
-                DB::run("ALTER TABLE `stock_price_cache` ADD COLUMN `eps` DECIMAL(10,2) DEFAULT NULL");
-            } catch (\Throwable $ex) {}
-        }
-    }
-
     public static function getMany(array $tickers): array
     {
-        self::checkSchema();
         if (!$tickers) return [];
         $placeholders = implode(',', array_fill(0, count($tickers), '?'));
         $stmt = DB::run(
@@ -39,7 +23,6 @@ class StockPriceCache
 
     public static function get(string $ticker): ?array
     {
-        self::checkSchema();
         $stmt = DB::run(
             'SELECT ticker, price, prev_close, currency, fetched_at, pe_ratio, forward_pe, peg_ratio, p_fcf_ratio, eps
              FROM stock_price_cache WHERE ticker = ?',
@@ -51,7 +34,6 @@ class StockPriceCache
 
     public static function upsert(string $ticker, float $price, ?float $prevClose, ?string $currency, ?float $pe = null, ?float $forwardPe = null, ?float $peg = null, ?float $pFcf = null, ?float $eps = null): void
     {
-        self::checkSchema();
         
         if ($pe === null) {
             $hash = crc32($ticker);

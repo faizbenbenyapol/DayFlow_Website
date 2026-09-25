@@ -19,6 +19,11 @@ services:
       DB_USER: ${MARIADB_USER:?Set MARIADB_USER in the production .env}
       DB_PASS: ${MARIADB_PASSWORD:?Set MARIADB_PASSWORD in the production .env}
       TIMEZONE: ${TIMEZONE:-Asia/Bangkok}
+      # Browser notifications. .env is not in the image, so the keys have to be
+      # passed in here; left empty, push is simply switched off.
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
 
   caddy:
     image: caddy:2-alpine
@@ -55,6 +60,11 @@ services:
       DB_USER: ${MARIADB_USER:?Set DB_USER in the production .env}
       DB_PASS: ${MARIADB_PASSWORD:?Set MARIADB_PASSWORD in the production .env}
       TIMEZONE: ${TIMEZONE:-Asia/Bangkok}
+      # Browser notifications. .env is not in the image, so the keys have to be
+      # passed in here; left empty, push is simply switched off.
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
     volumes:
       - ./uploads:/var/www/html/uploads
       - ./storage:/var/www/html/storage

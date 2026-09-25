@@ -17,24 +17,7 @@ class FocusController
     {
         $userId = Auth::userId();
 
-        // 1. Automatically run migration script if table focus_sessions doesn't exist
-        try {
-            DB::run('SELECT 1 FROM `focus_sessions` LIMIT 1');
-        } catch (PDOException $e) {
-            $sqlFile = ROOT . '/sql/migrate_focus.sql';
-            if (file_exists($sqlFile)) {
-                try {
-                    $queries = file_get_contents($sqlFile);
-                    DB::conn()->exec($queries);
-                } catch (PDOException $ex) {
-                    Response::abort(500, 'ไม่สามารถติดตั้งตารางโฟกัสอัตโนมัติได้: ' . $ex->getMessage());
-                }
-            } else {
-                Response::abort(500, 'ไม่พบไฟล์สคริปต์สำหรับติดตั้งโครงสร้างตารางข้อมูล: ' . $sqlFile);
-            }
-        }
-
-        // 2. Fetch all open tasks for user
+        // Fetch all open tasks for user
         $allTasks = Task::getAllForUser($userId);
         $openTasks = array_filter($allTasks, fn($t) => $t['status'] === 'open');
 

@@ -122,15 +122,6 @@ final class AccountData
             throw new InvalidArgumentException('ไฟล์นี้มาจาก DayFlow เวอร์ชันใหม่กว่า กรุณาอัปเดตระบบก่อนนำเข้า');
         }
 
-        // exercise_categories is created on first use rather than by a
-        // migration. Create it now: DDL inside the transaction below would
-        // commit it implicitly.
-        // ExerciseCategory shares Workout.php, so the autoloader cannot find it by name.
-        if (isset($data['exercise_categories'])) {
-            require_once ROOT . '/models/Workout.php';
-            ExerciseCategory::checkTable();
-        }
-
         $present = array_values(array_filter(
             array_keys(self::TABLES),
             fn(string $t): bool => isset($data[$t]) && is_array($data[$t]) && self::columns($t) !== []

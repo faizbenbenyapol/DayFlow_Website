@@ -137,7 +137,7 @@ test('repository files are not served', function (TestClient $_c): void {
         '/README.md', '/docker-compose.yml', '/Dockerfile', '/Caddyfile', '/cron.php',
         '/.env.example', '/.gitignore', '/.github/workflows/ci.yml',
         '/scripts/migrate.php', '/scripts/smoke.php', '/tests/run.php', '/tests/bootstrap.php',
-        '/sql/schema.sql', '/docker/php.ini', '/storage/logs/php-error.log',
+        '/sql/migrations/001_schema.sql', '/docker/php.ini', '/storage/logs/php-error.log',
     ] as $path) {
         assertSame(403, $anonymous->get($path)['status'], $path . ' must be refused');
     }

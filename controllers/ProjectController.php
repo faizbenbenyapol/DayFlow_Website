@@ -88,60 +88,12 @@ class ProjectController
 
     /**
      * โหลดหน้าวางแผนโปรเจค (Project Planner Page)
-     * พร้อมระบบตรวจสอบและรันสคริปต์สร้างตารางอัตโนมัติหากเข้าใช้งานครั้งแรก
      */
     public function index(): void
     {
         $userId = Auth::userId();
 
-        // 1. ระบบติดตั้งตารางข้อมูลอัตโนมัติเมื่อยังไม่มีตารางอยู่ในระบบ
-        try {
-            DB::run('SELECT 1 FROM `projects` LIMIT 1');
-        } catch (PDOException $e) {
-            $sqlFile = ROOT . '/sql/migrate_projects.sql';
-            if (file_exists($sqlFile)) {
-                try {
-                    $queries = file_get_contents($sqlFile);
-                    DB::conn()->exec($queries);
-                } catch (PDOException $ex) {
-                    Response::abort(500, 'ไม่สามารถติดตั้งตารางโปรเจคอัตโนมัติได้: ' . $ex->getMessage());
-                }
-            } else {
-                Response::abort(500, 'ไม่พบไฟล์สคริปต์สำหรับติดตั้งโครงสร้างตารางข้อมูล: ' . $sqlFile);
-            }
-        }
-
-        // 2. ระบบติดตั้งตารางการทำงานร่วมกันและแชทสดอัตโนมัติ
-        try {
-            DB::run('SELECT 1 FROM `project_members` LIMIT 1');
-        } catch (PDOException $e) {
-            $sqlCollabFile = ROOT . '/sql/migrate_project_collab.sql';
-            if (file_exists($sqlCollabFile)) {
-                try {
-                    $queries = file_get_contents($sqlCollabFile);
-                    DB::conn()->exec($queries);
-                } catch (PDOException $ex) {
-                    Response::abort(500, 'ไม่สามารถติดตั้งตารางข้อมูลสำหรับทีมงานและแชทอัตโนมัติได้: ' . $ex->getMessage());
-                }
-            }
-        }
-
-        // 3. ระบบอัปเกรดตารางสำหรับระบบลิงก์สาธารณะและ Guest
-        try {
-            DB::run('SELECT `guest_name` FROM `project_activities` LIMIT 1');
-        } catch (PDOException $e) {
-            $sqlShareFile = ROOT . '/sql/migrate_project_share.sql';
-            if (file_exists($sqlShareFile)) {
-                try {
-                    $queries = file_get_contents($sqlShareFile);
-                    DB::conn()->exec($queries);
-                } catch (PDOException $ex) {
-                    // ป้องกันข้อผิดพลาดกรณีฟิลด์มีอยู่แล้ว
-                }
-            }
-        }
-
-        $pageTitle    = 'วางแผนโปรเจค (Project Planner)';
+        $pageTitle   = 'วางแผนโปรเจค (Project Planner)';
         $pageStyle    = 'projects';
         $pageScript   = 'projects';
         $loadChartJs  = true; // โหลด Chart.js เพื่อใช้วาดกราฟความคืบหน้าของโครงการ

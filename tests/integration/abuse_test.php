@@ -9,7 +9,7 @@
 declare(strict_types=1);
 
 /**
- * sql/migrate_demo_account.sql only flags an account someone registered by
+ * sql/migrations/018_demo_account.sql only flags an account someone registered by
  * hand, so a fresh test database has none. Register it over HTTP, then set the
  * flag directly — the suites run inside the app container, next to the DB.
  */

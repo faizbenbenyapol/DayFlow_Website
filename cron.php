@@ -48,24 +48,10 @@ if (!function_exists('logNotification')) {
 
 echo "Starting DayFlow Cron Job...\n";
 
-// 1. Auto-migrate if table doesn't exist
-try {
-    DB::run('SELECT 1 FROM `telegram_cron_logs` LIMIT 1');
-} catch (Exception $e) {
-    $sqlFile = ROOT . '/sql/migrate_telegram_cron.sql';
-    if (file_exists($sqlFile)) {
-        try {
-            DB::conn()->exec(file_get_contents($sqlFile));
-            echo "Created telegram_cron_logs table.\n";
-        } catch (Exception $ex) {
-            echo "Error running migration: " . $ex->getMessage() . "\n";
-        }
-    } else {
-        echo "Migration file not found: {$sqlFile}\n";
-    }
-}
+// The tables this job uses come from scripts/migrate.php, which a deploy
+// runs before starting the worker.
 
-// 2. Web Push digest.
+// 1. Web Push digest.
 //
 // This runs before the Telegram section because that one returns early when no
 // account has a bot configured, and browser notifications do not depend on it.
@@ -102,7 +88,7 @@ if (WebPush::isConfigured()) {
 ";
 }
 
-// 3. Fetch users with valid Telegram settings
+// 2. Fetch users with valid Telegram settings
 $users = DB::run("
     SELECT user_id, telegram_bot_token, telegram_chat_id, telegram_notify_events, timezone 
     FROM user_settings 
