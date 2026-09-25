@@ -103,6 +103,22 @@ class Auth
         return true;
     }
 
+    /**
+     * Whether the signed-in account is the public demo, which every visitor
+     * of /demo shares. Share mode is never the demo: it acts as the owner.
+     */
+    public static function isDemo(): bool
+    {
+        static $isDemo = null;
+        if ($isDemo !== null) return $isDemo;
+        if (self::$isShareMode || empty($_SESSION['user_id'])) return $isDemo = false;
+
+        return $isDemo = (bool)DB::run(
+            'SELECT is_demo FROM users WHERE id = ?',
+            [(int)$_SESSION['user_id']]
+        )->fetchColumn();
+    }
+
     public static function check(): bool
     {
         return self::$isShareMode || !empty($_SESSION['user_id']);

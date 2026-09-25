@@ -806,7 +806,13 @@ async function handleCredentialResponse(response) {
         });
         const data = await res.json();
         
-        if (res.ok) {
+        if (res.ok && data.two_factor_required) {
+            // Google vouched for the email only; an account with 2FA still
+            // needs its code, which the login pane asks for.
+            setLoading(btnId, false);
+            if (activeTab !== 'login') switchTab('login');
+            showTwoFactorStep();
+        } else if (res.ok) {
             window.location.href = data.redirect || BASE_URL + '/';
         } else {
             showAlert(alertId, data.error || 'เกิดข้อผิดพลาดในการลงชื่อเข้าใช้ด้วย Google', 'error');

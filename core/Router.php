@@ -398,6 +398,10 @@ class Router
                 Auth::requireLogin();
             }
 
+            if ($method !== 'GET' && $this->isDemoRestricted($path)) {
+                Response::json(['error' => 'บัญชีทดลองใช้ไม่สามารถทำรายการนี้ได้ กรุณาสมัครสมาชิกเพื่อใช้งานเต็มรูปแบบ'], 403);
+            }
+
             // PHP holds an exclusive lock on the session file for the whole
             // request. A page that fires several XHRs would have them queue up
             // behind each other instead of running side by side. Every session
@@ -422,6 +426,34 @@ class Router
 
         // No route matched
         Response::abort(404, 'ไม่พบหน้าที่ต้องการ');
+    }
+
+    /**
+     * Writes the shared demo account may not make.
+     *
+     * Every visitor of /demo signs in as the same account, so the demo keeps
+     * its everyday writes (tasks, notes, planner …) for people to try, but not
+     * the ones that reach past it: storing uploaded files, minting public
+     * links, inviting real users, saving API keys, push subscriptions and
+     * anything in settings (password, 2FA, import, account deletion).
+     */
+    private const DEMO_RESTRICTED = [
+        '#^/api/settings(/|$)#',
+        '#^/api/files(/|$)#',
+        '#^/api/(shares|app-shares)(/|$)#',
+        '#^/api/transfer/send$#',
+        '#^/api/stocks/(screenshots|keys)(/|$)#',
+        '#^/api/ai/keys(/|$)#',
+        '#^/api/push(/|$)#',
+        '#^/api/projects/[^/]+/(share|members)(/|$)#',
+    ];
+
+    private function isDemoRestricted(string $path): bool
+    {
+        foreach (self::DEMO_RESTRICTED as $pattern) {
+            if (preg_match($pattern, $path)) return Auth::isDemo();
+        }
+        return false;
     }
 
     /**

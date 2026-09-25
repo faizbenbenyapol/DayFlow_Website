@@ -17,7 +17,7 @@ if (isset($pageScript) && in_array($pageScript, $sortablePages, true)):
 <!-- CDN: PDF / File Tools libs (loaded only on file-tools page) -->
 <?php if (isset($loadPdfLibs) && $loadPdfLibs): ?>
 <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/spark-md5@3.0.2/spark-md5.min.js"></script>
 <?php endif; ?>
