@@ -848,8 +848,16 @@ body.modal-open { overflow: hidden; }
 
 /* Filling out the scale above; these replace inline style="" attributes. */
 .mt-3 { margin-top: var(--space-3); }
+.mb-3 { margin-bottom: var(--space-3); }
 .p-4 { padding: var(--space-4); }
 .cursor-pointer { cursor: pointer; }
+
+/* Used in the markup all along but never defined, so they did nothing:
+   empty-state rows that meant to be centred, number columns that meant to
+   align right, delete buttons that meant to be red. */
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-danger { color: var(--color-danger); }
 
 /* --- Misc --- */
 .clickable {
