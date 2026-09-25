@@ -1,4 +1,9 @@
 <?php
+// CLI-only: the web server must never run this, even if it is reachable.
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit("This script is CLI-only.\n");
+}
 // DayFlow CLI migration runner.
 //
 //   php scripts/migrate.php            apply everything still pending

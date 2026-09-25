@@ -5,10 +5,13 @@ RUN apt-get update \
         libfreetype6-dev libjpeg62-turbo-dev libpng-dev libzip-dev curl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j"$(nproc)" pdo_mysql mysqli gd zip opcache \
-    && a2enmod rewrite headers expires deflate \
+    && a2enmod rewrite headers expires deflate remoteip \
     && printf 'ServerName localhost\n' > /etc/apache2/conf-available/dayflow-servername.conf \
     && a2enconf dayflow-servername \
     && rm -rf /var/lib/apt/lists/*
+
+COPY docker/remoteip.conf /etc/apache2/conf-available/dayflow-remoteip.conf
+RUN a2enconf dayflow-remoteip
 
 COPY docker/php.ini /usr/local/etc/php/conf.d/dayflow.ini
 COPY . /var/www/html/

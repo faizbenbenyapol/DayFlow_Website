@@ -48,7 +48,9 @@ class Security
             "Content-Security-Policy: default-src 'self'; "
             . "script-src 'self' 'nonce-{$nonce}' https://accounts.google.com https://cdn.jsdelivr.net; "
             . "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi https://cdn.jsdelivr.net; "
-            . "font-src 'self'; worker-src 'self'; img-src 'self' data: blob:; "
+            // blob: lets PDF.js start its worker: a worker script cannot be
+            // loaded cross-origin, so it wraps the CDN URL in a blob: stub.
+            . "font-src 'self'; worker-src 'self' blob:; img-src 'self' data: blob:; "
             . "connect-src 'self' https://accounts.google.com https://accounts.google.com/gsi/ "
             . "https://oauth2.googleapis.com https://generativelanguage.googleapis.com; "
             . "frame-src https://accounts.google.com https://accounts.google.com/gsi/; "

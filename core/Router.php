@@ -333,7 +333,9 @@ class Router
             require_once dirname(__DIR__) . '/models/AppShare.php';
             $share = AppShare::getByToken($_SESSION['app_share_token']);
             if ($share && AppShare::isValid($share)) {
-                $menus = json_decode($share['menus'], true) ?: [];
+                // Rows written before menus were validated on save may still
+                // name anything, so the stored list is filtered again here.
+                $menus = AppShare::sanitizeMenus(json_decode($share['menus'], true) ?: []);
                 Auth::setShareMode((int)$share['user_id'], $menus);
             } else {
                 unset($_SESSION['app_share_token']);
@@ -350,12 +352,23 @@ class Router
             }
 
             $allowed = Auth::getSharedMenus();
+
+            // The dashboard aggregates every module, so a share link never
+            // opens it; send the visitor to the first menu it does cover.
+            if ($path === '/' && $allowed !== []) {
+                Response::redirect('/' . $allowed[0]);
+            }
+
             $parts = explode('/', trim($path, '/'));
             $base = $parts[0] ?? '';
             if ($base === 'api') $base = $parts[1] ?? '';
-            
-            $alwaysAllowed = ['shared', 'exit-share', 'login', 'logout', 'dashboard', 'settings']; // Need settings for layout, but handled later if needed
-            if (!in_array($base, $allowed) && !in_array($base, $alwaysAllowed) && $path !== '/') {
+
+            // Only the routes needed to enter and leave share mode. Settings
+            // and the dashboard must stay out: Auth::userId() is the owner's
+            // here, so /api/settings/export would hand a guest the whole
+            // account and /api/dashboard/summary every module's figures.
+            $alwaysAllowed = ['shared', 'exit-share', 'login', 'logout'];
+            if (!in_array($base, $allowed, true) && !in_array($base, $alwaysAllowed, true)) {
                 if (Request::isApi()) Response::json(['error' => 'ไม่มีสิทธิ์เข้าถึงเมนูนี้'], 403);
                 Response::abort(403, 'ไม่มีสิทธิ์เข้าถึงเมนูนี้');
             }
@@ -385,6 +398,10 @@ class Router
                 Auth::requireLogin();
             }
 
+            if ($method !== 'GET' && $this->isDemoRestricted($path)) {
+                Response::json(['error' => 'บัญชีทดลองใช้ไม่สามารถทำรายการนี้ได้ กรุณาสมัครสมาชิกเพื่อใช้งานเต็มรูปแบบ'], 403);
+            }
+
             // PHP holds an exclusive lock on the session file for the whole
             // request. A page that fires several XHRs would have them queue up
             // behind each other instead of running side by side. Every session
@@ -409,6 +426,34 @@ class Router
 
         // No route matched
         Response::abort(404, 'ไม่พบหน้าที่ต้องการ');
+    }
+
+    /**
+     * Writes the shared demo account may not make.
+     *
+     * Every visitor of /demo signs in as the same account, so the demo keeps
+     * its everyday writes (tasks, notes, planner …) for people to try, but not
+     * the ones that reach past it: storing uploaded files, minting public
+     * links, inviting real users, saving API keys, push subscriptions and
+     * anything in settings (password, 2FA, import, account deletion).
+     */
+    private const DEMO_RESTRICTED = [
+        '#^/api/settings(/|$)#',
+        '#^/api/files(/|$)#',
+        '#^/api/(shares|app-shares)(/|$)#',
+        '#^/api/transfer/send$#',
+        '#^/api/stocks/(screenshots|keys)(/|$)#',
+        '#^/api/ai/keys(/|$)#',
+        '#^/api/push(/|$)#',
+        '#^/api/projects/[^/]+/(share|members)(/|$)#',
+    ];
+
+    private function isDemoRestricted(string $path): bool
+    {
+        foreach (self::DEMO_RESTRICTED as $pattern) {
+            if (preg_match($pattern, $path)) return Auth::isDemo();
+        }
+        return false;
     }
 
     /**

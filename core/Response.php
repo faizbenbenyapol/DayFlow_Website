@@ -290,7 +290,7 @@ class Response
             <?php else: ?>
                 <a href="<?= APP_URL ?>/" class="btn btn-primary">กลับหน้าหลัก</a>
             <?php endif; ?>
-            <button onclick="history.back()" class="btn btn-secondary">ย้อนกลับหน้าเดิม</button>
+            <button type="button" id="errorBackBtn" class="btn btn-secondary">ย้อนกลับหน้าเดิม</button>
         </div>
 
         <?php if ($isReadOnly && !empty($sharedMenus)): ?>
@@ -306,6 +306,10 @@ class Response
             </div>
         <?php endif; ?>
     </div>
+    <script nonce="<?= h(Security::nonce()) ?>">
+        // An onclick attribute is blocked by the CSP, so the button is wired here.
+        document.getElementById('errorBackBtn').addEventListener('click', () => history.back());
+    </script>
 </body>
 </html>
         <?php

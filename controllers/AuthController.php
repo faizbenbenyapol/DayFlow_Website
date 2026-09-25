@@ -69,11 +69,7 @@ class AuthController
         // With 2FA on, the password alone does not open a session: the user id
         // is parked as a pending challenge until a valid code arrives.
         if (TwoFactor::isEnabled((int)$user['id'])) {
-            session_regenerate_id(true);
-            $_SESSION['pending_2fa_user'] = (int)$user['id'];
-            $_SESSION['pending_2fa_since'] = time();
-            $_SESSION['pending_2fa_remember'] = $remember;
-            Response::json(['ok' => true, 'two_factor_required' => true]);
+            $this->beginTwoFactorChallenge((int)$user['id'], $remember);
         }
 
         unset($_SESSION['app_share_token']);
@@ -81,6 +77,19 @@ class AuthController
         if ($remember) RememberToken::issue((int)$user['id']);
         RateLimiter::clear($rateKey);
         Response::json(['ok' => true, 'redirect' => APP_URL . '/']);
+    }
+
+    /**
+     * Parks a user whose first factor checked out, and stops the request.
+     * No session is opened until apiTwoFactor() accepts a code.
+     */
+    private function beginTwoFactorChallenge(int $userId, bool $remember): void
+    {
+        session_regenerate_id(true);
+        $_SESSION['pending_2fa_user'] = $userId;
+        $_SESSION['pending_2fa_since'] = time();
+        $_SESSION['pending_2fa_remember'] = $remember;
+        Response::json(['ok' => true, 'two_factor_required' => true]);
     }
 
     /**
@@ -253,13 +262,19 @@ class AuthController
             }
         }
 
-        unset($_SESSION['app_share_token']);
-        Auth::login($user);
-
         // Update picture as avatar if available
         if ($picture) {
             User::updateAvatar($user['id'], $picture);
         }
+
+        // Google proves who owns the email, not the second factor. An account
+        // with 2FA on gets the same pending challenge as a password login.
+        if (TwoFactor::isEnabled((int)$user['id'])) {
+            $this->beginTwoFactorChallenge((int)$user['id'], false);
+        }
+
+        unset($_SESSION['app_share_token']);
+        Auth::login($user);
 
         Response::json(['ok' => true, 'redirect' => APP_URL . '/']);
     }

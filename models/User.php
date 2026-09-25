@@ -228,8 +228,21 @@ class User
         return $data;
     }
 
+    /**
+     * Replaces the user's data with the rows of an export file.
+     *
+     * Everything in $data is attacker-controlled. Column names are matched
+     * against the table's real columns (they used to be pasted straight into
+     * the SQL, which made the file an injection vector), values must be
+     * scalars, and a row that points at a note, tag, category or skill must
+     * point at one this same import created — otherwise it could attach itself
+     * to another account's rows. Foreign-key checks stay on for the same reason.
+     *
+     * @throws InvalidArgumentException when a value is not a scalar
+     */
     public static function importAllData(int $userId, array $data): bool
     {
+        // Parents before children: the ownership checks below rely on it.
         $tables = [
             'tasks', 'notes', 'note_blocks', 'note_tags', 'note_tag_relations',
             'calendar_events', 'daily_todos', 'workouts',
@@ -237,63 +250,107 @@ class User
             'food_notes', 'skills', 'skill_logs', 'stock_transactions', 'stock_watchlists'
         ];
 
+        // Tables whose rows carry user_id directly.
+        $userTables = [
+            'tasks', 'notes', 'note_tags', 'calendar_events', 'daily_todos',
+            'workouts', 'finance_categories', 'finances', 'subscriptions',
+            'dashboard_layout', 'food_notes', 'skills', 'skill_logs',
+            'stock_transactions', 'stock_watchlists'
+        ];
+
+        // Ids created by this import, per parent table. Every earlier row of
+        // the user is deleted first, so these are exactly the rows they own.
+        $owned = ['notes' => [], 'note_tags' => [], 'finance_categories' => [], 'skills' => []];
+
         $conn = DB::conn();
         $conn->beginTransaction();
 
         try {
-            // Disable FK checks
-            $conn->exec('SET FOREIGN_KEY_CHECKS = 0');
-
-            // Delete old data for this user
-            $userTables = [
-                'tasks', 'notes', 'note_tags', 'calendar_events', 'daily_todos',
-                'workouts', 'finance_categories', 'finances', 'subscriptions',
-                'dashboard_layout', 'food_notes', 'skills', 'skill_logs',
-                'stock_transactions', 'stock_watchlists'
-            ];
+            // note_blocks and note_tag_relations go with their notes and tags
+            // through ON DELETE CASCADE.
             foreach ($userTables as $t) {
-                DB::run("DELETE FROM $t WHERE user_id = ?", [$userId]);
+                DB::run("DELETE FROM `$t` WHERE user_id = ?", [$userId]);
             }
 
-            // Clean child blocks and relations that cascade deleted but strictly clean
-            DB::run("DELETE nb FROM note_blocks nb JOIN notes n ON nb.note_id = n.id WHERE n.user_id = ?", [$userId]);
-            DB::run("DELETE r FROM note_tag_relations r JOIN notes n ON r.note_id = n.id WHERE n.user_id = ?", [$userId]);
-
-            // Now, import new data if present in the data array
             foreach ($tables as $t) {
-                if (!isset($data[$t]) || !is_array($data[$t])) {
-                    continue;
-                }
+                if (!isset($data[$t]) || !is_array($data[$t])) continue;
+
+                $columns = self::tableColumns($t);
+                if ($columns === []) continue;
 
                 foreach ($data[$t] as $row) {
-                    if (!is_array($row)) {
-                        continue;
+                    if (!is_array($row)) continue;
+
+                    // Unknown keys are dropped, never interpolated.
+                    $row = array_intersect_key($row, $columns);
+                    foreach ($row as $column => $value) {
+                        if ($value !== null && !is_scalar($value)) {
+                            throw new InvalidArgumentException("Invalid value for {$t}.{$column}");
+                        }
                     }
 
-                    // Enforce current user_id for safety
-                    if (in_array($t, $userTables)) {
+                    if (in_array($t, $userTables, true)) {
                         $row['user_id'] = $userId;
                     }
 
-                    // Build dynamic INSERT query
-                    $columns = array_keys($row);
-                    $placeholders = array_fill(0, count($columns), '?');
-                    $colStr = implode('`, `', $columns);
-                    $valStr = implode(', ', $placeholders);
+                    if ($row === [] || !self::importReferencesOwned($t, $row, $owned)) continue;
 
-                    $sql = "INSERT INTO `$t` (`$colStr`) VALUES ($valStr)";
-                    DB::run($sql, array_values($row));
+                    $colStr = implode('`, `', array_keys($row));
+                    $valStr = implode(', ', array_fill(0, count($row), '?'));
+                    DB::run("INSERT INTO `$t` (`$colStr`) VALUES ($valStr)", array_values($row));
+
+                    if (isset($owned[$t])) {
+                        $id = isset($row['id']) ? (string)$row['id'] : (string)$conn->lastInsertId();
+                        if ($id !== '' && $id !== '0') $owned[$t][$id] = true;
+                    }
                 }
             }
 
-            // Enable FK checks
-            $conn->exec('SET FOREIGN_KEY_CHECKS = 1');
             $conn->commit();
             return true;
         } catch (\Throwable $e) {
             $conn->rollBack();
-            try { $conn->exec('SET FOREIGN_KEY_CHECKS = 1'); } catch (\Throwable $_) {}
             throw $e;
         }
+    }
+
+    /**
+     * Whether an imported row references only parents this import created.
+     * A finance entry with a foreign category loses the category; a block,
+     * tag link or skill log that points elsewhere is skipped.
+     */
+    private static function importReferencesOwned(string $table, array &$row, array $owned): bool
+    {
+        $has = static fn(string $parent, mixed $id): bool =>
+            $id !== null && isset($owned[$parent][(string)$id]);
+
+        switch ($table) {
+            case 'note_blocks':
+                return $has('notes', $row['note_id'] ?? null);
+            case 'note_tag_relations':
+                return $has('notes', $row['note_id'] ?? null) && $has('note_tags', $row['tag_id'] ?? null);
+            case 'skill_logs':
+                return $has('skills', $row['skill_id'] ?? null);
+            case 'finances':
+                if (isset($row['category_id']) && !$has('finance_categories', $row['category_id'])) {
+                    $row['category_id'] = null;
+                }
+                return true;
+            default:
+                return true;
+        }
+    }
+
+    /**
+     * The real columns of a table, as a name => true map.
+     */
+    private static function tableColumns(string $table): array
+    {
+        $names = DB::run(
+            'SELECT COLUMN_NAME FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?',
+            [$table]
+        )->fetchAll(PDO::FETCH_COLUMN);
+        return array_fill_keys($names, true);
     }
 }

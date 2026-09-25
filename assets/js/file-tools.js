@@ -102,8 +102,9 @@ let workerSet = false;
 function ensurePdfWorker() {
     const lib = pdfjsLib();
     if (!lib || workerSet) return;
-    // Use CDN worker matching the loaded version
-    lib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    // Same CDN and version as the pdf.min.js in footer.php. A cross-origin
+    // worker is started through a blob: wrapper, which the CSP allows.
+    lib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
     workerSet = true;
 }
 

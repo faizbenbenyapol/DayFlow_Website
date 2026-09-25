@@ -14,6 +14,9 @@ final class TestClient
     private string $cookieJar;
     private string $csrf = '';
 
+    /** Sent with every request, e.g. X-Forwarded-For to stand in for another client. */
+    public array $headers = [];
+
     public function __construct(string $baseUrl)
     {
         $this->baseUrl   = rtrim($baseUrl, '/');
@@ -29,7 +32,7 @@ final class TestClient
     public function request(string $method, string $path, ?array $json = null): array
     {
         $ch = curl_init($this->baseUrl . $path);
-        $headers = ['Accept: application/json'];
+        $headers = array_merge(['Accept: application/json'], $this->headers);
 
         if ($json !== null) {
             $headers[] = 'Content-Type: application/json';

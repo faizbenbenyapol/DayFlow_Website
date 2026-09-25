@@ -181,6 +181,15 @@ class FileTransferController
     // ------------------------------------------------------------------ //
     public function apiReceive(): void
     {
+        // Six digits is a million codes and this endpoint needs no account, so
+        // unthrottled it could be walked in minutes. Successes count too:
+        // clearing on success would let someone reset the window with a code
+        // of their own between guesses.
+        $rateKey = 'transfer-receive:' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+        if (!RateLimiter::hit($rateKey, 30, 600)) {
+            Response::json(['error' => 'ลองใส่รหัสมากเกินไป กรุณารอประมาณ 10 นาที'], 429);
+        }
+
         $code = trim(Request::input('code', ''));
         if (!preg_match('/^\d{6}$/', $code)) {
             Response::json(['error' => 'กรุณาใส่รหัส 6 หลัก'], 422);
