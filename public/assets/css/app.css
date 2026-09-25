@@ -358,7 +358,7 @@ hr {
 .nav-item {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     padding: 10px 16px;
     margin: 6px 14px;
     font-size: 0.88rem;
@@ -853,3 +853,6 @@ textarea.form-control { min-height: 96px; resize: vertical; }
     .card, .panel, .stat-card, .settings-card { border-radius: var(--radius); }
     .table-wrap { border-radius: var(--radius); }
 }
+
+/* Home and menu buttons on the right of the mobile top bar. */
+.app-topbar-actions { display: flex; align-items: center; gap: 4px; }

@@ -127,7 +127,7 @@ class SettingsController
             Response::json(['error' => 'รูปแบบข้อมูลไม่ถูกต้อง'], 422);
         }
 
-        $allowedMenus = ['projects', 'tasks', 'notes', 'planner', 'focus', 'exercise', 'food-notes', 'finance', 'subscriptions', 'stocks', 'ai', 'file-tools', 'transfer', 'files', 'quick-notes', 'bookmarks'];
+        $allowedMenus = AppMenus::KEYS;
         $menus = array_map('strval', $menus);
         $order = array_map('strval', $order);
         $hiddenMenus = [];
@@ -137,17 +137,7 @@ class SettingsController
             }
         }
 
-        $normalizedOrder = [];
-        foreach ($order as $menu) {
-            if (in_array($menu, $allowedMenus, true) && !in_array($menu, $normalizedOrder, true)) {
-                $normalizedOrder[] = $menu;
-            }
-        }
-        foreach ($allowedMenus as $menu) {
-            if (!in_array($menu, $normalizedOrder, true)) {
-                $normalizedOrder[] = $menu;
-            }
-        }
+        $normalizedOrder = AppMenus::ordered($order);
 
         $json = json_encode($hiddenMenus);
         $orderJson = json_encode($normalizedOrder);

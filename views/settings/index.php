@@ -344,15 +344,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
             if (!is_array($hiddenMenus)) {
                 $hiddenMenus = [];
             }
-            $defaultMenuOrder = ['projects', 'tasks', 'notes', 'planner', 'focus', 'exercise', 'food-notes', 'finance', 'subscriptions', 'stocks', 'ai', 'file-tools', 'transfer', 'files', 'quick-notes', 'bookmarks'];
-            $savedMenuOrder = !empty($settings['menu_order']) ? json_decode($settings['menu_order'], true) : [];
-            if (!is_array($savedMenuOrder)) {
-                $savedMenuOrder = [];
-            }
-            $menuOrder = array_values(array_unique(array_merge(
-                array_values(array_intersect($savedMenuOrder, $defaultMenuOrder)),
-                $defaultMenuOrder
-            )));
+            $menuOrder = AppMenus::ordered(json_decode($settings['menu_order'] ?? 'null', true));
             $isMenuVisible = function(string $menu) use ($hiddenMenus) {
                 return !in_array($menu, $hiddenMenus);
             };
@@ -360,7 +352,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
             <?php
             $menuLabels = [
                 'projects' => 'Projects', 'tasks' => 'งาน (Tasks)', 'notes' => 'โน้ต (Notes)',
-                'planner' => 'แพลนเนอร์ (Planner)', 'focus' => 'โฟกัส (Focus/Pomodoro)',
+                'planner' => 'แพลนเนอร์ (Planner)', 'focus' => 'โฟกัส (Focus/Pomodoro)', 'habits' => 'นิสัยประจำวัน (Habits)',
                 'exercise' => 'ออกกำลังกาย (Workout)', 'food-notes' => 'อาหาร-เครื่องดื่ม (Food Notes)',
                 'finance' => 'การเงิน (Finance)', 'subscriptions' => 'การแจ้งเตือน (Subscriptions)',
                 'stocks' => 'ระบบหุ้น (Stocks)', 'ai' => 'ผู้ช่วยอัจฉริยะ (AI Helper)',
@@ -369,7 +361,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
             ];
             ?>
             <div class="menu-order-list" id="menuVisibilityList" data-menu-order="<?= h(json_encode($menuOrder, JSON_UNESCAPED_UNICODE)) ?>">
-                <?php foreach ($defaultMenuOrder as $menu): ?>
+                <?php foreach (AppMenus::KEYS as $menu): ?>
                 <label class="flex items-center gap-3 settings-check">
                     <input type="checkbox" name="visible_menus[]" value="<?= h($menu) ?>" <?= $isMenuVisible($menu) ? 'checked' : '' ?>>
                     <span><?= h($menuLabels[$menu]) ?></span>
