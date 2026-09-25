@@ -10,41 +10,52 @@ if (PHP_SAPI !== 'cli') {
 //   php scripts/migrate.php --status   list what has and has not been applied
 //   php scripts/migrate.php --force    re-apply everything, tracking aside
 //
-// Every migration is written to be safe to run again, but until now nothing
-// recorded what had already run, so a partially applied database looked exactly
-// like a fresh one. Applied files are now tracked in schema_migrations together
-// with a checksum, which also surfaces a migration that was edited after it
-// shipped.
+// Migrations live in sql/migrations/ as NNN_name.sql and run in filename order,
+// so adding one is dropping in the next number — there is no list to keep in
+// sync. Every migration is written to be safe to run again. Applied files are
+// tracked in schema_migrations with a checksum, which also surfaces a
+// migration that was edited after it shipped.
 
 define('ROOT', dirname(__DIR__));
 require_once ROOT . '/config/config.php';
 require_once ROOT . '/config/database.php';
 
-$files = [
-    'sql/schema.sql',
-    'sql/migrate_ai.sql',
-    'sql/migrate_app_shares.sql',
-    'sql/migrate_file_transfer.sql',
-    'sql/migrate_focus.sql',
-    'sql/migrate_projects.sql',
-    'sql/migrate_project_collab.sql',
-    'sql/migrate_project_share.sql',
-    'sql/migrate_shares.sql',
-    'sql/migrate_skills.sql',
-    'sql/migrate_stock_watchlists.sql',
-    'sql/migrate_telegram_cron.sql',
-    'sql/migrate_remember_tokens.sql',
-    'sql/migrate_habits.sql',
-    'sql/migrate_quick_capture.sql',
-    'sql/migrate_menu_order.sql',
-    'sql/migrate_theme_colors.sql',
-    'sql/migrate_demo_account.sql',
-    'sql/migrate_perf_indexes.sql',
-    'sql/migrate_theme_auto.sql',
-    'sql/migrate_recurrence.sql',
-    'sql/migrate_two_factor.sql',
-    'sql/migrate_web_push.sql',
-];
+$files = array_map(
+    fn(string $path): string => 'sql/migrations/' . basename($path),
+    glob(ROOT . '/sql/migrations/*.sql') ?: []
+);
+sort($files, SORT_STRING);
+
+if ($files === []) {
+    fwrite(STDERR, "No migrations found in sql/migrations/.\n");
+    exit(1);
+}
+
+/**
+ * The checksum ignores line endings: the same file checked out on Windows
+ * (CRLF) and on the server (LF) must not look "changed since it was applied".
+ */
+function migrationChecksum(string $relative): string
+{
+    return hash('sha256', str_replace("\r\n", "\n", (string)file_get_contents(ROOT . '/' . $relative)));
+}
+
+/** Whether a stored checksum describes this file, whichever way it was hashed. */
+function sameMigration(string $stored, string $relative): bool
+{
+    return hash_equals($stored, migrationChecksum($relative))
+        || hash_equals($stored, hash_file('sha256', ROOT . '/' . $relative));
+}
+
+/**
+ * The name the file had before migrations were numbered (sql/schema.sql,
+ * sql/migrate_<name>.sql). Databases migrated back then recorded those names.
+ */
+function legacyName(string $relative): string
+{
+    $name = preg_replace('/^\d+_/', '', basename($relative, '.sql'));
+    return $name === 'schema' ? 'sql/schema.sql' : 'sql/migrate_' . $name . '.sql';
+}
 
 $args     = array_slice($argv, 1);
 $statusOnly = in_array('--status', $args, true);
@@ -66,41 +77,43 @@ foreach (DB::run('SELECT filename, checksum, applied_at FROM schema_migrations')
     $applied[$row['filename']] = $row;
 }
 
-$missing = [];
-foreach ($files as $relative) {
-    if (!is_file(ROOT . '/' . $relative)) $missing[] = $relative;
-}
-if ($missing) {
-    fwrite(STDERR, "Missing migration files:\n  " . implode("\n  ", $missing) . "\n");
-    exit(1);
-}
-
-if ($statusOnly) {
-    foreach ($files as $relative) {
-        $checksum = hash_file('sha256', ROOT . '/' . $relative);
-        if (!isset($applied[$relative])) {
-            printf("%-40s %s\n", $relative, 'PENDING');
-        } elseif ($applied[$relative]['checksum'] !== $checksum) {
-            printf("%-40s %s\n", $relative, 'CHANGED since it was applied on ' . $applied[$relative]['applied_at']);
-        } else {
-            printf("%-40s %s\n", $relative, 'applied ' . $applied[$relative]['applied_at']);
-        }
-    }
-    exit(0);
-}
-
 $record = DB::conn()->prepare(
     'INSERT INTO schema_migrations (filename, checksum) VALUES (?, ?)
      ON DUPLICATE KEY UPDATE checksum = VALUES(checksum), applied_at = CURRENT_TIMESTAMP'
 );
 
+// Carry a record over from the old file name, so an unchanged migration that
+// already ran under that name is not run again after the rename.
+foreach ($files as $relative) {
+    $legacy = legacyName($relative);
+    if (isset($applied[$relative]) || !isset($applied[$legacy])) continue;
+    if (!sameMigration($applied[$legacy]['checksum'], $relative)) continue;
+
+    $record->execute([$relative, migrationChecksum($relative)]);
+    $applied[$relative] = ['checksum' => migrationChecksum($relative), 'applied_at' => $applied[$legacy]['applied_at']];
+    if (!$statusOnly) echo "Recorded {$relative} (applied earlier as {$legacy})\n";
+}
+
+if ($statusOnly) {
+    foreach ($files as $relative) {
+        if (!isset($applied[$relative])) {
+            printf("%-45s %s\n", $relative, 'PENDING');
+        } elseif (!sameMigration($applied[$relative]['checksum'], $relative)) {
+            printf("%-45s %s\n", $relative, 'CHANGED since it was applied on ' . $applied[$relative]['applied_at']);
+        } else {
+            printf("%-45s %s\n", $relative, 'applied ' . $applied[$relative]['applied_at']);
+        }
+    }
+    exit(0);
+}
+
 $ran = 0;
 foreach ($files as $relative) {
     $file     = ROOT . '/' . $relative;
-    $checksum = hash_file('sha256', $file);
+    $checksum = migrationChecksum($relative);
 
     if (!$force && isset($applied[$relative])) {
-        if ($applied[$relative]['checksum'] === $checksum) {
+        if (sameMigration($applied[$relative]['checksum'], $relative)) {
             echo "Skipping {$relative} (already applied)\n";
             continue;
         }
