@@ -109,3 +109,17 @@ function assertStringContains(string $needle, string $haystack, string $message 
         );
     }
 }
+
+/**
+ * A path outside public/ is either refused outright (dotfiles: 403) or falls
+ * through to the router, which answers with the app's own 404 page. Either
+ * way the file itself must not come back.
+ */
+function assertNotServed(TestClient $client, string $path): void
+{
+    $response = $client->get($path);
+    if ($response['status'] === 403) return;
+
+    assertSame(404, $response['status'], $path . ' must not be served');
+    assertStringContains('ไม่พบหน้าที่ต้องการ', $response['body'], $path . ' should get the app 404 page, not the file');
+}

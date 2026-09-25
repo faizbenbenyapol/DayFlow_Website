@@ -7,7 +7,7 @@
     <title><?= h($pageTitle ?? 'เข้าสู่ระบบ') ?> — <?= h(APP_NAME) ?></title>
     <link rel="preload" as="font" type="font/woff2" crossorigin
         href="<?= APP_URL ?>/assets/fonts/sarabun-thai-400.woff2">
-    <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/fonts.css?v=<?= @filemtime(ROOT . '/assets/css/fonts.css') ?>">
+    <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/fonts.css?v=<?= @filemtime(PUBLIC_ROOT . '/assets/css/fonts.css') ?>">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -825,6 +825,6 @@ async function handleCredentialResponse(response) {
 }
 </script>
 <!-- The data-act dispatcher: without it none of the buttons above do anything. -->
-<script src="<?= APP_URL ?>/assets/js/actions.js?v=<?= @filemtime(ROOT . '/assets/js/actions.js') ?>"></script>
+<script src="<?= APP_URL ?>/assets/js/actions.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/actions.js') ?>"></script>
 </body>
 </html>

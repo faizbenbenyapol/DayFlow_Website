@@ -1,79 +1,19 @@
+# Only for an Apache whose document root is this repository rather than
+# public/ — XAMPP at http://localhost/DayFlow, or shared hosting that cannot
+# change it. Every request is served from public/, so nothing else in the
+# repository (config, code, uploads, logs, .env, .git) can be reached by URL.
+#
+# The Docker image points Apache straight at public/ and never reads this.
+
 Options -Indexes
 
-# Enable rewrite engine
-RewriteEngine On
-
-# Block direct access to sensitive directories
-RewriteRule ^config(/|$) - [F,L]
-RewriteRule ^core(/|$) - [F,L]
-RewriteRule ^models(/|$) - [F,L]
-RewriteRule ^controllers(/|$) - [F,L]
-RewriteRule ^sql(/|$) - [F,L]
-RewriteRule ^views(/|$) - [F,L]
-RewriteRule ^config/.*\.php$ - [F,L]
-
-# The document root is the whole repository, so everything that is not part of
-# the site has to be refused here — otherwise the rule below serves it as-is
-# (and runs it, for scripts/migrate.php or tests/run.php).
-# Dotfiles and dot-directories: .env, .git, .github, .claude ...
-RewriteRule (^|/)\.(?!well-known/) - [F,L]
-# Tooling, tests, runtime data and backups.
-RewriteRule ^(scripts|tests|storage|backups|docker)(/|$) - [F,L]
-# User uploads are only ever served by a controller, which checks ownership
-# and sends a safe Content-Type. Served directly, an uploaded .html or .svg
-# would run as a page of this site, and anyone with the path could read it.
-RewriteRule ^uploads(/|$) - [F,L]
-# Repository files at the root: docs, compose files, container and proxy config,
-# and the CLI-only cron job.
-RewriteRule ^[^/]+\.(md|ya?ml)$ - [F,L]
-RewriteRule ^(Dockerfile|Caddyfile|cron\.php)$ - [F,L]
-# Dumps, logs and leftovers wherever they end up.
-RewriteRule \.(sql|log|bak|ini)$ - [F,L]
-
-# Allow access to assets and uploads directly
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteRule ^ - [L]
-
-# Route everything else through index.php
-RewriteRule ^ index.php [QSA,L]
-
-# Security headers are emitted by core/Security.php to avoid duplicate values.
-
-# Static asset caching. Query-string filemtime versions are already used by
-# the templates, so immutable caching is safe for these files.
-<IfModule mod_headers.c>
-    <FilesMatch "\.(css|js|png|jpg|jpeg|gif|webp|svg|ico|woff2)$">
-        Header set Cache-Control "public, max-age=31536000, immutable"
-    </FilesMatch>
-    # The service worker and the manifest are fetched by URL with no ?v= to
-    # bust, so they must stay revalidated or a deploy would never reach clients.
-    <FilesMatch "^(sw\.js|manifest\.json|offline\.html)$">
-        Header set Cache-Control "public, max-age=0, must-revalidate"
-    </FilesMatch>
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # public/.htaccess takes over once the request is inside public/.
+    RewriteRule ^(?!public/)(.*)$ public/$1 [L]
 </IfModule>
 
-# PHP settings (if mod_php)
-<IfModule mod_php7.c>
-    php_value upload_max_filesize 20M
-    php_value post_max_size 22M
-    php_value max_execution_time 60
-</IfModule>
-<IfModule mod_php8.c>
-    php_value upload_max_filesize 20M
-    php_value post_max_size 22M
-    php_value max_execution_time 60
-</IfModule>
-
-# Response compression. Caddy already compresses in the tunnel/VPS setup, but a
-# plain Apache deployment (XAMPP, DirectAdmin) has no proxy in front of it.
-<IfModule mod_deflate.c>
-    <IfModule mod_filter.c>
-        AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript
-        AddOutputFilterByType DEFLATE application/javascript application/x-javascript
-        AddOutputFilterByType DEFLATE application/json application/manifest+json
-        AddOutputFilterByType DEFLATE image/svg+xml application/xml
-    </IfModule>
-    # Already-compressed payloads only get bigger.
-    SetEnvIfNoCase Request_URI \.(?:gz|zip|rar|7z|png|jpe?g|webp|gif|ico|woff2?|mp4|webm|pdf)$ no-gzip dont-vary
+# Without mod_rewrite nothing here is safe to serve.
+<IfModule !mod_rewrite.c>
+    Require all denied
 </IfModule>

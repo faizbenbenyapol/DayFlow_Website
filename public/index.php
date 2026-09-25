@@ -1,9 +1,14 @@
 <?php
 // =====================================================
-// index.php — Front Controller
+// public/index.php — Front Controller
+//
+// public/ is the web server's document root: only this file and the static
+// files beside it are reachable by URL. The code, config, uploads, logs and
+// tooling live one level up, out of reach, rather than being fenced off one
+// path at a time.
 // =====================================================
 
-define('ROOT', __DIR__);
+define('ROOT', dirname(__DIR__));
 
 require_once ROOT . '/config/config.php';
 

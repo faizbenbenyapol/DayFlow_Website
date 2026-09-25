@@ -54,8 +54,10 @@ define('APP_URL', rtrim(envValue('APP_URL', 'http://localhost/DayFlow'), '/'));
 // --- Application Settings ---
 define('APP_NAME', 'DayFlow');
 define('SESSION_NAME', 'mylife_sess');
+// The web server's document root; static assets are read from here for
+// cache-busting timestamps.
+define('PUBLIC_ROOT', dirname(__DIR__) . '/public');
 define('UPLOAD_DIR', dirname(__DIR__) . '/uploads/');
-define('UPLOAD_URL', APP_URL . '/uploads/');
 define('MAX_UPLOAD_BYTES', (int)envValue('MAX_UPLOAD_BYTES', (string)(20 * 1024 * 1024)));
 define('TIMEZONE', envValue('TIMEZONE', 'Asia/Bangkok'));
 

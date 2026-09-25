@@ -27,8 +27,8 @@ if (isset($pageScript) && in_array($pageScript, $sortablePages, true)):
 <?php endif; ?>
 
 <!-- Global JS -->
-<script src="<?= APP_URL ?>/assets/js/actions.js?v=<?= @filemtime(ROOT . '/assets/js/actions.js') ?>"></script>
-<script src="<?= APP_URL ?>/assets/js/app.js?v=<?= @filemtime(ROOT . '/assets/js/app.js') ?>"></script>
+<script src="<?= APP_URL ?>/assets/js/actions.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/actions.js') ?>"></script>
+<script src="<?= APP_URL ?>/assets/js/app.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/app.js') ?>"></script>
 
 <script nonce="<?= h(Security::nonce()) ?>">
 // Service worker: caches the static shell only (CSS/JS/fonts), never pages or
@@ -45,9 +45,9 @@ if ('serviceWorker' in navigator) {
 
 <!-- Page-specific JS -->
 <?php if (isset($pageScript)): ?>
-<script src="<?= APP_URL ?>/assets/js/<?= h($pageScript) ?>.js?v=<?= @filemtime(ROOT . '/assets/js/' . $pageScript . '.js') ?>"></script>
+<script src="<?= APP_URL ?>/assets/js/<?= h($pageScript) ?>.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/' . $pageScript . '.js') ?>"></script>
 <?php if ($pageScript === 'settings'): ?>
-<script src="<?= APP_URL ?>/assets/js/shares.js?v=<?= @filemtime(ROOT . '/assets/js/shares.js') ?>"></script>
+<script src="<?= APP_URL ?>/assets/js/shares.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/shares.js') ?>"></script>
 <?php endif; ?>
 <?php endif; ?>
 

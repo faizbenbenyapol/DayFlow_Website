@@ -68,7 +68,7 @@ test('the application code never changes the schema itself', function (TestClien
     // there first. That is migrate.php's job now.
     $sources = array_merge(
         glob(ROOT . '/models/*.php'), glob(ROOT . '/controllers/*.php'),
-        glob(ROOT . '/core/*.php'), [ROOT . '/cron.php', ROOT . '/index.php']
+        glob(ROOT . '/core/*.php'), [ROOT . '/cron.php', ROOT . '/public/index.php']
     );
     $offenders = [];
     foreach ($sources as $file) {

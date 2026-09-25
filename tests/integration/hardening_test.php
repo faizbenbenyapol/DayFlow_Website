@@ -138,8 +138,10 @@ test('repository files are not served', function (TestClient $_c): void {
         '/.env.example', '/.gitignore', '/.github/workflows/ci.yml',
         '/scripts/migrate.php', '/scripts/smoke.php', '/tests/run.php', '/tests/bootstrap.php',
         '/sql/migrations/001_schema.sql', '/docker/php.ini', '/storage/logs/php-error.log',
+        '/config/config.php', '/models/User.php', '/views/layout/header.php', '/.env', '/.git/config',
+        '/public/index.php', '/public/.htaccess',
     ] as $path) {
-        assertSame(403, $anonymous->get($path)['status'], $path . ' must be refused');
+        assertNotServed($anonymous, $path);
     }
 });
 

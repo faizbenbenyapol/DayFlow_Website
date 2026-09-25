@@ -32,7 +32,7 @@ test('uploaded files are never served straight from disk', function (TestClient 
     $anonymous = new TestClient(TEST_BASE_URL);
 
     foreach (['/uploads/', '/uploads/.htaccess', '/uploads/1/anything.html', '/uploads/stocks/1/x.png'] as $path) {
-        assertSame(403, $anonymous->get($path)['status'], $path . ' must be refused');
+        assertNotServed($anonymous, $path);
     }
 });
 

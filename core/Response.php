@@ -96,7 +96,7 @@ class Response
     <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
     <title><?= h((string)$status) ?> — <?= h(APP_NAME) ?></title>
     <!-- Self-hosted like the rest of the app; the CSP does not allow Google Fonts. -->
-    <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/fonts.css?v=<?= @filemtime(ROOT . '/assets/css/fonts.css') ?>">
+    <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/fonts.css?v=<?= @filemtime(PUBLIC_ROOT . '/assets/css/fonts.css') ?>">
     <style>
         :root {
             --color-bg: #ffffff;
