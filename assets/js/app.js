@@ -155,8 +155,13 @@ document.addEventListener('click', function (e) {
    dialog. The shim keeps every existing `Swal.fire(...)` call site working: the
    real library replaces window.Swal as soon as it lands.
 ===================================================== */
-const SWAL_CSS = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
-const SWAL_JS  = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js';
+// Pinned to an exact version with its SRI hash, so a compromised or changed
+// CDN file is refused instead of run. Bumping the version means new hashes:
+//   curl -fsSL <url> | openssl dgst -sha384 -binary | openssl base64 -A
+const SWAL_CSS = 'https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25/dist/sweetalert2.min.css';
+const SWAL_CSS_SRI = 'sha384-dCW5imOdApH6OwpFau8cZNKjqVbJYnCA5q+8YsMYP3XwXKsV6Jfz1u6MZLnXaBsS';
+const SWAL_JS  = 'https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25/dist/sweetalert2.all.min.js';
+const SWAL_JS_SRI = 'sha384-nLoOnA/BDh8A/jxqtckg4DumuCGOBYUnNJLZdQz/zfYNp3wcjGSoWTAzgko06G/2';
 
 let swalLoader = null;
 function loadSwal() {
@@ -165,10 +170,14 @@ function loadSwal() {
         const css = document.createElement('link');
         css.rel = 'stylesheet';
         css.href = SWAL_CSS;
+        css.integrity = SWAL_CSS_SRI;
+        css.crossOrigin = 'anonymous';
         document.head.appendChild(css);
 
         const js = document.createElement('script');
         js.src = SWAL_JS;
+        js.integrity = SWAL_JS_SRI;
+        js.crossOrigin = 'anonymous';
         js.onload = () => resolve(window.Swal);
         js.onerror = () => {
             swalLoader = null; // let a later dialog retry

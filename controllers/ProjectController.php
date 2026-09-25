@@ -16,6 +16,12 @@ class ProjectController
     private const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
 
     /**
+     * Roles an owner can hand out to a member or a share link. Owner is
+     * implied by owning the project and is never granted.
+     */
+    private const GRANTABLE_ROLES = ['Editor', 'Viewer'];
+
+    /**
      * Loads a project the caller may see, or stops with a 404.
      *
      * Project::getById() already scopes to the owner, the members, and a guest
@@ -40,7 +46,11 @@ class ProjectController
      */
     private function requireEditor(array $project, string $action): void
     {
-        if (($project['user_role'] ?? '') === 'Viewer') {
+        // Fails closed: a role this code does not know (a row written before
+        // roles were validated) is read-only rather than editor.
+        $canEdit = !empty($project['is_owner'])
+            || in_array($project['user_role'] ?? '', ['Owner', 'Editor'], true);
+        if (!$canEdit) {
             Response::json(['error' => 'คุณมีสิทธิ์ดูเท่านั้น ไม่สามารถ' . $action . 'ได้'], 403);
         }
     }
@@ -485,6 +495,9 @@ class ProjectController
 
         $emailOrUsername = trim(Request::input('email_or_username', ''));
         $role            = Request::input('role', 'Editor');
+        if (!in_array($role, self::GRANTABLE_ROLES, true)) {
+            Response::json(['error' => 'สิทธิ์ไม่ถูกต้อง'], 422);
+        }
 
         if (!$emailOrUsername) {
             Response::json(['error' => 'กรุณาระบุชื่อผู้ใช้หรืออีเมลที่ต้องการเชิญ'], 422);
@@ -648,6 +661,9 @@ class ProjectController
         $this->requireOwner($project, 'เปิดลิงก์สาธารณะ');
 
         $shareRole = Request::input('share_role', 'Viewer');
+        if (!in_array($shareRole, self::GRANTABLE_ROLES, true)) {
+            Response::json(['error' => 'สิทธิ์ไม่ถูกต้อง'], 422);
+        }
         
         // ถ้าเคยมี Token อยู่แล้วให้ใช้ของเดิม หรือสุ่มใหม่
         $token = $project['share_token'] ?: bin2hex(random_bytes(16));

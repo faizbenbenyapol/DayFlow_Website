@@ -14,13 +14,18 @@ final class TestClient
     private string $cookieJar;
     private string $csrf = '';
 
-    /** Sent with every request, e.g. X-Forwarded-For to stand in for another client. */
+    /**
+     * Sent with every request. Each client stands in for a different visitor,
+     * so it gets its own address from the 198.18.0.0/15 test range by default; otherwise the
+     * per-IP limits (sign-up, login) would treat the whole suite as one person.
+     */
     public array $headers = [];
 
     public function __construct(string $baseUrl)
     {
         $this->baseUrl   = rtrim($baseUrl, '/');
         $this->cookieJar = tempnam(sys_get_temp_dir(), 'dayflow-test-');
+        $this->headers   = ['X-Forwarded-For: 198.18.' . random_int(0, 255) . '.' . random_int(1, 254)];
     }
 
     public function __destruct()
@@ -100,7 +105,7 @@ final class TestClient
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_COOKIEJAR      => $this->cookieJar,
             CURLOPT_COOKIEFILE     => $this->cookieJar,
-            CURLOPT_HTTPHEADER     => ['Accept: application/json', 'X-CSRF-Token: ' . $this->csrf],
+            CURLOPT_HTTPHEADER     => array_merge(['Accept: application/json', 'X-CSRF-Token: ' . $this->csrf], $this->headers),
             CURLOPT_TIMEOUT        => 20,
         ]);
 
@@ -152,7 +157,7 @@ final class TestClient
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_COOKIEJAR      => $this->cookieJar,
             CURLOPT_COOKIEFILE     => $this->cookieJar,
-            CURLOPT_HTTPHEADER     => ['Accept: application/json', 'X-CSRF-Token: ' . $this->csrf],
+            CURLOPT_HTTPHEADER     => array_merge(['Accept: application/json', 'X-CSRF-Token: ' . $this->csrf], $this->headers),
             CURLOPT_TIMEOUT        => 30,
         ]);
 

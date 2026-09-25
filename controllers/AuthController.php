@@ -142,6 +142,13 @@ class AuthController
 
     public function apiRegister(): void
     {
+        // Every attempt counts, not just successes: the "already taken"
+        // answers below also tell a script which usernames and emails exist.
+        $rateKey = 'register:' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+        if (!RateLimiter::hit($rateKey, 10, 3600)) {
+            Response::json(['error' => 'มีการสมัครสมาชิกจากเครือข่ายนี้มากเกินไป กรุณารอประมาณ 1 ชั่วโมง'], 429);
+        }
+
         $username    = trim(Request::rawInput('username',     ''));
         $email       = trim(Request::rawInput('email',        ''));
         $password    = Request::rawInput('password',          '');

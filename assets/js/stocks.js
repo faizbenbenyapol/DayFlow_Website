@@ -823,6 +823,11 @@ async function deleteStock() {
     }
 }
 
+// uploads/ is not served directly; the image comes through an owner-checked endpoint.
+function screenshotUrl(s) {
+    return BASE_URL + '/api/stocks/screenshots/' + encodeURIComponent(s.id) + '/image';
+}
+
 function escHtmlStk(str) {
     if (str == null) return '';
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -1263,7 +1268,7 @@ function renderScreenshotsGrid() {
 
     grid.innerHTML = stockScreenshots.map(s => {
         const dateStr = formatDateTime(s.created_at);
-        const imgSrc = BASE_URL + '/uploads/' + s.file_path;
+        const imgSrc = screenshotUrl(s);
         return `
             <div class="stk-screenshot-card">
                 <div class="stk-screenshot-img-wrap" data-act="viewLightbox" data-args="[${s.id}]">
@@ -1295,7 +1300,7 @@ function renderSidebarScreenshot() {
     }
 
     const s = stockScreenshots[0];
-    const imgSrc = BASE_URL + '/uploads/' + s.file_path;
+    const imgSrc = screenshotUrl(s);
     const dateStr = formatDateTime(s.created_at);
 
     if (IS_READ_ONLY) {
@@ -1388,7 +1393,7 @@ function viewLightbox(id) {
     const desc = document.getElementById('lightboxDesc');
     
     if (title) title.textContent = s.name;
-    if (img) img.src = BASE_URL + '/uploads/' + s.file_path;
+    if (img) img.src = screenshotUrl(s);
     if (desc) desc.textContent = s.description || 'ไม่มีคำอธิบาย';
     
     openModal('screenshotLightboxModal');
