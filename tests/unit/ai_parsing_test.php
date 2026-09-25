@@ -6,12 +6,15 @@
 // in markdown fences, add a sentence before it, or drop a field, and none of
 // that should reach the database or the page as-is.
 //
-// They are private, so each case reaches them through reflection rather than
-// by making the controller's surface wider than it needs to be.
+// LlmClient::extractJson() is public and shared by the AI assistant and the
+// stock analysis. validateScriptSchema() is private to AiController, so those
+// cases reach it through reflection rather than widening the controller.
 // =====================================================
 
 declare(strict_types=1);
 
+require_once ROOT . '/core/HttpJson.php';
+require_once ROOT . '/core/LlmClient.php';
 require_once ROOT . '/controllers/AiController.php';
 
 function aiParse(string $method, mixed ...$args): mixed
@@ -22,33 +25,33 @@ function aiParse(string $method, mixed ...$args): mixed
 }
 
 test('extractJson reads a plain JSON object', function (): void {
-    assertSame(['a' => 1], aiParse('extractJson', '{"a":1}'));
+    assertSame(['a' => 1], LlmClient::extractJson('{"a":1}'));
 });
 
 test('extractJson strips a markdown code fence', function (): void {
     // Every major model does this at least some of the time.
-    assertSame(['a' => 1], aiParse('extractJson', "```json\n{\"a\":1}\n```"));
-    assertSame(['a' => 1], aiParse('extractJson', "```\n{\"a\":1}\n```"));
-    assertSame(['a' => 1], aiParse('extractJson', "  ```JSON  \n{\"a\":1}\n  ```  "));
+    assertSame(['a' => 1], LlmClient::extractJson("```json\n{\"a\":1}\n```"));
+    assertSame(['a' => 1], LlmClient::extractJson("```\n{\"a\":1}\n```"));
+    assertSame(['a' => 1], LlmClient::extractJson("  ```JSON  \n{\"a\":1}\n  ```  "));
 });
 
 test('extractJson finds an object buried in prose', function (): void {
     $raw = "Sure! Here is the script you asked for:\n{\"title\":\"x\"}\nHope that helps.";
-    assertSame(['title' => 'x'], aiParse('extractJson', $raw));
+    assertSame(['title' => 'x'], LlmClient::extractJson($raw));
 });
 
 test('extractJson handles a nested object and Thai text', function (): void {
     $raw = '{"title":"หัวข้อ","script":[{"scene":1,"text":"สวัสดี"}]}';
-    $parsed = aiParse('extractJson', $raw);
+    $parsed = LlmClient::extractJson($raw);
 
     assertSame('หัวข้อ', $parsed['title']);
     assertSame('สวัสดี', $parsed['script'][0]['text']);
 });
 
 test('extractJson returns null when there is no object at all', function (): void {
-    assertSame(null, aiParse('extractJson', 'I am afraid I cannot help with that.'));
-    assertSame(null, aiParse('extractJson', ''));
-    assertSame(null, aiParse('extractJson', '{ this is not json }'));
+    assertSame(null, LlmClient::extractJson('I am afraid I cannot help with that.'));
+    assertSame(null, LlmClient::extractJson(''));
+    assertSame(null, LlmClient::extractJson('{ this is not json }'));
 });
 
 test('validateScriptSchema accepts a complete result', function (): void {

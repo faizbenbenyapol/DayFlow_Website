@@ -299,3 +299,33 @@ test('every stocks endpoint needs a session', function (TestClient $_c): void {
         assertContains($anonymous->get($path)['status'], [401, 302], $path . ' must require a session');
     }
 });
+
+// =====================================================
+// Refresh, analysis and key checks — the paths that need no outside API
+// =====================================================
+
+test('refreshing prices without a price provider asks for one', function (TestClient $_c): void {
+    $client = stocksClient('noprovider');
+    trade($client, 'MSFT', 'buy', 1, 100);
+
+    $response = $client->post('/api/stocks/refresh', []);
+    assertSame(422, $response['status']);
+    assertStringContains('API หุ้น', $response['body']);
+});
+
+test('an analysis needs a valid ticker and an AI key', function (TestClient $_c): void {
+    $client = stocksClient('analysis');
+
+    assertSame(422, $client->post('/api/stocks/analyze', ['ticker' => 'not a ticker!'])['status'], 'bad ticker');
+
+    $response = $client->post('/api/stocks/analyze', ['ticker' => 'AAPL', 'market' => 'US']);
+    assertSame(422, $response['status'], 'no AI key configured');
+    assertStringContains('API Key', $response['body']);
+});
+
+test('testing a price key checks the provider and needs a key', function (TestClient $_c): void {
+    $client = stocksClient('keytest');
+
+    assertSame(422, $client->post('/api/stocks/keys/test', ['provider' => 'nope', 'api_key' => 'x'])['status'], 'unknown provider');
+    assertSame(422, $client->post('/api/stocks/keys/test', ['provider' => 'finnhub'])['status'], 'no key saved or sent');
+});

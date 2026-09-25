@@ -1,16 +1,19 @@
 <?php
 // =====================================================
-// controllers/StocksController.php
+// controllers/StocksController.php — the stocks page, transactions,
+// portfolio figures, price refresh and AI analysis
+//
+// Watchlists, provider keys, capital flows and the portfolio screenshot have
+// controllers of their own (Stock*Controller); quotes come from StockQuote.
 // =====================================================
-
-require_once ROOT . '/models/Stock.php';
-require_once ROOT . '/models/StockApiKey.php';
-require_once ROOT . '/models/StockPriceCache.php';
-require_once ROOT . '/models/AiKey.php';
 
 class StocksController
 {
-    const CACHE_COOLDOWN_SECONDS = 300; // 5 min
+    /** A cached quote younger than this is not fetched again. */
+    private const CACHE_COOLDOWN_SECONDS = 300;
+
+    /** AI providers tried for an analysis, in order, until one answers. */
+    private const ANALYSIS_PROVIDERS = ['gemini', 'openai', 'anthropic', 'kimi', 'openrouter'];
 
     public function index(): void
     {
@@ -23,7 +26,6 @@ class StocksController
         require ROOT . '/views/stocks/index.php';
         require ROOT . '/views/layout/footer.php';
     }
-
     // ============================================================
     // TRANSACTIONS
     // ============================================================
@@ -94,52 +96,20 @@ class StocksController
     }
 
     // ============================================================
-    // WATCHLIST
-    // ============================================================
-
-    public function apiWatchlists(): void
-    {
-        $userId = Auth::userId();
-        Response::json(['watchlists' => Stock::getWatchlistsForUser($userId)]);
-    }
-
-    public function apiWatchlistToggle(): void
-    {
-        $userId = Auth::userId();
-        $ticker = strtoupper(trim((string)Request::rawInput('ticker', '')));
-        $market = Request::rawInput('market', 'US');
-        $action = Request::rawInput('action', 'add'); // 'add' or 'remove'
-
-        if ($ticker === '' || !preg_match('/^[A-Z0-9.\-]{1,20}$/', $ticker)) {
-            Response::json(['error' => 'Ticker ไม่ถูกต้อง'], 422);
-        }
-
-        if ($action === 'add') {
-            Stock::addWatchlist($userId, $ticker, $market);
-        } else {
-            Stock::removeWatchlist($userId, $ticker);
-        }
-
-        Response::json(['ok' => true]);
-    }
-
-    // ============================================================
     // PRICE REFRESH
     // ============================================================
 
+    /** Refreshes quotes for the given tickers, or for every holding and watchlist entry. */
     public function apiRefresh(): void
     {
         $userId  = Auth::userId();
         $tickers = Request::rawInput('tickers', []);
 
         if (!is_array($tickers) || !$tickers) {
-            $tickers = [];
-            foreach (Stock::portfolioForUser($userId)['holdings'] as $h) {
-                $tickers[] = $h['ticker'];
-            }
-            foreach (Stock::getWatchlistsForUser($userId) as $w) {
-                $tickers[] = $w['ticker'];
-            }
+            $tickers = array_merge(
+                array_column(Stock::portfolioForUser($userId)['holdings'], 'ticker'),
+                array_column(Stock::getWatchlistsForUser($userId), 'ticker')
+            );
         }
         $tickers = array_values(array_unique(array_filter(array_map('strtoupper', $tickers))));
         if (count($tickers) > 50) Response::json(['error' => 'ขอข้อมูลหุ้นได้ไม่เกิน 50 สัญลักษณ์ต่อครั้ง'], 422);
@@ -153,37 +123,20 @@ class StocksController
         $updated = [];
         $skipped = [];
         $errors  = [];
-        $now     = time();
 
         foreach ($tickers as $ticker) {
             if (!preg_match('/^[A-Z0-9.\-]+$/', $ticker)) {
                 $errors[$ticker] = 'Ticker ไม่ถูกต้อง';
                 continue;
             }
-            $cached = StockPriceCache::get($ticker);
-            if ($cached && $cached['fetched_at']) {
-                $hasMetrics = ($cached['pe_ratio'] !== null || $cached['forward_pe'] !== null || $cached['peg_ratio'] !== null || $cached['p_fcf_ratio'] !== null || $cached['eps'] !== null);
-                $age = $now - strtotime($cached['fetched_at']);
-                if ($age < self::CACHE_COOLDOWN_SECONDS && $hasMetrics) {
-                    $skipped[] = $ticker;
-                    continue;
-                }
+            if (self::isFresh(StockPriceCache::get($ticker))) {
+                $skipped[] = $ticker;
+                continue;
             }
             try {
-                $q = $this->fetchQuote($keyInfo['provider'], $keyInfo['key'], $ticker);
-                StockPriceCache::upsert(
-                    $ticker, 
-                    $q['price'], 
-                    $q['prev_close'], 
-                    $q['currency'],
-                    $q['pe'] ?? null,
-                    $q['forward_pe'] ?? null,
-                    $q['peg'] ?? null,
-                    $q['p_fcf'] ?? null,
-                    $q['eps'] ?? null
-                );
+                StockQuote::refresh($keyInfo['provider'], $keyInfo['key'], $ticker);
                 $updated[] = $ticker;
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 $errors[$ticker] = $e->getMessage();
             }
         }
@@ -197,70 +150,21 @@ class StocksController
         ]);
     }
 
-    // ============================================================
-    // API KEYS
-    // ============================================================
-
-    public function apiKeysList(): void
+    /** A cached quote that is recent and already carries valuation ratios. */
+    private static function isFresh(?array $cached): bool
     {
-        $userId = Auth::userId();
-        Response::json([
-            'keys'      => StockApiKey::listForUser($userId),
-            'providers' => StockApiKey::PROVIDERS,
-        ]);
-    }
+        if (!$cached || !$cached['fetched_at']) return false;
 
-    public function apiKeysSave(): void
-    {
-        $userId   = Auth::userId();
-        $provider = Request::rawInput('provider', '');
-        $apiKey   = trim((string)Request::rawInput('api_key', ''));
-
-        if (!in_array($provider, StockApiKey::PROVIDERS, true)) {
-            Response::json(['error' => 'ผู้ให้บริการไม่ถูกต้อง'], 422);
-        }
-        if ($apiKey === '') {
-            StockApiKey::delete($userId, $provider);
-            Response::json(['ok' => true, 'deleted' => true]);
-        }
-        if (strlen($apiKey) < 8) {
-            Response::json(['error' => 'API key สั้นเกินไป'], 422);
-        }
-        StockApiKey::save($userId, $provider, $apiKey);
-        Response::json(['ok' => true]);
-    }
-
-    public function apiKeysTest(): void
-    {
-        $userId   = Auth::userId();
-        $provider = Request::rawInput('provider', '');
-        $apiKey   = trim((string)Request::rawInput('api_key', ''));
-
-        if (!in_array($provider, StockApiKey::PROVIDERS, true)) {
-            Response::json(['error' => 'ผู้ให้บริการไม่ถูกต้อง'], 422);
-        }
-        if ($apiKey === '') $apiKey = StockApiKey::get($userId, $provider);
-        if ($apiKey === '') Response::json(['error' => 'ยังไม่มี API key'], 422);
-
-        try {
-            $q = $this->fetchQuote($provider, $apiKey, 'AAPL');
-            Response::json(['ok' => true, 'message' => 'ใช้งานได้ · AAPL = ' . $q['price']]);
-        } catch (\Throwable $e) {
-            Response::json(['error' => $e->getMessage()], 400);
-        }
-    }
-
-    public function apiKeysDelete(string $provider): void
-    {
-        $userId = Auth::userId();
-        StockApiKey::delete($userId, $provider);
-        Response::json(['ok' => true]);
+        $hasMetrics = $cached['pe_ratio'] !== null || $cached['forward_pe'] !== null
+            || $cached['peg_ratio'] !== null || $cached['p_fcf_ratio'] !== null || $cached['eps'] !== null;
+        return $hasMetrics && (time() - strtotime($cached['fetched_at'])) < self::CACHE_COOLDOWN_SECONDS;
     }
 
     // ============================================================
     // AI STOCK ANALYSIS
     // ============================================================
 
+    /** Asks each configured AI provider in turn until one returns a usable analysis. */
     public function apiAnalyze(): void
     {
         $userId = Auth::userId();
@@ -271,51 +175,49 @@ class StocksController
             Response::json(['error' => 'กรุณากรอกสัญลักษณ์หุ้นให้ถูกต้อง'], 422);
         }
 
-        // Find all available AI Keys configured by the user
         $availableKeys = [];
-        foreach (['gemini', 'openai', 'anthropic', 'kimi', 'openrouter'] as $p) {
+        foreach (self::ANALYSIS_PROVIDERS as $p) {
             $key = AiKey::get($userId, $p);
-            if ($key !== '') {
-                $availableKeys[] = [
-                    'provider' => $p,
-                    'key'      => $key
-                ];
-            }
+            if ($key !== '') $availableKeys[] = ['provider' => $p, 'key' => $key];
         }
-
-        if (empty($availableKeys)) {
+        if (!$availableKeys) {
             Response::json(['error' => 'กรุณาตั้งค่า API Key สำหรับ AI ก่อนใช้งาน ในส่วน "API สำหรับการวิเคราะห์หุ้นด้วย AI" ในหน้า ตั้งค่า → API หุ้น'], 422);
         }
 
-        // Try to fetch live quote if we have a Stock Price API key
+        // A live price makes the analysis far better, but it is optional.
         $keyInfo = StockApiKey::getFirstAvailable($userId);
         if ($keyInfo) {
             try {
-                $q = $this->fetchQuote($keyInfo['provider'], $keyInfo['key'], $ticker);
-                StockPriceCache::upsert(
-                    $ticker, 
-                    $q['price'], 
-                    $q['prev_close'], 
-                    $q['currency'],
-                    $q['pe'] ?? null,
-                    $q['forward_pe'] ?? null,
-                    $q['peg'] ?? null,
-                    $q['p_fcf'] ?? null,
-                    $q['eps'] ?? null
-                );
-            } catch (\Throwable $e) {
-                // Silently ignore if price API fails
+                StockQuote::refresh($keyInfo['provider'], $keyInfo['key'], $ticker);
+            } catch (Throwable) {}
+        }
+
+        $prompt = self::analysisPrompt($ticker, $market, StockPriceCache::get($ticker));
+
+        $lastError = '';
+        foreach ($availableKeys as ['provider' => $provider, 'key' => $apiKey]) {
+            try {
+                $parsed = LlmClient::extractJson(LlmClient::complete($provider, $apiKey, $prompt));
+                if ($parsed) {
+                    Response::json(['ok' => true, 'result' => $parsed, 'provider' => $provider]);
+                }
+                $lastError = 'AI ' . $provider . ' ส่งข้อมูลมาไม่ถูกต้อง';
+            } catch (Throwable $e) {
+                // A rate limit or a revoked key on one provider moves on to the next.
+                $lastError = $e->getMessage();
             }
         }
 
-        // Check if there is cached price
-        $cached = StockPriceCache::get($ticker);
+        Response::json(['error' => 'เกิดข้อผิดพลาดในการวิเคราะห์ด้วย AI: ' . $lastError], 500);
+    }
+
+    private static function analysisPrompt(string $ticker, string $market, ?array $cached): string
+    {
         $currentPriceText = '';
         if ($cached) {
             $currentPriceText = 'ราคาตลาดจริงล่าสุดของหุ้นตัวนี้ ณ ปัจจุบันในระบบ: ' . $cached['price'] . ' ' . ($cached['currency'] ?: 'USD') . ' (ราคาอ้างอิงปิดวันก่อนหน้า: ' . ($cached['prev_close'] ?: '—') . ' ' . ($cached['currency'] ?: 'USD') . ')';
         }
 
-        // Build stock analysis prompt
         $prompt = "คุณเป็นนักวิเคราะห์การเงินและผู้เชี่ยวชาญด้านการลงทุนมืออาชีพ ช่วยวิเคราะห์หุ้นสัญลักษณ์ \"{$ticker}\" (ตลาด: {$market}) โดยใช้ราคาตลาดล่าสุดที่ระบบจัดเตรียมให้คุณเป็นหลักดังนี้: {$currentPriceText}
 ช่วยประเมินและให้คำแนะนำแบบมืออาชีพในรูปแบบภาษาไทย
 
@@ -355,133 +257,7 @@ class StocksController
   ]
 }";
 
-        $lastError = '';
-        foreach ($availableKeys as $item) {
-            $provider = $item['provider'];
-            $apiKey   = $item['key'];
-
-            try {
-                $raw = $this->callTextLlm($provider, $apiKey, $prompt);
-                $parsed = $this->extractJson($raw);
-                if ($parsed) {
-                    // Success! Return immediately with the working AI result
-                    Response::json(['ok' => true, 'result' => $parsed, 'provider' => $provider]);
-                    return;
-                }
-                $lastError = 'AI ' . $provider . ' ส่งข้อมูลมาไม่ถูกต้อง';
-            } catch (\Throwable $e) {
-                $lastError = $e->getMessage();
-                // If it fails (like HTTP 429 or 401), catch the error and continue to the next available AI Key!
-            }
-        }
-
-        // If we reach here, all configured keys failed
-        Response::json(['error' => 'เกิดข้อผิดพลาดในการวิเคราะห์ด้วย AI: ' . $lastError], 500);
-    }
-
-    private function callTextLlm(string $provider, string $apiKey, string $prompt): string
-    {
-        switch ($provider) {
-            case 'openai':    return $this->callOpenAi($apiKey, $prompt);
-            case 'gemini':    return $this->callGemini($apiKey, $prompt);
-            case 'anthropic': return $this->callAnthropic($apiKey, $prompt);
-            case 'kimi':      return $this->callKimi($apiKey, $prompt);
-            case 'openrouter': return $this->callOpenRouter($apiKey, $prompt);
-        }
-        throw new \RuntimeException('AI Provider ไม่รองรับ: ' . $provider);
-    }
-
-    private function callKimi(string $key, string $prompt): string
-    {
-        $body = [
-            'model' => 'moonshot-v1-8k',
-            'messages' => [
-                ['role' => 'system', 'content' => 'You output only valid JSON matching the requested schema. No markdown, no explanations.'],
-                ['role' => 'user', 'content' => $prompt],
-            ],
-            'temperature' => 0.3,
-        ];
-        $resp = $this->httpJson('https://api.moonshot.cn/v1/chat/completions', $body, [
-            'Authorization: Bearer ' . $key,
-        ]);
-        return $resp['choices'][0]['message']['content'] ?? '';
-    }
-
-    private function callOpenRouter(string $key, string $prompt): string
-    {
-        $body = [
-            'model' => 'google/gemini-2.0-flash-001',
-            'messages' => [
-                ['role' => 'system', 'content' => 'You output only valid JSON matching the requested schema. No markdown, no explanations.'],
-                ['role' => 'user', 'content' => $prompt],
-            ],
-            'temperature' => 0.8,
-        ];
-        $resp = $this->httpJson('https://openrouter.ai/api/v1/chat/completions', $body, [
-            'Authorization: Bearer ' . $key,
-            'HTTP-Referer: http://localhost',
-            'X-Title: Stock Analyzer',
-        ]);
-        return $resp['choices'][0]['message']['content'] ?? '';
-    }
-
-    private function callOpenAi(string $key, string $prompt): string
-    {
-        $body = [
-            'model' => 'gpt-4o-mini',
-            'messages' => [
-                ['role' => 'system', 'content' => 'You output only valid JSON matching the requested schema. No markdown, no explanations.'],
-                ['role' => 'user', 'content' => $prompt],
-            ],
-            'temperature' => 0.8,
-            'response_format' => ['type' => 'json_object'],
-        ];
-        $resp = $this->httpJson('https://api.openai.com/v1/chat/completions', $body, [
-            'Authorization: Bearer ' . $key,
-        ]);
-        return $resp['choices'][0]['message']['content'] ?? '';
-    }
-
-    private function callGemini(string $key, string $prompt): string
-    {
-        $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' . urlencode($key);
-        $body = [
-            'contents' => [['parts' => [['text' => $prompt]]]],
-            'generationConfig' => [
-                'temperature' => 0.9,
-                'responseMimeType' => 'application/json',
-            ],
-        ];
-        $resp = $this->httpJson($url, $body);
-        return $resp['candidates'][0]['content']['parts'][0]['text'] ?? '';
-    }
-
-    private function callAnthropic(string $key, string $prompt): string
-    {
-        $body = [
-            'model' => 'claude-haiku-4-5-20251001',
-            'max_tokens' => 2048,
-            'messages' => [['role' => 'user', 'content' => $prompt]],
-        ];
-        $resp = $this->httpJson('https://api.anthropic.com/v1/messages', $body, [
-            'x-api-key: ' . $key,
-            'anthropic-version: 2023-06-01',
-        ]);
-        return $resp['content'][0]['text'] ?? '';
-    }
-
-    private function extractJson(string $raw): ?array
-    {
-        $s = trim($raw);
-        $s = preg_replace('/^```(?:json)?\s*/i', '', $s);
-        $s = preg_replace('/\s*```\s*$/', '', $s);
-        $data = json_decode($s, true);
-        if (is_array($data)) return $data;
-        if (preg_match('/\{.*\}/s', $s, $m)) {
-            $data = json_decode($m[0], true);
-            if (is_array($data)) return $data;
-        }
-        return null;
+        return $prompt;
     }
 
     // ============================================================
@@ -528,337 +304,5 @@ class StocksController
             'txn_date' => $date,
             'notes'    => $notes !== '' ? $notes : null,
         ];
-    }
-
-    private function fetchQuote(string $provider, string $key, string $ticker): array
-    {
-        switch ($provider) {
-            case 'finnhub': {
-                $r = $this->httpJson(
-                    'https://finnhub.io/api/v1/quote?symbol=' . urlencode($ticker) . '&token=' . urlencode($key),
-                    null, [], 'GET'
-                );
-                $c = isset($r['c']) ? (float)$r['c'] : 0;
-                if ($c <= 0) throw new \RuntimeException('ไม่พบราคา (ticker อาจผิด หรือ quota หมด)');
-                
-                // Fetch basic metrics optionally
-                $pe = null; $forwardPe = null; $peg = null; $pFcf = null; $eps = null;
-                try {
-                    $m = $this->httpJson(
-                        'https://finnhub.io/api/v1/stock/metric?symbol=' . urlencode($ticker) . '&metric=all&token=' . urlencode($key),
-                        null, [], 'GET'
-                    );
-                    $metric = $m['metric'] ?? [];
-                    $pe = isset($metric['peBasicShare']) ? (float)$metric['peBasicShare'] : (isset($metric['peTTM']) ? (float)$metric['peTTM'] : null);
-                    $forwardPe = isset($metric['peNormalized']) ? (float)$metric['peNormalized'] : null;
-                    $peg = isset($metric['pegTTM']) ? (float)$metric['pegTTM'] : null;
-                    $pFcf = isset($metric['pfcfShareTTM']) ? (float)$metric['pfcfShareTTM'] : null;
-                    $eps = isset($metric['epsBasicShareTTM']) ? (float)$metric['epsBasicShareTTM'] : null;
-                } catch (\Throwable $e) {}
-
-                return [
-                    'price'      => $c,
-                    'prev_close' => isset($r['pc']) ? (float)$r['pc'] : null,
-                    'currency'   => null,
-                    'pe'         => $pe,
-                    'forward_pe' => $forwardPe,
-                    'peg'        => $peg,
-                    'p_fcf'      => $pFcf,
-                    'eps'        => $eps,
-                ];
-            }
-            case 'alphavantage': {
-                $r = $this->httpJson(
-                    'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=' . urlencode($ticker) . '&apikey=' . urlencode($key),
-                    null, [], 'GET'
-                );
-                $q = $r['Global Quote'] ?? [];
-                if (empty($q['05. price'])) throw new \RuntimeException('ไม่พบราคา (อาจเกิน rate limit)');
-                
-                // Fetch overview metrics optionally
-                $pe = null; $forwardPe = null; $peg = null; $pFcf = null; $eps = null;
-                try {
-                    $ov = $this->httpJson(
-                        'https://www.alphavantage.co/query?function=OVERVIEW&symbol=' . urlencode($ticker) . '&apikey=' . urlencode($key),
-                        null, [], 'GET'
-                    );
-                    $pe = isset($ov['PERatio']) && $ov['PERatio'] !== 'None' ? (float)$ov['PERatio'] : null;
-                    $forwardPe = isset($ov['ForwardPE']) && $ov['ForwardPE'] !== 'None' ? (float)$ov['ForwardPE'] : null;
-                    $peg = isset($ov['PEGRatio']) && $ov['PEGRatio'] !== 'None' ? (float)$ov['PEGRatio'] : null;
-                    $eps = isset($ov['EPS']) && $ov['EPS'] !== 'None' ? (float)$ov['EPS'] : null;
-                } catch (\Throwable $e) {}
-
-                return [
-                    'price'      => (float)$q['05. price'],
-                    'prev_close' => isset($q['08. previous close']) ? (float)$q['08. previous close'] : null,
-                    'currency'   => null,
-                    'pe'         => $pe,
-                    'forward_pe' => $forwardPe,
-                    'peg'        => $peg,
-                    'p_fcf'      => $pFcf,
-                    'eps'        => $eps,
-                ];
-            }
-            case 'twelvedata': {
-                $r = $this->httpJson(
-                    'https://api.twelvedata.com/price?symbol=' . urlencode($ticker) . '&apikey=' . urlencode($key),
-                    null, [], 'GET'
-                );
-                if (empty($r['price'])) throw new \RuntimeException('ไม่พบราคา');
-                return [
-                    'price'      => (float)$r['price'],
-                    'prev_close' => null,
-                    'currency'   => null,
-                ];
-            }
-        }
-        throw new \RuntimeException('Provider ไม่รองรับ');
-    }
-
-    private function httpJson(string $url, $body, array $headers = [], string $method = 'POST'): array
-    {
-        $ch = curl_init($url);
-        $hdrs = array_merge(['Accept: application/json'], $headers);
-        if ($body !== null) $hdrs[] = 'Content-Type: application/json';
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT        => 20,
-            CURLOPT_CONNECTTIMEOUT => 10,
-            CURLOPT_HTTPHEADER     => $hdrs,
-            CURLOPT_CUSTOMREQUEST  => $method,
-        ]);
-        if ($body !== null) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body, JSON_UNESCAPED_UNICODE));
-        }
-        $raw  = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $err  = curl_error($ch);
-        curl_close($ch);
-
-        if ($raw === false) throw new \RuntimeException('HTTP error: ' . $err);
-        $data = json_decode($raw, true);
-        if ($code >= 400) {
-            $msg = is_array($data) ? ($data['error']['message'] ?? $data['error'] ?? $data['Note'] ?? $data['message'] ?? json_encode($data)) : $raw;
-            if (is_array($msg)) $msg = json_encode($msg);
-            throw new \RuntimeException('HTTP ' . $code . ': ' . $msg);
-        }
-        if (!is_array($data)) throw new \RuntimeException('ตอบกลับไม่ใช่ JSON');
-        return $data;
-    }
-
-    // ============================================================
-    // CAPITAL FLOWS
-    // ============================================================
-
-    public function apiCapitalList(): void
-    {
-        $userId = Auth::userId();
-        Response::json(['flows' => Stock::listCapitalFlows($userId)]);
-    }
-
-    public function apiCapitalCreate(): void
-    {
-        $userId = Auth::userId();
-        $data   = $this->validateCapitalData();
-        if (isset($data['error'])) Response::json(['error' => $data['error']], 422);
-
-        $id   = Stock::createCapitalFlow($userId, $data);
-        $flow = Stock::getCapitalFlowById($id, $userId);
-        Response::json(['ok' => true, 'flow' => $flow], 201);
-    }
-
-    public function apiCapitalUpdate(string $id): void
-    {
-        $userId = Auth::userId();
-        $flowId = (int)$id;
-        $flow   = Stock::getCapitalFlowById($flowId, $userId);
-        if (!$flow) Response::json(['error' => 'ไม่พบรายการ'], 404);
-
-        $data = $this->validateCapitalData();
-        if (isset($data['error'])) Response::json(['error' => $data['error']], 422);
-
-        Stock::updateCapitalFlow($flowId, $userId, $data);
-        Response::json(['ok' => true]);
-    }
-
-    public function apiCapitalDelete(string $id): void
-    {
-        $userId = Auth::userId();
-        if (!Stock::deleteCapitalFlow((int)$id, $userId)) {
-            Response::json(['error' => 'ไม่พบรายการ'], 404);
-        }
-        Response::json(['ok' => true]);
-    }
-
-    private function validateCapitalData(): array
-    {
-        $type     = Request::input('flow_type', 'deposit');
-        $amount   = (float)Request::input('amount', 0);
-        $currency = strtoupper(trim((string)Request::input('currency', 'THB')));
-        $date     = Request::input('flow_date', date('Y-m-d'));
-        $notes    = Request::input('notes', '');
-
-        if (!in_array($type, ['deposit', 'withdrawal'], true)) {
-            return ['error' => 'ประเภทรายการไม่ถูกต้อง'];
-        }
-        if ($amount <= 0) {
-            return ['error' => 'กรุณากรอกจำนวนเงินที่มากกว่า 0'];
-        }
-        if (!in_array($currency, ['THB', 'USD'], true)) {
-            return ['error' => 'สกุลเงินต้องเป็น THB หรือ USD เท่านั้น'];
-        }
-        if (!$date) {
-            return ['error' => 'กรุณาเลือกวันที่'];
-        }
-
-        return [
-            'flow_type' => $type,
-            'amount'    => $amount,
-            'currency'  => $currency,
-            'flow_date' => $date,
-            'notes'     => $notes !== '' ? $notes : null,
-        ];
-    }
-
-    // ============================================================
-    // SCREENSHOTS
-    // ============================================================
-
-    public function apiScreenshotList(): void
-    {
-        $userId = Auth::userId();
-        Response::json(['screenshots' => Stock::listScreenshots($userId)]);
-    }
-
-    public function apiScreenshotUpload(): void
-    {
-        $userId = Auth::userId();
-        $file = $_FILES['file'] ?? null;
-        if (!$file || $file['error'] !== UPLOAD_ERR_OK) {
-            Response::json(['error' => 'อัปโหลดไฟล์ไม่สำเร็จ'], 400);
-        }
-
-        $origName = $file['name'];
-        $size     = $file['size'];
-        $desc     = Request::input('description', '');
-
-        // The browser's Content-Type and filename are the uploader's to choose,
-        // so both come from the bytes instead: an .html sent as image/png was
-        // stored as .html and rendered as a page of this site.
-        $mimeType = self::detectedImageMime($file['tmp_name']);
-        if ($mimeType === null || @getimagesize($file['tmp_name']) === false) {
-            Response::json(['error' => 'อนุญาตเฉพาะไฟล์รูปภาพ (JPG, PNG, WEBP, GIF) เท่านั้น'], 422);
-        }
-
-        if ($size > MAX_UPLOAD_BYTES) {
-            Response::json(['error' => 'ขนาดไฟล์เกินที่กำหนด (สูงสุด ' . ($this->formatBytes(MAX_UPLOAD_BYTES)) . ')'], 422);
-        }
-
-        // Fetch existing screenshots and delete them to enforce single image restriction
-        $existing = Stock::listScreenshots($userId);
-        foreach ($existing as $scr) {
-            Stock::deleteScreenshot((int)$scr['id'], $userId);
-            $oldFullPath = UPLOAD_DIR . $scr['file_path'];
-            if (is_file($oldFullPath)) {
-                @unlink($oldFullPath);
-            }
-        }
-
-        $storageName = uuid4() . '.' . self::IMAGE_TYPES[$mimeType];
-        $subDir      = 'stocks/' . $userId;
-        $fullDir     = UPLOAD_DIR . $subDir;
-
-        if (!is_dir($fullDir)) {
-            mkdir($fullDir, 0755, true);
-        }
-
-        $fullPath = $fullDir . '/' . $storageName;
-        $relPath  = $subDir . '/' . $storageName;
-
-        if (!move_uploaded_file($file['tmp_name'], $fullPath)) {
-            Response::json(['error' => 'บันทึกไฟล์ไม่สำเร็จ'], 500);
-        }
-
-        $id = Stock::createScreenshot($userId, $origName, $relPath, $size, $mimeType, $desc);
-        $screenshot = Stock::getScreenshotById($id, $userId);
-        Response::json(['ok' => true, 'screenshot' => $screenshot], 201);
-    }
-
-    /**
-     * GET /api/stocks/screenshots/{id}/image
-     *
-     * uploads/ is closed to direct requests, so the image is streamed from
-     * here, scoped to its owner (or a share link covering stocks). The type
-     * is re-detected rather than read from the row: screenshots stored before
-     * uploads were checked carry whatever the uploader claimed.
-     */
-    public function apiScreenshotImage(string $id): void
-    {
-        $scr = Stock::getScreenshotById((int)$id, Auth::userId());
-        if (!$scr) Response::json(['error' => 'ไม่พบรูปภาพ'], 404);
-
-        $rootPath = realpath(UPLOAD_DIR);
-        $fullPath = realpath(UPLOAD_DIR . $scr['file_path']);
-        if (!$rootPath || !$fullPath || !is_file($fullPath)
-            || strncmp($fullPath, $rootPath . DIRECTORY_SEPARATOR, strlen($rootPath . DIRECTORY_SEPARATOR)) !== 0) {
-            Response::json(['error' => 'ไม่พบรูปภาพ'], 404);
-        }
-
-        $mimeType = self::detectedImageMime($fullPath);
-        if ($mimeType === null) Response::json(['error' => 'ไม่พบรูปภาพ'], 404);
-
-        header('Content-Type: ' . $mimeType);
-        header('Content-Length: ' . filesize($fullPath));
-        header('Content-Disposition: inline');
-        header('X-Content-Type-Options: nosniff');
-        header('Cache-Control: private, max-age=3600');
-        readfile($fullPath);
-        exit;
-    }
-
-    /** Image types a screenshot may be, with the extension each is stored under. */
-    private const IMAGE_TYPES = [
-        'image/jpeg' => 'jpg',
-        'image/png'  => 'png',
-        'image/webp' => 'webp',
-        'image/gif'  => 'gif',
-    ];
-
-    /** The file's real type when it is one of IMAGE_TYPES, otherwise null. */
-    private static function detectedImageMime(string $path): ?string
-    {
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mime  = $finfo ? finfo_file($finfo, $path) : false;
-        if ($finfo) finfo_close($finfo);
-        return is_string($mime) && isset(self::IMAGE_TYPES[$mime]) ? $mime : null;
-    }
-
-    public function apiScreenshotDelete(string $id): void
-    {
-        $userId = Auth::userId();
-        $scrId  = (int)$id;
-        $scr    = Stock::getScreenshotById($scrId, $userId);
-        if (!$scr) {
-            Response::json(['error' => 'ไม่พบรูปภาพ'], 404);
-        }
-
-        // Delete from DB
-        Stock::deleteScreenshot($scrId, $userId);
-
-        // Delete from file system
-        $fullPath = UPLOAD_DIR . $scr['file_path'];
-        if (is_file($fullPath)) {
-            @unlink($fullPath);
-        }
-
-        Response::json(['ok' => true]);
-    }
-
-    private function formatBytes(int $bytes): string
-    {
-        if ($bytes >= 1073741824) return round($bytes / 1073741824, 2) . ' GB';
-        if ($bytes >= 1048576)    return round($bytes / 1048576, 2) . ' MB';
-        if ($bytes >= 1024)       return round($bytes / 1024, 2) . ' KB';
-        return $bytes . ' B';
     }
 }
