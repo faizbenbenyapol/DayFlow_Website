@@ -82,17 +82,17 @@ $themeAttr = $theme === 'auto' ? 'light' : $theme;
     <link rel="preload" as="font" type="font/woff2" crossorigin
         href="<?= APP_URL ?>/assets/fonts/<?= $criticalFont ?>.woff2">
     <?php endforeach; ?>
-    <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/fonts.css?v=<?= @filemtime(ROOT . '/assets/css/fonts.css') ?>">
-    <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/app.css?v=<?= @filemtime(ROOT . '/assets/css/app.css') ?>">
-    <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/components.css?v=<?= @filemtime(ROOT . '/assets/css/components.css') ?>">
+    <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/fonts.css?v=<?= @filemtime(PUBLIC_ROOT . '/assets/css/fonts.css') ?>">
+    <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/app.css?v=<?= @filemtime(PUBLIC_ROOT . '/assets/css/app.css') ?>">
+    <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/components.css?v=<?= @filemtime(PUBLIC_ROOT . '/assets/css/components.css') ?>">
     <?php if (isset($pageStyle)): ?>
-        <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/modules/<?= h($pageStyle) ?>.css?v=<?= @filemtime(ROOT . '/assets/css/modules/' . $pageStyle . '.css') ?>">
+        <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/modules/<?= h($pageStyle) ?>.css?v=<?= @filemtime(PUBLIC_ROOT . '/assets/css/modules/' . $pageStyle . '.css') ?>">
     <?php endif; ?>
     <?php if (isset($pageStyleExtra)): ?>
-        <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/modules/<?= h($pageStyleExtra) ?>.css?v=<?= @filemtime(ROOT . '/assets/css/modules/' . $pageStyleExtra . '.css') ?>">
+        <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/modules/<?= h($pageStyleExtra) ?>.css?v=<?= @filemtime(PUBLIC_ROOT . '/assets/css/modules/' . $pageStyleExtra . '.css') ?>">
     <?php endif; ?>
     <!-- escHtml()/cssColor(): loaded before any page or inline script needs them. -->
-    <script src="<?= APP_URL ?>/assets/js/html.js?v=<?= @filemtime(ROOT . '/assets/js/html.js') ?>"></script>
+    <script src="<?= APP_URL ?>/assets/js/html.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/html.js') ?>"></script>
 </head>
 
 <body>

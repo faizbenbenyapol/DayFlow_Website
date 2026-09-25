@@ -10,7 +10,7 @@ declare(strict_types=1);
 /** Page scripts: the JS bundles plus the views that carry inline script. */
 function frontEndSources(): array
 {
-    $files = array_merge(glob(ROOT . '/assets/js/*.js'), glob(ROOT . '/views/*/*.php'));
+    $files = array_merge(glob(PUBLIC_ROOT . '/assets/js/*.js'), glob(ROOT . '/views/*/*.php'));
     return array_values(array_filter($files, fn($f) => basename($f) !== 'html.js'));
 }
 

@@ -13,6 +13,13 @@ RUN apt-get update \
 COPY docker/remoteip.conf /etc/apache2/conf-available/dayflow-remoteip.conf
 RUN a2enconf dayflow-remoteip
 
+# Only public/ is web-reachable; the code, config, uploads and logs sit beside
+# it under /var/www/html. The second sed moves the image's
+# <Directory /var/www/> block (AllowOverride All) along with it.
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
+    && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+
 COPY docker/php.ini /usr/local/etc/php/conf.d/dayflow.ini
 COPY . /var/www/html/
 

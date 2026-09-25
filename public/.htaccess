@@ -1,0 +1,57 @@
+Options -Indexes
+
+# Enable rewrite engine
+RewriteEngine On
+
+# This folder is the document root and holds only the site itself, so there
+# is nothing to fence off: code, config, uploads, logs and tooling sit one
+# level up. Dotfiles are still refused (".well-known" excepted).
+RewriteRule (^|/)\.(?!well-known/) - [F,L]
+
+# Existing files (assets, manifest, service worker) are served as they are
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Route everything else through index.php
+RewriteRule ^ index.php [QSA,L]
+
+# Security headers are emitted by core/Security.php to avoid duplicate values.
+
+# Static asset caching. Query-string filemtime versions are already used by
+# the templates, so immutable caching is safe for these files.
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js|png|jpg|jpeg|gif|webp|svg|ico|woff2)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+    # The service worker and the manifest are fetched by URL with no ?v= to
+    # bust, so they must stay revalidated or a deploy would never reach clients.
+    <FilesMatch "^(sw\.js|manifest\.json|offline\.html)$">
+        Header set Cache-Control "public, max-age=0, must-revalidate"
+    </FilesMatch>
+</IfModule>
+
+# PHP settings (if mod_php)
+<IfModule mod_php7.c>
+    php_value upload_max_filesize 20M
+    php_value post_max_size 22M
+    php_value max_execution_time 60
+</IfModule>
+<IfModule mod_php8.c>
+    php_value upload_max_filesize 20M
+    php_value post_max_size 22M
+    php_value max_execution_time 60
+</IfModule>
+
+# Response compression. Caddy already compresses in the tunnel/VPS setup, but a
+# plain Apache deployment (XAMPP, DirectAdmin) has no proxy in front of it.
+<IfModule mod_deflate.c>
+    <IfModule mod_filter.c>
+        AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript
+        AddOutputFilterByType DEFLATE application/javascript application/x-javascript
+        AddOutputFilterByType DEFLATE application/json application/manifest+json
+        AddOutputFilterByType DEFLATE image/svg+xml application/xml
+    </IfModule>
+    # Already-compressed payloads only get bigger.
+    SetEnvIfNoCase Request_URI \.(?:gz|zip|rar|7z|png|jpe?g|webp|gif|ico|woff2?|mp4|webm|pdf)$ no-gzip dont-vary
+</IfModule>

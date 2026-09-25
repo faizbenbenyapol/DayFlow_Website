@@ -97,6 +97,14 @@ sudo cloudflared service install <YOUR_TUNNEL_TOKEN>
 sudo systemctl enable --now cloudflared
 ```
 
+### แบบ C: Apache/Nginx โดยไม่ใช้ Docker (รวม XAMPP)
+
+- ตั้ง document root ไปที่โฟลเดอร์ **`public/`** เท่านั้น — โค้ด config uploads และ log อยู่นอกโฟลเดอร์นี้และเข้าถึงผ่าน URL ไม่ได้
+- ถ้าเปลี่ยน document root ไม่ได้ (เช่น XAMPP ที่ `http://localhost/DayFlow` หรือ shared hosting) ไฟล์ `.htaccess` ที่ root ของโปรเจคจะส่งทุก request เข้า `public/` ให้เอง ต้องเปิด `mod_rewrite` และ `AllowOverride All`
+- Nginx: ใช้ `root /path/to/DayFlow/public;` และ `try_files $uri /index.php?$query_string;`
+- รัน `php scripts/migrate.php` หลังติดตั้งและหลังอัปเดตทุกครั้ง แอปไม่สร้างตารางเองระหว่างใช้งาน
+- ตั้ง cron ให้รัน `php cron.php` ทุก 5 นาที
+
 ---
 
 ## 4. อัปเดตหลัง push ขึ้น GitHub
