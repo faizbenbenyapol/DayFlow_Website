@@ -325,17 +325,22 @@
                         throw new Error(msg);
                     }
 
+                    const result = await res.json().catch(() => ({}));
+                    const summary = Number.isFinite(result.total)
+                        ? `นำเข้าข้อมูลสำเร็จ ${result.total.toLocaleString('th-TH')} รายการ`
+                        : 'นำเข้าข้อมูลสำเร็จแล้ว';
+
                     if (window.Swal) {
                         Swal.fire({
                             icon: 'success',
-                            title: 'นำเข้าข้อมูลสำเร็จ',
+                            title: summary,
                             text: 'ระบบได้รีสโตร์ข้อมูลสำรองเรียบร้อยแล้ว กำลังโหลดหน้าใหม่...',
                             timer: 2000,
                             showConfirmButton: false
                         });
                         setTimeout(() => { window.location.reload(); }, 2000);
                     } else {
-                        toast('นำเข้าข้อมูลสำเร็จแล้ว');
+                        toast(summary);
                         setTimeout(() => { window.location.reload(); }, 1500);
                     }
                 } catch (err) {

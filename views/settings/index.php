@@ -636,7 +636,8 @@ window.dashboardLayout = <?= json_encode($layout, JSON_UNESCAPED_UNICODE) ?>;
     <div class="card mb-6" style="max-width:540px">
         <div class="card-header"><span class="card-title">ส่งออกข้อมูล</span></div>
         <div class="card-body">
-            <p class="form-hint">ดาวน์โหลดข้อมูลทั้งหมดของคุณ (งาน, โน้ต, แพลนเนอร์, การเงิน, การออกกำลังกาย ฯลฯ) เป็นไฟล์ JSON สามารถเก็บไว้เป็นสำรองได้</p>
+            <p class="form-hint">ดาวน์โหลดข้อมูลส่วนตัวของคุณเป็นไฟล์ JSON เพื่อเก็บสำรอง ได้แก่ งาน, โน้ต, แพลนเนอร์, การออกกำลังกาย, อาหาร, การเงิน, การสมัครสมาชิก, หุ้น, ทักษะ, โฟกัส, นิสัย, จดด่วน, ลิงก์สำคัญ, ประวัติ AI และการตั้งค่าการแสดงผล</p>
+            <p class="form-hint">ไม่รวม: โปรเจกต์ (แชร์กับสมาชิกคนอื่น), ไฟล์และภาพหน้าจอหุ้น, API key, การยืนยันตัวตน 2 ขั้นตอน, Telegram และลิงก์แชร์</p>
             <a class="btn btn-primary" href="<?= APP_URL ?>/api/settings/export" download>ดาวน์โหลด JSON</a>
         </div>
     </div>
@@ -644,7 +645,7 @@ window.dashboardLayout = <?= json_encode($layout, JSON_UNESCAPED_UNICODE) ?>;
     <div class="card mb-6" style="max-width:540px">
         <div class="card-header"><span class="card-title">นำเข้าข้อมูล</span></div>
         <div class="card-body">
-            <p class="form-hint">อัปโหลดไฟล์ข้อมูลสำรอง JSON ที่บันทึกไว้เพื่อนำกลับมาใช้ใหม่ <span class="text-xs" style="color:var(--color-danger);font-weight:600">คำเตือน: การนำเข้าจะเขียนทับและทดแทนข้อมูลชุดปัจจุบันทั้งหมดในระบบ</span></p>
+            <p class="form-hint">อัปโหลดไฟล์ข้อมูลสำรอง JSON ที่บันทึกไว้เพื่อนำกลับมาใช้ใหม่ <span class="text-xs" style="color:var(--color-danger);font-weight:600">คำเตือน: ข้อมูลแต่ละส่วนที่มีอยู่ในไฟล์จะแทนที่ข้อมูลส่วนนั้นในระบบทั้งหมด ส่วนที่ไม่มีในไฟล์จะไม่ถูกแตะต้อง</span></p>
             
             <div class="settings-import-zone" id="settingsImportZone" data-click="#importFile">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--color-muted)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
