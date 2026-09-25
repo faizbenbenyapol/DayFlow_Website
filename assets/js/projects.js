@@ -473,7 +473,7 @@ function renderKanbanCardItem(task) {
         else if (task.assignee === 'Taylor') avatarBg = '#ec4899';
         else if (task.assignee === 'Me') avatarBg = '#10b981';
 
-        avatarHtml = `<div class="avatar-member" style="--avatar-bg: ${avatarBg};" title="ผู้ทำงาน: ${task.assignee}">${init}</div>`;
+        avatarHtml = `<div class="avatar-member" style="--avatar-bg: ${avatarBg};" title="ผู้ทำงาน: ${escHtml(task.assignee)}">${escHtml(init)}</div>`;
     }
 
     // ปุ่มแก้ไขสำหรับสิทธิ์ทั่วไป (ซ่อนเมื่อเป็น Viewer)
@@ -1204,16 +1204,6 @@ async function deleteTask(id) {
 // --- ฟังก์ชันช่วยเหลือด้านความปลอดภัยและแปลงตัวอักษร ---
 // =====================================================
 
-function escHtml(str) {
-    if (str == null) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
-
 // =====================================================
 // --- ระบบแชทสนทนาและการทำงานร่วมกัน (Collaboration & Chat) ---
 // =====================================================
@@ -1360,7 +1350,7 @@ async function loadProjectMembers(shouldOpenModal = true) {
                 if (m.role === 'Owner') roleCls = 'role-owner';
                 else if (m.role === 'Viewer') roleCls = 'role-viewer';
                 
-                const init = escHtml(m.display_name || m.username).substring(0, 1).toUpperCase();
+                const init = escHtml(String(m.display_name || m.username || "").substring(0, 1).toUpperCase());
                 
                 return `
                     <div class="member-item">
@@ -1372,7 +1362,7 @@ async function loadProjectMembers(shouldOpenModal = true) {
                             </div>
                         </div>
                         <div class="member-actions">
-                            <span class="member-role-badge ${roleCls}">${m.role}</span>
+                            <span class="member-role-badge ${roleCls}">${escHtml(m.role)}</span>
                             ${showDelete ? `
                                 <button type="button" class="btn-remove-member" data-act="removeMember" data-args="[${m.id}]" title="ลบสมาชิกออกจากกลุ่ม">&#215;</button>
                             ` : ''}

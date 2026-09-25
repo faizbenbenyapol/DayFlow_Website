@@ -117,7 +117,7 @@ function renderFocus(focus, period) {
         + byDay.map(function (day) {
             const minutes = Number(day.minutes) || 0;
             const height = Math.max(4, Math.round((minutes / peak) * 60));
-            return '<div class="review-spark-col" title="' + escapeAttr(day.day) + ' — ' + formatMinutes(minutes) + '">'
+            return '<div class="review-spark-col" title="' + escHtml(day.day) + ' — ' + formatMinutes(minutes) + '">'
                  + '<div class="review-spark-bar" style="height:' + height + 'px"></div>'
                  + '<span>' + new Date(day.day).getDate() + '</span>'
                  + '</div>';
@@ -140,7 +140,7 @@ function renderHabits(habits) {
         const target = Number(habit.target_days) || 0;
         const hit = target > 0 && done >= target;
         return reviewRow(
-            escapeAttr(habit.name),
+            escHtml(habit.name),
             done + (target > 0 ? ' / ' + target : '') + ' วัน',
             hit ? 'success' : ''
         );
@@ -163,7 +163,7 @@ function renderMixed(exercise, finance, notes) {
         + (categories.length
             ? '<p class="text-xs text-muted" style="margin:10px 0 6px">หมวดที่ใช้จ่ายมากที่สุด</p>'
               + '<div class="review-rows">'
-              + categories.map(c => reviewRow(escapeAttr(c.name), formatMoney(c.total) + ' บาท')).join('')
+              + categories.map(c => reviewRow(escHtml(c.name), formatMoney(c.total) + ' บาท')).join('')
               + '</div>'
             : '');
 }
@@ -182,10 +182,4 @@ function formatMinutes(minutes) {
     const hours = Math.floor(total / 60);
     const rest = total % 60;
     return rest ? hours + ' ชม. ' + rest + ' นาที' : hours + ' ชม.';
-}
-
-function escapeAttr(value) {
-    return String(value ?? '').replace(/[&<>'"]/g, ch => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-    }[ch]));
 }

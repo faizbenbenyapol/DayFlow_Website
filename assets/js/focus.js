@@ -321,16 +321,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Helper formatting tools
-    function escHtml(str) {
-        if (!str) return '';
-        return String(str)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-    }
-
     function formatDate(dateStr) {
         const d = new Date(dateStr);
         if (isNaN(d)) return dateStr;

@@ -250,5 +250,5 @@ usort($layout, fn($a, $b) => $a['position'] <=> $b['position']);
 </div>
 
 <script nonce="<?= h(Security::nonce()) ?>">
-window.dashboardLayout = <?= json_encode($layout, JSON_UNESCAPED_UNICODE) ?>;
+window.dashboardLayout = <?= jsonForScript($layout) ?>;
 </script>

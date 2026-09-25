@@ -387,12 +387,6 @@
     }
 
     // ---------- Categories ----------
-    function escHtml(s) {
-        return String(s == null ? '' : s)
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-
     function renderFinCategories(cats) {
         const income  = $('#finCatListIncome');
         const expense = $('#finCatListExpense');
@@ -698,8 +692,8 @@
                 <div class="stock-key-row" data-provider="${p.id}">
                     <div>
                         <div class="stock-key-provider">${p.label}</div>
-                        <div class="stock-key-status ${statusClass}">${escape(statusText)}</div>
-                        <div class="text-xs text-muted" style="margin-top:2px">${escape(p.help)}</div>
+                        <div class="stock-key-status ${statusClass}">${escHtml(statusText)}</div>
+                        <div class="text-xs text-muted" style="margin-top:2px">${escHtml(p.help)}</div>
                     </div>
                     <input type="password" class="form-control" placeholder="${info.set ? 'กรอกเพื่อเปลี่ยน' : 'API key'}" data-key-input="${p.id}">
                     <div class="stock-key-actions">
@@ -710,12 +704,8 @@
                 </div>`;
             }).join('');
         } catch (err) {
-            container.innerHTML = '<div class="text-sm" style="color:var(--color-danger)">โหลดไม่สำเร็จ: ' + escape(err.message || '') + '</div>';
+            container.innerHTML = '<div class="text-sm" style="color:var(--color-danger)">โหลดไม่สำเร็จ: ' + escHtml(err.message || '') + '</div>';
         }
-    }
-
-    function escape(s) {
-        return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
     async function saveStockKey(provider) {
@@ -785,8 +775,8 @@
                 <div class="stock-key-row" data-provider="${p.id}" style="border-left-color: ${borderColor}">
                     <div>
                         <div class="stock-key-provider">${p.label}</div>
-                        <div class="stock-key-status ${statusClass}">${escape(statusText)}</div>
-                        <div class="text-xs text-muted" style="margin-top:2px">${escape(p.help)}</div>
+                        <div class="stock-key-status ${statusClass}">${escHtml(statusText)}</div>
+                        <div class="text-xs text-muted" style="margin-top:2px">${escHtml(p.help)}</div>
                     </div>
                     <input type="password" class="form-control" placeholder="${info.set ? 'กรอกเพื่อเปลี่ยน' : 'API key'}" data-ai-key-input="${p.id}">
                     <div class="stock-key-actions">
@@ -797,7 +787,7 @@
                 </div>`;
             }).join('');
         } catch (err) {
-            container.innerHTML = '<div class="text-sm" style="color:var(--color-danger)">โหลดไม่สำเร็จ: ' + escape(err.message || '') + '</div>';
+            container.innerHTML = '<div class="text-sm" style="color:var(--color-danger)">โหลดไม่สำเร็จ: ' + escHtml(err.message || '') + '</div>';
         }
     }
 

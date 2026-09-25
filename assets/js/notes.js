@@ -660,11 +660,6 @@ function autoResize(el) {
     el.style.height = el.scrollHeight + 'px';
 }
 
-function escHtml(str) {
-    if (str == null) return '';
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
 /* --- Helpers named by the declarative actions in the editor markup --- */
 
 // The tag input submits on blur, but a click on the "add" button next to it

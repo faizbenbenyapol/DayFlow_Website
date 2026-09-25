@@ -8,10 +8,6 @@
     let editingShareId = null;
 
     // ---- Helpers ----
-    function esc(s) {
-        return String(s == null ? '' : s)
-            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
     function fmtDate(d) {
         if (!d) return null;
         return new Date(d).toLocaleString('th-TH');
@@ -42,19 +38,19 @@
 
                 return `<tr>
                     <td>
-                        <div style="font-weight:500">${esc(s.label || s.file_name)}</div>
-                        <div style="font-size:.75rem;color:var(--color-muted)">${s.file_type === 'folder' ? '📁' : '📄'} ${esc(s.file_name)}</div>
+                        <div style="font-weight:500">${escHtml(s.label || s.file_name)}</div>
+                        <div style="font-size:.75rem;color:var(--color-muted)">${s.file_type === 'folder' ? '📁' : '📄'} ${escHtml(s.file_name)}</div>
                     </td>
                     <td>
-                        <a class="share-link-url" href="${esc(link)}" target="_blank" rel="noopener">${esc(link)}</a>
+                        <a class="share-link-url" href="${escHtml(link)}" target="_blank" rel="noopener">${escHtml(link)}</a>
                     </td>
-                    <td><span class="share-perm-badge ${esc(s.permission)}">${s.permission === 'download' ? 'ดาวน์โหลด' : 'ดูอย่างเดียว'}</span></td>
+                    <td><span class="share-perm-badge ${escHtml(s.permission)}">${s.permission === 'download' ? 'ดาวน์โหลด' : 'ดูอย่างเดียว'}</span></td>
                     <td>${exp}</td>
                     <td>
                         <div class="share-actions">
-                            <button class="btn btn-ghost btn-sm" data-act="copy" data-link="${esc(link)}" title="คัดลอกลิงก์">คัดลอก</button>
+                            <button class="btn btn-ghost btn-sm" data-act="copy" data-link="${escHtml(link)}" title="คัดลอกลิงก์">คัดลอก</button>
                             <button class="btn btn-ghost btn-sm" data-act="edit" data-id="${s.id}" data-file-id="${s.file_id}"
-                                data-label="${esc(s.label)}" data-perm="${esc(s.permission)}" data-exp="${esc(s.expires_at||'')}">แก้ไข</button>
+                                data-label="${escHtml(s.label)}" data-perm="${escHtml(s.permission)}" data-exp="${escHtml(s.expires_at||'')}">แก้ไข</button>
                             <button class="btn btn-ghost btn-sm" style="color:var(--color-danger)" data-act="del" data-id="${s.id}">ลบ</button>
                         </div>
                     </td>

@@ -21,7 +21,7 @@ function renderHabits() {
         return;
     }
     grid.innerHTML = items.map(h => `
-        <article class="habit-card ${Number(h.completed_today) ? 'is-complete' : ''}" style="--habit-color:${escHtml(h.color)}">
+        <article class="habit-card ${Number(h.completed_today) ? 'is-complete' : ''}" style="--habit-color:${cssColor(h.color, '#10b981')}">
             <div class="habit-card-top">
                 <span class="habit-dot" aria-hidden="true"></span>
                 <button class="habit-edit" type="button" data-edit-habit="${h.id}" aria-label="แก้ไข ${escHtml(h.name)}">แก้ไข</button>
