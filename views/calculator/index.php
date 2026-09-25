@@ -276,7 +276,7 @@
             </div>
             <div class="calc-result" data-result="f2">—</div>
             <details class="mt-4">
-                <summary class="text-sm text-muted" style="cursor:pointer">ตารางการผ่อน (amortization)</summary>
+                <summary class="text-sm text-muted cursor-pointer">ตารางการผ่อน (amortization)</summary>
                 <div class="table-wrap mt-2">
                     <table class="table calc-amort-table">
                         <thead><tr><th>งวด</th><th>ค่างวด</th><th>เงินต้น</th><th>ดอกเบี้ย</th><th>คงเหลือ</th></tr></thead>
@@ -326,14 +326,14 @@
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label">จาก</label>
-                    <div class="flex" style="gap:.5rem">
+                    <div class="flex gap-2">
                         <input type="number" step="any" class="form-control" id="convFromValue" placeholder="1">
                         <select class="form-control" id="convFromUnit" style="max-width:140px"></select>
                     </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">ไป</label>
-                    <div class="flex" style="gap:.5rem">
+                    <div class="flex gap-2">
                         <input type="text" class="form-control" id="convToValue" readonly>
                         <select class="form-control" id="convToUnit" style="max-width:140px"></select>
                     </div>
@@ -770,7 +770,7 @@
                     </select>
                 </div>
             </div>
-            <div class="flex" style="gap:.5rem; margin-bottom:1rem">
+            <div class="flex gap-2 mb-4">
                 <button type="button" class="btn btn-primary btn-sm" id="btnRandom">สุ่มเลย</button>
                 <button type="button" class="btn btn-ghost btn-sm" id="btnFlipCoin">โยนเหรียญ</button>
                 <button type="button" class="btn btn-ghost btn-sm" id="btnRollDice">ทอยลูกเต๋า</button>
@@ -791,7 +791,7 @@
                 <div class="form-group"><label class="form-label">จำนวนที่สร้าง</label>
                     <input type="number" step="1" min="1" max="20" class="form-control" id="pwCount" value="3"></div>
             </div>
-            <div class="flex flex-wrap" style="gap:1rem; margin-bottom:1rem">
+            <div class="flex flex-wrap gap-4 mb-4">
                 <label class="flex items-center" style="gap:.3rem"><input type="checkbox" id="pwUpper" checked> A–Z</label>
                 <label class="flex items-center" style="gap:.3rem"><input type="checkbox" id="pwLower" checked> a–z</label>
                 <label class="flex items-center" style="gap:.3rem"><input type="checkbox" id="pwDigit" checked> 0–9</label>

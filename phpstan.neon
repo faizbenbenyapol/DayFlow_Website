@@ -1,0 +1,32 @@
+# Static analysis, also run in CI. Locally:
+#   docker run --rm -v "$PWD":/app -w /app ghcr.io/phpstan/phpstan:2.2.16 analyse
+parameters:
+    level: 5
+    phpVersion: 80200
+    paths:
+        - config
+        - core
+        - models
+        - controllers
+        - cron.php
+        - public/index.php
+        - scripts
+    bootstrapFiles:
+        - tests/phpstan/bootstrap.php
+    # Set from the environment at runtime; their bootstrap values are not
+    # the ones production sees, so no branch on them is "always" anything.
+    dynamicConstantNames:
+        - APP_ENV
+        - APP_URL
+        - DB_HOST
+        - DB_NAME
+        - DB_USER
+        - DB_PASS
+        - GOOGLE_CLIENT_ID
+        - VAPID_PUBLIC_KEY
+        - VAPID_PRIVATE_KEY
+        - VAPID_SUBJECT
+        - APP_KEY_ENV
+        - CRON_TOKEN
+        - MAX_UPLOAD_BYTES
+        - TIMEZONE

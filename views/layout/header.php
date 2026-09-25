@@ -139,7 +139,7 @@ if ($isReadOnly || $isGuest):
                 <span style="color:var(--color-text); font-size:1rem; font-weight:600;">บอร์ดโครงการสาธารณะ</span>
                 <span class="badge" style="background:rgba(6, 182, 212, 0.12); color:#06b6d4; font-size:0.7rem;font-weight:600;margin-left:4px;padding:2px 6px;">ผู้เยี่ยมชม</span>
             </div>
-            <div style="flex:1;"></div>
+            <div class="flex-1"></div>
             <div style="flex-shrink:0; display:flex; align-items:center; gap:12px;">
                 <a href="<?= APP_URL ?>/login" class="btn btn-ghost btn-sm" style="font-size:0.8rem; border-color:var(--color-border-2);">
                     เข้าสู่ระบบ

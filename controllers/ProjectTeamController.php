@@ -41,7 +41,7 @@ class ProjectTeamController
 
         $emailOrUsername = trim(Request::input('email_or_username', ''));
         $role            = Request::input('role', 'Editor');
-        if (!in_array($role, self::GRANTABLE_ROLES, true)) {
+        if (!in_array($role, ProjectMember::GRANTABLE_ROLES, true)) {
             Response::json(['error' => 'สิทธิ์ไม่ถูกต้อง'], 422);
         }
 

@@ -141,7 +141,7 @@ class Finance
         // Fill all 12 months
         $chart = [];
         for ($m = 1; $m <= 12; $m++) {
-            $key = str_pad($m, 2, '0', STR_PAD_LEFT);
+            $key = str_pad((string)$m, 2, '0', STR_PAD_LEFT);
             $row = array_filter($rows, fn($r) => $r['month'] === $key);
             $row = array_values($row)[0] ?? null;
             $chart[] = [
@@ -174,20 +174,12 @@ class FinanceCategory
     }
 
     /** Whether this category exists and belongs to the given account. */
-    public static function belongsTo(int $id, int $userId): bool
-    {
-        return (bool)DB::run(
-            'SELECT 1 FROM finance_categories WHERE id = ? AND user_id = ?',
-            [$id, $userId]
-        )->fetchColumn();
-    }
-
     public static function update(int $id, int $userId, string $name, string $type): bool
     {
         return DB::run(
             'UPDATE finance_categories SET name = ?, type = ? WHERE id = ? AND user_id = ?',
             [$name, $type, $id, $userId]
-        )->rowCount() >= 0;
+        )->rowCount() > 0;
     }
 
     public static function delete(int $id, int $userId): bool

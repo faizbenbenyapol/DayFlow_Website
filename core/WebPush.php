@@ -175,18 +175,21 @@ final class WebPush
     /** Converts an ASN.1 DER ECDSA signature into the fixed 64-byte form. */
     private static function derToRawSignature(string $der): ?string
     {
-        $offset = 0;
-        if (($der[$offset++] ?? '') !== "\x30") return null;
+        // One byte of the DER blob, or '' past its end (ord('') is 0).
+        $byte = static fn(string $s, int $i): string => $i < strlen($s) ? $s[$i] : '';
 
-        $seqLength = ord($der[$offset++] ?? "\x00");
+        $offset = 0;
+        if ($byte($der, $offset++) !== "\x30") return null;
+
+        $seqLength = ord($byte($der, $offset++));
         if ($seqLength & 0x80) {
             // Long form: the low bits say how many length bytes follow.
             $offset += $seqLength & 0x7f;
         }
 
-        $readInteger = static function (string $der, int &$offset): ?string {
-            if (($der[$offset++] ?? '') !== "\x02") return null;
-            $length = ord($der[$offset++] ?? "\x00");
+        $readInteger = static function (string $der, int &$offset) use ($byte): ?string {
+            if ($byte($der, $offset++) !== "\x02") return null;
+            $length = ord($byte($der, $offset++));
             $value  = substr($der, $offset, $length);
             $offset += $length;
 

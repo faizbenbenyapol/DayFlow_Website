@@ -57,7 +57,7 @@ function legacyName(string $relative): string
     return $name === 'schema' ? 'sql/schema.sql' : 'sql/migrate_' . $name . '.sql';
 }
 
-$args     = array_slice($argv, 1);
+$args     = array_slice($_SERVER['argv'] ?? [], 1);
 $statusOnly = in_array('--status', $args, true);
 $force      = in_array('--force', $args, true);
 

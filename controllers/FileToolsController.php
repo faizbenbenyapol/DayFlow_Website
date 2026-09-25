@@ -60,22 +60,14 @@ class FileToolsController
 
         $origName = pathinfo(basename($file['name']), PATHINFO_FILENAME);
 
-        switch ($action) {
-            case 'convert':
-                $this->doConvert($src, $origName, Request::input('format', 'png'));
-                break;
-            case 'resize':
-                $this->doResize($src, $origName, $mimeType);
-                break;
-            case 'compress':
-                $this->doCompress($src, $origName, $mimeType);
-                break;
-            case 'transform':
-                $this->doTransform($src, $origName, $mimeType);
-                break;
-            default:
-                Response::json(['error' => 'action ไม่รู้จัก'], 422);
-        }
+        // Each branch streams its result and exits.
+        match ($action) {
+            'convert'   => $this->doConvert($src, $origName, Request::input('format', 'png')),
+            'resize'    => $this->doResize($src, $origName, $mimeType),
+            'compress'  => $this->doCompress($src, $origName, $mimeType),
+            'transform' => $this->doTransform($src, $origName, $mimeType),
+            default     => Response::json(['error' => 'action ไม่รู้จัก'], 422),
+        };
     }
 
     private function gdLoad(string $path, string $mime)
@@ -148,7 +140,7 @@ class FileToolsController
         if ($keepRatio) {
             if ($targetW > 0 && $targetH <= 0) {
                 $targetH = (int) round($origH * $targetW / $origW);
-            } elseif ($targetH > 0 && $targetW <= 0) {
+            } elseif ($targetW <= 0) { // so $targetH > 0, per the check above
                 $targetW = (int) round($origW * $targetH / $origH);
             } else {
                 $scaleW = $targetW / $origW;

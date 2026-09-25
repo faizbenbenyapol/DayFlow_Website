@@ -114,7 +114,7 @@ class ShareController
 
         // Validate expires_at format
         $expiresClean = null;
-        if ($expiresAt && $expiresAt !== '') {
+        if ($expiresAt) {
             $ts = strtotime($expiresAt);
             if (!$ts || $ts <= time()) Response::json(['error' => 'วันหมดอายุต้องเป็นอนาคต'], 422);
             $expiresClean = date('Y-m-d H:i:s', $ts);
@@ -140,7 +140,7 @@ class ShareController
         if (!in_array($permission, ['view', 'download'])) Response::json(['error' => 'สิทธิ์ไม่ถูกต้อง'], 422);
 
         $expiresClean = null;
-        if ($expiresAt && $expiresAt !== '') {
+        if ($expiresAt) {
             $ts = strtotime($expiresAt);
             if (!$ts) Response::json(['error' => 'รูปแบบวันที่ไม่ถูกต้อง'], 422);
             $expiresClean = date('Y-m-d H:i:s', $ts);

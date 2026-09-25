@@ -24,7 +24,7 @@ class ProjectShareController
         $this->requireOwner($project, 'เปิดลิงก์สาธารณะ');
 
         $shareRole = Request::input('share_role', 'Viewer');
-        if (!in_array($shareRole, self::GRANTABLE_ROLES, true)) {
+        if (!in_array($shareRole, ProjectMember::GRANTABLE_ROLES, true)) {
             Response::json(['error' => 'สิทธิ์ไม่ถูกต้อง'], 422);
         }
         

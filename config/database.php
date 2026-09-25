@@ -19,6 +19,13 @@ class DB
                         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                         PDO::ATTR_EMULATE_PREPARES   => false,
+                        // rowCount() after an UPDATE counts the rows the
+                        // WHERE matched, not only the ones whose values
+                        // changed. Otherwise saving a record unchanged
+                        // looked like "not found", and code worked around it
+                        // with rowCount() >= 0, which reported success for a
+                        // row that did not exist or belonged to someone else.
+                        PDO::MYSQL_ATTR_FOUND_ROWS   => true,
                         PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci"
                     ]
                 );

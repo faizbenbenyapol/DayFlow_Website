@@ -69,7 +69,7 @@ class DashboardLayout
                 $userId,
                 $w['widget_key'],
                 (int)$w['position'],
-                isset($w['is_visible']) ? (int)$w['is_visible'] : 1
+                (int)$w['is_visible']
             ]);
         }
     }

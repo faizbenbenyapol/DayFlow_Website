@@ -1034,7 +1034,7 @@ function renderStockAnalysisResult(data) {
                                 </div>
                             </div>
                         </div>
-                        <div class="stk-levels-meter" style="margin-top: var(--space-4)">
+                        <div class="stk-levels-meter mt-4">
                             <div class="stk-level-range">
                                 <span>แนวรับ (S1): <strong>${escHtml(r.support_1 || '—')}</strong></span>
                                 <span>แนวต้าน (R1): <strong>${escHtml(r.resistance_1 || '—')}</strong></span>
@@ -1318,7 +1318,7 @@ function renderSidebarScreenshot() {
                 </div>
             </div>
             <div class="mt-4">
-                <div class="stk-screenshot-name" style="font-size:0.85rem;" title="${escHtml(s.name)}">${escHtml(s.name)}</div>
+                <div class="stk-screenshot-name text-sm" title="${escHtml(s.name)}">${escHtml(s.name)}</div>
                 <div class="stk-screenshot-desc" style="font-size:0.75rem; height:auto; margin-bottom:4px;">${escHtml(s.description || 'ไม่มีคำอธิบาย')}</div>
                 <div class="text-xs text-muted">อัปโหลดเมื่อ ${escHtml(dateStr)}</div>
             </div>

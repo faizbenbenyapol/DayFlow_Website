@@ -15,6 +15,12 @@ class RateLimiter
     /** Roughly one sweep per this many calls, so the cost is amortised. */
     private const SWEEP_ODDS = 200;
 
+    /**
+     * Counts one attempt and says whether it is still within the limit.
+     * Each call changes the count, so two identical calls can disagree.
+     *
+     * @phpstan-impure
+     */
     public static function hit(string $key, int $maxAttempts, int $windowSeconds): bool
     {
         $dir = ROOT . '/storage/ratelimit';

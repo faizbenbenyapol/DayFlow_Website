@@ -6,6 +6,12 @@
 class ProjectMember
 {
     /**
+     * Roles an owner can hand out to a member or a share link. Owner is
+     * implied by owning the project and is never granted.
+     */
+    public const GRANTABLE_ROLES = ['Editor', 'Viewer'];
+
+    /**
      * ดึงสิทธิ์/บทบาทของสมาชิกในโปรเจค
      */
     public static function getRole(int $projectId, int $userId): ?string

@@ -79,7 +79,7 @@ class AppShareController
 
         // Validate expires_at format
         $expiresClean = null;
-        if ($expiresAt && $expiresAt !== '') {
+        if ($expiresAt) {
             $ts = strtotime($expiresAt);
             if (!$ts || $ts <= time()) Response::json(['error' => 'วันหมดอายุต้องเป็นอนาคต'], 422);
             $expiresClean = date('Y-m-d H:i:s', $ts);

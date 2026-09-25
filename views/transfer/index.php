@@ -176,7 +176,7 @@
 
     <div class="card tf-card">
         <div class="card-body">
-            <h2 class="tf-section-title" style="margin-bottom: 1rem;">ประวัติการส่ง</h2>
+            <h2 class="tf-section-title mb-4">ประวัติการส่ง</h2>
             <div id="historyList" class="tf-history-list">
                 <div class="tf-empty-state">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="opacity:.3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>

@@ -5,7 +5,7 @@
 /* --- Segmented Controls (Tabs) --- */
 .settings-tabs {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     overflow-x: auto;
     background: var(--color-bg) !important;
     box-shadow: var(--shadow-nm-recessed) !important;
@@ -835,3 +835,13 @@
 }
 .theme-auto-preview .preview-line-1 { width: 100%; }
 .theme-auto-preview .preview-line-2 { width: 75%; }
+
+/* Setting cards keep a readable line length; the wider ones hold tables. */
+.settings-card { max-width: 540px; }
+.settings-card--wide { max-width: 720px; }
+.settings-card--xwide { max-width: 900px; }
+
+/* A checkbox row in a settings list (menus, dashboard widgets). */
+.settings-check { cursor: pointer; font-weight: 500; padding: 4px 0; }
+
+.theme-card-option { min-width: 140px; }

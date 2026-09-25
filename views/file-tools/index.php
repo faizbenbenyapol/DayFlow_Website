@@ -57,7 +57,7 @@
                 <input type="file" id="splitInput" accept=".pdf,application/pdf" hidden>
             </div>
             <div id="splitFileName" class="ft-chosen-file"></div>
-            <div class="form-group" style="margin-top:.5rem">
+            <div class="form-group mt-2">
                 <label class="form-label">ช่วงหน้า <span class="text-xs text-muted">(เช่น 1-3,5,7-9)</span></label>
                 <input type="text" class="form-control" id="splitRange" placeholder="1-3,5,7-9">
             </div>
@@ -96,7 +96,7 @@
             </div>
             <div id="rotateFileName" class="ft-chosen-file"></div>
             <div id="rotatePageGrid" class="ft-page-grid" hidden></div>
-            <div class="form-group" id="rotateAngleRow" style="margin-top:.5rem" hidden>
+            <div class="form-group mt-2" id="rotateAngleRow" hidden>
                 <label class="form-label">มุมหมุน</label>
                 <div class="ft-btn-group">
                     <button type="button" class="btn btn-sm btn-ghost ft-angle-btn active" data-angle="90">90°</button>
@@ -120,7 +120,7 @@
                 <input type="file" id="wmInput" accept=".pdf,application/pdf" hidden>
             </div>
             <div id="wmFileName" class="ft-chosen-file"></div>
-            <div class="ft-form-grid" style="margin-top:.5rem">
+            <div class="ft-form-grid mt-2">
                 <div class="form-group">
                     <label class="form-label">ข้อความ</label>
                     <input type="text" class="form-control" id="wmText" placeholder="CONFIDENTIAL">
@@ -170,7 +170,7 @@
                 <input type="file" id="pdf2imgInput" accept=".pdf,application/pdf" hidden>
             </div>
             <div id="pdf2imgFileName" class="ft-chosen-file"></div>
-            <div class="form-group" style="margin-top:.5rem">
+            <div class="form-group mt-2">
                 <label class="form-label">ความละเอียด</label>
                 <select class="form-control" id="pdf2imgDpi">
                     <option value="1">72 DPI (เร็ว)</option>
@@ -198,7 +198,7 @@
                 <input type="file" id="pwdInput" accept=".pdf,application/pdf" hidden>
             </div>
             <div id="pwdFileName" class="ft-chosen-file"></div>
-            <div class="ft-form-grid" style="margin-top:.5rem">
+            <div class="ft-form-grid mt-2">
                 <div class="form-group">
                     <label class="form-label">รหัสผ่านผู้ใช้</label>
                     <input type="password" class="form-control" id="pwdUser" placeholder="รหัสผ่านสำหรับเปิดไฟล์">
@@ -231,7 +231,7 @@
                 <input type="file" id="imgConvInput" accept="image/*" hidden>
             </div>
             <div id="imgConvPreview" class="ft-img-preview" hidden></div>
-            <div class="form-group" style="margin-top:.5rem">
+            <div class="form-group mt-2">
                 <label class="form-label">แปลงเป็น</label>
                 <select class="form-control" id="imgConvFormat">
                     <option value="jpg">JPG</option>
@@ -257,7 +257,7 @@
                 <input type="file" id="imgResizeInput" accept="image/*" hidden>
             </div>
             <div id="imgResizeInfo" class="ft-chosen-file"></div>
-            <div class="ft-form-grid" style="margin-top:.5rem">
+            <div class="ft-form-grid mt-2">
                 <div class="form-group">
                     <label class="form-label">ความกว้าง (px)</label>
                     <input type="number" class="form-control" id="resizeW" placeholder="เช่น 800" min="1">
@@ -286,7 +286,7 @@
                 <input type="file" id="imgCmpInput" accept="image/*" hidden>
             </div>
             <div id="imgCmpInfo" class="ft-chosen-file"></div>
-            <div class="form-group" style="margin-top:.5rem">
+            <div class="form-group mt-2">
                 <label class="form-label">คุณภาพ: <strong id="cmpQualityVal">80</strong>%</label>
                 <input type="range" id="cmpQuality" min="10" max="100" value="80" class="ft-range">
             </div>
@@ -306,7 +306,7 @@
                 <input type="file" id="imgRotInput" accept="image/*" hidden>
             </div>
             <div id="imgRotInfo" class="ft-chosen-file"></div>
-            <div class="ft-btn-group" style="margin-top:.5rem">
+            <div class="ft-btn-group mt-2">
                 <button type="button" class="btn btn-sm btn-ghost ft-op-btn active" data-op="rotate90">หมุนขวา 90°</button>
                 <button type="button" class="btn btn-sm btn-ghost ft-op-btn" data-op="rotate180">หมุน 180°</button>
                 <button type="button" class="btn btn-sm btn-ghost ft-op-btn" data-op="rotate270">หมุน 270°</button>
@@ -329,18 +329,18 @@
                 <input type="file" id="imgFxInput" accept="image/*" hidden>
             </div>
             <div id="imgFxInfo" class="ft-chosen-file"></div>
-            <div class="ft-btn-group" style="margin-top:.5rem" id="fxOpBtns">
+            <div class="ft-btn-group mt-2" id="fxOpBtns">
                 <button type="button" class="btn btn-sm btn-ghost ft-fx-btn active" data-op="grayscale">ขาวดำ</button>
                 <button type="button" class="btn btn-sm btn-ghost ft-fx-btn" data-op="blur">เบลอ</button>
                 <button type="button" class="btn btn-sm btn-ghost ft-fx-btn" data-op="brightness">ความสว่าง</button>
                 <button type="button" class="btn btn-sm btn-ghost ft-fx-btn" data-op="contrast">คอนทราสต์</button>
             </div>
-            <div id="fxLevelRow" class="form-group" style="margin-top:.5rem" hidden>
+            <div id="fxLevelRow" class="form-group mt-2" hidden>
                 <label class="form-label" id="fxLevelLabel">ระดับ</label>
                 <input type="range" class="ft-range" id="fxLevel" min="-100" max="100" value="30">
                 <div class="text-xs text-muted" id="fxLevelVal">30</div>
             </div>
-            <div id="fxBlurRow" class="form-group" style="margin-top:.5rem" hidden>
+            <div id="fxBlurRow" class="form-group mt-2" hidden>
                 <label class="form-label">ระดับเบลอ (1–20)</label>
                 <input type="range" class="ft-range" id="fxBlurPasses" min="1" max="20" value="5">
                 <div class="text-xs text-muted" id="fxBlurVal">5</div>
@@ -363,7 +363,7 @@
     <div class="card ft-tool-card">
         <div class="card-header"><span class="card-title">JSON ↔ CSV</span></div>
         <div class="card-body">
-            <div class="ft-btn-group" style="margin-bottom:.5rem">
+            <div class="ft-btn-group mb-2">
                 <button type="button" class="btn btn-sm btn-ghost ft-dir-btn active" data-dir="json2csv">JSON → CSV</button>
                 <button type="button" class="btn btn-sm btn-ghost ft-dir-btn" data-dir="csv2json">CSV → JSON</button>
             </div>
@@ -382,7 +382,7 @@
     <div class="card ft-tool-card">
         <div class="card-header"><span class="card-title">JSON ↔ XML</span></div>
         <div class="card-body">
-            <div class="ft-btn-group" style="margin-bottom:.5rem">
+            <div class="ft-btn-group mb-2">
                 <button type="button" class="btn btn-sm btn-ghost ft-dir-btn active" data-dir="json2xml">JSON → XML</button>
                 <button type="button" class="btn btn-sm btn-ghost ft-dir-btn" data-dir="xml2json">XML → JSON</button>
             </div>
@@ -415,7 +415,7 @@
     <div class="card ft-tool-card">
         <div class="card-header"><span class="card-title">Base64 Encode / Decode</span></div>
         <div class="card-body">
-            <div class="ft-tabs-inner" style="margin-bottom:.5rem">
+            <div class="ft-tabs-inner mb-2">
                 <button type="button" class="btn btn-sm btn-ghost ft-b64-tab active" data-b64="text">ข้อความ</button>
                 <button type="button" class="btn btn-sm btn-ghost ft-b64-tab" data-b64="file">ไฟล์</button>
             </div>
@@ -433,11 +433,11 @@
                     <div>ลากไฟล์มาวาง หรือ <label for="b64FileInput" class="ft-link">คลิกเลือก</label></div>
                     <input type="file" id="b64FileInput" hidden>
                 </div>
-                <div class="ft-actions" style="margin-top:.5rem">
+                <div class="ft-actions mt-2">
                     <button class="btn btn-ghost" id="btnB64FileCopy">คัดลอก Base64</button>
                     <button class="btn btn-ghost" id="btnB64FileDownload">ดาวน์โหลดไฟล์ต้นฉบับ</button>
                 </div>
-                <textarea class="form-control ft-textarea ft-output" id="b64FileOutput" readonly style="font-size:.75rem"></textarea>
+                <textarea class="form-control ft-textarea ft-output text-xs" id="b64FileOutput" readonly></textarea>
             </div>
         </div>
     </div>
@@ -446,7 +446,7 @@
     <div class="card ft-tool-card">
         <div class="card-header"><span class="card-title">Hash ไฟล์ / ข้อความ</span><span class="text-xs text-muted">SHA-256 · SHA-1 · MD5</span></div>
         <div class="card-body">
-            <div class="ft-tabs-inner" style="margin-bottom:.5rem">
+            <div class="ft-tabs-inner mb-2">
                 <button type="button" class="btn btn-sm btn-ghost ft-hash-tab active" data-hsrc="text">ข้อความ</button>
                 <button type="button" class="btn btn-sm btn-ghost ft-hash-tab" data-hsrc="file">ไฟล์</button>
             </div>
@@ -497,7 +497,7 @@
                 <input type="file" id="zipCreateInput" multiple hidden>
             </div>
             <div id="zipCreateFileList" class="ft-file-list"></div>
-            <div class="form-group" style="margin-top:.5rem">
+            <div class="form-group mt-2">
                 <label class="form-label">ชื่อไฟล์ ZIP</label>
                 <input type="text" class="form-control" id="zipCreateName" value="archive" placeholder="archive">
             </div>
@@ -533,7 +533,7 @@
                 <input type="file" id="zipExtInput" accept=".zip,application/zip,application/x-zip-compressed" hidden>
             </div>
             <div id="zipExtEntries" class="ft-zip-table-wrap" hidden></div>
-            <div id="zipExtSelInfo" class="text-xs text-muted" style="margin-top:.5rem" hidden></div>
+            <div id="zipExtSelInfo" class="text-xs text-muted mt-2" hidden></div>
             <div class="ft-actions">
                 <button class="btn btn-primary" id="btnZipExtAll" disabled>ดาวน์โหลดทั้งหมด</button>
                 <button class="btn btn-ghost" id="btnZipExtSel" disabled>ดาวน์โหลดที่เลือก</button>

@@ -22,7 +22,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
 </div>
 
 <!-- Tabs -->
-<div class="flex gap-3 mb-8 settings-tabs" id="settingsTabs" style="flex-wrap:wrap">
+<div class="flex gap-3 mb-8 settings-tabs" id="settingsTabs">
     <button class="btn btn-primary btn-sm settings-tab active" data-tab="profile">โปรไฟล์</button>
     <button class="btn btn-ghost btn-sm settings-tab" data-tab="password">รหัสผ่าน</button>
     <button class="btn btn-ghost btn-sm settings-tab" data-tab="appearance">ธีม &amp; เขตเวลา</button>
@@ -59,7 +59,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
 
 <!-- PROFILE -->
 <div id="tab-profile" class="settings-pane">
-    <div class="card" style="max-width:540px">
+    <div class="card settings-card">
         <div class="card-header"><span class="card-title">ข้อมูลโปรไฟล์</span></div>
         <div class="card-body">
             <div class="form-group">
@@ -78,7 +78,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
                 <p class="form-hint">ไม่สามารถเปลี่ยนชื่อผู้ใช้งานได้</p>
             </div>
         </div>
-        <div class="modal-footer" style="border-top:1px solid var(--color-border)">
+        <div class="modal-footer">
             <button class="btn btn-primary" id="btnSaveProfile">บันทึก</button>
         </div>
     </div>
@@ -86,7 +86,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
 
 <!-- PASSWORD -->
 <div id="tab-password" class="settings-pane" style="display:none">
-    <div class="card" style="max-width:540px">
+    <div class="card settings-card">
         <div class="card-header"><span class="card-title">เปลี่ยนรหัสผ่าน</span></div>
         <div class="card-body">
             <div class="form-group">
@@ -116,19 +116,19 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
                 <p class="form-hint" id="pwMatchHint"></p>
             </div>
         </div>
-        <div class="modal-footer" style="border-top:1px solid var(--color-border)">
+        <div class="modal-footer">
             <button class="btn btn-primary" id="btnChangePassword">เปลี่ยนรหัสผ่าน</button>
         </div>
     </div>
 
     <!-- TWO-FACTOR AUTHENTICATION -->
-    <div class="card mb-6" style="max-width:540px; margin-top: var(--space-6);">
+    <div class="card mb-6 mt-6 settings-card">
         <div class="card-header">
             <span class="card-title">การยืนยันตัวตนสองชั้น (2FA)</span>
             <span class="badge" id="tfaBadge" style="font-size:0.7rem">กำลังตรวจสอบ...</span>
         </div>
         <div class="card-body">
-            <p class="text-xs text-muted" style="margin-bottom: var(--space-4);">
+            <p class="text-xs text-muted mb-4">
                 เพิ่มขั้นยืนยันด้วยแอป Authenticator (Google Authenticator, Authy, 1Password)
                 หลังกรอกรหัสผ่าน ทำให้แค่รหัสผ่านหลุดก็ยังเข้าบัญชีไม่ได้
             </p>
@@ -144,12 +144,12 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
 
             <!-- State: mid-enrolment -->
             <div id="tfaEnrol" style="display:none">
-                <p class="text-sm" style="margin-bottom: var(--space-3);">1. สแกน QR นี้ด้วยแอป Authenticator</p>
+                <p class="text-sm mb-3">1. สแกน QR นี้ด้วยแอป Authenticator</p>
                 <div id="tfaQr" style="background:#fff; padding:12px; border-radius:10px; display:inline-block;"></div>
                 <p class="text-xs text-muted" style="margin:var(--space-3) 0;">
                     หรือกรอกรหัสนี้เอง: <code id="tfaSecret" style="user-select:all; font-size:0.85rem;"></code>
                 </p>
-                <div class="form-group" style="margin-top: var(--space-4);">
+                <div class="form-group mt-4">
                     <label class="form-label">2. กรอกรหัส 6 หลักที่แอปแสดง</label>
                     <input type="text" class="form-control" id="tfaConfirmCode"
                            inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code">
@@ -162,14 +162,14 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
 
             <!-- State: on -->
             <div id="tfaOn" style="display:none">
-                <p class="text-sm" style="margin-bottom: var(--space-3);">
+                <p class="text-sm mb-3">
                     เปิดใช้งานอยู่ • เหลือรหัสสำรอง <strong id="tfaCodesLeft">-</strong> ชุด
                 </p>
                 <div class="form-group">
                     <label class="form-label">ยืนยันรหัสผ่านเพื่อดำเนินการ</label>
                     <input type="password" class="form-control" id="tfaManagePassword" autocomplete="current-password">
                 </div>
-                <div class="flex gap-2" style="flex-wrap:wrap">
+                <div class="flex gap-2 flex-wrap">
                     <button class="btn btn-ghost btn-sm" id="btnTfaRegenerate">สร้างรหัสสำรองใหม่</button>
                     <button class="btn btn-danger btn-sm" id="btnTfaDisable">ปิดการใช้งาน</button>
                 </div>
@@ -177,10 +177,10 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
 
             <!-- Recovery codes, shown once -->
             <div id="tfaRecovery" style="display:none; margin-top: var(--space-5);">
-                <p class="text-sm" style="font-weight:600; margin-bottom: var(--space-2);">
+                <p class="text-sm font-semibold mb-2">
                     รหัสสำรอง — เก็บไว้ในที่ปลอดภัย จะแสดงครั้งเดียวเท่านั้น
                 </p>
-                <p class="text-xs text-muted" style="margin-bottom: var(--space-3);">
+                <p class="text-xs text-muted mb-3">
                     ใช้แทนรหัสจากแอปได้เมื่อทำอุปกรณ์หาย แต่ละชุดใช้ได้ครั้งเดียว
                 </p>
                 <pre id="tfaRecoveryList" style="background:var(--color-surface-2); padding:12px; border-radius:8px; font-size:0.85rem; line-height:1.8; user-select:all;"></pre>
@@ -193,11 +193,11 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
 
 <!-- APPEARANCE + TIMEZONE -->
 <div id="tab-appearance" class="settings-pane" style="display:none">
-    <div class="card mb-6" style="max-width:540px">
+    <div class="card mb-6 settings-card">
         <div class="card-header"><span class="card-title">ธีม</span></div>
         <div class="card-body">
-            <div class="flex gap-4 theme-cards-container" style="flex-wrap:wrap">
-                <label class="theme-card-option" style="cursor:pointer; min-width:140px;">
+            <div class="flex gap-4 theme-cards-container flex-wrap">
+                <label class="theme-card-option">
                     <input type="radio" name="theme" value="auto"
                            <?= ($settings['theme'] ?? 'light') === 'auto' ? 'checked' : '' ?>
                            class="sr-only">
@@ -213,7 +213,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
                         ตามระบบ (Auto)
                     </span>
                 </label>
-                <label class="theme-card-option" style="cursor:pointer; min-width:140px;">
+                <label class="theme-card-option">
                     <input type="radio" name="theme" value="light"
                            <?= ($settings['theme'] ?? 'light') === 'light' ? 'checked' : '' ?>
                            class="sr-only">
@@ -229,7 +229,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
                         สว่าง (Light Mode)
                     </span>
                 </label>
-                <label class="theme-card-option" style="cursor:pointer; min-width:140px;">
+                <label class="theme-card-option">
                     <input type="radio" name="theme" value="dark"
                            <?= ($settings['theme'] ?? 'light') === 'dark' ? 'checked' : '' ?>
                            class="sr-only">
@@ -245,7 +245,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
                         มืด (Dark Mode)
                     </span>
                 </label>
-                <label class="theme-card-option" style="cursor:pointer; min-width:140px;">
+                <label class="theme-card-option">
                     <input type="radio" name="theme" value="soft"
                            <?= ($settings['theme'] ?? 'light') === 'soft' ? 'checked' : '' ?>
                            class="sr-only">
@@ -261,7 +261,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
                         พาสเทลครีม (Pastel Soft)
                     </span>
                 </label>
-                <label class="theme-card-option" style="cursor:pointer; min-width:140px;">
+                <label class="theme-card-option">
                     <input type="radio" name="theme" value="lavender"
                            <?= ($settings['theme'] ?? 'light') === 'lavender' ? 'checked' : '' ?>
                            class="sr-only">
@@ -277,7 +277,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
                         พาสเทลม่วง (Lavender)
                     </span>
                 </label>
-                <label class="theme-card-option" style="cursor:pointer; min-width:140px;">
+                <label class="theme-card-option">
                     <input type="radio" name="theme" value="ocean"
                            <?= ($settings['theme'] ?? 'light') === 'ocean' ? 'checked' : '' ?>
                            class="sr-only">
@@ -293,7 +293,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
                         พาสเทลฟ้าน้ำทะเล (Mint)
                     </span>
                 </label>
-                <label class="theme-card-option" style="cursor:pointer; min-width:140px;">
+                <label class="theme-card-option">
                     <input type="radio" name="theme" value="peach"
                            <?= ($settings['theme'] ?? 'light') === 'peach' ? 'checked' : '' ?>
                            class="sr-only">
@@ -313,7 +313,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
         </div>
     </div>
 
-    <div class="card" style="max-width:540px">
+    <div class="card settings-card">
         <div class="card-header"><span class="card-title">เขตเวลา</span></div>
         <div class="card-body">
             <div class="form-group">
@@ -326,7 +326,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
                 <p class="form-hint">ปัจจุบัน: <span id="tzCurrentTime">—</span></p>
             </div>
         </div>
-        <div class="modal-footer" style="border-top:1px solid var(--color-border)">
+        <div class="modal-footer">
             <button class="btn btn-primary" id="btnSaveTimezone">บันทึกเขตเวลา</button>
         </div>
     </div>
@@ -334,7 +334,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
 
 <!-- MANAGE MENUS -->
 <div id="tab-menus" class="settings-pane" style="display:none">
-    <div class="card" style="max-width:540px">
+    <div class="card settings-card">
         <div class="card-header"><span class="card-title">การแสดงผลเมนู</span></div>
         <div class="card-body">
             <p class="form-hint mb-4">เลือกเมนูที่คุณต้องการให้แสดงในหน้าหลักและแถบเมนูด้านข้าง เมนูที่ไม่ได้เลือกจะถูกซ่อนไว้ชั่วคราว</p>
@@ -357,74 +357,27 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
                 return !in_array($menu, $hiddenMenus);
             };
             ?>
+            <?php
+            $menuLabels = [
+                'projects' => 'Projects', 'tasks' => 'งาน (Tasks)', 'notes' => 'โน้ต (Notes)',
+                'planner' => 'แพลนเนอร์ (Planner)', 'focus' => 'โฟกัส (Focus/Pomodoro)',
+                'exercise' => 'ออกกำลังกาย (Workout)', 'food-notes' => 'อาหาร-เครื่องดื่ม (Food Notes)',
+                'finance' => 'การเงิน (Finance)', 'subscriptions' => 'การแจ้งเตือน (Subscriptions)',
+                'stocks' => 'ระบบหุ้น (Stocks)', 'ai' => 'ผู้ช่วยอัจฉริยะ (AI Helper)',
+                'file-tools' => 'เครื่องมือจัดการไฟล์ (File Tools)', 'transfer' => 'ย้ายไฟล์ (File Transfer)',
+                'files' => 'ไฟล์ (Files)', 'quick-notes' => 'จดด่วน (Quick Notes)', 'bookmarks' => 'ลิงก์สำคัญ (Bookmarks)',
+            ];
+            ?>
             <div class="menu-order-list" id="menuVisibilityList" data-menu-order="<?= h(json_encode($menuOrder, JSON_UNESCAPED_UNICODE)) ?>">
-                <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
-                    <input type="checkbox" name="visible_menus[]" value="projects" style="width:18px; height:18px;" <?= $isMenuVisible('projects') ? 'checked' : '' ?>>
-                    <span>Projects</span>
+                <?php foreach ($defaultMenuOrder as $menu): ?>
+                <label class="flex items-center gap-3 settings-check">
+                    <input type="checkbox" name="visible_menus[]" value="<?= h($menu) ?>" <?= $isMenuVisible($menu) ? 'checked' : '' ?>>
+                    <span><?= h($menuLabels[$menu]) ?></span>
                 </label>
-                <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
-                    <input type="checkbox" name="visible_menus[]" value="tasks" style="width:18px; height:18px;" <?= $isMenuVisible('tasks') ? 'checked' : '' ?>>
-                    <span>งาน (Tasks)</span>
-                </label>
-                <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
-                    <input type="checkbox" name="visible_menus[]" value="notes" style="width:18px; height:18px;" <?= $isMenuVisible('notes') ? 'checked' : '' ?>>
-                    <span>โน้ต (Notes)</span>
-                </label>
-                <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
-                    <input type="checkbox" name="visible_menus[]" value="planner" style="width:18px; height:18px;" <?= $isMenuVisible('planner') ? 'checked' : '' ?>>
-                    <span>แพลนเนอร์ (Planner)</span>
-                </label>
-                <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
-                    <input type="checkbox" name="visible_menus[]" value="focus" style="width:18px; height:18px;" <?= $isMenuVisible('focus') ? 'checked' : '' ?>>
-                    <span>โฟกัส (Focus/Pomodoro)</span>
-                </label>
-                <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
-                    <input type="checkbox" name="visible_menus[]" value="exercise" style="width:18px; height:18px;" <?= $isMenuVisible('exercise') ? 'checked' : '' ?>>
-                    <span>ออกกำลังกาย (Workout)</span>
-                </label>
-                <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
-                    <input type="checkbox" name="visible_menus[]" value="food-notes" style="width:18px; height:18px;" <?= $isMenuVisible('food-notes') ? 'checked' : '' ?>>
-                    <span>อาหาร-เครื่องดื่ม (Food Notes)</span>
-                </label>
-                <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
-                    <input type="checkbox" name="visible_menus[]" value="finance" style="width:18px; height:18px;" <?= $isMenuVisible('finance') ? 'checked' : '' ?>>
-                    <span>การเงิน (Finance)</span>
-                </label>
-                <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
-                    <input type="checkbox" name="visible_menus[]" value="subscriptions" style="width:18px; height:18px;" <?= $isMenuVisible('subscriptions') ? 'checked' : '' ?>>
-                    <span>การแจ้งเตือน (Subscriptions)</span>
-                </label>
-                <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
-                    <input type="checkbox" name="visible_menus[]" value="stocks" style="width:18px; height:18px;" <?= $isMenuVisible('stocks') ? 'checked' : '' ?>>
-                    <span>ระบบหุ้น (Stocks)</span>
-                </label>
-                <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
-                    <input type="checkbox" name="visible_menus[]" value="ai" style="width:18px; height:18px;" <?= $isMenuVisible('ai') ? 'checked' : '' ?>>
-                    <span>ผู้ช่วยอัจฉริยะ (AI Helper)</span>
-                </label>
-                <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
-                    <input type="checkbox" name="visible_menus[]" value="file-tools" style="width:18px; height:18px;" <?= $isMenuVisible('file-tools') ? 'checked' : '' ?>>
-                    <span>เครื่องมือจัดการไฟล์ (File Tools)</span>
-                </label>
-                <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
-                    <input type="checkbox" name="visible_menus[]" value="transfer" style="width:18px; height:18px;" <?= $isMenuVisible('transfer') ? 'checked' : '' ?>>
-                    <span>ย้ายไฟล์ (File Transfer)</span>
-                </label>
-                <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
-                    <input type="checkbox" name="visible_menus[]" value="files" style="width:18px; height:18px;" <?= $isMenuVisible('files') ? 'checked' : '' ?>>
-                    <span>ไฟล์ (Files)</span>
-                </label>
-                <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
-                    <input type="checkbox" name="visible_menus[]" value="quick-notes" style="width:18px; height:18px;" <?= $isMenuVisible('quick-notes') ? 'checked' : '' ?>>
-                    <span>จดด่วน (Quick Notes)</span>
-                </label>
-                <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
-                    <input type="checkbox" name="visible_menus[]" value="bookmarks" style="width:18px; height:18px;" <?= $isMenuVisible('bookmarks') ? 'checked' : '' ?>>
-                    <span>ลิงก์สำคัญ (Bookmarks)</span>
-                </label>
+                <?php endforeach; ?>
             </div>
         </div>
-        <div class="modal-footer" style="border-top:1px solid var(--color-border)">
+        <div class="modal-footer">
             <button class="btn btn-primary" id="btnSaveMenus">บันทึกการตั้งค่าเมนู</button>
         </div>
     </div>
@@ -432,7 +385,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
 
 <!-- DASHBOARD CONFIGURATION -->
 <div id="tab-dashboard-config" class="settings-pane" style="display:none">
-    <div class="card" style="max-width:540px">
+    <div class="card settings-card">
         <div class="card-header"><span class="card-title">ปรับแต่งหน้าแดชบอร์ด</span></div>
         <div class="card-body">
             <p class="form-hint mb-4">เลือกวิดเจ็ตที่คุณต้องการให้แสดงบนหน้าแดชบอร์ดส่วนตัว คุณสามารถจัดเรียงลำดับวิดเจ็ตได้โดยการลากย้ายบล็อกวิดเจ็ตบนหน้าแดชบอร์ดโดยตรง</p>
@@ -457,15 +410,15 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
                         $label = $widgetLabels[$key] ?? $key;
                         $checked = $widget['is_visible'] ? 'checked' : '';
                     ?>
-                        <label class="flex items-center gap-3" style="cursor:pointer; font-weight:500; padding:4px 0;">
-                            <input type="checkbox" name="widget_<?= h($key) ?>" id="chk_<?= h($key) ?>" value="1" style="width:18px; height:18px;" <?= $checked ?>>
+                        <label class="flex items-center gap-3 settings-check">
+                            <input type="checkbox" name="widget_<?= h($key) ?>" id="chk_<?= h($key) ?>" value="1" <?= $checked ?>>
                             <span><?= h($label) ?></span>
                         </label>
                     <?php endforeach; ?>
                 </div>
             </form>
         </div>
-        <div class="modal-footer" style="border-top:1px solid var(--color-border)">
+        <div class="modal-footer">
             <button class="btn btn-ghost btn-sm" id="btnResetDashboardLayout">รีเซ็ตค่าเริ่มต้น</button>
             <button class="btn btn-primary" id="btnSaveDashboardCustomization">บันทึกตั้งค่า</button>
         </div>
@@ -478,7 +431,7 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
 
 <!-- ACCOUNT INFO -->
 <div id="tab-account" class="settings-pane" style="display:none">
-    <div class="card" style="max-width:540px">
+    <div class="card settings-card">
         <div class="card-header"><span class="card-title">ข้อมูลบัญชี</span></div>
         <div class="card-body">
             <dl class="account-info">
@@ -531,7 +484,7 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
 <div id="tab-categories" class="settings-pane" style="display:none">
 
     <!-- Finance categories -->
-    <div class="card mb-6" style="max-width:720px">
+    <div class="card mb-6 settings-card settings-card--wide">
         <div class="card-header">
             <span class="card-title">หมวดหมู่การเงิน</span>
         </div>
@@ -551,7 +504,7 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
                 <div class="cat-group-title text-sm text-muted mb-2">รายรับ</div>
                 <ul class="cat-list" id="finCatListIncome"></ul>
             </div>
-            <div class="cat-group" style="margin-top:var(--space-4)">
+            <div class="cat-group mt-4">
                 <div class="cat-group-title text-sm text-muted mb-2">รายจ่าย</div>
                 <ul class="cat-list" id="finCatListExpense"></ul>
             </div>
@@ -559,7 +512,7 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
     </div>
 
     <!-- Exercise categories -->
-    <div class="card mb-6" style="max-width:720px">
+    <div class="card mb-6 settings-card settings-card--wide">
         <div class="card-header">
             <span class="card-title">หมวดหมู่การออกกำลังกาย</span>
         </div>
@@ -576,7 +529,7 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
     </div>
 
     <!-- Note tags -->
-    <div class="card" style="max-width:720px">
+    <div class="card settings-card settings-card--wide">
         <div class="card-header">
             <span class="card-title">แท็กของโน้ต</span>
         </div>
@@ -596,14 +549,14 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
 
 <!-- STOCK API KEYS -->
 <div id="tab-stock-api" class="settings-pane" style="display:none">
-    <div class="card" style="max-width:720px">
+    <div class="card settings-card settings-card--wide">
         <div class="card-header"><span class="card-title">API สำหรับราคาหุ้น</span></div>
         <div class="card-body">
             <p class="form-hint">เชื่อมต่อกับผู้ให้บริการเพื่อดึงราคาปัจจุบันมาคำนวณกำไร/ขาดทุนในหน้า "หุ้น". ใช้ฟรีได้ตาม quota ของแต่ละเจ้า — ลงทะเบียนแล้วนำ API key มาใส่</p>
             <div id="stockKeysList">
                 <div class="text-muted text-sm">กำลังโหลด...</div>
             </div>
-            <div class="text-xs text-muted" style="margin-top:var(--space-3)">
+            <div class="text-xs text-muted mt-3">
                 <strong>คำแนะนำ:</strong><br>
                 • Finnhub (<a href="https://finnhub.io/register" target="_blank" rel="noopener">finnhub.io</a>) — 60 req/min รองรับ US + SET (`.BK`)<br>
                 • Alpha Vantage (<a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener">alphavantage.co</a>) — 25 req/day<br>
@@ -612,14 +565,14 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
         </div>
     </div>
 
-    <div class="card" style="max-width:720px;margin-top:24px">
+    <div class="card settings-card settings-card--wide" style="margin-top:24px">
         <div class="card-header"><span class="card-title">API สำหรับการวิเคราะห์หุ้นด้วย AI</span></div>
         <div class="card-body">
             <p class="form-hint">ตั้งค่า API Key ของผู้ให้บริการ AI เพื่อใช้งานระบบวิเคราะห์หุ้นเชิงลึก (แนะนำใช้ Gemini 2.0 Flash ซึ่งประมวลผลได้รวดเร็วและเป็นประโยชน์ที่สุด)</p>
             <div id="stockAiKeysList">
                 <div class="text-muted text-sm">กำลังโหลด...</div>
             </div>
-            <div class="text-xs text-muted" style="margin-top:var(--space-3)">
+            <div class="text-xs text-muted mt-3">
                 <strong>คำแนะนำสมัครใช้งาน API Key:</strong><br>
                 • Google Gemini (<a href="https://aistudio.google.com/" target="_blank" rel="noopener">Google AI Studio</a>) — สมัครและใช้งาน API ฟรี รองรับโมเดล Gemini 2.0 Flash<br>
                 • OpenAI (<a href="https://platform.openai.com/" target="_blank" rel="noopener">platform.openai.com</a>) — มีค่าบริการตามปริมาณการใช้งานจริง<br>
@@ -633,7 +586,7 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
 
 <!-- DATA -->
 <div id="tab-data" class="settings-pane" style="display:none">
-    <div class="card mb-6" style="max-width:540px">
+    <div class="card mb-6 settings-card">
         <div class="card-header"><span class="card-title">ส่งออกข้อมูล</span></div>
         <div class="card-body">
             <p class="form-hint">ดาวน์โหลดข้อมูลส่วนตัวของคุณเป็นไฟล์ JSON เพื่อเก็บสำรอง ได้แก่ งาน, โน้ต, แพลนเนอร์, การออกกำลังกาย, อาหาร, การเงิน, การสมัครสมาชิก, หุ้น, ทักษะ, โฟกัส, นิสัย, จดด่วน, ลิงก์สำคัญ, ประวัติ AI และการตั้งค่าการแสดงผล</p>
@@ -642,13 +595,13 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
         </div>
     </div>
 
-    <div class="card mb-6" style="max-width:540px">
+    <div class="card mb-6 settings-card">
         <div class="card-header"><span class="card-title">นำเข้าข้อมูล</span></div>
         <div class="card-body">
             <p class="form-hint">อัปโหลดไฟล์ข้อมูลสำรอง JSON ที่บันทึกไว้เพื่อนำกลับมาใช้ใหม่ <span class="text-xs" style="color:var(--color-danger);font-weight:600">คำเตือน: ข้อมูลแต่ละส่วนที่มีอยู่ในไฟล์จะแทนที่ข้อมูลส่วนนั้นในระบบทั้งหมด ส่วนที่ไม่มีในไฟล์จะไม่ถูกแตะต้อง</span></p>
             
             <div class="settings-import-zone" id="settingsImportZone" data-click="#importFile">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--color-muted)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <svg class="text-muted" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 <div class="settings-import-text" id="importFileNameText">คลิกเพื่อเลือกไฟล์ข้อมูลสำรอง (.json)</div>
             </div>
             
@@ -660,7 +613,7 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
         </div>
     </div>
 
-    <div class="card" style="max-width:540px">
+    <div class="card settings-card">
         <div class="card-header"><span class="card-title">ข้อมูลในเครื่อง (Local Storage)</span></div>
         <div class="card-body">
             <p class="form-hint">ข้อมูลที่เก็บในเบราว์เซอร์นี้: ประวัติการคำนวณ, แท็บที่เปิดล่าสุด ฯลฯ การลบจะไม่กระทบข้อมูลบนเซิร์ฟเวอร์</p>
@@ -673,7 +626,7 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
 <!-- TELEGRAM -->
 <div id="tab-telegram" class="settings-pane" style="display:none">
     <!-- BROWSER NOTIFICATIONS -->
-    <div class="card" style="max-width:540px; margin-bottom:24px">
+    <div class="card settings-card" style="margin-bottom:24px">
         <div class="card-header">
             <span class="card-title">แจ้งเตือนผ่านเบราว์เซอร์</span>
             <span class="badge" id="pushBadge" style="font-size:0.7rem">กำลังตรวจสอบ...</span>
@@ -691,10 +644,10 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
             </div>
 
             <div id="pushControls" style="display:none">
-                <p class="text-sm" style="margin-bottom:var(--space-3)">
+                <p class="text-sm mb-3">
                     อุปกรณ์ที่เปิดแจ้งเตือนไว้: <strong id="pushDeviceCount">-</strong>
                 </p>
-                <div class="flex gap-2" style="flex-wrap:wrap">
+                <div class="flex gap-2 flex-wrap">
                     <button class="btn btn-primary btn-sm" id="btnPushEnable">เปิดแจ้งเตือนบนอุปกรณ์นี้</button>
                     <button class="btn btn-ghost btn-sm" id="btnPushDisable" style="display:none">ปิดบนอุปกรณ์นี้</button>
                     <button class="btn btn-ghost btn-sm" id="btnPushTest" style="display:none">ทดสอบส่ง</button>
@@ -703,7 +656,7 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
         </div>
     </div>
 
-    <div class="card" style="max-width:540px">
+    <div class="card settings-card">
         <div class="card-header"><span class="card-title">Telegram Bot Integration</span></div>
         <div class="card-body">
             <p class="form-hint mb-4">รับการแจ้งเตือนจากระบบผ่าน Telegram</p>
@@ -724,12 +677,12 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
                 };
                 ?>
                 <div style="display:flex; flex-direction:column; gap:8px;" id="telegramEventsList">
-                    <label class="flex items-center gap-2" style="cursor:pointer;"><input type="checkbox" name="tg_events[]" value="project" <?= $isTgEnabled('project') ? 'checked' : '' ?> style="width:18px;height:18px;"> โปรเจค (สร้างใหม่/ทีม)</label>
-                    <label class="flex items-center gap-2" style="cursor:pointer;"><input type="checkbox" name="tg_events[]" value="task" <?= $isTgEnabled('task') ? 'checked' : '' ?> style="width:18px;height:18px;"> งาน (เมื่อทำสำเร็จ)</label>
-                    <label class="flex items-center gap-2" style="cursor:pointer;"><input type="checkbox" name="tg_events[]" value="note" <?= $isTgEnabled('note') ? 'checked' : '' ?> style="width:18px;height:18px;"> โน๊ต (สร้างใหม่)</label>
-                    <label class="flex items-center gap-2" style="cursor:pointer;"><input type="checkbox" name="tg_events[]" value="planner" <?= $isTgEnabled('planner') ? 'checked' : '' ?> style="width:18px;height:18px;"> แพลนเนอร์ (กิจกรรมใหม่)</label>
-                    <label class="flex items-center gap-2" style="cursor:pointer;"><input type="checkbox" name="tg_events[]" value="focus" <?= $isTgEnabled('focus') ? 'checked' : '' ?> style="width:18px;height:18px;"> โฟกัส (เมื่อสิ้นสุดเวลา)</label>
-                    <label class="flex items-center gap-2" style="cursor:pointer;"><input type="checkbox" name="tg_events[]" value="subscription" <?= $isTgEnabled('subscription') ? 'checked' : '' ?> style="width:18px;height:18px;"> การแจ้งเตือน (เมื่อสร้างใหม่)</label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" name="tg_events[]" value="project" <?= $isTgEnabled('project') ? 'checked' : '' ?>> โปรเจค (สร้างใหม่/ทีม)</label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" name="tg_events[]" value="task" <?= $isTgEnabled('task') ? 'checked' : '' ?>> งาน (เมื่อทำสำเร็จ)</label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" name="tg_events[]" value="note" <?= $isTgEnabled('note') ? 'checked' : '' ?>> โน๊ต (สร้างใหม่)</label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" name="tg_events[]" value="planner" <?= $isTgEnabled('planner') ? 'checked' : '' ?>> แพลนเนอร์ (กิจกรรมใหม่)</label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" name="tg_events[]" value="focus" <?= $isTgEnabled('focus') ? 'checked' : '' ?>> โฟกัส (เมื่อสิ้นสุดเวลา)</label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" name="tg_events[]" value="subscription" <?= $isTgEnabled('subscription') ? 'checked' : '' ?>> การแจ้งเตือน (เมื่อสร้างใหม่)</label>
                 </div>
             </div>
             
@@ -752,7 +705,7 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
                 </div>
             </div>
         </div>
-        <div class="modal-footer" style="border-top:1px solid var(--color-border); justify-content: space-between;">
+        <div class="modal-footer justify-between">
             <div>
                 <button class="btn btn-ghost" id="btnTestTelegram">ทดสอบส่งข้อความ</button>
             </div>
@@ -763,7 +716,7 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
 
 <!-- DANGER ZONE -->
 <div id="tab-danger" class="settings-pane" style="display:none">
-    <div class="card danger-card" style="max-width:540px">
+    <div class="card danger-card settings-card">
         <div class="card-header"><span class="card-title" style="color:var(--color-danger)">ลบบัญชีถาวร</span></div>
         <div class="card-body">
             <p class="form-hint">การลบบัญชีจะลบข้อมูลทั้งหมดของคุณออกจากระบบอย่างถาวร — ไม่สามารถกู้คืนได้ ขอแนะนำให้ดาวน์โหลดข้อมูลก่อน</p>
@@ -783,7 +736,7 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
 
 <!-- APP SHARES (MENU) -->
 <div id="tab-app-shares" class="settings-pane" style="display:none">
-    <div class="card mb-6" style="max-width:900px">
+    <div class="card mb-6 settings-card settings-card--xwide">
         <div class="card-header"><span class="card-title">สร้างลิงก์แชร์เมนูใหม่</span></div>
         <div class="card-body">
             <p class="form-hint mb-4">ลิงก์นี้อนุญาตให้บุคคลภายนอกดูข้อมูลในเมนูที่คุณเลือกได้แบบเรียลไทม์ (อ่านได้อย่างเดียว)</p>
@@ -814,7 +767,7 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
         </div>
     </div>
 
-    <div class="card" style="max-width:900px">
+    <div class="card settings-card settings-card--xwide">
         <div class="card-header"><span class="card-title">ลิงก์แชร์เมนูของคุณ</span></div>
         <div class="card-body">
             <div class="shares-table-wrap">
@@ -829,7 +782,7 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
                         </tr>
                     </thead>
                     <tbody id="appSharesTableBody">
-                        <tr><td colspan="5" class="text-muted text-sm" style="padding:1rem">กำลังโหลด...</td></tr>
+                        <tr><td colspan="5" class="text-muted text-sm p-4">กำลังโหลด...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -839,7 +792,7 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
 
 <!-- FILE SHARES -->
 <div id="tab-shares" class="settings-pane" style="display:none">
-    <div class="card" style="max-width:900px">
+    <div class="card settings-card settings-card--xwide">
         <div class="card-header"><span class="card-title">ลิงก์แชร์ไฟล์และโฟลเดอร์ของคุณ</span></div>
         <div class="card-body">
             <p class="form-hint mb-4">ลิงก์เหล่านี้แชร์ไฟล์หรือโฟลเดอร์จากระบบจัดการไฟล์ สามารถเลือกให้ดูอย่างเดียวหรือดาวน์โหลดได้</p>
@@ -855,7 +808,7 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
                         </tr>
                     </thead>
                     <tbody id="sharesTableBody">
-                        <tr><td colspan="5" class="text-muted text-sm" style="padding:1rem">กำลังโหลด...</td></tr>
+                        <tr><td colspan="5" class="text-muted text-sm p-4">กำลังโหลด...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -912,7 +865,7 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
     async function loadAppShares() {
         const tbody = $('#appSharesTableBody');
         if (!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="5" class="text-muted text-sm" style="padding:1rem">กำลังโหลด...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-muted text-sm p-4">กำลังโหลด...</td></tr>';
         try {
             const res = await apiFetch(BASE_URL + '/api/app-shares');
             const shares = res.shares || [];
@@ -935,8 +888,8 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
                 const mLabels = (s.menus || []).map(m => menuNames[m] || m).join(', ');
 
                 return `<tr>
-                    <td><div style="font-weight:500">${escHtml(s.label)}</div></td>
-                    <td><span style="font-size:0.85rem;color:var(--color-muted)">${escHtml(mLabels)}</span></td>
+                    <td><div class="font-medium">${escHtml(s.label)}</div></td>
+                    <td><span class="text-sm text-muted">${escHtml(mLabels)}</span></td>
                     <td><a class="share-link-url" href="${escHtml(link)}" target="_blank" rel="noopener">${escHtml(link)}</a></td>
                     <td>${exp}</td>
                     <td>

@@ -28,7 +28,6 @@ class AuthController
     {
         if (!empty($_SESSION['user_id'])) {
             Response::redirect('/');
-            return;
         }
 
         $demoUser = User::findDemo();
@@ -36,7 +35,6 @@ class AuthController
 
         if (!$user) {
             Response::redirect('/login');
-            return;
         }
 
         Auth::login($user);

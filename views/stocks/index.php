@@ -391,7 +391,7 @@
                 <input type="text" class="form-control" id="stkNotes" maxlength="500">
             </div>
         </div>
-        <div class="modal-footer" style="justify-content:space-between">
+        <div class="modal-footer justify-between">
             <button class="btn btn-ghost" id="deleteStockBtn" data-act="deleteStock" style="color:var(--color-danger);display:none">ลบ</button>
             <div class="flex gap-3" style="margin-left:auto">
                 <button class="btn btn-ghost" data-close-modal>ยกเลิก</button>
@@ -441,7 +441,7 @@
                 <input type="text" class="form-control" id="capNotes" maxlength="500" placeholder="เช่น เงินเดือนเข้า, ปันผล, โอนเงินกลับ">
             </div>
         </div>
-        <div class="modal-footer" style="justify-content:space-between">
+        <div class="modal-footer justify-between">
             <button class="btn btn-ghost" id="deleteCapitalBtn" data-act="deleteCapital" style="color:var(--color-danger);display:none">ลบ</button>
             <div class="flex gap-3" style="margin-left:auto">
                 <button class="btn btn-ghost" data-close-modal>ยกเลิก</button>

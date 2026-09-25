@@ -11,12 +11,6 @@
 trait ProjectAccess
 {
     /**
-     * Roles an owner can hand out to a member or a share link. Owner is
-     * implied by owning the project and is never granted.
-     */
-    private const GRANTABLE_ROLES = ['Editor', 'Viewer'];
-
-    /**
      * Loads a project the caller may see, or stops with a 404.
      *
      * Project::getById() already scopes to the owner, the members, and a guest

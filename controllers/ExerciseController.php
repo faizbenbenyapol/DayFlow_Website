@@ -93,8 +93,10 @@ class ExerciseController
         $name = trim(Request::input('name', ''));
         if (!$name) Response::json(['error' => 'กรุณากรอกชื่อหมวดหมู่'], 422);
 
-        $ok = ExerciseCategory::update((int)$id, $userId, $name);
-        Response::json(['ok' => $ok]);
+        if (!ExerciseCategory::update((int)$id, $userId, $name)) {
+            Response::json(['error' => 'ไม่พบหมวดหมู่'], 404);
+        }
+        Response::json(['ok' => true]);
     }
 
     public function apiCategoryDelete(string $id): void
@@ -113,7 +115,7 @@ class ExerciseController
         if (!$date) return ['error' => 'กรุณากรอกวันที่'];
 
         $parsed = DateTime::createFromFormat('Y-m-d', (string)$date);
-        if (!$date || !$parsed || $parsed->format('Y-m-d') !== $date) return ['error' => 'วันที่ไม่ถูกต้อง'];
+        if (!$parsed || $parsed->format('Y-m-d') !== $date) return ['error' => 'วันที่ไม่ถูกต้อง'];
         $duration = (int)Request::input('duration_min', 0);
         $sets = (int)Request::input('sets', 0);
         $reps = (int)Request::input('reps', 0);

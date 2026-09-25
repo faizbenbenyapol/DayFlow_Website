@@ -170,9 +170,9 @@ class NoteController
         $name   = Request::input('name', '');
         if (!$name) Response::json(['error' => 'กรุณากรอกชื่อแท็ก'], 422);
 
-        if (!NoteTag::update((int)$id, $userId, $name)) {
-            Response::json(['error' => 'ชื่อแท็กนี้มีอยู่แล้ว'], 422);
-        }
+        $renamed = NoteTag::update((int)$id, $userId, $name);
+        if ($renamed === null) Response::json(['error' => 'ไม่พบแท็ก'], 404);
+        if (!$renamed) Response::json(['error' => 'ชื่อแท็กนี้มีอยู่แล้ว'], 422);
         Response::json(['ok' => true]);
     }
 

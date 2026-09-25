@@ -269,7 +269,7 @@
 
         <!-- วิดเจ็ต 4: บันทึกประวัติกิจกรรมล่าสุด (Activity Feed Widget) -->
         <div id="activityWidgetCard" class="activity-card" style="display: none;">
-            <h2 class="analytics-title" style="margin-bottom: var(--space-4);">ประวัติกิจกรรมโปรเจค</h2>
+            <h2 class="analytics-title">ประวัติกิจกรรมโปรเจค</h2>
             <div class="activity-feed-list" id="projectActivityList">
                 <!-- ไทม์ไลน์กิจกรรมจะดึงผ่าน JS -->
             </div>
@@ -490,7 +490,7 @@
                 </div>
 
             </div>
-            <div class="modal-footer" style="margin-top:var(--space-4);">
+            <div class="modal-footer mt-4">
                 <button type="button" class="btn btn-ghost" data-act="closeModal" data-args="[&quot;editTaskModal&quot;]">ยกเลิก</button>
                 <button type="submit" class="btn btn-primary">บันทึกข้อมูลงาน</button>
             </div>
@@ -509,7 +509,7 @@
             
             <!-- รายชื่อสมาชิกปัจจุบัน -->
             <div class="mb-4">
-                <label class="form-label mb-2" style="font-weight: 600;">ผู้ร่วมทีมปัจจุบัน</label>
+                <label class="form-label mb-2 font-semibold">ผู้ร่วมทีมปัจจุบัน</label>
                 <div class="members-list-wrapper" id="projectMembersList">
                     <!-- โหลดสมาชิกจาก JS -->
                 </div>
@@ -518,7 +518,7 @@
             <!-- ฟอร์มเชิญสมาชิกใหม่ (แสดงเฉพาะสำหรับ Owner) -->
             <form id="inviteMemberForm" data-act="submitInviteMember" data-args="[&quot;$event&quot;]" data-on="submit" style="display: none;">
                 <hr style="border: 0; border-top: 1px solid var(--color-border); margin: var(--space-4) 0;">
-                <label class="form-label mb-2" style="font-weight: 600;">เชิญผู้ร่วมทีมคนใหม่</label>
+                <label class="form-label mb-2 font-semibold">เชิญผู้ร่วมทีมคนใหม่</label>
                 <div class="form-group mb-3">
                     <label class="form-label" for="inviteSearchInput" style="font-size: 0.8rem;">ชื่อผู้ใช้งาน หรือ อีเมลผู้รับเชิญ</label>
                     <input type="text" id="inviteSearchInput" class="form-control" placeholder="ระบุ username หรือ email ของผู้ใช้ในระบบ..." required autocomplete="off">

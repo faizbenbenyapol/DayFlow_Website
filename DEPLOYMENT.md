@@ -25,6 +25,7 @@ docker compose ps
 | หยุดระบบ (เก็บข้อมูลไว้) | `docker compose down` |
 | ล้างข้อมูลทดสอบทั้งหมด | `docker compose down -v` |
 | รันชุดทดสอบ | `docker compose exec app php tests/run.php http://localhost` |
+| ตรวจโค้ดด้วย PHPStan (รันใน CI ด้วย) | `docker run --rm -v "$PWD":/app -w /app ghcr.io/phpstan/phpstan:2.2.16 analyse` |
 
 ---
 

@@ -112,7 +112,7 @@ class Workout
         $byType = DB::run(
             'SELECT type, COUNT(*) AS sessions, COALESCE(SUM(duration_min), 0) AS total_min
              FROM workouts WHERE user_id = ?
-             GROUP BY type ORDER BY sessions DESC LIMIT 10',
+             GROUP BY type ORDER BY sessions DESC, type ASC LIMIT 10',
             [$userId]
         )->fetchAll();
 

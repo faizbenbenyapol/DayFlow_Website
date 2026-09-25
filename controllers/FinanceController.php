@@ -121,12 +121,9 @@ class FinanceController
 
         $name = trim($name);
         if (!$name || mb_strlen($name) > 100) Response::json(['error' => 'ชื่อหมวดหมู่ไม่ถูกต้อง'], 422);
-        // rowCount() cannot distinguish "not yours" from "saved without
-        // changing anything", so ownership is checked before the write.
-        if (!FinanceCategory::belongsTo((int)$id, $userId)) {
+        if (!FinanceCategory::update((int)$id, $userId, $name, $type)) {
             Response::json(['error' => 'ไม่พบหมวดหมู่'], 404);
         }
-        FinanceCategory::update((int)$id, $userId, $name, $type);
         Response::json(['ok' => true]);
     }
 
@@ -151,7 +148,7 @@ class FinanceController
 
         if ($amount <= 0 || $amount > 999999999.99 || !is_finite($amount)) return ['error' => 'จำนวนเงินไม่ถูกต้อง'];
         $parsedDate = DateTime::createFromFormat('Y-m-d', (string)$date);
-        if (!$date || !$parsedDate || $parsedDate->format('Y-m-d') !== $date) return ['error' => 'วันที่ไม่ถูกต้อง'];
+        if (!$parsedDate || $parsedDate->format('Y-m-d') !== $date) return ['error' => 'วันที่ไม่ถูกต้อง'];
 
         return [
             'type'        => $type,

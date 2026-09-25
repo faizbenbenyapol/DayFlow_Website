@@ -15,7 +15,7 @@
             </select>
             <input type="text" id="timerNotesInput" class="form-control" placeholder="คุณกำลังทำอะไรอยู่? (บันทึกย่อ)">
         </div>
-        <div class="timer-display-wrapper" style="display:flex; align-items:center; gap: 1rem;">
+        <div class="timer-display-wrapper flex items-center gap-4">
             <div class="timer-display" id="timerDisplay">00:00:00</div>
             <button class="btn-timer" id="btnTimerToggle" data-act="toggleTimer">
                 ▶
@@ -233,7 +233,7 @@ async function loadLogs() {
                     <span class="log-skill-badge" style="background:${cssColor(l.skill_color)}">${escHtml(l.skill_name)}</span>
                 </td>
                 <td style="color:var(--text-muted)">${escHtml(l.notes || '-')}</td>
-                <td style="font-size:0.85rem">${date}<br/>${start} - ${end}</td>
+                <td class="text-sm">${date}<br/>${start} - ${end}</td>
                 <td><strong>${formatDurationHm(l.duration_seconds)}</strong></td>
                 <td>
                     <button class="btn btn-sm btn-ghost text-danger" data-act="deleteLog" data-args="[&quot;${l.id}&quot;]">&times;</button>
