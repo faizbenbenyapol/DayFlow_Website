@@ -86,16 +86,16 @@ class AiController
     {
         switch ($provider) {
             case 'openai':
-                $this->httpJson('https://api.openai.com/v1/models', null,
+                HttpJson::request('https://api.openai.com/v1/models', null,
                     ['Authorization: Bearer ' . $key], 'GET');
                 return;
             case 'gemini':
-                $this->httpJson('https://generativelanguage.googleapis.com/v1beta/models?key=' . urlencode($key),
+                HttpJson::request('https://generativelanguage.googleapis.com/v1beta/models?key=' . urlencode($key),
                     null, [], 'GET');
                 return;
             case 'anthropic':
                 // Small messages call with 1 token
-                $this->httpJson('https://api.anthropic.com/v1/messages', [
+                HttpJson::request('https://api.anthropic.com/v1/messages', [
                     'model' => 'claude-haiku-4-5-20251001',
                     'max_tokens' => 1,
                     'messages' => [['role' => 'user', 'content' => 'hi']],
@@ -105,15 +105,15 @@ class AiController
                 ]);
                 return;
             case 'replicate':
-                $this->httpJson('https://api.replicate.com/v1/account', null,
+                HttpJson::request('https://api.replicate.com/v1/account', null,
                     ['Authorization: Bearer ' . $key], 'GET');
                 return;
             case 'kimi':
-                $this->httpJson('https://api.moonshot.cn/v1/models', null,
+                HttpJson::request('https://api.moonshot.cn/v1/models', null,
                     ['Authorization: Bearer ' . $key], 'GET');
                 return;
             case 'openrouter':
-                $this->httpJson('https://openrouter.ai/api/v1/models', null,
+                HttpJson::request('https://openrouter.ai/api/v1/models', null,
                     ['Authorization: Bearer ' . $key], 'GET');
                 return;
         }
@@ -152,12 +152,12 @@ class AiController
         $prompt = $this->buildScriptPrompt($keyword, $platform, $style, $language, $duration, $extraPrompt);
 
         try {
-            $raw = $this->callTextLlm($provider, $apiKey, $prompt);
+            $raw = LlmClient::complete($provider, $apiKey, $prompt);
         } catch (\Throwable $e) {
             Response::json(['error' => 'AI ตอบกลับผิดพลาด: ' . $e->getMessage()], 500);
         }
 
-        $parsed = $this->extractJson($raw);
+        $parsed = LlmClient::extractJson($raw);
         if (!$parsed) {
             Response::json(['error' => 'AI ส่งผลลัพธ์ไม่ใช่ JSON ที่ถูกต้อง', 'raw' => $raw], 500);
         }
@@ -385,127 +385,16 @@ PROMPT;
 P;
 
         try {
-            $raw = $this->callTextLlm($provider, $apiKey, $prompt);
+            $raw = LlmClient::complete($provider, $apiKey, $prompt);
         } catch (\Throwable $e) {
             Response::json(['error' => $e->getMessage()], 500);
         }
-        $parsed = $this->extractJson($raw);
+        $parsed = LlmClient::extractJson($raw);
         $options = is_array($parsed['options'] ?? null) ? $parsed['options'] : null;
         if (!$options) {
             Response::json(['error' => 'AI ส่งผลลัพธ์ไม่ถูกต้อง', 'raw' => $raw], 500);
         }
         Response::json(['ok' => true, 'options' => $options]);
-    }
-
-    private function extractJson(string $raw): ?array
-    {
-        // Strip markdown code fences
-        $s = trim($raw);
-        $s = preg_replace('/^```(?:json)?\s*/i', '', $s);
-        $s = preg_replace('/\s*```\s*$/', '', $s);
-        $data = json_decode($s, true);
-        if (is_array($data)) return $data;
-        // Try extracting first {...} block
-        if (preg_match('/\{.*\}/s', $s, $m)) {
-            $data = json_decode($m[0], true);
-            if (is_array($data)) return $data;
-        }
-        return null;
-    }
-
-    // ============================================================
-    // LLM CALLS
-    // ============================================================
-
-    private function callTextLlm(string $provider, string $apiKey, string $prompt): string
-    {
-        switch ($provider) {
-            case 'openai':    return $this->callOpenAi($apiKey, $prompt);
-            case 'gemini':    return $this->callGemini($apiKey, $prompt);
-            case 'anthropic': return $this->callAnthropic($apiKey, $prompt);
-            case 'kimi':      return $this->callKimi($apiKey, $prompt);
-            case 'openrouter': return $this->callOpenRouter($apiKey, $prompt);
-        }
-        throw new \RuntimeException('Provider ไม่รองรับ: ' . $provider);
-    }
-
-    private function callKimi(string $key, string $prompt): string
-    {
-        $body = [
-            'model' => 'moonshot-v1-8k',
-            'messages' => [
-                ['role' => 'system', 'content' => 'You output only valid JSON matching the requested schema. No markdown, no explanations.'],
-                ['role' => 'user', 'content' => $prompt],
-            ],
-            'temperature' => 0.3,
-        ];
-        $resp = $this->httpJson('https://api.moonshot.cn/v1/chat/completions', $body, [
-            'Authorization: Bearer ' . $key,
-        ]);
-        return $resp['choices'][0]['message']['content'] ?? '';
-    }
-
-    private function callOpenRouter(string $key, string $prompt): string
-    {
-        $body = [
-            'model' => 'google/gemini-2.0-flash-001',
-            'messages' => [
-                ['role' => 'system', 'content' => 'You output only valid JSON matching the requested schema. No markdown, no explanations.'],
-                ['role' => 'user', 'content' => $prompt],
-            ],
-            'temperature' => 0.8,
-        ];
-        $resp = $this->httpJson('https://openrouter.ai/api/v1/chat/completions', $body, [
-            'Authorization: Bearer ' . $key,
-            'HTTP-Referer: http://localhost',
-            'X-Title: Stock Analyzer',
-        ]);
-        return $resp['choices'][0]['message']['content'] ?? '';
-    }
-
-    private function callOpenAi(string $key, string $prompt): string
-    {
-        $body = [
-            'model' => 'gpt-4o-mini',
-            'messages' => [
-                ['role' => 'system', 'content' => 'You output only valid JSON matching the requested schema. No markdown, no explanations.'],
-                ['role' => 'user', 'content' => $prompt],
-            ],
-            'temperature' => 0.8,
-            'response_format' => ['type' => 'json_object'],
-        ];
-        $resp = $this->httpJson('https://api.openai.com/v1/chat/completions', $body, [
-            'Authorization: Bearer ' . $key,
-        ]);
-        return $resp['choices'][0]['message']['content'] ?? '';
-    }
-
-    private function callGemini(string $key, string $prompt): string
-    {
-        $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' . urlencode($key);
-        $body = [
-            'contents' => [['parts' => [['text' => $prompt]]]],
-            'generationConfig' => [
-                'temperature' => 0.9,
-                'responseMimeType' => 'application/json',
-            ],
-        ];
-        $resp = $this->httpJson($url, $body);
-        return $resp['candidates'][0]['content']['parts'][0]['text'] ?? '';
-    }
-
-    private function callAnthropic(string $key, string $prompt): string
-    {
-        $body = [
-            'model' => 'claude-haiku-4-5-20251001',
-            'max_tokens' => 2048,
-            'messages' => [['role' => 'user', 'content' => $prompt]],
-        ];
-        $resp = $this->httpJson('https://api.anthropic.com/v1/messages', $body, [
-            'x-api-key: ' . $key,
-            'anthropic-version: 2023-06-01',
-        ]);
-        return $resp['content'][0]['text'] ?? '';
     }
 
     // ============================================================
@@ -516,49 +405,15 @@ P;
     {
         // Use the "run a model" endpoint that takes model slug directly
         $url = 'https://api.replicate.com/v1/models/' . $model . '/predictions';
-        return $this->httpJson($url, ['input' => $input], [
+        return HttpJson::request($url, ['input' => $input], [
             'Authorization: Bearer ' . $key,
             'Prefer: respond-async',
-        ]);
+        ], 'POST', 60);
     }
 
     private function replicateFetch(string $key, string $jobId): array
     {
         $url = 'https://api.replicate.com/v1/predictions/' . urlencode($jobId);
-        return $this->httpJson($url, null, ['Authorization: Bearer ' . $key], 'GET');
-    }
-
-    // ============================================================
-    // HTTP
-    // ============================================================
-
-    private function httpJson(string $url, $body, array $headers = [], string $method = 'POST'): array
-    {
-        $ch = curl_init($url);
-        $hdrs = array_merge(['Content-Type: application/json', 'Accept: application/json'], $headers);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT        => 60,
-            CURLOPT_CONNECTTIMEOUT => 15,
-            CURLOPT_HTTPHEADER     => $hdrs,
-            CURLOPT_CUSTOMREQUEST  => $method,
-        ]);
-        if ($body !== null) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body, JSON_UNESCAPED_UNICODE));
-        }
-        $raw  = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $err  = curl_error($ch);
-        curl_close($ch);
-
-        if ($raw === false) throw new \RuntimeException('HTTP error: ' . $err);
-        $data = json_decode($raw, true);
-        if ($code >= 400) {
-            $msg = is_array($data) ? ($data['error']['message'] ?? $data['error'] ?? $data['detail'] ?? json_encode($data)) : $raw;
-            if (is_array($msg)) $msg = json_encode($msg);
-            throw new \RuntimeException('HTTP ' . $code . ': ' . $msg);
-        }
-        if (!is_array($data)) throw new \RuntimeException('ตอบกลับไม่ใช่ JSON');
-        return $data;
+        return HttpJson::request($url, null, ['Authorization: Bearer ' . $key], 'GET');
     }
 }

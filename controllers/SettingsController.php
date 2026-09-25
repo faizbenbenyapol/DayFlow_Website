@@ -1,10 +1,10 @@
 <?php
 // =====================================================
-// controllers/SettingsController.php
+// controllers/SettingsController.php — the settings page, profile, password, appearance and Telegram
 // =====================================================
 
-require_once ROOT . '/models/User.php';
-require_once ROOT . '/core/RememberToken.php';
+// Devices and two-factor sign-in are in AccountSecurityController; backup,
+// restore and account deletion in AccountDataController.
 
 class SettingsController
 {
@@ -28,8 +28,6 @@ class SettingsController
         require ROOT . '/views/layout/footer.php';
     }
 
-    // --- API ---
-
     public function apiGet(): void
     {
         $userId   = Auth::userId();
@@ -37,27 +35,6 @@ class SettingsController
         $settings = User::getSettings($userId);
         $settings['telegram_bot_token'] = !empty($settings['telegram_bot_token']) ? '••••••••' : '';
         Response::json(['user' => $user, 'settings' => $settings]);
-    }
-
-    public function apiDevices(): void
-    {
-        Response::json(['devices' => RememberToken::listForUser(Auth::userId())]);
-    }
-
-    public function apiDeviceRevoke(string $id): void
-    {
-        $tokenId = filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-        if (!$tokenId) Response::json(['error' => 'อุปกรณ์ไม่ถูกต้อง'], 422);
-
-        $revoked = RememberToken::revokeForUser((int)$tokenId, Auth::userId());
-        if (!$revoked) Response::json(['error' => 'ไม่พบอุปกรณ์นี้'], 404);
-        Response::json(['ok' => true]);
-    }
-
-    public function apiDevicesRevokeOthers(): void
-    {
-        $count = RememberToken::revokeOthers(Auth::userId());
-        Response::json(['ok' => true, 'revoked' => $count]);
     }
 
     public function apiProfile(): void
@@ -110,102 +87,6 @@ class SettingsController
         // A password change invalidates every remembered login on other devices.
         RememberToken::revokeAll($userId);
         setcookie(RememberToken::COOKIE, '', ['expires' => time() - 3600, 'path' => '/', 'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off', 'httponly' => true, 'samesite' => 'Lax']);
-        Response::json(['ok' => true]);
-    }
-
-    // --- Two-factor authentication ---
-
-    public function apiTwoFactorStatus(): void
-    {
-        $userId = Auth::userId();
-        $row    = TwoFactor::forUser($userId);
-
-        Response::json([
-            'enabled'         => (bool)($row['is_enabled'] ?? false),
-            'pending'         => $row !== null && empty($row['is_enabled']),
-            'confirmed_at'    => $row['confirmed_at'] ?? null,
-            'recovery_codes_left' => $row && !empty($row['is_enabled'])
-                ? TwoFactor::countUnusedRecoveryCodes($userId)
-                : 0,
-        ]);
-    }
-
-    /**
-     * Starts enrolment. The secret is returned once, for the QR code and for
-     * anyone typing it in by hand; it is stored encrypted and never sent again.
-     */
-    public function apiTwoFactorBegin(): void
-    {
-        $userId = Auth::userId();
-
-        // Turning on a second factor is a security change, so the current
-        // password has to be re-entered even though the session is open.
-        $hash = User::passwordHash($userId);
-        if ($hash === null || !User::verifyPassword((string)Request::rawInput('password', ''), $hash)) {
-            Response::json(['error' => 'รหัสผ่านไม่ถูกต้อง'], 401);
-        }
-
-        if (TwoFactor::isEnabled($userId)) {
-            Response::json(['error' => 'เปิดใช้งานการยืนยันสองชั้นอยู่แล้ว'], 409);
-        }
-
-        $secret = TwoFactor::beginEnrolment($userId);
-        $user   = User::findById($userId);
-
-        Response::json([
-            'ok'     => true,
-            'secret' => $secret,
-            'uri'    => Totp::provisioningUri(
-                $secret,
-                (string)($user['email'] ?? $user['username'] ?? 'user'),
-                APP_NAME
-            ),
-        ]);
-    }
-
-    public function apiTwoFactorConfirm(): void
-    {
-        $userId = Auth::userId();
-        $code   = (string)Request::rawInput('code', '');
-
-        if ($code === '') {
-            Response::json(['error' => 'กรุณากรอกรหัสจากแอป'], 422);
-        }
-
-        $codes = TwoFactor::confirmEnrolment($userId, $code);
-        if ($codes === null) {
-            Response::json(['error' => 'รหัสไม่ถูกต้อง กรุณาลองใหม่'], 401);
-        }
-
-        // Shown once: from here on only their hashes exist.
-        Response::json(['ok' => true, 'recovery_codes' => $codes]);
-    }
-
-    public function apiTwoFactorRecovery(): void
-    {
-        $userId = Auth::userId();
-
-        $hash = User::passwordHash($userId);
-        if ($hash === null || !User::verifyPassword((string)Request::rawInput('password', ''), $hash)) {
-            Response::json(['error' => 'รหัสผ่านไม่ถูกต้อง'], 401);
-        }
-        if (!TwoFactor::isEnabled($userId)) {
-            Response::json(['error' => 'ยังไม่ได้เปิดใช้งานการยืนยันสองชั้น'], 409);
-        }
-
-        Response::json(['ok' => true, 'recovery_codes' => TwoFactor::issueRecoveryCodes($userId)]);
-    }
-
-    public function apiTwoFactorDisable(): void
-    {
-        $userId = Auth::userId();
-
-        $hash = User::passwordHash($userId);
-        if ($hash === null || !User::verifyPassword((string)Request::rawInput('password', ''), $hash)) {
-            Response::json(['error' => 'รหัสผ่านไม่ถูกต้อง'], 401);
-        }
-
-        TwoFactor::disable($userId);
         Response::json(['ok' => true]);
     }
 
@@ -334,82 +215,5 @@ class SettingsController
     public function apiCronTest(): void
     {
         Response::json(['error' => 'งานแจ้งเตือนทำงานผ่าน Docker worker เท่านั้น'], 410);
-    }
-
-    public function apiExport(): void
-    {
-        $userId = Auth::userId();
-        $user   = User::findById($userId);
-        $data   = AccountData::export($userId);
-
-        $username = preg_replace('/[^a-zA-Z0-9_\-]/', '', $user['username'] ?? 'user');
-        $filename = 'my-data-' . $username . '-' . date('Ymd-His') . '.json';
-
-        header('Content-Type: application/json; charset=utf-8');
-        header('Content-Disposition: ' . contentDisposition($filename));
-        echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
-    public function apiImport(): void
-    {
-        $userId = Auth::userId();
-
-        if (empty($_FILES['file'])) {
-            Response::json(['error' => 'ไม่พบไฟล์ที่อัปโหลด'], 422);
-        }
-
-        $file = $_FILES['file'];
-
-        if ($file['error'] !== UPLOAD_ERR_OK) {
-            Response::json(['error' => 'การอัปโหลดไฟล์ล้มเหลว'], 422);
-        }
-
-        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-        if ($ext !== 'json') {
-            Response::json(['error' => 'กรุณาอัปโหลดไฟล์รูปแบบ JSON เท่านั้น'], 422);
-        }
-
-        $content = file_get_contents($file['tmp_name']);
-        $data = json_decode($content, true);
-
-        if (!is_array($data)) {
-            Response::json(['error' => 'ข้อมูลในไฟล์ JSON ไม่ถูกต้อง หรือเสียหาย'], 422);
-        }
-
-        try {
-            $imported = AccountData::import($userId, $data);
-            Response::json(['ok' => true, 'imported' => $imported, 'total' => array_sum($imported)]);
-        } catch (\InvalidArgumentException $e) {
-            // AccountData words these for the user; the cause goes to the log.
-            if ($e->getPrevious()) error_log('Import rejected: ' . $e->getPrevious()->getMessage());
-            Response::json(['error' => $e->getMessage()], 422);
-        } catch (\Throwable $e) {
-            error_log($e->getMessage());
-            Response::json(['error' => 'นำเข้าข้อมูลไม่สำเร็จ'], 500);
-        }
-    }
-
-    public function apiDeleteAccount(): void
-    {
-        $userId   = Auth::userId();
-        $password = Request::rawInput('password', '');
-        $confirm  = Request::rawInput('confirm_text', '');
-
-        if (empty($password)) {
-            Response::json(['error' => 'กรุณากรอกรหัสผ่าน'], 422);
-        }
-        if ($confirm !== 'DELETE') {
-            Response::json(['error' => 'กรุณาพิมพ์ DELETE เพื่อยืนยัน'], 422);
-        }
-
-        $hash = User::passwordHash($userId);
-        if ($hash === null || !User::verifyPassword($password, $hash)) {
-            Response::json(['error' => 'รหัสผ่านไม่ถูกต้อง'], 401);
-        }
-
-        User::deleteAccount($userId);
-        Auth::logout();
-        Response::json(['ok' => true]);
     }
 }

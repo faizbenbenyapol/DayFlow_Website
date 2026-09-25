@@ -52,11 +52,11 @@ class Router
         $this->add('POST', '/api/auth/two-factor', 'AuthController', 'apiTwoFactor', false);
 
         // --- API: Two-factor setup (inside a signed-in session) ---
-        $this->add('GET',    '/api/settings/two-factor',         'SettingsController', 'apiTwoFactorStatus',  true);
-        $this->add('POST',   '/api/settings/two-factor/begin',   'SettingsController', 'apiTwoFactorBegin',   true);
-        $this->add('POST',   '/api/settings/two-factor/confirm', 'SettingsController', 'apiTwoFactorConfirm', true);
-        $this->add('POST',   '/api/settings/two-factor/recovery','SettingsController', 'apiTwoFactorRecovery',true);
-        $this->add('DELETE', '/api/settings/two-factor',         'SettingsController', 'apiTwoFactorDisable', true);
+        $this->add('GET',    '/api/settings/two-factor',         'AccountSecurityController', 'apiTwoFactorStatus',  true);
+        $this->add('POST',   '/api/settings/two-factor/begin',   'AccountSecurityController', 'apiTwoFactorBegin',   true);
+        $this->add('POST',   '/api/settings/two-factor/confirm', 'AccountSecurityController', 'apiTwoFactorConfirm', true);
+        $this->add('POST',   '/api/settings/two-factor/recovery','AccountSecurityController', 'apiTwoFactorRecovery',true);
+        $this->add('DELETE', '/api/settings/two-factor',         'AccountSecurityController', 'apiTwoFactorDisable', true);
 
         // --- API: Dashboard ---
         $this->add('GET',  '/api/dashboard/summary', 'DashboardController', 'summary', true);
@@ -189,9 +189,9 @@ class Router
 
         // --- API: Settings ---
         $this->add('GET',  '/api/settings',          'SettingsController', 'apiGet',      true);
-        $this->add('GET',  '/api/settings/devices',  'SettingsController', 'apiDevices',  true);
-        $this->add('DELETE', '/api/settings/devices/{id}', 'SettingsController', 'apiDeviceRevoke', true);
-        $this->add('POST', '/api/settings/devices/revoke-others', 'SettingsController', 'apiDevicesRevokeOthers', true);
+        $this->add('GET',  '/api/settings/devices',  'AccountSecurityController', 'apiDevices',  true);
+        $this->add('DELETE', '/api/settings/devices/{id}', 'AccountSecurityController', 'apiDeviceRevoke', true);
+        $this->add('POST', '/api/settings/devices/revoke-others', 'AccountSecurityController', 'apiDevicesRevokeOthers', true);
         $this->add('POST', '/api/settings/profile',  'SettingsController', 'apiProfile',  true);
         $this->add('POST', '/api/settings/password', 'SettingsController', 'apiPassword', true);
         $this->add('POST', '/api/settings/theme',    'SettingsController', 'apiTheme',    true);
@@ -200,9 +200,9 @@ class Router
         $this->add('POST', '/api/settings/telegram', 'SettingsController', 'apiTelegram', true);
         $this->add('POST', '/api/settings/telegram/test', 'SettingsController', 'apiTelegramTest', true);
         $this->add('POST', '/api/settings/telegram/cron', 'SettingsController', 'apiCronTest', true);
-        $this->add('GET',  '/api/settings/export',   'SettingsController', 'apiExport',   true);
-        $this->add('POST', '/api/settings/import',   'SettingsController', 'apiImport',   true);
-        $this->add('POST', '/api/settings/delete',   'SettingsController', 'apiDeleteAccount', true);
+        $this->add('GET',  '/api/settings/export',   'AccountDataController', 'apiExport',   true);
+        $this->add('POST', '/api/settings/import',   'AccountDataController', 'apiImport',   true);
+        $this->add('POST', '/api/settings/delete',   'AccountDataController', 'apiDeleteAccount', true);
 
         // --- API: AI ---
         $this->add('GET',    '/api/ai/keys',                  'AiController', 'apiKeysList',       true);
@@ -264,45 +264,45 @@ class Router
         $this->add('GET',    '/api/stocks/chart',             'StocksController', 'apiChart',      true);
         $this->add('POST',   '/api/stocks/refresh',           'StocksController', 'apiRefresh',    true);
         $this->add('POST',   '/api/stocks/analyze',           'StocksController', 'apiAnalyze',    true);
-        $this->add('GET',    '/api/stocks/watchlists',        'StocksController', 'apiWatchlists', true);
-        $this->add('POST',   '/api/stocks/watchlists/toggle', 'StocksController', 'apiWatchlistToggle', true);
+        $this->add('GET',    '/api/stocks/watchlists',        'StockWatchlistController', 'apiList', true);
+        $this->add('POST',   '/api/stocks/watchlists/toggle', 'StockWatchlistController', 'apiToggle', true);
 
         // --- API: Stocks Capital & Screenshots ---
-        $this->add('GET',    '/api/stocks/capital',           'StocksController', 'apiCapitalList',   true);
-        $this->add('POST',   '/api/stocks/capital',           'StocksController', 'apiCapitalCreate', true);
-        $this->add('PUT',    '/api/stocks/capital/{id}',      'StocksController', 'apiCapitalUpdate', true);
-        $this->add('DELETE', '/api/stocks/capital/{id}',      'StocksController', 'apiCapitalDelete', true);
-        $this->add('GET',    '/api/stocks/screenshots',       'StocksController', 'apiScreenshotList', true);
-        $this->add('GET',    '/api/stocks/screenshots/{id}/image', 'StocksController', 'apiScreenshotImage', true);
-        $this->add('POST',   '/api/stocks/screenshots',       'StocksController', 'apiScreenshotUpload', true);
-        $this->add('DELETE', '/api/stocks/screenshots/{id}',   'StocksController', 'apiScreenshotDelete', true);
+        $this->add('GET',    '/api/stocks/capital',           'StockCapitalController', 'apiList',   true);
+        $this->add('POST',   '/api/stocks/capital',           'StockCapitalController', 'apiCreate', true);
+        $this->add('PUT',    '/api/stocks/capital/{id}',      'StockCapitalController', 'apiUpdate', true);
+        $this->add('DELETE', '/api/stocks/capital/{id}',      'StockCapitalController', 'apiDelete', true);
+        $this->add('GET',    '/api/stocks/screenshots',       'StockScreenshotController', 'apiList', true);
+        $this->add('GET',    '/api/stocks/screenshots/{id}/image', 'StockScreenshotController', 'apiImage', true);
+        $this->add('POST',   '/api/stocks/screenshots',       'StockScreenshotController', 'apiUpload', true);
+        $this->add('DELETE', '/api/stocks/screenshots/{id}',   'StockScreenshotController', 'apiDelete', true);
 
         // --- API: Stocks API keys ---
-        $this->add('GET',    '/api/stocks/keys',              'StocksController', 'apiKeysList',   true);
-        $this->add('POST',   '/api/stocks/keys',              'StocksController', 'apiKeysSave',   true);
-        $this->add('POST',   '/api/stocks/keys/test',         'StocksController', 'apiKeysTest',   true);
-        $this->add('DELETE', '/api/stocks/keys/{provider}',   'StocksController', 'apiKeysDelete', true);
+        $this->add('GET',    '/api/stocks/keys',              'StockKeyController', 'apiList',   true);
+        $this->add('POST',   '/api/stocks/keys',              'StockKeyController', 'apiSave',   true);
+        $this->add('POST',   '/api/stocks/keys/test',         'StockKeyController', 'apiTest',   true);
+        $this->add('DELETE', '/api/stocks/keys/{provider}',   'StockKeyController', 'apiDelete', true);
 
         // --- API: Projects & Kanban ---
         $this->add('GET',    '/api/projects',              'ProjectController', 'apiList',        true);
         $this->add('POST',   '/api/projects',              'ProjectController', 'apiCreate',      true);
         $this->add('PUT',    '/api/projects/{id}',         'ProjectController', 'apiUpdate',      true);
         $this->add('DELETE', '/api/projects/{id}',         'ProjectController', 'apiDelete',      true);
-        $this->add('GET',    '/api/projects/{id}/tasks',   'ProjectController', 'apiTasksList',   true);
-        $this->add('POST',   '/api/projects/{id}/tasks',   'ProjectController', 'apiTaskCreate',  true);
-        $this->add('PUT',    '/api/projects/tasks/{tid}',  'ProjectController', 'apiTaskUpdate',  true);
-        $this->add('DELETE', '/api/projects/tasks/{tid}',  'ProjectController', 'apiTaskDelete',  true);
-        $this->add('POST',   '/api/projects/tasks/reorder','ProjectController', 'apiTaskReorder', true);
+        $this->add('GET',    '/api/projects/{id}/tasks',   'ProjectTaskController', 'apiTasksList',   true);
+        $this->add('POST',   '/api/projects/{id}/tasks',   'ProjectTaskController', 'apiTaskCreate',  true);
+        $this->add('PUT',    '/api/projects/tasks/{tid}',  'ProjectTaskController', 'apiTaskUpdate',  true);
+        $this->add('DELETE', '/api/projects/tasks/{tid}',  'ProjectTaskController', 'apiTaskDelete',  true);
+        $this->add('POST',   '/api/projects/tasks/reorder','ProjectTaskController', 'apiTaskReorder', true);
 
         // --- API: Projects Collaboration & Chat ---
-        $this->add('GET',    '/api/projects/{id}/members',      'ProjectController', 'apiMemberList',   true);
-        $this->add('POST',   '/api/projects/{id}/members',      'ProjectController', 'apiMemberAdd',    true);
-        $this->add('DELETE', '/api/projects/{id}/members/{mid}', 'ProjectController', 'apiMemberRemove', true);
-        $this->add('GET',    '/api/projects/{id}/chat',         'ProjectController', 'apiChatList',     true);
-        $this->add('POST',   '/api/projects/{id}/chat',         'ProjectController', 'apiChatSend',     true);
-        $this->add('POST',   '/api/projects/{id}/share',        'ProjectController', 'apiShareEnable',  true);
-        $this->add('DELETE', '/api/projects/{id}/share',        'ProjectController', 'apiShareDisable', true);
-        $this->add('POST',   '/api/projects/guest-name',        'ProjectController', 'apiSetGuestName', false);
+        $this->add('GET',    '/api/projects/{id}/members',      'ProjectTeamController', 'apiMemberList',   true);
+        $this->add('POST',   '/api/projects/{id}/members',      'ProjectTeamController', 'apiMemberAdd',    true);
+        $this->add('DELETE', '/api/projects/{id}/members/{mid}', 'ProjectTeamController', 'apiMemberRemove', true);
+        $this->add('GET',    '/api/projects/{id}/chat',         'ProjectTeamController', 'apiChatList',     true);
+        $this->add('POST',   '/api/projects/{id}/chat',         'ProjectTeamController', 'apiChatSend',     true);
+        $this->add('POST',   '/api/projects/{id}/share',        'ProjectShareController', 'apiShareEnable',  true);
+        $this->add('DELETE', '/api/projects/{id}/share',        'ProjectShareController', 'apiShareDisable', true);
+        $this->add('POST',   '/api/projects/guest-name',        'ProjectShareController', 'apiSetGuestName', false);
     }
 
     private function add(string $method, string $pattern, string $controller, string $action, bool $auth): void
