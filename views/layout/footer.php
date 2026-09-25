@@ -44,12 +44,17 @@ if ('serviceWorker' in navigator) {
 </script>
 
 <!-- Page-specific JS -->
-<?php if (isset($pageScript)): ?>
-<script src="<?= APP_URL ?>/assets/js/<?= h($pageScript) ?>.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/' . $pageScript . '.js') ?>"></script>
-<?php if ($pageScript === 'settings'): ?>
-<script src="<?= APP_URL ?>/assets/js/shares.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/shares.js') ?>"></script>
-<?php endif; ?>
-<?php endif; ?>
+<?php if (isset($pageScript)):
+    // Pages whose script comes in several files, loaded in this order after
+    // the main one. They are classic scripts, so they share the page's globals.
+    $pageScriptParts = [
+        'settings'   => ['settings-two-factor', 'settings-push', 'shares'],
+        'projects'   => ['projects-board', 'projects-team', 'projects-share'],
+        'stocks'     => ['stocks-analysis', 'stocks-capital', 'stocks-screenshots'],
+    ];
+    foreach (array_merge([$pageScript], $pageScriptParts[$pageScript] ?? []) as $script): ?>
+<script src="<?= APP_URL ?>/assets/js/<?= h($script) ?>.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/' . $script . '.js') ?>"></script>
+<?php endforeach; endif; ?>
 
 <script nonce="<?= h(Security::nonce()) ?>">
 // Mobile sidebar toggle and hamburger icon animation
