@@ -188,7 +188,11 @@ class NoteTag
         return (int)DB::conn()->lastInsertId();
     }
 
-    public static function update(int $id, int $userId, string $name): bool
+    /**
+     * Renames a tag. False when another of the user's tags already has the
+     * name, null when the user has no such tag.
+     */
+    public static function update(int $id, int $userId, string $name): ?bool
     {
         $name = trim($name);
         if ($name === '') return false;
@@ -200,10 +204,11 @@ class NoteTag
         )->fetchColumn();
         if ($dup > 0) return false;
 
-        return DB::run(
+        $matched = DB::run(
             'UPDATE note_tags SET name = ? WHERE id = ? AND user_id = ?',
             [$name, $id, $userId]
-        )->rowCount() >= 0;
+        )->rowCount() > 0;
+        return $matched ? true : null;
     }
 
     public static function delete(int $id, int $userId): bool

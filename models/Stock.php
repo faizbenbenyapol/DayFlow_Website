@@ -72,7 +72,7 @@ class Stock
                 $id,
                 $userId,
             ]
-        )->rowCount() >= 0;
+        )->rowCount() > 0;
     }
 
     public static function delete(int $id, int $userId): bool
@@ -362,12 +362,13 @@ class Stock
         return $results;
     }
 
-    public static function addWatchlist(int $userId, string $ticker, string $market = 'US'): bool
+    /** A ticker already on the list counts as added. */
+    public static function addWatchlist(int $userId, string $ticker, string $market = 'US'): void
     {
-        return DB::run(
+        DB::run(
             'INSERT IGNORE INTO stock_watchlists (user_id, ticker, market) VALUES (?, ?, ?)',
             [$userId, strtoupper($ticker), $market]
-        )->rowCount() >= 0;
+        );
     }
 
     public static function removeWatchlist(int $userId, string $ticker): bool
@@ -474,7 +475,7 @@ class Stock
                 $id,
                 $userId
             ]
-        )->rowCount() >= 0;
+        )->rowCount() > 0;
     }
 
     public static function deleteCapitalFlow(int $id, int $userId): bool

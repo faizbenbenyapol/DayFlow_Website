@@ -169,7 +169,8 @@ class Project
         $openCritical = (int)$stats['open_critical'];
         $overdue = (int)$stats['overdue'];
 
-        $percent = $total > 0 ? round(($done / $total) * 100) : 0;
+        // An int: compared with === 100 below, which a float from round() never equals.
+        $percent = $total > 0 ? (int)round(($done / $total) * 100) : 0;
         
         $status = 'healthy';
         $insight = '';

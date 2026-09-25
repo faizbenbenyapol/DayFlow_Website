@@ -131,7 +131,7 @@ class Task
         // back on the next date that is still ahead, not pile up behind.
         $today = date('Y-m-d');
         $guard = 0;
-        while ($next !== null && $next < $today && $guard++ < 500) {
+        while ($next < $today && $guard++ < 500) {
             $candidate = Recurrence::next($next, $rule);
             if ($candidate === null || $candidate <= $next) break;
             if ($until && $candidate > substr((string)$until, 0, 10)) return null;

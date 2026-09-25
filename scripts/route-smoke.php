@@ -53,6 +53,8 @@ foreach ($routes as $route => $expected) {
     ]);
     $body = @file_get_contents($baseUrl . $route, false, $context);
     $status = 0;
+    // Unset when the connection itself failed, whatever PHPStan infers.
+    // @phpstan-ignore nullCoalesce.variable
     foreach ($http_response_header ?? [] as $header) {
         if (preg_match('/^HTTP\/\S+\s+(\d+)/', $header, $match)) {
             $status = (int)$match[1];

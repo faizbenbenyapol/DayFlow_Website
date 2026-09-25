@@ -42,7 +42,7 @@ class ExerciseCategory
         return DB::run(
             'UPDATE exercise_categories SET name = ? WHERE id = ? AND user_id = ?',
             [$name, $id, $userId]
-        )->rowCount() >= 0;
+        )->rowCount() > 0;
     }
 
     public static function delete(int $id, int $userId): bool

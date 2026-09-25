@@ -8,7 +8,7 @@ class Response
     /**
      * Send JSON response and exit
      */
-    public static function json($data, int $status = 200): void
+    public static function json($data, int $status = 200): never
     {
         http_response_code($status);
         header('Content-Type: application/json; charset=utf-8');
@@ -23,7 +23,7 @@ class Response
     /**
      * Redirect and exit
      */
-    public static function redirect(string $path): void
+    public static function redirect(string $path): never
     {
         $url = (strpos($path, 'http') === 0) ? $path : APP_URL . $path;
         header('Location: ' . $url);
@@ -31,24 +31,9 @@ class Response
     }
 
     /**
-     * Render a view file with data
-     */
-    public static function view(string $template, array $data = []): void
-    {
-        extract($data, EXTR_SKIP);
-        $file = dirname(__DIR__) . '/views/' . $template . '.php';
-        if (!file_exists($file)) {
-            http_response_code(404);
-            include dirname(__DIR__) . '/views/errors/404.php';
-            exit;
-        }
-        include $file;
-    }
-
-    /**
      * Abort with error (JSON for API, page for browser)
      */
-    public static function abort(int $status, string $message = ''): void
+    public static function abort(int $status, string $message = ''): never
     {
         if (Request::isApi()) {
             self::json(['error' => $message ?: 'Error ' . $status], $status);

@@ -361,7 +361,7 @@ class Router
             }
 
             $parts = explode('/', trim($path, '/'));
-            $base = $parts[0] ?? '';
+            $base = $parts[0];
             if ($base === 'api') $base = $parts[1] ?? '';
 
             // Only the routes needed to enter and leave share mode. Settings
