@@ -201,9 +201,9 @@
 }
 
 /* ── Quadrant accent colors ── */
-#q1 { --qc: #f43f5e; }   /* ด่วน + สำคัญ  → rose   */
-#q2 { --qc: #3b82f6; }   /* สำคัญ          → blue   */
-#q3 { --qc: #f59e0b; }   /* ด่วน           → amber  */
+#q1 { --qc: var(--palette-rose-500); }   /* ด่วน + สำคัญ  → rose   */
+#q2 { --qc: var(--palette-blue-500); }   /* สำคัญ          → blue   */
+#q3 { --qc: var(--palette-amber-500); }   /* ด่วน           → amber  */
 #q4 { --qc: #94a3b8; }   /* ตัดทิ้ง        → slate  */
 
 .quadrant {

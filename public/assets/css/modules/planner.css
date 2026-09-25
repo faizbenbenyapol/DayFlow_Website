@@ -73,12 +73,12 @@
 
 /* Today accent */
 .calendar-cell.today {
-    border-color: #3b82f6;
-    background: color-mix(in srgb, #3b82f6 5%, var(--color-surface));
+    border-color: var(--palette-blue-500);
+    background: color-mix(in srgb, var(--palette-blue-500) 5%, var(--color-surface));
 }
 
 .calendar-cell.today .calendar-day-number {
-    background: #3b82f6;
+    background: var(--palette-blue-500);
     color: #ffffff;
     font-weight: 700;
 }
@@ -173,7 +173,7 @@
     padding: var(--space-3) var(--space-4);
     background: var(--color-bg);
     border: 1px solid var(--color-border);
-    border-left: 4px solid var(--event-color, #3b82f6);
+    border-left: 4px solid var(--event-color, var(--palette-blue-500));
     border-radius: var(--radius);
     font-size: 0.875rem;
     transition: transform var(--transition), border-color var(--transition);

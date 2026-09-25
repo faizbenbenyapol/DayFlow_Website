@@ -112,12 +112,12 @@
 }
 
 .project-card.active-project {
-    border-color: #06b6d4;
+    border-color: var(--palette-cyan-500);
     box-shadow: var(--shadow-sm), 0 0 0 3px rgba(6, 182, 212, 0.25);
 }
 
 .project-card.active-project:hover {
-    border-color: #06b6d4;
+    border-color: var(--palette-cyan-500);
     box-shadow: var(--shadow), 0 0 0 3px rgba(6, 182, 212, 0.25);
     transform: translateY(-3px);
 }
@@ -480,8 +480,8 @@
 
 /* Custom indicator color variables */
 .dot-todo { background: var(--color-muted-2); }
-.dot-in-progress { background: #3b82f6; }
-.dot-review { background: #f59e0b; }
+.dot-in-progress { background: var(--palette-blue-500); }
+.dot-review { background: var(--palette-amber-500); }
 .dot-done { background: var(--color-success); }
 
 /* --- Checklist Indicator Progress --- */
@@ -835,7 +835,7 @@
 }
 
 .ai-summary-sparkle {
-    color: #06b6d4;
+    color: var(--palette-cyan-500);
     animation: sparkle 2s ease infinite;
 }
 
@@ -855,10 +855,10 @@
     margin-top: var(--space-3);
     padding: var(--space-2) var(--space-3);
     background: rgba(239, 68, 68, 0.08);
-    border-left: 3px solid #ef4444;
+    border-left: 3px solid var(--palette-red-500);
     border-radius: var(--radius-sm);
     font-size: 0.78rem;
-    color: #ef4444;
+    color: var(--palette-red-500);
     font-weight: 600;
 }
 
@@ -982,7 +982,7 @@
 .chat-status-dot {
     width: 8px;
     height: 8px;
-    background: #06b6d4; /* Teal Accent */
+    background: var(--palette-cyan-500); /* Teal Accent */
     border-radius: 50%;
     animation: chat-pulse 2s infinite;
 }
@@ -1065,7 +1065,7 @@
     justify-content: flex-end;
 }
 .chat-msg-own .chat-msg-bubble {
-    background: #06b6d4; /* Teal Accent */
+    background: var(--palette-cyan-500); /* Teal Accent */
     color: #ffffff;
     border-bottom-right-radius: 2px;
 }
@@ -1108,11 +1108,11 @@
     justify-content: center;
     border-radius: var(--radius-md) !important;
     padding: 0 !important;
-    background: #06b6d4 !important;
+    background: var(--palette-cyan-500) !important;
     border: none !important;
 }
 .btn-chat-send:hover {
-    background: #0891b2 !important;
+    background: var(--palette-cyan-600) !important;
 }
 
 /* 2. Members List in Modal */
@@ -1149,7 +1149,7 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: #06b6d4;
+    background: var(--palette-cyan-500);
     color: #ffffff;
     display: flex;
     align-items: center;
@@ -1183,17 +1183,17 @@
 
 .role-owner {
     background: rgba(6, 182, 212, 0.15);
-    color: #06b6d4;
+    color: var(--palette-cyan-500);
 }
 
 .role-editor {
     background: rgba(34, 197, 94, 0.15);
-    color: #22c55e;
+    color: var(--palette-green-500);
 }
 
 .role-viewer {
     background: rgba(107, 114, 128, 0.15);
-    color: #6b7280;
+    color: var(--palette-gray-500);
 }
 
 .member-actions {
@@ -1260,7 +1260,7 @@
 }
 
 input:checked + .slider {
-    background-color: #06b6d4; /* Teal Accent */
+    background-color: var(--palette-cyan-500); /* Teal Accent */
 }
 
 input:checked + .slider:before {

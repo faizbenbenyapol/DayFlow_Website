@@ -41,7 +41,7 @@
     border-radius: 99px;
     font-weight: 500;
 }
-.share-perm-badge.view     { background: #dbeafe; color: #1d4ed8; }
+.share-perm-badge.view     { background: var(--palette-blue-100); color: var(--palette-blue-700); }
 .share-perm-badge.download { background: #d1fae5; color: #065f46; }
 
 .share-expired { color: var(--color-danger); font-size: .75rem; }

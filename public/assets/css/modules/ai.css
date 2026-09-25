@@ -23,7 +23,7 @@
 /* ---------- API Keys ---------- */
 .ai-key-row[data-provider="openai"]     { border-left: 3px solid #10a37f; }
 .ai-key-row[data-provider="gemini"]     { border-left: 3px solid #4285f4; }
-.ai-key-row[data-provider="anthropic"]  { border-left: 3px solid #d97706; }
+.ai-key-row[data-provider="anthropic"]  { border-left: 3px solid var(--palette-amber-600); }
 .ai-key-row[data-provider="replicate"]  { border-left: 3px solid #7c3aed; }
 
 .ai-key-row {

@@ -180,7 +180,7 @@
 
 /* Lavender Theme Card Preview Mock */
 .theme-lavender-preview {
-    background: #ede9fe;
+    background: var(--palette-violet-100);
     border: 1px solid #ddd6fe;
 }
 .theme-lavender-preview .preview-header {
@@ -197,14 +197,14 @@
 }
 .theme-lavender-preview .preview-line-1 {
     height: 18px;
-    background: #ede9fe;
+    background: var(--palette-violet-100);
     box-shadow: inset 2px 2px 4px rgba(196, 181, 253, 0.45), inset -2px -2px 4px rgba(255, 255, 255, 0.85);
     border-radius: 4px;
     width: 100%;
 }
 .theme-lavender-preview .preview-line-2 {
     height: 18px;
-    background: #ede9fe;
+    background: var(--palette-violet-100);
     box-shadow: inset 2px 2px 4px rgba(196, 181, 253, 0.45), inset -2px -2px 4px rgba(255, 255, 255, 0.85);
     border-radius: 4px;
     width: 75%;
@@ -212,7 +212,7 @@
 
 /* Ocean Theme Card Preview Mock */
 .theme-ocean-preview {
-    background: #e0f2fe;
+    background: var(--palette-sky-100);
     border: 1px solid #bae6fd;
 }
 .theme-ocean-preview .preview-header {
@@ -229,14 +229,14 @@
 }
 .theme-ocean-preview .preview-line-1 {
     height: 18px;
-    background: #e0f2fe;
+    background: var(--palette-sky-100);
     box-shadow: inset 2px 2px 4px rgba(186, 230, 253, 0.45), inset -2px -2px 4px rgba(255, 255, 255, 0.85);
     border-radius: 4px;
     width: 100%;
 }
 .theme-ocean-preview .preview-line-2 {
     height: 18px;
-    background: #e0f2fe;
+    background: var(--palette-sky-100);
     box-shadow: inset 2px 2px 4px rgba(186, 230, 253, 0.45), inset -2px -2px 4px rgba(255, 255, 255, 0.85);
     border-radius: 4px;
     width: 75%;
@@ -244,7 +244,7 @@
 
 /* Peach Theme Card Preview Mock */
 .theme-peach-preview {
-    background: #ffe4e6;
+    background: var(--palette-rose-100);
     border: 1px solid #fecdd3;
 }
 .theme-peach-preview .preview-header {
@@ -261,14 +261,14 @@
 }
 .theme-peach-preview .preview-line-1 {
     height: 18px;
-    background: #ffe4e6;
+    background: var(--palette-rose-100);
     box-shadow: inset 2px 2px 4px rgba(244, 196, 202, 0.5), inset -2px -2px 4px rgba(255, 255, 255, 0.85);
     border-radius: 4px;
     width: 100%;
 }
 .theme-peach-preview .preview-line-2 {
     height: 18px;
-    background: #ffe4e6;
+    background: var(--palette-rose-100);
     box-shadow: inset 2px 2px 4px rgba(244, 196, 202, 0.5), inset -2px -2px 4px rgba(255, 255, 255, 0.85);
     border-radius: 4px;
     width: 75%;
@@ -520,7 +520,7 @@
 }
 
 .stock-key-row[data-provider="twelvedata"] {
-    border-left-color: #3b82f6;
+    border-left-color: var(--palette-blue-500);
 }
 
 .stock-key-provider {

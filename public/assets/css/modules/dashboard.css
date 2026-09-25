@@ -91,22 +91,22 @@
 
 .dash-strip-card:nth-child(1) {
     --ic: #f43f5e;
-    border-left: 3px solid #f43f5e;
+    border-left: 3px solid var(--palette-rose-500);
 }
 
 .dash-strip-card:nth-child(2) {
     --ic: #10b981;
-    border-left: 3px solid #10b981;
+    border-left: 3px solid var(--palette-emerald-500);
 }
 
 .dash-strip-card:nth-child(3) {
     --ic: #22c55e;
-    border-left: 3px solid #22c55e;
+    border-left: 3px solid var(--palette-green-500);
 }
 
 .dash-strip-card:nth-child(4) {
     --ic: #8b5cf6;
-    border-left: 3px solid #8b5cf6;
+    border-left: 3px solid var(--palette-violet-500);
 }
 
 .dash-strip-icon-wrap {
@@ -672,7 +672,7 @@
 
 .widget-project-progress-fill {
     height: 100%;
-    background: #06b6d4;
+    background: var(--palette-cyan-500);
     border-radius: 99px;
     transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -727,9 +727,9 @@
 .widget-note-pinned-dot {
     width: 6px;
     height: 6px;
-    background: #f59e0b;
+    background: var(--palette-amber-500);
     border-radius: 50%;
-    box-shadow: 0 0 8px #f59e0b;
+    box-shadow: 0 0 8px var(--palette-amber-500);
 }
 
 .widget-note-time {
@@ -755,7 +755,7 @@
 
 .widget-note-tag-chip {
     font-size: 0.68rem;
-    color: #f59e0b;
+    color: var(--palette-amber-500);
     background: rgba(245, 158, 11, 0.08);
     padding: 1px 6px;
     border-radius: 4px;
@@ -954,9 +954,9 @@
 .active-status-dot {
     width: 8px;
     height: 8px;
-    background: #10b981;
+    background: var(--palette-emerald-500);
     border-radius: 50%;
-    box-shadow: 0 0 12px #10b981;
+    box-shadow: 0 0 12px var(--palette-emerald-500);
     animation: pulseGlow 2s infinite;
 }
 
