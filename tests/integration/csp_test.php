@@ -9,6 +9,15 @@
 
 declare(strict_types=1);
 
+/**
+ * Every script under public/assets/js, by name — including the parts a page
+ * loads after its main script, which a hand-kept list would miss.
+ */
+function allPageScripts(): array
+{
+    return array_map(fn(string $p): string => basename($p, '.js'), glob(ROOT . '/public/assets/js/*.js'));
+}
+
 /** Every page a signed-in user can reach. */
 const CSP_PAGES = [
     '/', '/tasks', '/notes', '/planner', '/projects', '/exercise', '/finance',
@@ -85,8 +94,7 @@ test('no page carries an inline event handler', function (TestClient $client): v
 test('the served scripts generate no inline handlers either', function (TestClient $client): void {
     // Markup built in JavaScript is subject to the same policy as markup from
     // the server, and is easier to overlook.
-    foreach (['app', 'dashboard', 'notes', 'projects', 'finance', 'stocks',
-              'tasks', 'planner', 'files', 'transfer', 'settings'] as $script) {
+    foreach (allPageScripts() as $script) {
         $response = $client->get('/assets/js/' . $script . '.js');
         if ($response['status'] !== 200) continue;
 
@@ -142,9 +150,7 @@ test('every data-args the server sends is valid JSON', function (TestClient $cli
 test('the scripts write valid data-args too', function (TestClient $client): void {
     // Markup built in JavaScript is where the quoting goes wrong: a bare " ends
     // the attribute early, and `this.checked` was never JSON to begin with.
-    foreach (['actions', 'app', 'dashboard', 'notes', 'projects', 'finance', 'stocks',
-              'tasks', 'planner', 'files', 'transfer', 'settings', 'exercise',
-              'subscriptions', 'food_notes', 'calculator'] as $script) {
+    foreach (allPageScripts() as $script) {
         $response = $client->get('/assets/js/' . $script . '.js');
         if ($response['status'] !== 200) continue;
 
