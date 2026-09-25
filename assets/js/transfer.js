@@ -155,7 +155,7 @@
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                 </div>
                 <div class="tf-file-info">
-                    <div class="tf-file-name">${escapeHtml(f.name)}</div>
+                    <div class="tf-file-name">${escHtml(f.name)}</div>
                     <div class="tf-file-size">${formatSize(f.size)}</div>
                 </div>
                 <button class="tf-file-remove" data-act="window._tfRemoveFile" data-args="[${i}]" title="ลบ">
@@ -420,7 +420,7 @@
                 <div class="tf-result-file-icon">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                 </div>
-                <div class="tf-result-file-name">${escapeHtml(f.name)}</div>
+                <div class="tf-result-file-name">${escHtml(f.name)}</div>
                 <div class="tf-result-file-size">${formatSize(f.size)}</div>
             </div>
         `).join('');
@@ -463,9 +463,9 @@
 
             return `
                 <div class="tf-history-item ${isExpired ? 'tf-expired' : ''}">
-                    <div class="tf-history-code">${escapeHtml(t.code)}</div>
+                    <div class="tf-history-code">${escHtml(t.code)}</div>
                     <div class="tf-history-info">
-                        <div class="tf-history-files" title="${escapeHtml(fileNames)}">${files.length} ไฟล์ · ${formatSize(t.total_size)}</div>
+                        <div class="tf-history-files" title="${escHtml(fileNames)}">${files.length} ไฟล์ · ${formatSize(t.total_size)}</div>
                         <div class="tf-history-meta">
                             <span>
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
@@ -479,7 +479,7 @@
                     </div>
                     ${statusBadge}
                     <div class="tf-history-actions">
-                        ${!isExpired ? `<button class="btn btn-ghost btn-sm" data-act="_tfCopyHistoryCode" data-args="[&quot;${escapeHtml(t.code)}&quot;]" title="คัดลอกรหัส">
+                        ${!isExpired ? `<button class="btn btn-ghost btn-sm" data-act="_tfCopyHistoryCode" data-args="[&quot;${escHtml(t.code)}&quot;]" title="คัดลอกรหัส">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
                         </button>` : ''}
                         <button class="btn btn-ghost btn-sm" data-act="window._tfDeleteTransfer" data-args="[${t.id}]" title="ลบ" style="color:#ef4444;">
@@ -516,12 +516,6 @@
         if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
         if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
         return bytes + ' B';
-    }
-
-    function escapeHtml(str) {
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
     }
 
 })();

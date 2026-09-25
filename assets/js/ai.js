@@ -198,12 +198,6 @@
         return el ? el.value : '';
     }
 
-    function escHtml(s) {
-        return String(s == null ? '' : s)
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
-    }
-
     function renderResult(r) {
         const card = document.getElementById('aiResultCard');
         const body = document.getElementById('aiResultBody');

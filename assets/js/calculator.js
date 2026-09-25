@@ -64,9 +64,9 @@
             }
             box.innerHTML = this.list.map(h =>
                 `<div class="calc-history-item" data-expr="${encodeURIComponent(h.expr)}">` +
-                `<div class="hi-cat">${h.category}</div>` +
-                `<div class="hi-expr">${h.expr}</div>` +
-                `<div class="hi-result">= ${h.result}</div>` +
+                `<div class="hi-cat">${escHtml(h.category)}</div>` +
+                `<div class="hi-expr">${escHtml(h.expr)}</div>` +
+                `<div class="hi-result">= ${escHtml(h.result)}</div>` +
                 `</div>`
             ).join('');
         }
@@ -298,7 +298,7 @@
         const diffPct = best.perUnit ? ((worst.perUnit - best.perUnit) / best.perUnit) * 100 : 0;
 
         const lines = items.map(it =>
-            `${it === best ? '* ' : ''}<strong>${it.name}</strong>: ${money(it.perUnit)}/${it.unit} (${money(it.price)} ÷ ${fmt(it.qty)} ${it.unit})`
+            `${it === best ? '* ' : ''}<strong>${escHtml(it.name)}</strong>: ${money(it.perUnit)}/${escHtml(it.unit)} (${money(it.price)} ÷ ${fmt(it.qty)} ${escHtml(it.unit)})`
         ).join('<br>');
 
         setResult('compare',

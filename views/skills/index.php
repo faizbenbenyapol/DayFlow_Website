@@ -137,7 +137,7 @@ async function loadData() {
         const select = document.getElementById('timerSkillSelect');
         select.innerHTML = '<option value="">-- เลือกทักษะเพื่อจับเวลา --</option>';
         skills.forEach(s => {
-            select.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+            select.innerHTML += `<option value="${escHtml(s.id)}">${escHtml(s.name)}</option>`;
         });
 
         // Load Stats & Active Timer
@@ -191,16 +191,16 @@ function renderSkillsProgress(skillsProgressData) {
             <div class="skill-item">
                 <div class="skill-header">
                     <span class="skill-name">
-                        <span class="color-dot" style="background:${s.color}"></span>
-                        ${s.name}
+                        <span class="color-dot" style="background:${cssColor(s.color)}"></span>
+                        ${escHtml(s.name)}
                     </span>
                     <div>
-                        <button class="btn btn-sm btn-ghost" data-act="editSkill" data-args="[&quot;${s.id}&quot;]" title="แก้ไข" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">✎</button>
-                        <button class="btn btn-sm btn-ghost text-danger" data-act="deleteSkill" data-args="[&quot;${s.id}&quot;]" title="ลบ">&times;</button>
+                        <button class="btn btn-sm btn-ghost" data-act="editSkill" data-args="[&quot;${escHtml(s.id)}&quot;]" title="แก้ไข" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">✎</button>
+                        <button class="btn btn-sm btn-ghost text-danger" data-act="deleteSkill" data-args="[&quot;${escHtml(s.id)}&quot;]" title="ลบ">&times;</button>
                     </div>
                 </div>
                 <div class="progress-container">
-                    <div class="progress-bar" style="width: ${pcent}%; background: ${s.color}"></div>
+                    <div class="progress-bar" style="width: ${pcent}%; background: ${cssColor(s.color)}"></div>
                 </div>
                 <div class="skill-meta">
                     <span>${totalHours.toFixed(1)} ชม.</span>
@@ -230,9 +230,9 @@ async function loadLogs() {
         tbody.innerHTML += `
             <tr>
                 <td>
-                    <span class="log-skill-badge" style="background:${l.skill_color}">${l.skill_name}</span>
+                    <span class="log-skill-badge" style="background:${cssColor(l.skill_color)}">${escHtml(l.skill_name)}</span>
                 </td>
-                <td style="color:var(--text-muted)">${l.notes || '-'}</td>
+                <td style="color:var(--text-muted)">${escHtml(l.notes || '-')}</td>
                 <td style="font-size:0.85rem">${date}<br/>${start} - ${end}</td>
                 <td><strong>${formatDurationHm(l.duration_seconds)}</strong></td>
                 <td>

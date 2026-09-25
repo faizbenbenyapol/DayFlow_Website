@@ -158,7 +158,7 @@ async function loadDayPanel(date) {
     } else {
         evEl.innerHTML = evs.map(ev => {
             const timeStr = ev.is_all_day ? 'ทั้งวัน' : ev.start_datetime.slice(11, 16);
-            return `<div class="day-event-item" style="--event-color: ${ev.color || '#3b82f6'}">
+            return `<div class="day-event-item" style="--event-color: ${cssColor(ev.color, '#3b82f6')}">
                 <span class="day-event-time">${escHtml(timeStr)}</span>
                 <span class="day-event-title">${escHtml(ev.title)}</span>
                 <button class="btn-link" data-act="openEditEvent" data-args="[${ev.id}]" style="padding: 2px 6px;">แก้ไข</button>
@@ -370,11 +370,6 @@ async function deleteEvent() {
     await loadMonth(currentYear, currentMonth);
     loadDayPanel(selectedDate);
     toast('ลบแล้ว');
-}
-
-function escHtml(str) {
-    if (str == null) return '';
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 /* --- Calendar import (.ics) ---

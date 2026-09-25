@@ -7,7 +7,7 @@
 <script nonce="<?= h(Security::nonce()) ?>">
     const CURRENT_USER_ID = <?= (int)Auth::userId() ?>;
     const ACTIVE_PROJECT_ID_OVERRIDE = <?= (int)($projectIdOverride ?? 0) ?>;
-    const CURRENT_GUEST_NAME = <?= json_encode($_SESSION['guest_name'] ?? null, JSON_UNESCAPED_UNICODE) ?>;
+    const CURRENT_GUEST_NAME = <?= jsonForScript($_SESSION['guest_name'] ?? null) ?>;
 </script>
 
 <div class="projects-layout">

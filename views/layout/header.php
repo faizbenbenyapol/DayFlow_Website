@@ -91,6 +91,8 @@ $themeAttr = $theme === 'auto' ? 'light' : $theme;
     <?php if (isset($pageStyleExtra)): ?>
         <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/modules/<?= h($pageStyleExtra) ?>.css?v=<?= @filemtime(ROOT . '/assets/css/modules/' . $pageStyleExtra . '.css') ?>">
     <?php endif; ?>
+    <!-- escHtml()/cssColor(): loaded before any page or inline script needs them. -->
+    <script src="<?= APP_URL ?>/assets/js/html.js?v=<?= @filemtime(ROOT . '/assets/js/html.js') ?>"></script>
 </head>
 
 <body>

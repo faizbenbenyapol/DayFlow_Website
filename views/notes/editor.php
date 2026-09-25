@@ -1,7 +1,7 @@
 <?php
-$noteData = json_encode($note, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+$noteData = jsonForScript($note);
 $tags = Note::getTagsForNote($note['id']);
-$tagsData = json_encode($tags, JSON_UNESCAPED_UNICODE);
+$tagsData = jsonForScript($tags);
 ?>
 
 <div class="note-editor" id="noteEditor"

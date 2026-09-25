@@ -40,26 +40,30 @@ class Request
     }
 
     /**
-     * Get a value from JSON body, POST, or GET (in that order)
-     * Strips tags and trims by default
+     * Get a value from JSON body, POST, or GET (in that order), trimmed.
+     *
+     * Text is kept exactly as typed apart from the surrounding whitespace.
+     * This used to run strip_tags(), which is not an escaper: it silently cut
+     * "a<b" down to "a" and "<3" to nothing, yet left quotes alone, so it
+     * neither kept data intact nor made it safe inside an attribute. Output
+     * is escaped where it is rendered — h() in PHP, escHtml() in JS.
      */
     public static function input(string $key, $default = null)
     {
         $json = self::json();
         if (array_key_exists($key, $json)) {
-            return is_string($json[$key]) ? trim(strip_tags($json[$key])) : $json[$key];
+            return is_string($json[$key]) ? trim($json[$key]) : $json[$key];
         }
-        if (isset($_POST[$key])) {
-            return trim(strip_tags($_POST[$key]));
-        }
-        if (isset($_GET[$key])) {
-            return trim(strip_tags($_GET[$key]));
+        foreach ([$_POST, $_GET] as $source) {
+            if (isset($source[$key])) {
+                return is_string($source[$key]) ? trim($source[$key]) : $source[$key];
+            }
         }
         return $default;
     }
 
     /**
-     * Get raw input (no stripping — use for content that allows HTML)
+     * Get raw input: not even trimmed (passwords, content whose whitespace matters)
      */
     public static function rawInput(string $key, $default = null)
     {

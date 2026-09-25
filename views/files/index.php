@@ -239,5 +239,5 @@
 </div>
 
 <script nonce="<?= h(Security::nonce()) ?>">
-window.INITIAL_PARENT_ID = <?= json_encode($parentId) ?>;
+window.INITIAL_PARENT_ID = <?= jsonForScript($parentId) ?>;
 </script>

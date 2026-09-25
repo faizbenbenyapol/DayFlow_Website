@@ -473,7 +473,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
 </div>
 
 <script nonce="<?= h(Security::nonce()) ?>">
-window.dashboardLayout = <?= json_encode($layout, JSON_UNESCAPED_UNICODE) ?>;
+window.dashboardLayout = <?= jsonForScript($layout) ?>;
 </script>
 
 <!-- ACCOUNT INFO -->
@@ -900,9 +900,6 @@ window.dashboardLayout = <?= json_encode($layout, JSON_UNESCAPED_UNICODE) ?>;
     const $ = s => document.querySelector(s);
     const $$ = s => Array.from(document.querySelectorAll(s));
 
-    function esc(s) {
-        return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
     function fmtDate(d) {
         if (!d) return null;
         return new Date(d).toLocaleString('th-TH');
@@ -938,13 +935,13 @@ window.dashboardLayout = <?= json_encode($layout, JSON_UNESCAPED_UNICODE) ?>;
                 const mLabels = (s.menus || []).map(m => menuNames[m] || m).join(', ');
 
                 return `<tr>
-                    <td><div style="font-weight:500">${esc(s.label)}</div></td>
-                    <td><span style="font-size:0.85rem;color:var(--color-muted)">${esc(mLabels)}</span></td>
-                    <td><a class="share-link-url" href="${esc(link)}" target="_blank" rel="noopener">${esc(link)}</a></td>
+                    <td><div style="font-weight:500">${escHtml(s.label)}</div></td>
+                    <td><span style="font-size:0.85rem;color:var(--color-muted)">${escHtml(mLabels)}</span></td>
+                    <td><a class="share-link-url" href="${escHtml(link)}" target="_blank" rel="noopener">${escHtml(link)}</a></td>
                     <td>${exp}</td>
                     <td>
                         <div class="share-actions">
-                            <button class="btn btn-ghost btn-sm btn-copy-app" data-link="${esc(link)}" title="คัดลอกลิงก์">คัดลอก</button>
+                            <button class="btn btn-ghost btn-sm btn-copy-app" data-link="${escHtml(link)}" title="คัดลอกลิงก์">คัดลอก</button>
                             <button class="btn btn-ghost btn-sm btn-del-app" style="color:var(--color-danger)" data-id="${s.id}">ลบ</button>
                         </div>
                     </td>

@@ -98,6 +98,18 @@ function h(string $s): string
 }
 
 /**
+ * JSON for embedding in an inline <script>. The HEX flags turn < > & ' " into
+ * \u escapes, so a value containing "</script>" cannot close the tag early.
+ */
+function jsonForScript(mixed $value): string
+{
+    return json_encode(
+        $value,
+        JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+    ) ?: 'null';
+}
+
+/**
  * Sanitises a name for a Content-Disposition header: strips control
  * characters, quotes and path separators.
  *

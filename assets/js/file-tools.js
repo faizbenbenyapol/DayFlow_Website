@@ -197,7 +197,7 @@ function getCheckedPages(gridId) {
         mergeFiles.forEach((f, i) => {
             const item = document.createElement('div');
             item.className = 'ft-file-item';
-            item.innerHTML = `<span>${f.name} <span class="text-muted">(${fmtBytes(f.size)})</span></span><span class="ft-remove" data-i="${i}">✕</span>`;
+            item.innerHTML = `<span>${escHtml(f.name)} <span class="text-muted">(${fmtBytes(f.size)})</span></span><span class="ft-remove" data-i="${i}">✕</span>`;
             listEl.appendChild(item);
         });
         btnMerge.disabled = mergeFiles.length < 2;
@@ -439,7 +439,7 @@ function getCheckedPages(gridId) {
         img2pdfFiles.forEach((f, i) => {
             const item = document.createElement('div');
             item.className = 'ft-file-item';
-            item.innerHTML = `<span>${f.name}</span><span class="ft-remove" data-i="${i}">✕</span>`;
+            item.innerHTML = `<span>${escHtml(f.name)}</span><span class="ft-remove" data-i="${i}">✕</span>`;
             listEl.appendChild(item);
         });
         $('btnImg2Pdf').disabled = img2pdfFiles.length === 0;
@@ -999,7 +999,7 @@ wireImageTool({
         zipFiles.forEach((f, i) => {
             const item = document.createElement('div');
             item.className = 'ft-file-item';
-            item.innerHTML = `<span>${f.name} <span class="text-muted">(${fmtBytes(f.size)})</span></span><span class="ft-remove" data-i="${i}">✕</span>`;
+            item.innerHTML = `<span>${escHtml(f.name)} <span class="text-muted">(${fmtBytes(f.size)})</span></span><span class="ft-remove" data-i="${i}">✕</span>`;
             listEl.appendChild(item);
         });
         $('btnZipCreate').disabled = zipFiles.length === 0;
@@ -1057,7 +1057,7 @@ wireImageTool({
             <tbody>${data.entries.map(e => `
                 <tr>
                     <td>${e.index + 1}</td>
-                    <td>${e.name}</td>
+                    <td>${escHtml(e.name)}</td>
                     <td>${fmtBytes(e.size)}</td>
                     <td>${fmtBytes(e.compressed_size)}</td>
                 </tr>`).join('')}
@@ -1095,7 +1095,7 @@ wireImageTool({
             <tbody>${extEntries.map(e => `
                 <tr>
                     <td><input type="checkbox" class="zip-ext-chk" value="${e.index}"></td>
-                    <td>${e.name}</td>
+                    <td>${escHtml(e.name)}</td>
                     <td>${fmtBytes(e.size)}</td>
                 </tr>`).join('')}
             </tbody>

@@ -321,8 +321,8 @@ function renderUnifiedStocks() {
                 <svg data-act="toggleWatchlist" data-args="[&quot;${item.ticker}&quot;, &quot;${item.market}&quot;]" style="cursor:pointer;color:${starColor};fill:${starFill};transition:all 0.2s" width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
             </td>
             <td>
-                <span class="stk-ticker">${escHtmlStk(item.ticker)}</span>
-                <span class="stk-market-badge">${escHtmlStk(item.market)}</span>
+                <span class="stk-ticker">${escHtml(item.ticker)}</span>
+                <span class="stk-market-badge">${escHtml(item.market)}</span>
             </td>
             <td class="stk-num">${lastPrice == null ? '<span class="text-muted">—</span>' : formatMoney(lastPrice)}</td>
             <td class="stk-num ${dayClass}">${dayText}</td>
@@ -493,14 +493,14 @@ function renderStockTxnList() {
             : '<span class="stk-side-sell">ขาย</span>';
         return `
             <tr>
-                <td class="text-sm">${escHtmlStk(formatDate(t.txn_date))}</td>
+                <td class="text-sm">${escHtml(formatDate(t.txn_date))}</td>
                 <td>
-                    <span class="stk-ticker">${escHtmlStk(t.ticker)}</span>
-                    <span class="stk-market-badge">${escHtmlStk(t.market)}</span>
+                    <span class="stk-ticker">${escHtml(t.ticker)}</span>
+                    <span class="stk-market-badge">${escHtml(t.market)}</span>
                 </td>
                 <td>${sideBadge}</td>
                 <td class="stk-num">${fmtShares(t.quantity)}</td>
-                <td class="stk-num">${formatMoney(t.price)} ${escHtmlStk(t.currency)}</td>
+                <td class="stk-num">${formatMoney(t.price)} ${escHtml(t.currency)}</td>
                 <td class="stk-num">${formatMoney(t.fee)}</td>
                 <td class="stk-num">${formatMoney(value)}</td>
                 <td class="mode-readonly-hide">
@@ -828,11 +828,6 @@ function screenshotUrl(s) {
     return BASE_URL + '/api/stocks/screenshots/' + encodeURIComponent(s.id) + '/image';
 }
 
-function escHtmlStk(str) {
-    if (str == null) return '';
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
 /* ── AI Stock Analysis ── */
 let stkAnalyzeTextInterval = null;
 
@@ -951,8 +946,8 @@ function renderStockAnalysisResult(data) {
 
     const providerHtml = providerLabel ? ` · <span class="stk-rec-provider" style="color:var(--color-accent);font-weight:700">วิเคราะห์โดย ${providerLabel}</span>` : '';
 
-    const oppsHtml = (r.opportunities || []).map(o => `<li><span class="stk-bullet-success">✦</span> ${escHtmlStk(o)}</li>`).join('');
-    const risksHtml = (r.risks || []).map(rk => `<li><span class="stk-bullet-danger">⚠</span> ${escHtmlStk(rk)}</li>`).join('');
+    const oppsHtml = (r.opportunities || []).map(o => `<li><span class="stk-bullet-success">✦</span> ${escHtml(o)}</li>`).join('');
+    const risksHtml = (r.risks || []).map(rk => `<li><span class="stk-bullet-danger">⚠</span> ${escHtml(rk)}</li>`).join('');
 
     container.innerHTML = `
         <div class="stk-analysis-dashboard">
@@ -963,9 +958,9 @@ function renderStockAnalysisResult(data) {
                     <div class="stk-rec-header">ผลประเมินและคำแนะนำ${providerHtml}</div>
                     <div class="stk-rec-pill stk-rec-${recColor}">
                         ${recIcon}
-                        <span>${escHtmlStk(r.recommendation_label || r.recommendation)}</span>
+                        <span>${escHtml(r.recommendation_label || r.recommendation)}</span>
                     </div>
-                    <div class="stk-rec-summary">${escHtmlStk(r.summary)}</div>
+                    <div class="stk-rec-summary">${escHtml(r.summary)}</div>
                 </div>
 
                 <!-- 2. Strategic Targets -->
@@ -974,15 +969,15 @@ function renderStockAnalysisResult(data) {
                     <div class="stk-price-targets">
                         <div class="stk-target-item">
                             <span class="stk-target-lbl">ราคาอ้างอิง</span>
-                            <span class="stk-target-val">${escHtmlStk(r.current_price || '—')}</span>
+                            <span class="stk-target-val">${escHtml(r.current_price || '—')}</span>
                         </div>
                         <div class="stk-target-item">
                             <span class="stk-target-lbl" style="color:var(--color-success)">เป้าหมายทำกำไร</span>
-                            <span class="stk-target-val txt-pos" style="font-weight:700">${escHtmlStk(r.target_price || '—')}</span>
+                            <span class="stk-target-val txt-pos" style="font-weight:700">${escHtml(r.target_price || '—')}</span>
                         </div>
                         <div class="stk-target-item">
                             <span class="stk-target-lbl" style="color:var(--color-danger)">จุดตัดขาดทุน (SL)</span>
-                            <span class="stk-target-val txt-neg" style="font-weight:700">${escHtmlStk(r.stop_loss || '—')}</span>
+                            <span class="stk-target-val txt-neg" style="font-weight:700">${escHtml(r.stop_loss || '—')}</span>
                         </div>
                     </div>
                 </div>
@@ -994,7 +989,7 @@ function renderStockAnalysisResult(data) {
                 <div class="stk-details-col">
                     <div class="stk-detailed-box">
                         <h4 class="stk-box-title"><span class="stk-title-decor bg-pos"></span>วิเคราะห์ปัจจัยพื้นฐาน (Fundamental Analysis)</h4>
-                        <p class="stk-analysis-text">${escHtmlStk(r.fundamental_analysis).replace(/\n/g, '<br>')}</p>
+                        <p class="stk-analysis-text">${escHtml(r.fundamental_analysis).replace(/\n/g, '<br>')}</p>
                     </div>
                     
                     <div class="stk-opps-risks-vertical">
@@ -1020,29 +1015,29 @@ function renderStockAnalysisResult(data) {
                                 <span class="stk-level-title">แนวรับสำคัญ (Support Levels)</span>
                                 <div class="stk-level-item">
                                     <span class="lbl">แนวรับที่ 1 (S1)</span>
-                                    <span class="val text-pos font-semibold">${escHtmlStk(r.support_1 || '—')}</span>
+                                    <span class="val text-pos font-semibold">${escHtml(r.support_1 || '—')}</span>
                                 </div>
                                 <div class="stk-level-item">
                                     <span class="lbl">แนวรับที่ 2 (S2)</span>
-                                    <span class="val text-pos" style="opacity:0.8">${escHtmlStk(r.support_2 || '—')}</span>
+                                    <span class="val text-pos" style="opacity:0.8">${escHtml(r.support_2 || '—')}</span>
                                 </div>
                             </div>
                             <div class="stk-level-group resistance">
                                 <span class="stk-level-title">แนวต้านสำคัญ (Resistance Levels)</span>
                                 <div class="stk-level-item">
                                     <span class="lbl">แนวต้านที่ 1 (R1)</span>
-                                    <span class="val text-neg font-semibold">${escHtmlStk(r.resistance_1 || '—')}</span>
+                                    <span class="val text-neg font-semibold">${escHtml(r.resistance_1 || '—')}</span>
                                 </div>
                                 <div class="stk-level-item">
                                     <span class="lbl">แนวต้านที่ 2 (R2)</span>
-                                    <span class="val text-neg" style="opacity:0.8">${escHtmlStk(r.resistance_2 || '—')}</span>
+                                    <span class="val text-neg" style="opacity:0.8">${escHtml(r.resistance_2 || '—')}</span>
                                 </div>
                             </div>
                         </div>
                         <div class="stk-levels-meter" style="margin-top: var(--space-4)">
                             <div class="stk-level-range">
-                                <span>แนวรับ (S1): <strong>${escHtmlStk(r.support_1 || '—')}</strong></span>
-                                <span>แนวต้าน (R1): <strong>${escHtmlStk(r.resistance_1 || '—')}</strong></span>
+                                <span>แนวรับ (S1): <strong>${escHtml(r.support_1 || '—')}</strong></span>
+                                <span>แนวต้าน (R1): <strong>${escHtml(r.resistance_1 || '—')}</strong></span>
                             </div>
                             <div class="stk-level-bar-container">
                                 <div class="stk-level-bar-fill fill-${recColor}"></div>
@@ -1057,7 +1052,7 @@ function renderStockAnalysisResult(data) {
                 <div class="stk-details-col">
                     <div class="stk-detailed-box">
                         <h4 class="stk-box-title"><span class="stk-title-decor bg-accent"></span>วิเคราะห์เชิงเทคนิค (Technical Analysis)</h4>
-                        <p class="stk-analysis-text">${escHtmlStk(r.technical_analysis).replace(/\n/g, '<br>')}</p>
+                        <p class="stk-analysis-text">${escHtml(r.technical_analysis).replace(/\n/g, '<br>')}</p>
                     </div>
 
                     <div class="stk-stats-box">
@@ -1065,47 +1060,47 @@ function renderStockAnalysisResult(data) {
                         <table class="stk-ratios-table">
                             <tr>
                                 <td>ชื่อกิจการ</td>
-                                <td class="text-right"><strong>${escHtmlStk(r.name || '—')}</strong></td>
+                                <td class="text-right"><strong>${escHtml(r.name || '—')}</strong></td>
                             </tr>
                             <tr>
                                 <td>เทรนด์หลัก (Trend)</td>
-                                <td class="text-right"><span class="stk-trend-badge">${escHtmlStk(r.trend || '—')}</span></td>
+                                <td class="text-right"><span class="stk-trend-badge">${escHtml(r.trend || '—')}</span></td>
                             </tr>
                             <tr>
                                 <td>รายได้รวมล่าสุด</td>
-                                <td class="text-right font-semibold">${escHtmlStk(r.revenue || '—')}</td>
+                                <td class="text-right font-semibold">${escHtml(r.revenue || '—')}</td>
                             </tr>
                             <tr>
                                 <td>กำไรสุทธิ (Net Profit)</td>
-                                <td class="text-right font-semibold text-pos">${escHtmlStk(r.net_profit || '—')}</td>
+                                <td class="text-right font-semibold text-pos">${escHtml(r.net_profit || '—')}</td>
                             </tr>
                             <tr>
                                 <td>กำไรต่อหุ้น (EPS)</td>
-                                <td class="text-right font-mono">${escHtmlStk(r.eps || '—')}</td>
+                                <td class="text-right font-mono">${escHtml(r.eps || '—')}</td>
                             </tr>
                             <tr>
                                 <td>อัตราส่วน P/E Ratio</td>
-                                <td class="text-right font-mono">${escHtmlStk(r.pe || '—')}</td>
+                                <td class="text-right font-mono">${escHtml(r.pe || '—')}</td>
                             </tr>
                             <tr>
                                 <td>อัตราส่วน P/B Ratio</td>
-                                <td class="text-right font-mono">${escHtmlStk(r.pb || '—')}</td>
+                                <td class="text-right font-mono">${escHtml(r.pb || '—')}</td>
                             </tr>
                             <tr>
                                 <td>อัตราส่วน ROE</td>
-                                <td class="text-right font-mono">${escHtmlStk(r.roe || '—')}</td>
+                                <td class="text-right font-mono">${escHtml(r.roe || '—')}</td>
                             </tr>
                             <tr>
                                 <td>หนี้สินต่อทุน (D/E)</td>
-                                <td class="text-right font-mono">${escHtmlStk(r.de_ratio || '—')}</td>
+                                <td class="text-right font-mono">${escHtml(r.de_ratio || '—')}</td>
                             </tr>
                             <tr>
                                 <td>กระแสเงินสดอิสระ (FCF)</td>
-                                <td class="text-right font-semibold">${escHtmlStk(r.free_cash_flow || '—')}</td>
+                                <td class="text-right font-semibold">${escHtml(r.free_cash_flow || '—')}</td>
                             </tr>
                             <tr>
                                 <td>ปันผล (Dividend Yield)</td>
-                                <td class="text-right font-mono">${escHtmlStk(r.dividend_yield || '—')}</td>
+                                <td class="text-right font-mono">${escHtml(r.dividend_yield || '—')}</td>
                             </tr>
                         </table>
                     </div>
@@ -1150,11 +1145,11 @@ function renderCapitalList() {
         
         return `
             <tr>
-                <td class="text-sm">${escHtmlStk(formatDate(f.flow_date))}</td>
+                <td class="text-sm">${escHtml(formatDate(f.flow_date))}</td>
                 <td>${typeBadge}</td>
                 <td class="stk-num" style="font-weight:700">${formatMoney(f.amount)}</td>
-                <td>${escHtmlStk(f.currency)}</td>
-                <td class="text-sm">${escHtmlStk(f.notes || '—')}</td>
+                <td>${escHtml(f.currency)}</td>
+                <td class="text-sm">${escHtml(f.notes || '—')}</td>
                 <td class="mode-readonly-hide">
                     <button class="btn-link" data-act="openEditCapital" data-args="[${f.id}]">แก้ไข</button>
                 </td>
@@ -1272,7 +1267,7 @@ function renderScreenshotsGrid() {
         return `
             <div class="stk-screenshot-card">
                 <div class="stk-screenshot-img-wrap" data-act="viewLightbox" data-args="[${s.id}]">
-                    <img class="stk-screenshot-img" src="${imgSrc}" alt="${escHtmlStk(s.name)}">
+                    <img class="stk-screenshot-img" src="${imgSrc}" alt="${escHtml(s.name)}">
                     <div class="stk-screenshot-overlay">
                         <button class="stk-screenshot-btn btn-del mode-readonly-hide" data-act="deleteScreenshot" data-args="[${s.id}]" data-stop title="ลบรูปภาพ">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
@@ -1280,9 +1275,9 @@ function renderScreenshotsGrid() {
                     </div>
                 </div>
                 <div class="stk-screenshot-info">
-                    <div class="stk-screenshot-name" title="${escHtmlStk(s.name)}">${escHtmlStk(s.name)}</div>
-                    <div class="stk-screenshot-desc">${escHtmlStk(s.description || 'ไม่มีคำอธิบาย')}</div>
-                    <div class="stk-screenshot-date">อัปโหลดเมื่อ ${escHtmlStk(dateStr)}</div>
+                    <div class="stk-screenshot-name" title="${escHtml(s.name)}">${escHtml(s.name)}</div>
+                    <div class="stk-screenshot-desc">${escHtml(s.description || 'ไม่มีคำอธิบาย')}</div>
+                    <div class="stk-screenshot-date">อัปโหลดเมื่อ ${escHtml(dateStr)}</div>
                 </div>
             </div>`;
     }).join('');
@@ -1306,26 +1301,26 @@ function renderSidebarScreenshot() {
     if (IS_READ_ONLY) {
         container.innerHTML = `
             <div class="stk-share-img-wrap">
-                <img class="stk-share-img" src="${imgSrc}" alt="${escHtmlStk(s.name)}">
+                <img class="stk-share-img" src="${imgSrc}" alt="${escHtml(s.name)}">
             </div>
             <div class="mt-4" style="text-align: left;">
-                <div class="stk-screenshot-name" style="font-size:0.9rem;" title="${escHtmlStk(s.name)}">${escHtmlStk(s.name)}</div>
-                <div class="stk-screenshot-desc" style="font-size:0.8rem; height:auto; margin-bottom:4px; white-space: pre-wrap;">${escHtmlStk(s.description || 'ไม่มีคำอธิบาย')}</div>
-                <div class="text-xs text-muted">อัปโหลดเมื่อ ${escHtmlStk(dateStr)}</div>
+                <div class="stk-screenshot-name" style="font-size:0.9rem;" title="${escHtml(s.name)}">${escHtml(s.name)}</div>
+                <div class="stk-screenshot-desc" style="font-size:0.8rem; height:auto; margin-bottom:4px; white-space: pre-wrap;">${escHtml(s.description || 'ไม่มีคำอธิบาย')}</div>
+                <div class="text-xs text-muted">อัปโหลดเมื่อ ${escHtml(dateStr)}</div>
             </div>
         `;
     } else {
         container.innerHTML = `
             <div class="stk-sidebar-thumb-wrap" data-act="viewLightbox" data-args="[${s.id}]">
-                <img class="stk-sidebar-thumb" src="${imgSrc}" alt="${escHtmlStk(s.name)}">
+                <img class="stk-sidebar-thumb" src="${imgSrc}" alt="${escHtml(s.name)}">
                 <div class="stk-sidebar-thumb-overlay">
                     <span>คลิกเพื่อดูรูปภาพขนาดเต็ม</span>
                 </div>
             </div>
             <div class="mt-4">
-                <div class="stk-screenshot-name" style="font-size:0.85rem;" title="${escHtmlStk(s.name)}">${escHtmlStk(s.name)}</div>
-                <div class="stk-screenshot-desc" style="font-size:0.75rem; height:auto; margin-bottom:4px;">${escHtmlStk(s.description || 'ไม่มีคำอธิบาย')}</div>
-                <div class="text-xs text-muted">อัปโหลดเมื่อ ${escHtmlStk(dateStr)}</div>
+                <div class="stk-screenshot-name" style="font-size:0.85rem;" title="${escHtml(s.name)}">${escHtml(s.name)}</div>
+                <div class="stk-screenshot-desc" style="font-size:0.75rem; height:auto; margin-bottom:4px;">${escHtml(s.description || 'ไม่มีคำอธิบาย')}</div>
+                <div class="text-xs text-muted">อัปโหลดเมื่อ ${escHtml(dateStr)}</div>
             </div>
         `;
     }

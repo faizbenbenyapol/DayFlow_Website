@@ -296,18 +296,14 @@ function debounce(fn, delay) {
     const results = document.getElementById('globalSearchResults');
     if (!input || !results) return;
 
-    const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, ch => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-    }[ch]));
-
     const render = items => {
         if (!items.length) {
             results.innerHTML = '<div class="global-search-empty">ไม่พบข้อมูลที่ตรงกัน</div>';
         } else {
             results.innerHTML = items.map((item, index) => `
-                <a class="global-search-item" role="option" data-search-index="${index}" href="${escapeHtml(item.url)}">
-                    <span class="global-search-type">${escapeHtml(item.type)}</span>
-                    <span class="global-search-copy"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.subtitle)}</small></span>
+                <a class="global-search-item" role="option" data-search-index="${index}" href="${escHtml(item.url)}">
+                    <span class="global-search-type">${escHtml(item.type)}</span>
+                    <span class="global-search-copy"><strong>${escHtml(item.title)}</strong><small>${escHtml(item.subtitle)}</small></span>
                 </a>`).join('');
         }
         results.hidden = false;
@@ -412,10 +408,6 @@ function debounce(fn, delay) {
     let active = 0;
     let inFlight = null;
 
-    const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, ch => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-    }[ch]));
-
     const render = () => {
         if (items.length === 0) {
             list.innerHTML = '<div class="cmdk-empty">ไม่พบรายการที่ตรงกัน</div>';
@@ -423,10 +415,10 @@ function debounce(fn, delay) {
         }
         list.innerHTML = items.map((item, index) => `
             <a class="cmdk-item${index === active ? ' is-active' : ''}" role="option"
-               aria-selected="${index === active}" data-index="${index}" href="${escapeHtml(item.url)}">
-                <span class="cmdk-item-type">${escapeHtml(item.type)}</span>
-                <span class="cmdk-item-title">${escapeHtml(item.title)}</span>
-                ${item.subtitle ? `<span class="cmdk-item-sub">${escapeHtml(item.subtitle)}</span>` : ''}
+               aria-selected="${index === active}" data-index="${index}" href="${escHtml(item.url)}">
+                <span class="cmdk-item-type">${escHtml(item.type)}</span>
+                <span class="cmdk-item-title">${escHtml(item.title)}</span>
+                ${item.subtitle ? `<span class="cmdk-item-sub">${escHtml(item.subtitle)}</span>` : ''}
             </a>`).join('');
         list.querySelector('.is-active')?.scrollIntoView({ block: 'nearest' });
     };

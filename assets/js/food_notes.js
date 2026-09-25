@@ -72,12 +72,6 @@ function severityDots(severity) {
     return `<div class="fn-severity-dots">${dots}</div>`;
 }
 
-function escHtml(str) {
-    return String(str)
-        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;');
-}
-
 // ── Filters ───────────────────────────────────────────
 function setFilter(key, value, btn) {
     filters[key] = value;
