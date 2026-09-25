@@ -214,7 +214,7 @@ class SettingsController
         $userId = Auth::userId();
         $theme  = Request::input('theme', 'light');
 
-        if (!in_array($theme, ['light', 'dark', 'soft', 'lavender', 'ocean', 'peach', 'auto'])) {
+        if (!in_array($theme, User::THEMES, true)) {
             Response::json(['error' => 'ธีมไม่ถูกต้อง'], 422);
         }
 
@@ -340,7 +340,7 @@ class SettingsController
     {
         $userId = Auth::userId();
         $user   = User::findById($userId);
-        $data   = User::exportAllData($userId);
+        $data   = AccountData::export($userId);
 
         $username = preg_replace('/[^a-zA-Z0-9_\-]/', '', $user['username'] ?? 'user');
         $filename = 'my-data-' . $username . '-' . date('Ymd-His') . '.json';
@@ -378,10 +378,12 @@ class SettingsController
         }
 
         try {
-            User::importAllData($userId, $data);
-            Response::json(['ok' => true]);
+            $imported = AccountData::import($userId, $data);
+            Response::json(['ok' => true, 'imported' => $imported, 'total' => array_sum($imported)]);
         } catch (\InvalidArgumentException $e) {
-            Response::json(['error' => 'ข้อมูลในไฟล์ JSON ไม่ถูกต้อง หรือเสียหาย'], 422);
+            // AccountData words these for the user; the cause goes to the log.
+            if ($e->getPrevious()) error_log('Import rejected: ' . $e->getPrevious()->getMessage());
+            Response::json(['error' => $e->getMessage()], 422);
         } catch (\Throwable $e) {
             error_log($e->getMessage());
             Response::json(['error' => 'นำเข้าข้อมูลไม่สำเร็จ'], 500);

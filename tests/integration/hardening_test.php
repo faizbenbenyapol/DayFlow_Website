@@ -117,7 +117,12 @@ test('an export imports back with its blocks intact', function (TestClient $_c):
     $export = $client->json($client->get('/api/settings/export'));
     assertSame(200, hardeningImport($client, $export)['status']);
 
-    $blocks = $client->json($client->get('/api/notes/' . (int)$note['id'] . '/blocks'))['blocks'] ?? [];
+    // An import hands out fresh ids, so find the restored note by its title.
+    $notes = $client->json($client->get('/api/notes'))['notes'] ?? [];
+    $restored = array_values(array_filter($notes, fn($n) => $n['title'] === $note['title']))[0] ?? null;
+    assertTrue($restored !== null, 'the note should be restored');
+
+    $blocks = $client->json($client->get('/api/notes/' . (int)$restored['id'] . '/blocks'))['blocks'] ?? [];
     assertContains('ยังอยู่ครบ', array_column($blocks, 'content'), 'a block of an imported note must survive');
 });
 
