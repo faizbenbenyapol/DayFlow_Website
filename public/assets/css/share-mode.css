@@ -1,0 +1,124 @@
+/* =====================================================
+   share-mode.css — pages opened through a share link
+   Loaded only then: an app share link (read-only, body.is-readonly) or a
+   public project link opened by a guest. These rules used to be a <style>
+   block and inline style="" attributes in views/layout/header.php.
+===================================================== */
+
+/* --- The top bar that replaces the sidebar --- */
+.share-topbar {
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    padding: 0 24px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    gap: 16px;
+}
+
+.share-topbar-brand {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.share-topbar .share-topbar-badge {
+    font-size: 0.7rem;
+    font-weight: 500;
+    margin-left: 4px;
+    padding: 2px 6px;
+}
+
+.share-topbar-menu {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    flex: 1;
+    justify-content: center;
+}
+
+.share-topbar .share-topbar-link {
+    white-space: nowrap;
+    text-decoration: none;
+    color: var(--color-text);
+    font-weight: 400;
+    border-bottom: none;
+    padding: 18px 8px;
+}
+
+.share-topbar .share-topbar-link.is-active {
+    color: var(--color-primary);
+    font-weight: 600;
+    border-bottom: 2px solid var(--color-primary);
+}
+
+.share-topbar-actions {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.share-topbar .share-topbar-btn { font-size: 0.8rem; }
+.share-topbar .btn-ghost.share-topbar-btn { border-color: var(--color-border-2); }
+
+/* A guest on a public project board: the cyan "visitor" accent. */
+.share-topbar-icon--guest { color: #06b6d4; }
+.share-topbar-title { color: var(--color-text); font-size: 1rem; font-weight: 600; }
+.share-topbar .share-topbar-badge--guest { background: rgba(6, 182, 212, 0.12); color: #06b6d4; font-weight: 600; }
+.share-topbar .btn-primary.share-topbar-signup { background: #06b6d4; border: none; color: #ffffff; }
+
+/* --- Page body under the fixed top bar --- */
+.app-main.share-main {
+    flex: 1;
+    width: 100%;
+    min-height: 100vh;
+    display: block;
+    padding-top: 80px;
+    padding-bottom: 40px;
+}
+
+/* --- Read-only (app share link): hide everything that would change data --- */
+.is-readonly .mode-readonly-hide,
+.is-readonly .task-actions,
+.is-readonly .btn-link,
+.is-readonly .action-btn,
+.is-readonly .delete-btn,
+.is-readonly .edit-btn,
+.is-readonly .btn-delete,
+.is-readonly .add-task-form,
+.is-readonly .quick-add-bar,
+.is-readonly .todo-actions {
+    display: none !important;
+}
+
+/* Add/record buttons in the page itself (tabs, toggles, filters and close
+   buttons stay). The server refuses writes in share mode regardless. */
+.is-readonly .app-main button:not([class*="tabs"]):not([class*="toggle"]):not([class*="filter"]):not([class*="close"]),
+.is-readonly .app-main .btn:not([class*="tabs"]):not([class*="toggle"]):not([class*="filter"]):not([class*="close"]):not([class*="btn-secondary"]) {
+    display: none !important;
+}
+
+.is-readonly .task-checkbox,
+.is-readonly .todo-checkbox {
+    pointer-events: none !important;
+    opacity: 0.7 !important;
+    cursor: not-allowed !important;
+}
+
+.is-readonly .task-title,
+.is-readonly .todo-text,
+.is-readonly .calendar-event {
+    pointer-events: none !important;
+    cursor: default !important;
+}

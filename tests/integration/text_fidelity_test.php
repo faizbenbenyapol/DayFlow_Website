@@ -65,3 +65,11 @@ test('every app page loads the shared escaper before its own script', function (
         }
     }
 });
+
+test('every menu, habits included, is in the sidebar', function (TestClient $_c): void {
+    $body = fidelityClient()->get('/tasks')['body'];
+
+    foreach (AppMenus::KEYS as $menu) {
+        assertTrue(str_contains($body, 'data-menu-key="' . $menu . '"'), "the sidebar lacks {$menu}");
+    }
+});

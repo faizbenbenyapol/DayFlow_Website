@@ -5,6 +5,8 @@ $user = Auth::user();
 $theme = Auth::theme();
 
 $isReadOnly = Auth::isReadOnly();
+// A visitor on a public project link, signed in to no account.
+$isGuest = empty($_SESSION['user_id']) && !empty($_SESSION['active_project_share_token']);
 $sharedMenus = $isReadOnly ? Auth::getSharedMenus() : [];
 $shareToken = $isReadOnly ? (string)($_SESSION['app_share_token'] ?? '') : '';
 $shareQuery = $shareToken !== '' ? '?share=' . rawurlencode($shareToken) : '';
@@ -31,10 +33,6 @@ function showMenu(string $menu): bool
     return !in_array($menu, $cachedHidden);
 }
 
-$showManage = showMenu('tasks') || showMenu('notes') || showMenu('planner') || showMenu('projects') || showMenu('focus');
-$showTrack = showMenu('exercise') || showMenu('food-notes') || showMenu('finance') || showMenu('subscriptions') || showMenu('stocks');
-$showTools = showMenu('ai') || showMenu('file-tools') || showMenu('transfer');
-$showOthers = showMenu('files') || showMenu('quick-notes') || showMenu('bookmarks') || !$isReadOnly;
 
 function isActive(string $path): string
 {
@@ -72,6 +70,8 @@ $themeAttr = $theme === 'auto' ? 'light' : $theme;
     <meta name="robots" content="noindex, nofollow, noarchive">
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="<?= h(APP_URL . '/manifest.json') ?>">
+    <!-- Without it browsers ask for /favicon.ico, which does not exist. -->
+    <link rel="icon" type="image/png" href="<?= h(APP_URL . '/assets/icons/icon-192.png') ?>">
     <title><?= isset($pageTitle) ? h($pageTitle) . ' — ' : '' ?><?= h(APP_NAME) ?></title>
     <?php
     // Fonts are self-hosted and declared in fonts.css, so there is no remote
@@ -91,41 +91,41 @@ $themeAttr = $theme === 'auto' ? 'light' : $theme;
     <?php if (isset($pageStyleExtra)): ?>
         <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/modules/<?= h($pageStyleExtra) ?>.css?v=<?= @filemtime(PUBLIC_ROOT . '/assets/css/modules/' . $pageStyleExtra . '.css') ?>">
     <?php endif; ?>
+    <?php if ($isReadOnly || $isGuest): ?>
+        <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/share-mode.css?v=<?= @filemtime(PUBLIC_ROOT . '/assets/css/share-mode.css') ?>">
+    <?php endif; ?>
     <!-- escHtml()/cssColor(): loaded before any page or inline script needs them. -->
     <script src="<?= APP_URL ?>/assets/js/html.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/html.js') ?>"></script>
 </head>
 
-<body>
-<?php 
-$isGuest = empty($_SESSION['user_id']) && !empty($_SESSION['active_project_share_token']);
-if ($isReadOnly || $isGuest): 
-?>
+<body<?= $isReadOnly ? ' class="is-readonly"' : '' ?>>
+<?php if ($isReadOnly || $isGuest): ?>
     <?php if ($isReadOnly): ?>
         <!-- Shared Mode Top Bar -->
-        <header style="background:var(--color-surface);border-bottom:1px solid var(--color-border);padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;position:fixed;top:0;left:0;right:0;z-index:100;gap:16px;">
-            <div style="font-weight:600;font-size:1.1rem;color:var(--color-primary);display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        <header class="share-topbar">
+            <div class="share-topbar-brand">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                <span class="badge badge-gray" style="font-size:0.7rem;font-weight:500;margin-left:4px;padding:2px 6px;">โหมดแชร์</span>
+                <span class="badge badge-gray share-topbar-badge">โหมดแชร์</span>
             </div>
-            <div style="display:flex; gap:16px; overflow-x:auto; flex:1; justify-content:center;">
-                <?php 
+            <div class="share-topbar-menu">
+                <?php
                 $menuLabels = [
                     'tasks' => 'งาน', 'notes' => 'โน้ต', 'planner' => 'แพลนเนอร์', 'focus' => 'โฟกัส', 'habits' => 'นิสัยประจำวัน',
                     'exercise' => 'ออกกำลังกาย', 'food-notes' => 'อาหาร',
                     'finance' => 'การเงิน', 'subscriptions' => 'แจ้งเตือน', 'stocks' => 'หุ้น'
                 ];
-                foreach ($sharedMenus as $m): 
+                foreach ($sharedMenus as $m):
                 ?>
-                    <a href="<?= h(APP_URL . '/' . $m . $shareQuery) ?>" style="white-space:nowrap; text-decoration:none;color:<?= isActive('/'.$m) ? 'var(--color-primary)' : 'var(--color-text)' ?>;font-weight:<?= isActive('/'.$m) ? '600' : '400' ?>;border-bottom: <?= isActive('/'.$m) ? '2px solid var(--color-primary)' : 'none' ?>;padding:18px 8px;"><?= h($menuLabels[$m] ?? $m) ?></a>
+                    <a href="<?= h(APP_URL . '/' . $m . $shareQuery) ?>" class="share-topbar-link <?= isActive('/' . $m) ? 'is-active' : '' ?>"><?= h($menuLabels[$m] ?? $m) ?></a>
                 <?php endforeach; ?>
             </div>
-            <div style="flex-shrink:0; display:flex; align-items:center; gap:12px;">
+            <div class="share-topbar-actions">
                 <?php if (!empty($_SESSION['user_id'])): ?>
-                    <a href="<?= APP_URL ?>/exit-share" class="btn btn-ghost btn-sm" style="font-size:0.8rem; border-color:var(--color-border-2);">
+                    <a href="<?= APP_URL ?>/exit-share" class="btn btn-ghost btn-sm share-topbar-btn">
                         กลับหน้าหลักของคุณ
                     </a>
                 <?php else: ?>
-                    <a href="<?= APP_URL ?>/login" class="btn btn-primary btn-sm" style="font-size:0.8rem;">
+                    <a href="<?= APP_URL ?>/login" class="btn btn-primary btn-sm share-topbar-btn">
                         เข้าสู่ระบบ
                     </a>
                 <?php endif; ?>
@@ -133,75 +133,24 @@ if ($isReadOnly || $isGuest):
         </header>
     <?php else: ?>
         <!-- Guest Public Share Mode Top Bar -->
-        <header style="background:var(--color-surface);border-bottom:1px solid var(--color-border);padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;position:fixed;top:0;left:0;right:0;z-index:100;gap:16px;">
-            <div style="font-weight:600;font-size:1.1rem;color:var(--color-primary);display:flex;align-items:center;gap:8px;flex-shrink:0;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:#06b6d4;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                <span style="color:var(--color-text); font-size:1rem; font-weight:600;">บอร์ดโครงการสาธารณะ</span>
-                <span class="badge" style="background:rgba(6, 182, 212, 0.12); color:#06b6d4; font-size:0.7rem;font-weight:600;margin-left:4px;padding:2px 6px;">ผู้เยี่ยมชม</span>
+        <header class="share-topbar">
+            <div class="share-topbar-brand">
+                <svg class="share-topbar-icon--guest" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                <span class="share-topbar-title">บอร์ดโครงการสาธารณะ</span>
+                <span class="badge share-topbar-badge share-topbar-badge--guest">ผู้เยี่ยมชม</span>
             </div>
             <div class="flex-1"></div>
-            <div style="flex-shrink:0; display:flex; align-items:center; gap:12px;">
-                <a href="<?= APP_URL ?>/login" class="btn btn-ghost btn-sm" style="font-size:0.8rem; border-color:var(--color-border-2);">
+            <div class="share-topbar-actions">
+                <a href="<?= APP_URL ?>/login" class="btn btn-ghost btn-sm share-topbar-btn">
                     เข้าสู่ระบบ
                 </a>
-                <a href="<?= APP_URL ?>/register" class="btn btn-primary btn-sm" style="font-size:0.8rem; background:#06b6d4; border:none; color:#ffffff;">
+                <a href="<?= APP_URL ?>/register" class="btn btn-primary btn-sm share-topbar-btn share-topbar-signup">
                     สมัครสมาชิก
                 </a>
             </div>
         </header>
     <?php endif; ?>
-    <style>
-        /* --- Premium Read-Only & Layout Tuning for Share Mode --- */
-        .app-main {
-            flex: 1 !important;
-            width: 100% !important;
-            min-height: 100vh !important;
-            display: block !important;
-        }
-        
-        <?php if ($isReadOnly): ?>
-        /* Hide all mutating actions in Read-Only Mode */
-        .mode-readonly-hide,
-        .task-actions,
-        .btn-link,
-        .action-btn,
-        .delete-btn,
-        .edit-btn,
-        .btn-delete,
-        .add-task-form,
-        .quick-add-bar,
-        .todo-actions,
-        .modal-footer button[onclick*="save"],
-        .modal-footer button[onclick*="Save"],
-        .modal-footer button[onclick*="submit"],
-        .modal-footer button[onclick*="Submit"] {
-            display: none !important;
-        }
-
-        /* Hide add/record buttons within the main content of Share Mode */
-        .app-main button:not([class*="tabs"]):not([class*="toggle"]):not([class*="filter"]):not([class*="close"]),
-        .app-main .btn:not([class*="tabs"]):not([class*="toggle"]):not([class*="filter"]):not([class*="close"]):not([class*="btn-secondary"]) {
-            display: none !important;
-        }
-
-        /* Make interactive inputs and checkboxes look read-only */
-        .task-checkbox,
-        .todo-checkbox {
-            pointer-events: none !important;
-            opacity: 0.7 !important;
-            cursor: not-allowed !important;
-        }
-
-        /* Disable click-to-edit interactions */
-        .task-title,
-        .todo-text,
-        .calendar-event {
-            pointer-events: none !important;
-            cursor: default !important;
-        }
-        <?php endif; ?>
-    </style>
-    <main class="app-main" style="padding-top:80px; padding-bottom:40px;">
+    <main class="app-main share-main">
         <div class="app-content">
             <div class="toast-container" id="toastContainer" role="status" aria-live="polite" aria-atomic="true"></div>
 <?php else: ?>
@@ -210,7 +159,7 @@ if ($isReadOnly || $isGuest):
     <!-- Mobile Top Bar -->
     <div class="app-topbar" id="appTopbar">
         <span class="app-topbar-title"><?= h(APP_NAME) ?></span>
-        <div style="display: flex; align-items: center; gap: 4px;">
+        <div class="app-topbar-actions">
             <a href="<?= APP_URL ?>/" class="topbar-home-btn" aria-label="แดชบอร์ด">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
             </a>
@@ -227,11 +176,11 @@ if ($isReadOnly || $isGuest):
         <nav class="sidebar-nav">
             <?php if (!$isReadOnly): ?>
             <div class="sidebar-section">
-                <a href="<?= APP_URL ?>/" class="nav-item <?= isActive('/') ?>" style="display: flex; align-items: center; gap: 8px;">
+                <a href="<?= APP_URL ?>/" class="nav-item <?= isActive('/') ?>">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
                     <span>แดชบอร์ด</span>
                 </a>
-                <a href="<?= APP_URL ?>/review" class="nav-item <?= isActive('/review') ?>" style="display: flex; align-items: center; gap: 8px;">
+                <a href="<?= APP_URL ?>/review" class="nav-item <?= isActive('/review') ?>">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6" rx="1"/><rect x="12" y="8" width="3" height="10" rx="1"/><rect x="17" y="4" width="3" height="14" rx="1"/></svg>
                     <span>สรุปผล</span>
                 </a>
@@ -239,35 +188,43 @@ if ($isReadOnly || $isGuest):
             <?php endif; ?>
 
             <?php
-            $defaultSidebarOrder = ['projects', 'tasks', 'notes', 'planner', 'focus', 'exercise', 'food-notes', 'finance', 'subscriptions', 'stocks', 'ai', 'file-tools', 'transfer', 'files', 'quick-notes', 'bookmarks'];
-            $sidebarSettings = [];
-            if (!$isReadOnly) {
-                require_once ROOT . '/models/User.php';
-                $sidebarSettings = User::getSettings(Auth::userId());
-            }
-            $savedSidebarOrder = !empty($sidebarSettings['menu_order']) ? json_decode($sidebarSettings['menu_order'], true) : [];
-            if (!is_array($savedSidebarOrder)) $savedSidebarOrder = [];
-            $sidebarOrder = array_values(array_unique(array_merge(
-                array_values(array_intersect($savedSidebarOrder, $defaultSidebarOrder)),
-                $defaultSidebarOrder
-            )));
+            $sidebarSettings = $isReadOnly ? [] : User::getSettings(Auth::userId());
+            $sidebarOrder = AppMenus::ordered(json_decode($sidebarSettings['menu_order'] ?? 'null', true));
             $sidebarMenus = [
-                'projects' => ['group' => 'จัดการ', 'label' => 'โปรเจค', 'path' => '/projects'],
-                'tasks' => ['group' => 'จัดการ', 'label' => 'งาน', 'path' => '/tasks'],
-                'notes' => ['group' => 'จัดการ', 'label' => 'โน้ต', 'path' => '/notes'],
-                'planner' => ['group' => 'จัดการ', 'label' => 'แพลนเนอร์', 'path' => '/planner'],
-                'focus' => ['group' => 'จัดการ', 'label' => 'โฟกัส (Focus)', 'path' => '/focus'],
-                'exercise' => ['group' => 'ติดตาม', 'label' => 'ออกกำลังกาย', 'path' => '/exercise'],
-                'food-notes' => ['group' => 'ติดตาม', 'label' => 'อาหาร-เครื่องดื่ม', 'path' => '/food-notes'],
-                'finance' => ['group' => 'ติดตาม', 'label' => 'การเงิน', 'path' => '/finance'],
-                'subscriptions' => ['group' => 'ติดตาม', 'label' => 'การแจ้งเตือน', 'path' => '/subscriptions'],
-                'stocks' => ['group' => 'ติดตาม', 'label' => 'ระบบหุ้น (Stocks)', 'path' => '/stocks'],
-                'ai' => ['group' => 'เครื่องมือ', 'label' => 'ผู้ช่วยอัจฉริยะ (AI)', 'path' => '/ai'],
-                'file-tools' => ['group' => 'เครื่องมือ', 'label' => 'เครื่องมือจัดการไฟล์', 'path' => '/file-tools'],
-                'transfer' => ['group' => 'เครื่องมือ', 'label' => 'ย้ายไฟล์', 'path' => '/transfer'],
-                'files' => ['group' => 'อื่น ๆ', 'label' => 'ไฟล์', 'path' => '/files'],
-                'quick-notes' => ['group' => 'อื่น ๆ', 'label' => 'จดด่วน', 'path' => '/quick-notes'],
-                'bookmarks' => ['group' => 'อื่น ๆ', 'label' => 'ลิงก์สำคัญ', 'path' => '/bookmarks'],
+                'projects' => ['group' => 'จัดการ', 'label' => 'โปรเจค', 'path' => '/projects',
+                    'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="M11 3v18"/><path d="M16 3v18"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>'],
+                'tasks' => ['group' => 'จัดการ', 'label' => 'งาน', 'path' => '/tasks',
+                    'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>'],
+                'notes' => ['group' => 'จัดการ', 'label' => 'โน้ต', 'path' => '/notes',
+                    'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>'],
+                'planner' => ['group' => 'จัดการ', 'label' => 'แพลนเนอร์', 'path' => '/planner',
+                    'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>'],
+                'focus' => ['group' => 'จัดการ', 'label' => 'โฟกัส (Focus)', 'path' => '/focus',
+                    'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'],
+                'habits' => ['group' => 'จัดการ', 'label' => 'นิสัยประจำวัน', 'path' => '/habits',
+                    'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 17h14"/><circle cx="12" cy="7" r="2"/><circle cx="12" cy="17" r="2"/></svg>'],
+                'exercise' => ['group' => 'ติดตาม', 'label' => 'ออกกำลังกาย', 'path' => '/exercise',
+                    'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.4 14.4 9.6 9.6"/><path d="M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767 1.768a2 2 0 1 1-2.829-2.829l6.364-6.364a2 2 0 1 1 2.829 2.829l-1.768 1.767a2 2 0 1 1 2.828 2.829z"/><path d="m21.5 21.5-1.4-1.4"/><path d="M3.9 3.9 2.5 2.5"/><path d="M6.404 2.768a2 2 0 1 1 2.829 2.829l1.768-1.767a2 2 0 1 1 2.828 2.829L7.465 13.023a2 2 0 1 1-2.829-2.829l1.768-1.768a2 2 0 1 1-2.829-2.828z"/></svg>'],
+                'food-notes' => ['group' => 'ติดตาม', 'label' => 'อาหาร-เครื่องดื่ม', 'path' => '/food-notes',
+                    'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v2"/><path d="M14 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/><path d="M6 2v2"/></svg>'],
+                'finance' => ['group' => 'ติดตาม', 'label' => 'การเงิน', 'path' => '/finance',
+                    'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'],
+                'subscriptions' => ['group' => 'ติดตาม', 'label' => 'การแจ้งเตือน', 'path' => '/subscriptions',
+                    'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>'],
+                'stocks' => ['group' => 'ติดตาม', 'label' => 'ระบบหุ้น (Stocks)', 'path' => '/stocks',
+                    'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>'],
+                'ai' => ['group' => 'เครื่องมือ', 'label' => 'ผู้ช่วยอัจฉริยะ (AI)', 'path' => '/ai',
+                    'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/></svg>'],
+                'file-tools' => ['group' => 'เครื่องมือ', 'label' => 'เครื่องมือจัดการไฟล์', 'path' => '/file-tools',
+                    'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="M9 15l3 3 3-3"/></svg>'],
+                'transfer' => ['group' => 'เครื่องมือ', 'label' => 'ย้ายไฟล์', 'path' => '/transfer',
+                    'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22 11 13 2 9l20-7z"/></svg>'],
+                'files' => ['group' => 'อื่น ๆ', 'label' => 'ไฟล์', 'path' => '/files',
+                    'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>'],
+                'quick-notes' => ['group' => 'อื่น ๆ', 'label' => 'จดด่วน', 'path' => '/quick-notes',
+                    'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>'],
+                'bookmarks' => ['group' => 'อื่น ๆ', 'label' => 'ลิงก์สำคัญ', 'path' => '/bookmarks',
+                    'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>'],
             ];
             $currentSidebarGroup = null;
             foreach ($sidebarOrder as $menuKey):
@@ -279,8 +236,8 @@ if ($isReadOnly || $isGuest):
                     echo '<div class="sidebar-section"><div class="sidebar-section-label">' . h($currentSidebarGroup) . '</div>';
                 endif;
             ?>
-                <a href="<?= APP_URL . h($menu['path']) ?>" class="nav-item <?= isActive($menu['path']) ?>" data-menu-key="<?= h($menuKey) ?>" style="display:flex;align-items:center;gap:8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+                <a href="<?= APP_URL . h($menu['path']) ?>" class="nav-item <?= isActive($menu['path']) ?>" data-menu-key="<?= h($menuKey) ?>">
+                    <?= $menu['icon'] ?? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>' ?>
                     <span><?= h($menu['label']) ?></span>
                 </a>
             <?php endforeach; if ($currentSidebarGroup !== null) echo '</div>'; ?>
@@ -288,146 +245,13 @@ if ($isReadOnly || $isGuest):
             <?php if (!$isReadOnly): ?>
             <div class="sidebar-section">
                 <div class="sidebar-section-label">อื่น ๆ</div>
-                <a href="<?= APP_URL ?>/settings" class="nav-item <?= isActive('/settings') ?>" data-menu-key="settings" style="display:flex;align-items:center;gap:8px;">
+                <a href="<?= APP_URL ?>/settings" class="nav-item <?= isActive('/settings') ?>" data-menu-key="settings">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
                     <span>ตั้งค่า</span>
                 </a>
             </div>
             <?php endif; ?>
 
-            <?php if (false): // Legacy static menu markup retained for safe rollback during migration ?>
-            <?php if ($showManage): ?>
-            <div class="sidebar-section">
-                <div class="sidebar-section-label">จัดการ</div>
-                <?php if (showMenu('projects')): ?>
-                <a href="<?= APP_URL ?>/projects" class="nav-item <?= isActive('/projects') ?>" style="display: flex; align-items: center; gap: 8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="M11 3v18"/><path d="M16 3v18"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>
-                    <span>โปรเจค</span>
-                </a>
-                <?php endif; ?>
-                <?php if (showMenu('tasks')): ?>
-                <a href="<?= APP_URL ?>/tasks" class="nav-item <?= isActive('/tasks') ?>" style="display: flex; align-items: center; gap: 8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                    <span>งาน</span>
-                </a>
-                <?php endif; ?>
-                <?php if (showMenu('notes')): ?>
-                <a href="<?= APP_URL ?>/notes" class="nav-item <?= isActive('/notes') ?>" style="display: flex; align-items: center; gap: 8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
-                    <span>โน้ต</span>
-                </a>
-                <?php endif; ?>
-                <?php if (showMenu('planner')): ?>
-                <a href="<?= APP_URL ?>/planner" class="nav-item <?= isActive('/planner') ?>" style="display: flex; align-items: center; gap: 8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-                    <span>แพลนเนอร์</span>
-                </a>
-                <?php endif; ?>
-                <?php if (showMenu('focus')): ?>
-                <a href="<?= APP_URL ?>/focus" class="nav-item <?= isActive('/focus') ?>" style="display: flex; align-items: center; gap: 8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    <span>โฟกัส (Focus)</span>
-                </a>
-                <?php endif; ?>
-                <?php if (false): // Habits menu retired from the primary navigation ?>
-                <a href="<?= APP_URL ?>/habits" class="nav-item <?= isActive('/habits') ?>" style="display: flex; align-items: center; gap: 8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 17h14"/><circle cx="12" cy="7" r="2"/><circle cx="12" cy="17" r="2"/></svg>
-                    <span>นิสัยประจำวัน</span>
-                </a>
-                <?php endif; ?>
-            </div>
-            <?php endif; ?>
-
-            <?php if ($showTrack): ?>
-            <div class="sidebar-section">
-                <div class="sidebar-section-label">ติดตาม</div>
-                <?php if (showMenu('exercise')): ?>
-                <a href="<?= APP_URL ?>/exercise" class="nav-item <?= isActive('/exercise') ?>" style="display: flex; align-items: center; gap: 8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.4 14.4 9.6 9.6"/><path d="M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767 1.768a2 2 0 1 1-2.829-2.829l6.364-6.364a2 2 0 1 1 2.829 2.829l-1.768 1.767a2 2 0 1 1 2.828 2.829z"/><path d="m21.5 21.5-1.4-1.4"/><path d="M3.9 3.9 2.5 2.5"/><path d="M6.404 2.768a2 2 0 1 1 2.829 2.829l1.768-1.767a2 2 0 1 1 2.828 2.829L7.465 13.023a2 2 0 1 1-2.829-2.829l1.768-1.768a2 2 0 1 1-2.829-2.828z"/></svg>
-                    <span>ออกกำลังกาย</span>
-                </a>
-                <?php endif; ?>
-                <?php if (showMenu('food-notes')): ?>
-                <a href="<?= APP_URL ?>/food-notes" class="nav-item <?= isActive('/food-notes') ?>" style="display: flex; align-items: center; gap: 8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v2"/><path d="M14 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/><path d="M6 2v2"/></svg>
-                    <span>อาหาร-เครื่องดื่ม</span>
-                </a>
-                <?php endif; ?>
-                <?php if (showMenu('finance')): ?>
-                <a href="<?= APP_URL ?>/finance" class="nav-item <?= isActive('/finance') ?>" style="display: flex; align-items: center; gap: 8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                    <span>การเงิน</span>
-                </a>
-                <?php endif; ?>
-                <?php if (showMenu('subscriptions')): ?>
-                <a href="<?= APP_URL ?>/subscriptions" class="nav-item <?= isActive('/subscriptions') ?>" style="display: flex; align-items: center; gap: 8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-                    <span>การแจ้งเตือน</span>
-                </a>
-                <?php endif; ?>
-                <?php if (showMenu('stocks')): ?>
-                <a href="<?= APP_URL ?>/stocks" class="nav-item <?= isActive('/stocks') ?>" style="display: flex; align-items: center; gap: 8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-                    <span>ระบบหุ้น (Stocks)</span>
-                </a>
-                <?php endif; ?>
-            </div>
-            <?php endif; ?>
-
-            <?php if ($showTools): ?>
-            <div class="sidebar-section">
-                <div class="sidebar-section-label">เครื่องมือ</div>
-                <?php if (showMenu('ai')): ?>
-                <a href="<?= APP_URL ?>/ai" class="nav-item <?= isActive('/ai') ?>" style="display: flex; align-items: center; gap: 8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/></svg>
-                    <span>ผู้ช่วยอัจฉริยะ (AI)</span>
-                </a>
-                <?php endif; ?>
-                <?php if (showMenu('file-tools')): ?>
-                <a href="<?= APP_URL ?>/file-tools" class="nav-item <?= isActive('/file-tools') ?>" style="display: flex; align-items: center; gap: 8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="M9 15l3 3 3-3"/></svg>
-                    <span>เครื่องมือจัดการไฟล์</span>
-                </a>
-                <?php endif; ?>
-                <?php if (showMenu('transfer')): ?>
-                <a href="<?= APP_URL ?>/transfer" class="nav-item <?= isActive('/transfer') ?>" style="display: flex; align-items: center; gap: 8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22 11 13 2 9l20-7z"/></svg>
-                    <span>ย้ายไฟล์</span>
-                </a>
-                <?php endif; ?>
-            </div>
-            <?php endif; ?>
-
-            <?php if ($showOthers): ?>
-            <div class="sidebar-section">
-                <div class="sidebar-section-label">อื่น ๆ</div>
-                <?php if (showMenu('files')): ?>
-                <a href="<?= APP_URL ?>/files" class="nav-item <?= isActive('/files') ?>" style="display: flex; align-items: center; gap: 8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
-                    <span>ไฟล์</span>
-                </a>
-                <?php endif; ?>
-                <?php if (showMenu('quick-notes')): ?>
-                <a href="<?= APP_URL ?>/quick-notes" class="nav-item <?= isActive('/quick-notes') ?>" style="display:flex;align-items:center;gap:8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
-                    <span>จดด่วน</span>
-                </a>
-                <?php endif; ?>
-                <?php if (showMenu('bookmarks')): ?>
-                <a href="<?= APP_URL ?>/bookmarks" class="nav-item <?= isActive('/bookmarks') ?>" style="display:flex;align-items:center;gap:8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-                    <span>ลิงก์สำคัญ</span>
-                </a>
-                <?php endif; ?>
-                <?php if (!$isReadOnly): ?>
-                <a href="<?= APP_URL ?>/settings" class="nav-item <?= isActive('/settings') ?>" style="display: flex; align-items: center; gap: 8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-                    <span>ตั้งค่า</span>
-                </a>
-                <?php endif; ?>
-            </div>
-            <?php endif; ?>
-            <?php endif; ?>
         </nav>
 
         <div class="sidebar-footer">
@@ -436,7 +260,7 @@ if ($isReadOnly || $isGuest):
                 <span><?= h($user['email'] ?? '') ?></span>
             </div>
             <?php if (!$isReadOnly): ?>
-            <a href="<?= APP_URL ?>/logout" class="btn btn-ghost btn-sm btn-block" style="justify-content:center">
+            <a href="<?= APP_URL ?>/logout" class="btn btn-ghost btn-sm btn-block">
                 ออกจากระบบ
             </a>
             <?php endif; ?>
