@@ -333,7 +333,9 @@ class Router
             require_once dirname(__DIR__) . '/models/AppShare.php';
             $share = AppShare::getByToken($_SESSION['app_share_token']);
             if ($share && AppShare::isValid($share)) {
-                $menus = json_decode($share['menus'], true) ?: [];
+                // Rows written before menus were validated on save may still
+                // name anything, so the stored list is filtered again here.
+                $menus = AppShare::sanitizeMenus(json_decode($share['menus'], true) ?: []);
                 Auth::setShareMode((int)$share['user_id'], $menus);
             } else {
                 unset($_SESSION['app_share_token']);
@@ -350,12 +352,23 @@ class Router
             }
 
             $allowed = Auth::getSharedMenus();
+
+            // The dashboard aggregates every module, so a share link never
+            // opens it; send the visitor to the first menu it does cover.
+            if ($path === '/' && $allowed !== []) {
+                Response::redirect('/' . $allowed[0]);
+            }
+
             $parts = explode('/', trim($path, '/'));
             $base = $parts[0] ?? '';
             if ($base === 'api') $base = $parts[1] ?? '';
-            
-            $alwaysAllowed = ['shared', 'exit-share', 'login', 'logout', 'dashboard', 'settings']; // Need settings for layout, but handled later if needed
-            if (!in_array($base, $allowed) && !in_array($base, $alwaysAllowed) && $path !== '/') {
+
+            // Only the routes needed to enter and leave share mode. Settings
+            // and the dashboard must stay out: Auth::userId() is the owner's
+            // here, so /api/settings/export would hand a guest the whole
+            // account and /api/dashboard/summary every module's figures.
+            $alwaysAllowed = ['shared', 'exit-share', 'login', 'logout'];
+            if (!in_array($base, $allowed, true) && !in_array($base, $alwaysAllowed, true)) {
                 if (Request::isApi()) Response::json(['error' => 'ไม่มีสิทธิ์เข้าถึงเมนูนี้'], 403);
                 Response::abort(403, 'ไม่มีสิทธิ์เข้าถึงเมนูนี้');
             }

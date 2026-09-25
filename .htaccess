@@ -13,6 +13,20 @@ RewriteRule ^views(/|$) - [F,L]
 RewriteRule ^install(/|$) - [F,L]
 RewriteRule ^config/.*\.php$ - [F,L]
 
+# The document root is the whole repository, so everything that is not part of
+# the site has to be refused here — otherwise the rule below serves it as-is
+# (and runs it, for scripts/migrate.php or tests/run.php).
+# Dotfiles and dot-directories: .env, .git, .github, .claude ...
+RewriteRule (^|/)\.(?!well-known/) - [F,L]
+# Tooling, tests, runtime data and backups.
+RewriteRule ^(scripts|tests|storage|backups|docker)(/|$) - [F,L]
+# Repository files at the root: docs, compose files, container and proxy config,
+# and the CLI-only cron job.
+RewriteRule ^[^/]+\.(md|ya?ml)$ - [F,L]
+RewriteRule ^(Dockerfile|Caddyfile|cron\.php)$ - [F,L]
+# Dumps, logs and leftovers wherever they end up.
+RewriteRule \.(sql|log|bak|ini)$ - [F,L]
+
 # Allow access to assets and uploads directly
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d

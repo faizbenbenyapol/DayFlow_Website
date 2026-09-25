@@ -373,13 +373,15 @@ class SettingsController
         $content = file_get_contents($file['tmp_name']);
         $data = json_decode($content, true);
 
-        if ($data === null) {
+        if (!is_array($data)) {
             Response::json(['error' => 'ข้อมูลในไฟล์ JSON ไม่ถูกต้อง หรือเสียหาย'], 422);
         }
 
         try {
             User::importAllData($userId, $data);
             Response::json(['ok' => true]);
+        } catch (\InvalidArgumentException $e) {
+            Response::json(['error' => 'ข้อมูลในไฟล์ JSON ไม่ถูกต้อง หรือเสียหาย'], 422);
         } catch (\Throwable $e) {
             error_log($e->getMessage());
             Response::json(['error' => 'นำเข้าข้อมูลไม่สำเร็จ'], 500);

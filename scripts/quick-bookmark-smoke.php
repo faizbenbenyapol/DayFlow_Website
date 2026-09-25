@@ -1,4 +1,9 @@
 <?php
+// CLI-only: the web server must never run this, even if it is reachable.
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit("This script is CLI-only.\n");
+}
 if (!defined('ROOT')) define('ROOT', dirname(__DIR__));
 require_once ROOT . '/config/config.php';
 require_once ROOT . '/config/database.php';
