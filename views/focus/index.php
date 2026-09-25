@@ -131,7 +131,7 @@
         </div>
 
         <!-- History logs card -->
-        <div class="card" style="margin-top: var(--space-4);">
+        <div class="card mt-4">
             <div class="card-header flex items-center justify-between">
                 <span class="card-title">ประวัติช่วงเวลาสมาธิ</span>
             </div>

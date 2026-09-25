@@ -40,7 +40,7 @@
 
 <!-- Quick Add Bar -->
 <div class="card mb-8" style="padding: 1.25rem; border-left: 3px solid var(--color-text);">
-    <form id="quickAddForm" class="flex gap-4 items-center justify-between" data-act="saveQuickTransaction" style="flex-wrap: wrap;">
+    <form id="quickAddForm" class="flex gap-4 items-center justify-between flex-wrap" data-act="saveQuickTransaction">
         <span style="font-weight: 600; font-size: 0.9rem; white-space: nowrap; display: flex; align-items: center; gap: 6px;">
             <span style="font-size: 1.2rem;"></span> บันทึกด่วน:
         </span>
@@ -92,7 +92,7 @@
 <div class="grid-2-custom mb-8">
     <!-- Left Column: Transaction list -->
     <div class="card" style="display: flex; flex-direction: column; overflow: hidden; padding-bottom: var(--space-4);">
-        <div class="card-header flex items-center justify-between" style="flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-4);">
+        <div class="card-header flex items-center justify-between flex-wrap gap-3 mb-4">
             <span class="card-title">ประวัติการทำรายการ</span>
             <div class="flex gap-2" style="flex-wrap: wrap; width: auto;">
                 <input type="text" class="form-control filter-input" id="searchFilter" placeholder="ค้นหารายการ..." style="width: 150px; font-size: 0.85rem;" data-act="filterTransactionsLocal" data-on="input">
@@ -134,10 +134,10 @@
     </div>
 
     <!-- Right Column: Visual category analytics + Financial Insight advices -->
-    <div class="flex-col gap-6" style="display: flex; flex-direction: column; gap: var(--space-6);">
+    <div class="flex-col gap-6">
         <!-- Breakdown progress bars -->
         <div class="card" style="height: 100%;">
-            <div class="card-header mb-4" style="margin-bottom: var(--space-4);">
+            <div class="card-header mb-4">
                 <span class="card-title">สัดส่วนการใช้จ่ายรายจ่าย</span>
             </div>
             <div id="categoryBreakdown" class="card-body flex-col" style="display: flex; flex-direction: column; gap: 12px;">
@@ -147,7 +147,7 @@
 
         <!-- Financial advise insights box -->
         <div class="card" style="border-left: 4px solid #3b82f6; background: var(--color-surface);">
-            <div class="card-header mb-2" style="margin-bottom: var(--space-2);">
+            <div class="card-header mb-2">
                 <span class="card-title" style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: #3b82f6; font-weight: 700; display: flex; align-items: center; gap: 6px;">
                      การประเมินผลสุขภาพการเงิน
                 </span>

@@ -846,6 +846,11 @@ body.modal-open { overflow: hidden; }
     white-space: nowrap;
 }
 
+/* Filling out the scale above; these replace inline style="" attributes. */
+.mt-3 { margin-top: var(--space-3); }
+.p-4 { padding: var(--space-4); }
+.cursor-pointer { cursor: pointer; }
+
 /* --- Misc --- */
 .clickable {
     cursor: pointer;

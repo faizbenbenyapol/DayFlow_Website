@@ -605,6 +605,9 @@
     color: var(--color-text);
 }
 
+/* The activity feed sits closer to its heading than the charts do. */
+.activity-card .analytics-title { margin-bottom: var(--space-4); }
+
 .analytics-stats-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);

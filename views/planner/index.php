@@ -78,7 +78,7 @@
                 </div>
             </div>
 
-            <div class="form-group" style="margin-top: var(--space-4);">
+            <div class="form-group mt-4">
                 <label class="flex items-center gap-3" style="cursor:pointer; font-size: 0.9rem; font-weight: 500;">
                     <input type="checkbox" id="eventAllDay" data-act="toggleAllDay" data-args="[&quot;$checked&quot;]" data-on="change" style="width: 16px; height: 16px;">
                     <span>กิจกรรมทั้งวัน (All Day Event)</span>

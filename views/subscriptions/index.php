@@ -56,7 +56,7 @@
                 <textarea class="form-control" id="subNotes" rows="2"></textarea>
             </div>
             <div class="form-group">
-                <label class="flex items-center gap-3" style="cursor:pointer">
+                <label class="flex items-center gap-3 cursor-pointer">
                     <input type="checkbox" id="subActive" checked>
                     <span>ใช้งานอยู่</span>
                 </label>

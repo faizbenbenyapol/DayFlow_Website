@@ -238,7 +238,7 @@ function renderTasksWidget(data) {
 
         const qColor = QUADRANT_COLOR[task.quadrant] || 'var(--color-border-2)';
 
-        html += '<div class="widget-task-item" data-nav="\'' + BASE_URL + '/tasks\'" style="cursor:pointer;">'
+        html += '<div class="widget-task-item cursor-pointer" data-nav="\'' + BASE_URL + '/tasks\'">'
             + '<span class="widget-task-dot" style="background:' + qColor + '"></span>'
             + '<span class="widget-task-title">' + escHtml(task.title) + '</span>'
             + badge
@@ -262,7 +262,7 @@ function renderCalendarWidget(data) {
     data.today_events.forEach(function (ev) {
         let timeStr = ev.is_all_day ? 'ทั้งวัน' : new Date(ev.start_datetime).toTimeString().slice(0, 5);
         const dot   = ev.color || '#6366f1';
-        html += '<div class="widget-event-item" data-nav="\'' + BASE_URL + '/planner\'" style="cursor:pointer;">'
+        html += '<div class="widget-event-item cursor-pointer" data-nav="\'' + BASE_URL + '/planner\'">'
             + '<span class="widget-event-dot" style="background:' + escHtml(dot) + '"></span>'
             + '<span class="widget-event-time">' + escHtml(timeStr) + '</span>'
             + '<span class="widget-event-title" style="color:var(--color-text); font-weight:500;">' + escHtml(ev.title) + '</span>'
@@ -331,9 +331,9 @@ function renderWorkoutWidget(data) {
 
     el.innerHTML =
         '<div class="widget-workout-card" data-nav="\'' + BASE_URL + '/exercise\'" style="cursor:pointer; display:flex; flex-direction:column; gap:8px;">'
-        +   '<div class="widget-workout-top" style="display:flex; justify-content:space-between; align-items:center;">'
+        +   '<div class="widget-workout-top flex justify-between items-center">'
         +       '<span class="workout-type-badge" data-wtype="' + escHtml(session.type) + '" style="font-size:0.75rem; font-weight:700; background:rgba(34,197,94,0.12); color:#16a34a; padding:4px 10px; border-radius:8px;">' + escHtml(session.type) + '</span>'
-        +       '<span class="widget-workout-ago" style="font-size:0.75rem; color:var(--color-muted);">' + daysAgo + '</span>'
+        +       '<span class="widget-workout-ago text-xs text-muted">' + daysAgo + '</span>'
         +   '</div>'
         +   '<div class="widget-workout-date" style="font-size:0.82rem; color:var(--color-muted);">' + formatDate(session.workout_date) + '</div>'
         +   (details ? '<div class="widget-workout-details" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px;">' + details + '</div>' : '')

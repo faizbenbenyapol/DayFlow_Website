@@ -21,7 +21,7 @@
     async function loadShares() {
         const tbody = document.getElementById('sharesTableBody');
         if (!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="5" class="text-muted text-sm" style="padding:1rem">กำลังโหลด...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-muted text-sm p-4">กำลังโหลด...</td></tr>';
         try {
             const data = await apiFetch(BASE_URL + '/api/shares');
             const shares = data.shares || [];
@@ -38,8 +38,8 @@
 
                 return `<tr>
                     <td>
-                        <div style="font-weight:500">${escHtml(s.label || s.file_name)}</div>
-                        <div style="font-size:.75rem;color:var(--color-muted)">${s.file_type === 'folder' ? '📁' : '📄'} ${escHtml(s.file_name)}</div>
+                        <div class="font-medium">${escHtml(s.label || s.file_name)}</div>
+                        <div class="text-xs text-muted">${s.file_type === 'folder' ? '📁' : '📄'} ${escHtml(s.file_name)}</div>
                     </td>
                     <td>
                         <a class="share-link-url" href="${escHtml(link)}" target="_blank" rel="noopener">${escHtml(link)}</a>

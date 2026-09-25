@@ -5,7 +5,7 @@
     </div>
 </div>
 
-<div class="flex gap-3 mb-8 ai-tabs" style="flex-wrap:wrap">
+<div class="flex gap-3 mb-8 ai-tabs flex-wrap">
     <button class="btn btn-primary btn-sm ai-tab active" data-tab="generate">สร้างคอนเทนต์</button>
     <button class="btn btn-ghost btn-sm ai-tab" data-tab="keys">ตั้งค่า API Key</button>
     <button class="btn btn-ghost btn-sm ai-tab" data-tab="history">ประวัติ</button>
@@ -34,7 +34,7 @@
             </div>
 
             <details class="mb-4">
-                <summary class="text-sm text-muted" style="cursor:pointer">ปรับแต่งเพิ่มเติม (ไม่บังคับ)</summary>
+                <summary class="text-sm text-muted cursor-pointer">ปรับแต่งเพิ่มเติม (ไม่บังคับ)</summary>
                 <div class="form-row mt-4">
                     <div class="form-group">
                         <label class="form-label">แพลตฟอร์ม</label>
@@ -82,7 +82,7 @@
                 </div>
             </details>
 
-            <div class="flex ai-gen-actions" style="gap:.5rem; flex-wrap:wrap">
+            <div class="flex ai-gen-actions gap-2 flex-wrap">
                 <button class="btn btn-primary" id="btnGenScript">
                     <span class="ai-btn-label">สร้างสคริปต์</span>
                 </button>
@@ -134,7 +134,7 @@
                         <option value="kwaivgi/kling-v2.0">kwaivgi/kling-v2.0 (คุณภาพสูง, แพง)</option>
                         <option value="google/veo-3">google/veo-3 (พรีเมียม)</option>
                     </select>
-                    <p class="form-hint" style="margin-top:var(--space-2)">
+                    <p class="form-hint mt-2">
                         ทุกโมเดลสร้างวิดีโอด้านบน (เช่น minimax, seedance, kling, veo-3) ทำงานอยู่ภายใต้ผู้ให้บริการ **Replicate** ร่วมกันทั้งหมด คุณสามารถตั้งค่า API Key ของ Replicate ได้ที่แท็บ "ตั้งค่า API Key" ด้านบน เพื่อใช้งานโมเดลเหล่านี้
                     </p>
                 </div>
@@ -151,7 +151,7 @@
     <div class="card" style="max-width:720px">
         <div class="card-header"><span class="card-title">API Keys</span></div>
         <div class="card-body">
-            <p class="form-hint" style="margin-bottom:1rem">
+            <p class="form-hint mb-4">
                 API Key ของคุณจะถูกเข้ารหัสก่อนเก็บลงฐานข้อมูล และไม่มีใครเข้าถึงได้โดยตรงจากหน้าจอ
             </p>
             <div id="aiKeysList"></div>

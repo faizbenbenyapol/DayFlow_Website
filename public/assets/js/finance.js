@@ -165,7 +165,7 @@ function renderTransactions(filteredList) {
                     ${escHtml(t.category_name || 'ไม่ระบุ')}
                 </span>
             </td>
-            <td style="font-weight: 500">${escHtml(t.description || '—')}</td>
+            <td class="font-medium">${escHtml(t.description || '—')}</td>
             <td style="text-align:right; font-weight:700; color:${t.type === 'income' ? 'var(--color-success)' : 'var(--color-text)'}">
                 ${t.type === 'income' ? '+' : ''}${formatMoney(t.amount)}
             </td>
