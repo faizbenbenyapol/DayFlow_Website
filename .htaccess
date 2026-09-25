@@ -10,7 +10,6 @@ RewriteRule ^models(/|$) - [F,L]
 RewriteRule ^controllers(/|$) - [F,L]
 RewriteRule ^sql(/|$) - [F,L]
 RewriteRule ^views(/|$) - [F,L]
-RewriteRule ^install(/|$) - [F,L]
 RewriteRule ^config/.*\.php$ - [F,L]
 
 # The document root is the whole repository, so everything that is not part of
