@@ -9,10 +9,6 @@
    Loaded after components.css so the frame wins where the two meet.
 ===================================================== */
 
-:root {
-    --content-max: 1240px;
-}
-
 .skip-link {
     position: absolute;
     left: 8px;
@@ -55,8 +51,10 @@ body {
 }
 
 .app-content {
-    max-width: var(--content-max);
-    /* Content sits against the rail, not centred in the leftover space. */
+    /* The page uses all the room beside the rail, at any window size: a
+       column that stopped at 1240px left a blank strip on a wide screen.
+       Pages that read as prose (the note editor) set their own measure. */
+    width: 100%;
     margin: 0;
     padding: var(--space-4) var(--space-4) calc(var(--tabbar-height) + var(--space-8) + env(safe-area-inset-bottom));
 }
