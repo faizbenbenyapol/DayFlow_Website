@@ -183,7 +183,7 @@ class Review
         $topCategories = DB::run(
             'SELECT COALESCE(c.name, "ไม่ระบุหมวด") AS name, SUM(f.amount) AS total
              FROM finances f
-             LEFT JOIN finance_categories c ON c.id = f.category_id
+             LEFT JOIN finance_categories c ON c.id = f.category_id AND c.user_id = f.user_id
              WHERE f.user_id = ? AND f.type = "expense" AND f.txn_date >= ? AND f.txn_date < ?
              GROUP BY name
              ORDER BY total DESC

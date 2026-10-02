@@ -52,7 +52,7 @@ class Finance
         $sql = 'SELECT f.id, f.type, f.amount, f.description, f.txn_date,
                        c.name AS category_name, f.category_id
                 FROM finances f
-                LEFT JOIN finance_categories c ON c.id = f.category_id'
+                LEFT JOIN finance_categories c ON c.id = f.category_id AND c.user_id = f.user_id'
              . $where
              . ' ORDER BY f.txn_date DESC, f.id DESC'
              // Bound values rather than placeholders: LIMIT/OFFSET are ints
@@ -162,6 +162,15 @@ class FinanceCategory
             'SELECT id, name, type FROM finance_categories WHERE user_id = ? ORDER BY name ASC',
             [$userId]
         )->fetchAll();
+    }
+
+    /** Whether this category exists and belongs to the given account. */
+    public static function ownedBy(int $id, int $userId): bool
+    {
+        return (bool)DB::run(
+            'SELECT 1 FROM finance_categories WHERE id = ? AND user_id = ?',
+            [$id, $userId]
+        )->fetchColumn();
     }
 
     public static function create(int $userId, string $name, string $type): int

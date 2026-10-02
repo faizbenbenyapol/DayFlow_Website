@@ -150,10 +150,16 @@ class FinanceController
         $parsedDate = DateTime::createFromFormat('Y-m-d', (string)$date);
         if (!$parsedDate || $parsedDate->format('Y-m-d') !== $date) return ['error' => 'วันที่ไม่ถูกต้อง'];
 
+        // A category id from another account would show that account's category name.
+        $categoryId = (int)Request::input('category_id', 0);
+        if ($categoryId && !FinanceCategory::ownedBy($categoryId, Auth::userId())) {
+            return ['error' => 'หมวดหมู่ไม่ถูกต้อง'];
+        }
+
         return [
             'type'        => $type,
             'amount'      => $amount,
-            'category_id' => (int)Request::input('category_id', 0),
+            'category_id' => $categoryId,
             'description' => mb_substr(Request::input('description', ''), 0, 1000),
             'txn_date'    => $date,
         ];
