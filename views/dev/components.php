@@ -145,7 +145,6 @@
     </div>
     <div class="tag-list mb-4">
         <span class="tag">งาน</span><span class="tag active">ส่วนตัว</span><span class="tag">ไอเดีย</span>
-        <span class="workout-type-badge" data-wtype="วิ่ง">วิ่ง</span>
     </div>
     <div class="gal-row">
         <span class="flex items-center gap-2"><span class="status-dot status-open"></span> ยังไม่เสร็จ</span>

@@ -110,15 +110,7 @@ body.share-body {
 
 /* --- Read-only (app share link): hide everything that would change data --- */
 .is-readonly .mode-readonly-hide,
-.is-readonly .task-actions,
-.is-readonly .btn-link,
-.is-readonly .action-btn,
-.is-readonly .delete-btn,
-.is-readonly .edit-btn,
-.is-readonly .btn-delete,
-.is-readonly .add-task-form,
-.is-readonly .quick-add-bar,
-.is-readonly .todo-actions {
+.is-readonly .btn-link {
     display: none !important;
 }
 
@@ -129,16 +121,13 @@ body.share-body {
     display: none !important;
 }
 
-.is-readonly .task-checkbox,
-.is-readonly .todo-checkbox {
+.is-readonly .task-checkbox {
     pointer-events: none !important;
     opacity: 0.7 !important;
     cursor: not-allowed !important;
 }
 
-.is-readonly .task-title,
-.is-readonly .todo-text,
-.is-readonly .calendar-event {
+.is-readonly .task-title {
     pointer-events: none !important;
     cursor: default !important;
 }

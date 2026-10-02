@@ -331,8 +331,7 @@
    Sections and cards
    A box is for things that truly belong together. Most lists need none.
 --------------------------------------------------------------- */
-.card,
-.boxed {
+.card {
     padding: var(--space-5);
     background: var(--paper);
     border: 1px solid var(--rule);
@@ -1039,8 +1038,7 @@ body.modal-open {
     gap: var(--space-2);
 }
 
-.tag,
-.workout-type-badge {
+.tag {
     display: inline-flex;
     align-items: center;
     gap: var(--space-1);
@@ -1158,12 +1156,6 @@ body.modal-open {
     height: 100%;
     background: var(--ink);
     transition: width var(--dur) var(--ease);
-}
-
-.divider {
-    margin: var(--space-6) 0;
-    border: 0;
-    border-top: 1px solid var(--rule);
 }
 
 .status-dot {
@@ -1498,8 +1490,7 @@ body.modal-open {
 .gap-6 { gap: var(--space-6); }
 
 .grid-2,
-.grid-3,
-.grid-4 {
+.grid-3 {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-5);
@@ -1508,13 +1499,11 @@ body.modal-open {
 @media (min-width: 768px) {
     .form-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .grid-3,
-    .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (min-width: 1024px) {
     .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 .ml-auto {
@@ -1563,52 +1552,19 @@ body.modal-open {
 }
 
 /* ---------------------------------------------------------------
-   Phone overrides for pages that still set their layout inline.
-   The !important is there to beat style="" in those pages' markup; each page
-   drops its share of this when it is redesigned (phase 5).
+   Phone adjustments shared by every page
 --------------------------------------------------------------- */
 @media (max-width: 767px) {
     .hidden-mobile {
         display: none !important;
     }
 
-    .page-head,
-    .page-header {
+    .page-head {
         align-items: flex-start;
     }
 
     .page-head h1,
     .page-title { font-size: 1.5rem; }
-
-    .page-header.flex {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: var(--space-3) !important;
-    }
-
-    .page-header.flex > .flex,
-    .page-header.flex > div {
-        width: 100% !important;
-        flex-wrap: wrap !important;
-        gap: var(--space-2) !important;
-    }
-
-    .page-header.flex > .flex > .btn,
-    .page-header.flex > .flex > button,
-    .page-header.flex > div > .btn,
-    .page-header.flex > div > button,
-    .page-header.flex > .flex > .files-sort-wrap,
-    .page-header.flex > .flex > .files-search-wrap {
-        flex: 1 1 auto !important;
-        min-height: 44px !important;
-        justify-content: center !important;
-    }
-
-    .files-search-wrap input,
-    .files-sort-wrap select {
-        height: 44px !important;
-        font-size: 16px !important;
-    }
 
     .toast { max-width: calc(100vw - 32px); }
 
