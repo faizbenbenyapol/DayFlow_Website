@@ -29,6 +29,17 @@
     /* Fixed ink for text that sits on a day colour whatever the theme */
     --ink-fixed:    #1B2330;
 
+    /* The two palettes as they are, whatever theme is on: the theme cards in
+       settings preview each one, and a QR code needs black on white. */
+    --pv-light-paper: #FBFAF7;
+    --pv-light-sunk:  #F3F1EB;
+    --pv-light-rule:  #E4E1D8;
+    --pv-light-ink:   #1B2330;
+    --pv-dark-paper:  #15181D;
+    --pv-dark-sunk:   #1C2026;
+    --pv-dark-rule:   #2A2F37;
+    --pv-dark-ink:    #E9E6DF;
+
     /* Type */
     --font:         "IBM Plex Sans Thai", "IBM Plex Sans", system-ui, sans-serif;
     --font-num:     "IBM Plex Serif", Georgia, serif;   /* big figures only */

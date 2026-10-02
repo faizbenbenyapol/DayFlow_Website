@@ -249,7 +249,7 @@
             const strength = entropy < 40 ? 'อ่อน' : entropy < 60 ? 'ปานกลาง' : entropy < 80 ? 'แข็งแรง' : 'แข็งแรงมาก';
             const badge = entropy < 40 ? 'danger' : entropy < 60 ? 'warning' : 'success';
             setResult('pw',
-                out.map(p => `<code style="font-size:1rem">${p}</code>`).join('<br>'),
+                out.map(p => `<code class="calc-code">${escHtml(p)}</code>`).join('<br>'),
                 `<span class="calc-badge ${badge}">${strength}</span> entropy ${fmt(entropy, 0)} bits`);
         });
     }
@@ -260,19 +260,18 @@
     function initSearch() {
         const input = $('#calcSearch');
         if (!input) return;
-        const tabs = $$('.calc-tab');
-        const panels = $$('.calc-panel');
+        const layout = $('.calc-layout');
         const tools = $$('.calc-tool');
 
         function applySearch() {
             const q = input.value.trim().toLowerCase();
             if (!q) {
                 tools.forEach(t => t.classList.remove('calc-hidden', 'calc-highlight'));
-                panels.forEach(p => p.style.removeProperty('display'));
+                layout.classList.remove('calc-searching');
                 return;
             }
-            // Show all panels (so hits across tabs are visible)
-            panels.forEach(p => { p.style.display = 'block'; });
+            // Show every panel, so hits across tabs are visible.
+            layout.classList.add('calc-searching');
             let firstHit = null;
             tools.forEach(t => {
                 const title = t.querySelector('.card-title')?.textContent.toLowerCase() || '';
@@ -283,8 +282,7 @@
             });
             if (firstHit) {
                 const panel = firstHit.closest('.calc-panel');
-                const tabName = panel?.dataset.panel;
-                tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabName));
+                if (panel) DFCalc.selectTab(panel.dataset.panel);
             }
         }
 
@@ -314,7 +312,9 @@
             btn.textContent = 'คัดลอก';
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                const text = el.innerText.replace('คัดลอก', '').trim();
+                const clone = el.cloneNode(true);
+                clone.querySelector('.calc-copy-btn')?.remove();
+                const text = clone.textContent.trim();
                 try {
                     await navigator.clipboard.writeText(text);
                     btn.textContent = '✓ แล้ว';

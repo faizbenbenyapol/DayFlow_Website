@@ -86,3 +86,24 @@ test('the component gallery opens in development and needs a login', function (T
     $anonymous = new TestClient(TEST_BASE_URL);
     assertContains($anonymous->get('/dev/components')['status'], [302, 401, 403], 'a visitor must not see it');
 });
+
+test('the two places in the bottom bar on a phone can be chosen, and only validly', function (TestClient $_c): void {
+    $client = appearanceClient('look_tabs');
+    $all = ['tasks', 'planner', 'notes', 'finance', 'stocks'];
+
+    $saved = $client->post('/api/settings/menus', ['menus' => $all, 'order' => $all, 'mobile_tabs' => ['finance', 'notes']]);
+    assertSame(200, $saved['status'], substr($saved['body'], 0, 200));
+    $page = $client->get('/')['body'];
+    preg_match('#<nav class="tabbar".*?</nav>#s', $page, $bar);
+    assertStringContains('/finance', $bar[0] ?? '', 'the chosen menu is in the tab bar');
+    assertStringContains('/notes', $bar[0] ?? '');
+
+    // Two different menus that are still shown, or nothing at all.
+    assertSame(422, $client->post('/api/settings/menus', ['menus' => $all, 'order' => $all, 'mobile_tabs' => ['finance']])['status'], 'one is not enough');
+    assertSame(422, $client->post('/api/settings/menus', ['menus' => $all, 'order' => $all, 'mobile_tabs' => ['finance', 'finance']])['status'], 'the same twice');
+    assertSame(422, $client->post('/api/settings/menus', ['menus' => $all, 'order' => $all, 'mobile_tabs' => ['finance', 'nonsense']])['status'], 'an unknown menu');
+    assertSame(422, $client->post('/api/settings/menus', ['menus' => ['tasks', 'notes'], 'order' => $all, 'mobile_tabs' => ['finance', 'notes']])['status'], 'a hidden menu');
+
+    // Left out, the saved choice stays.
+    assertSame(200, $client->post('/api/settings/menus', ['menus' => $all, 'order' => $all])['status']);
+});

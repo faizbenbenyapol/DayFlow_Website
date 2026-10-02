@@ -170,6 +170,16 @@ class User
         );
     }
 
+    /** The two places in the phone's bottom bar, as a JSON list of menu keys (or NULL for the defaults). */
+    public static function updateMobileTabs(int $userId, ?string $mobileTabs): void
+    {
+        DB::run(
+            'INSERT INTO user_settings (user_id, mobile_tabs) VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE mobile_tabs = VALUES(mobile_tabs)',
+            [$userId, $mobileTabs]
+        );
+    }
+
     public static function updateTelegramSettings(int $userId, ?string $botToken, ?string $chatId, ?string $notifyEvents): void
     {
         if ($botToken === null || trim($botToken) === '') {

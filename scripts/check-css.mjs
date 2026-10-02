@@ -24,6 +24,8 @@ const CHECKED = [
     'modules/finance.css', 'modules/subscriptions.css', 'modules/stocks.css',
     'modules/notes.css', 'modules/skills.css', 'modules/exercise.css', 'modules/food_notes.css',
     'modules/review.css', 'modules/bookmarks.css',
+    'modules/calculator.css', 'modules/ai.css', 'modules/transfer.css', 'modules/files.css',
+    'modules/file-tools.css', 'modules/settings.css', 'modules/shares.css',
 ];
 
 // rgb(21 24 29 / .5): the dark scrim behind a dialog is the same in both themes.

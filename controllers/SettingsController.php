@@ -135,6 +135,7 @@ class SettingsController
         $userId = Auth::userId();
         $menus  = Request::input('menus', []);
         $order  = Request::input('order', []);
+        $tabs   = Request::input('mobile_tabs', null);
 
         if (!is_array($menus) || !is_array($order)) {
             Response::json(['error' => 'รูปแบบข้อมูลไม่ถูกต้อง'], 422);
@@ -152,6 +153,19 @@ class SettingsController
 
         $normalizedOrder = AppMenus::ordered($order);
 
+        // The two places in the phone's bottom bar: two different menus that are
+        // also shown. Left out of the request, the saved choice stays as it is.
+        $tabsJson = null;
+        if ($tabs !== null) {
+            $tabs = is_array($tabs) ? array_values(array_map('strval', $tabs)) : [];
+            $valid = count($tabs) === 2 && $tabs[0] !== $tabs[1]
+                && !array_diff($tabs, AppMenus::KEYS) && !array_diff($tabs, $menus);
+            if (!$valid) {
+                Response::json(['error' => 'เลือกเมนูในแถบล่างให้ครบสองช่อง ต้องเป็นเมนูที่ต่างกันและยังแสดงอยู่'], 422);
+            }
+            $tabsJson = json_encode($tabs);
+        }
+
         $json = json_encode($hiddenMenus);
         $orderJson = json_encode($normalizedOrder);
         $db = DB::conn();
@@ -159,6 +173,7 @@ class SettingsController
             $db->beginTransaction();
             User::updateHiddenMenus($userId, $json);
             User::updateMenuOrder($userId, $orderJson);
+            if ($tabsJson !== null) User::updateMobileTabs($userId, $tabsJson);
             $db->commit();
         } catch (Throwable $e) {
             if ($db->inTransaction()) {

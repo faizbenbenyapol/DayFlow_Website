@@ -52,7 +52,7 @@ const api = (tab, path, options = {}) => tab.eval(`(async () => {
 
 async function main() {
     const { cdp, stop } = await launch();
-    const made = { tasks: [], items: [], finance: [], todos: [], events: [], subs: [], stocks: [], bookmarks: [], foods: [], workouts: [], skills: [], notes: [] };
+    const made = { tasks: [], items: [], finance: [], todos: [], events: [], subs: [], stocks: [], bookmarks: [], foods: [], workouts: [], skills: [], notes: [], files: [], appShares: [] };
     let tab;
 
     try {
@@ -595,6 +595,167 @@ async function main() {
         const moved = await api(tab, `/api/notes/${newNoteId}/blocks`);
         check((moved.body.blocks || [])[0].type === 'checklist', 'the move-up button reorders the blocks on the server');
 
+        // ---------- the tools ----------
+        console.log('Calculator');
+        await tab.goto(BASE + '/calculator');
+        await tab.settle();
+        await fill(tab, '#calcDisplay', '2+3*4');
+        await tab.eval(`document.querySelector('[data-action="equals"]').click()`);
+        await sleep(200);
+        check(await tab.eval(`document.getElementById('calcDisplay').value`) === '14', 'the pocket calculator works out 2+3*4 without eval');
+        await fill(tab, '#calcDisplay', 'sqrt(16)+3!');
+        await tab.eval(`document.querySelector('[data-action="equals"]').click()`);
+        await sleep(200);
+        check(await tab.eval(`document.getElementById('calcDisplay').value`) === '10', 'functions and factorials work');
+        await fill(tab, '#calcDisplay', '2+*');
+        await tab.eval(`document.querySelector('[data-action="equals"]').click()`);
+        await sleep(200);
+        check(await tab.eval(`document.getElementById('calcSubDisplay').textContent.includes('ผิดพลาด')`), 'a broken expression says so');
+        check(await tab.eval(`document.querySelectorAll('.calc-history-item').length`) >= 2, 'worked-out sums go to the history');
+        await click(tab, '#calcTabs [data-tab="percent"]');
+        await sleep(200);
+        check(await tab.eval(`document.querySelector('#calcTabs [data-tab="percent"]').getAttribute('aria-selected')`) === 'true', 'a tab marks itself selected');
+        check(await tab.eval(`document.querySelector('.calc-panel.active').dataset.panel`) === 'percent', 'and shows its panel');
+        await tab.eval(`document.querySelector('[data-calc="p1"]').value = '20'; document.querySelectorAll('[data-calc="p1"]')[1].value = '1500'; document.querySelectorAll('[data-calc="p1"]')[1].dispatchEvent(new Event('input', { bubbles: true }))`);
+        await sleep(200);
+        check(await tab.eval(`document.querySelector('[data-result="p1"]').textContent.includes('300')`), 'a percentage result is drawn as the figures are typed');
+        check(await tab.eval(`(() => { const l = document.querySelector('.calc-panel.active .form-group label'); return !!l.htmlFor && document.getElementById(l.htmlFor) !== null; })()`), 'labels are tied to their fields');
+        await fill(tab, '#calcSearch', 'BMI');
+        await sleep(300);
+        check(await tab.eval(`document.querySelectorAll('.calc-tool:not(.calc-hidden)').length`) >= 1, 'searching finds a tool on another tab');
+        await fill(tab, '#calcSearch', '');
+
+        console.log('AI assistant');
+        await tab.goto(BASE + '/ai');
+        await tab.settle();
+        await click(tab, '.ai-tab[data-tab="keys"]');
+        await sleep(500);
+        check(await tab.eval(`document.getElementById('ai-pane-keys').hidden`) === false, 'the keys tab opens its pane');
+        check(await tab.eval(`document.getElementById('ai-pane-generate').hidden`) === true, 'and hides the other');
+        check(await tab.eval(`document.querySelectorAll('#aiKeysList .ai-key-row').length`) >= 1, 'a row for each service is listed');
+        check(await tab.eval(`[...document.querySelectorAll('#aiKeysList input')].every(i => i.getAttribute('aria-label'))`), 'each key field has a label');
+        await click(tab, '.ai-tab[data-tab="generate"]');
+        await sleep(200);
+
+        console.log('Transfer');
+        await tab.goto(BASE + '/transfer');
+        await tab.settle();
+        check(await tab.eval(`document.querySelector('[data-panel="send"]').hidden`) === false, 'it opens on the send tab');
+        check(await tab.eval(`document.getElementById('sendDrop').textContent.includes('MB')`), 'the real size limit is shown');
+        await click(tab, '#tfTabs [data-tab="receive"]');
+        await sleep(200);
+        check(await tab.eval(`document.getElementById('btnReceive').disabled`), 'the receive button waits for six digits');
+        await fill(tab, '#receiveCode', '12ab34');
+        check(await tab.eval(`document.getElementById('receiveCode').value`) === '1234', 'only digits are accepted');
+        await fill(tab, '#receiveCode', '000000');
+        check(await tab.eval(`!document.getElementById('btnReceive').disabled`), 'six digits enable it');
+        await click(tab, '#btnReceive');
+        await sleep(900);
+        check(await tab.eval(`!document.getElementById('receiveError').hidden`), 'an unknown code is explained in the form');
+        await click(tab, '#tfTabs [data-tab="history"]');
+        await sleep(700);
+        check(await tab.eval(`document.getElementById('historyList').getAttribute('aria-busy')`) === null, 'the history loads');
+
+        console.log('Files');
+        await tab.goto(BASE + '/files');
+        await tab.settle();
+        check(await tab.eval(`document.querySelectorAll('#filesGrid .file-item').length`) >= 3, 'the folder lists its files and folders');
+        check(await tab.eval(`document.querySelector('.file-item:first-child').dataset.fileType`) === 'folder', 'folders come first');
+        check(await tab.eval(`[...document.querySelectorAll('.file-item')].every(i => i.querySelector('.file-name') && i.querySelector('.file-checkbox').getAttribute('aria-label'))`), 'every row has a name button and a labelled checkbox');
+        await click(tab, '#btnCreateFolder');
+        await sleep(300);
+        await click(tab, '#nameForm [type="submit"]');
+        await sleep(200);
+        check(await tab.eval(`!document.getElementById('nameError').hidden`), 'an empty folder name shows an error in the form');
+        await fill(tab, '#nameInput', `โฟลเดอร์ ${STAMP}`);
+        await click(tab, '#nameForm [type="submit"]');
+        await sleep(900);
+        check(await tab.eval(`document.getElementById('filesGrid').textContent.includes(${JSON.stringify(STAMP)})`), 'a new folder is listed');
+        const folderList = await api(tab, '/api/files');
+        const made1 = (folderList.body.files || []).find(f => f.name.includes(STAMP));
+        check(!!made1, 'it reached the server');
+        if (made1) made.files.push(made1.id);
+        await click(tab, `.file-item[data-file-id="${made1.id}"] .file-more`);
+        await sleep(200);
+        check(await tab.eval(`!document.getElementById('ctxMenu').hidden`), 'the more button opens the menu');
+        check(await tab.eval(`document.activeElement.classList.contains('ctx-item')`), 'with the first item focused');
+        await key(tab, 'Escape');
+        await sleep(200);
+        check(await tab.eval(`document.getElementById('ctxMenu').hidden`), 'Escape closes it');
+        await click(tab, `.file-item[data-file-id="${made1.id}"] .file-checkbox`);
+        check(await tab.eval(`!document.getElementById('batchToolbar').hidden`), 'ticking a row shows the selection bar');
+        await click(tab, '#btnBatchClear');
+        await click(tab, '#btnGridView');
+        check(await tab.eval(`!document.getElementById('filesGrid').classList.contains('list-view')`), 'the tile view can be chosen');
+        await click(tab, '#btnListView');
+
+        console.log('Settings');
+        await tab.viewport({ width: 1366, height: 900, mobile: false });
+        await tab.eval(`localStorage.removeItem('settings_last_tab')`);
+        await tab.goto(BASE + '/settings');
+        await tab.settle();
+        await sleep(300);
+        check(await tab.eval(`document.querySelector('.settings-tab[aria-selected="true"]').dataset.tab`) === 'profile', 'it opens on the profile topic');
+        check(await tab.eval(`document.querySelectorAll('.settings-pane:not([hidden])').length`) === 1, 'only one pane is shown');
+        check(await tab.eval(`document.querySelectorAll('.settings-tab').length`) === 14, 'every topic is listed');
+        await click(tab, '.settings-tab[data-tab="categories"]');
+        await sleep(600);
+        check(await tab.eval(`document.getElementById('tab-categories').hidden`) === false, 'a topic opens its pane');
+        check(await tab.eval(`document.querySelectorAll('#finCatListExpense .cat-item, #finCatListIncome .cat-item').length`) >= 1, 'and loads its list the first time');
+        await tab.eval(`document.querySelector('.settings-tab[data-tab="categories"]').focus()`);
+        await key(tab, 'ArrowDown');
+        await sleep(300);
+        check(await tab.eval(`document.querySelector('.settings-tab[aria-selected="true"]').dataset.tab`) === 'stock-api', 'the arrow keys move between topics');
+        check(await tab.eval(`document.querySelectorAll('#stockKeysList .stock-key-row').length`) >= 1, 'the keys list loads when that topic opens');
+
+        await click(tab, '.settings-tab[data-tab="password"]');
+        await sleep(300);
+        await fill(tab, '#pwNew', 'abcd1234XY!z');
+        check(await tab.eval(`document.getElementById('pwStrength').dataset.level`) === 'good', 'a strong password reads as good');
+        await fill(tab, '#pwConfirm', 'different');
+        check(await tab.eval(`document.getElementById('pwMatchHint').classList.contains('bad')`), 'a mismatch is called out');
+        check(await tab.eval(`getComputedStyle(document.getElementById('tfaOn')).display`) === 'none', 'the unused 2FA states are hidden');
+        await fill(tab, '#pwNew', '');
+        await fill(tab, '#pwConfirm', '');
+
+        await click(tab, '.settings-tab[data-tab="menus"]');
+        await sleep(300);
+        check(await tab.eval(`document.querySelectorAll('.menu-group').length`) >= 5, 'menus are grouped like the rail');
+        check(await tab.eval(`document.getElementById('mobileTab1').options.length`) >= 10, 'the bottom bar choices list every shown menu');
+        await fill(tab, '#mobileTab1', 'notes');
+        await fill(tab, '#mobileTab2', 'notes');
+        check(await tab.eval(`document.getElementById('mobileTab1').value !== document.getElementById('mobileTab2').value`), 'the same menu cannot take both places');
+        await fill(tab, '#mobileTab1', 'finance');
+        await fill(tab, '#mobileTab2', 'notes');
+        await click(tab, '#btnSaveMenus');
+        await sleep(2000);
+        await tab.settle();
+        await tab.viewport({ width: 390, height: 844, mobile: true });
+        await tab.goto(BASE + '/');
+        await tab.settle();
+        check(await tab.eval(`[...document.querySelectorAll('.tabbar .tab')].map(t => t.getAttribute('href') || '').join(' ').includes('/notes')`), 'a saved bottom bar choice shows on the phone');
+        await tab.viewport({ width: 1366, height: 900, mobile: false });
+        await tab.goto(BASE + '/settings');
+        await tab.settle();
+        // Put the choice back.
+        const everyMenu = ['tasks', 'projects', 'planner', 'habits', 'focus', 'skills', 'notes', 'quick-notes', 'bookmarks', 'finance', 'subscriptions', 'stocks', 'exercise', 'food-notes', 'files', 'file-tools', 'transfer', 'ai', 'calculator'];
+        await api(tab, '/api/settings/menus', { method: 'POST', body: JSON.stringify({ menus: everyMenu, order: everyMenu, mobile_tabs: ['tasks', 'finance'] }) });
+
+        await click(tab, '.settings-tab[data-tab="app-shares"]');
+        await sleep(600);
+        await click(tab, '#btnCreateAppShare');
+        await sleep(200);
+        check(await tab.eval(`!document.getElementById('appShareError').hidden`), 'creating a menu share without a name shows an error in the page');
+        await fill(tab, '#asNewLabel', `แชร์ ${STAMP}`);
+        await tab.eval(`document.querySelector('input[name="as_menus[]"][value="tasks"]').click()`);
+        await click(tab, '#btnCreateAppShare');
+        await sleep(900);
+        check(await tab.eval(`document.getElementById('appSharesTableBody').textContent.includes(${JSON.stringify(STAMP)})`), 'a new menu share is listed');
+        const appShares = await api(tab, '/api/app-shares');
+        const appShare = (appShares.body.shares || []).find(s => (s.label || '').includes(STAMP));
+        check(!!appShare, 'it reached the server');
+        if (appShare) made.appShares.push(appShare.id);
+
         // ---------- phone ----------
         console.log('Phone');
         await tab.viewport({ width: 390, height: 844, mobile: true });
@@ -631,6 +792,8 @@ async function main() {
             for (const id of made.workouts) await api(tab, `/api/exercise/${id}`, { method: 'DELETE' }).catch(() => {});
             for (const id of made.skills) await api(tab, `/api/skills/${id}`, { method: 'DELETE' }).catch(() => {});
             for (const id of made.notes) await api(tab, `/api/notes/${id}`, { method: 'DELETE' }).catch(() => {});
+            for (const id of made.files) await api(tab, `/api/files/${id}`, { method: 'DELETE' }).catch(() => {});
+            for (const id of made.appShares) await api(tab, `/api/app-shares/${id}`, { method: 'DELETE' }).catch(() => {});
             for (const id of made.events) await api(tab, `/api/planner/events/${id}`, { method: 'DELETE' }).catch(() => {});
         }
         stop();

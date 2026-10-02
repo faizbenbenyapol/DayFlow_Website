@@ -1,14 +1,23 @@
-<div class="page-header flex items-center justify-between">
+<?php
+// =====================================================
+// views/ai/index.php — AI content assistant
+//
+// A topic goes in; a short-video script, a title and hashtags come out, and
+// optionally a video. Keys for the AI services are saved on a second tab and the
+// earlier results on a third. assets/js/ai.js runs it from /api/ai/*.
+// =====================================================
+?>
+<div class="page-head">
     <div>
-        <h1 class="page-title">AI สร้างคอนเทนต์</h1>
-        <div class="text-xs text-muted">สร้างสคริปต์ + วิดีโอสั้นสำหรับ TikTok / YouTube Shorts พร้อมชื่อคลิป + แฮชแท็กพร้อมโพสต์</div>
+        <h1>ผู้ช่วย AI</h1>
+        <p class="sub">สร้างสคริปต์วิดีโอสั้นสำหรับ TikTok และ YouTube Shorts พร้อมชื่อคลิปและแฮชแท็ก</p>
     </div>
 </div>
 
-<div class="flex gap-3 mb-8 ai-tabs flex-wrap">
-    <button class="btn btn-primary btn-sm ai-tab active" data-tab="generate">สร้างคอนเทนต์</button>
-    <button class="btn btn-ghost btn-sm ai-tab" data-tab="keys">ตั้งค่า API Key</button>
-    <button class="btn btn-ghost btn-sm ai-tab" data-tab="history">ประวัติ</button>
+<div class="tabs ai-tabs" role="tablist" aria-label="ส่วนของผู้ช่วย AI">
+    <button type="button" class="tab ai-tab" role="tab" aria-selected="true" data-tab="generate">สร้างคอนเทนต์</button>
+    <button type="button" class="tab ai-tab" role="tab" aria-selected="false" data-tab="keys">ตั้งค่า API Key</button>
+    <button type="button" class="tab ai-tab" role="tab" aria-selected="false" data-tab="history">ประวัติ</button>
 </div>
 
 <!-- ============ TAB: GENERATE ============ -->
@@ -17,8 +26,8 @@
         <div class="card-header"><span class="card-title">1. ใส่หัวข้อ / คีย์เวิร์ด</span></div>
         <div class="card-body">
             <div class="form-group">
-                <label class="form-label">หัวข้อคลิป</label>
-                <input type="text" class="form-control" id="aiKeyword"
+                <label class="form-label" for="aiKeyword">หัวข้อคลิป</label>
+                <input type="text" class="form-control" id="aiKeyword" autocomplete="off"
                        placeholder="เช่น ทริคออมเงินสำหรับวัยเริ่มทำงาน, สูตรเบาๆ ลดพุง 7 วัน, ทิปทำงาน WFH">
                 <div class="ai-preset-chips" id="aiPresetChips">
                     <span class="ai-chip-label">ไอเดีย:</span>
@@ -34,17 +43,17 @@
             </div>
 
             <details class="mb-4">
-                <summary class="text-sm text-muted cursor-pointer">ปรับแต่งเพิ่มเติม (ไม่บังคับ)</summary>
+                <summary class="ai-more">ปรับแต่งเพิ่มเติม (ไม่บังคับ)</summary>
                 <div class="form-row mt-4">
                     <div class="form-group">
-                        <label class="form-label">แพลตฟอร์ม</label>
+                        <label class="form-label" for="aiPlatform">แพลตฟอร์ม</label>
                         <select class="form-control" id="aiPlatform">
                             <option value="tiktok">TikTok</option>
                             <option value="shorts">YouTube Shorts</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">สไตล์</label>
+                        <label class="form-label" for="aiStyle">สไตล์</label>
                         <select class="form-control" id="aiStyle">
                             <option value="informative">ให้ข้อมูล/ทิปส์</option>
                             <option value="funny">สนุก/ตลก</option>
@@ -54,18 +63,18 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">ภาษา</label>
+                        <label class="form-label" for="aiLanguage">ภาษา</label>
                         <select class="form-control" id="aiLanguage">
                             <option value="th">ไทย</option>
                             <option value="en">อังกฤษ</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">ความยาว (วินาที)</label>
+                        <label class="form-label" for="aiDuration">ความยาว (วินาที)</label>
                         <input type="number" min="15" max="90" step="5" class="form-control" id="aiDuration" value="30">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">AI Text Provider</label>
+                        <label class="form-label" for="aiTextProvider">ผู้ให้บริการ AI เขียนสคริปต์</label>
                         <select class="form-control" id="aiTextProvider">
                             <option value="openai">OpenAI (GPT-4o-mini)</option>
                             <option value="gemini">Google Gemini</option>
@@ -76,33 +85,30 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">คำขอเพิ่มเติม</label>
+                    <label class="form-label" for="aiExtra">คำขอเพิ่มเติม</label>
                     <textarea class="form-control" id="aiExtra" rows="2"
                               placeholder="เช่น เน้นกลุ่มเป้าหมายนักศึกษา, อย่าใช้ศัพท์ยาก, ใส่มุกที่เกี่ยวกับแมว"></textarea>
                 </div>
             </details>
 
-            <div class="flex ai-gen-actions gap-2 flex-wrap">
-                <button class="btn btn-primary" id="btnGenScript">
+            <div class="ai-gen-actions">
+                <button class="btn btn-primary" type="button" id="btnGenScript">
                     <span class="ai-btn-label">สร้างสคริปต์</span>
                 </button>
-                <button class="btn btn-ghost" id="btnClearGen">ล้าง</button>
-                <span class="text-xs text-muted" style="margin-left:auto;align-self:center">
-                    <kbd>Ctrl</kbd>+<kbd>Enter</kbd> = สร้าง
-                </span>
+                <button class="btn btn-ghost" type="button" id="btnClearGen">ล้าง</button>
+                <span class="ai-shortcut"><kbd class="kbd">Ctrl</kbd> + <kbd class="kbd">Enter</kbd> เพื่อสร้าง</span>
             </div>
         </div>
     </div>
 
     <!-- Skeleton loader -->
-    <div id="aiSkeleton" class="card mb-6" hidden>
+    <div id="aiSkeleton" class="card mb-6" role="status" hidden>
         <div class="card-body">
-            <div class="ai-skel ai-skel-line" style="width:60%"></div>
-            <div class="ai-skel ai-skel-line" style="width:90%"></div>
-            <div class="ai-skel ai-skel-line" style="width:75%"></div>
-            <div class="ai-skel ai-skel-block"></div>
-            <div class="ai-skel ai-skel-line" style="width:40%"></div>
-            <div class="text-xs text-muted text-center mt-4">AI กำลังคิด... (โดยทั่วไปใช้เวลา 10-30 วินาที)</div>
+            <p class="ai-wait">AI กำลังเขียนสคริปต์ โดยทั่วไปใช้เวลา 10–30 วินาที</p>
+            <div class="skel-row"><span class="skel skel-w-60"></span></div>
+            <div class="skel-row"><span class="skel skel-wide"></span></div>
+            <div class="skel-row"><span class="skel skel-w-52"></span></div>
+            <div class="skel-row"><span class="skel skel-w-45"></span></div>
         </div>
     </div>
 
@@ -120,14 +126,14 @@
         <div class="card-header"><span class="card-title">3. สร้างวิดีโอ (ใช้ Replicate)</span></div>
         <div class="card-body">
             <div class="form-group">
-                <label class="form-label">Prompt สำหรับวิดีโอ (ภาษาอังกฤษ)</label>
+                <label class="form-label" for="aiVideoPrompt">Prompt สำหรับวิดีโอ (ภาษาอังกฤษ)</label>
                 <textarea class="form-control" id="aiVideoPrompt" rows="3"
                           placeholder="Cinematic shot of ..."></textarea>
                 <p class="form-hint">ระบบจะใช้ visual prompt จากฉากแรกของสคริปต์โดยอัตโนมัติ แก้ไขได้ตามต้องการ</p>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">โมเดล Replicate</label>
+                    <label class="form-label" for="aiVideoModel">โมเดล Replicate</label>
                     <select class="form-control" id="aiVideoModel">
                         <option value="minimax/video-01">minimax/video-01 (6s, เริ่มต้นแนะนำ)</option>
                         <option value="bytedance/seedance-1-lite">bytedance/seedance-1-lite (ประหยัด)</option>
@@ -135,7 +141,7 @@
                         <option value="google/veo-3">google/veo-3 (พรีเมียม)</option>
                     </select>
                     <p class="form-hint mt-2">
-                        ทุกโมเดลสร้างวิดีโอด้านบน (เช่น minimax, seedance, kling, veo-3) ทำงานอยู่ภายใต้ผู้ให้บริการ **Replicate** ร่วมกันทั้งหมด คุณสามารถตั้งค่า API Key ของ Replicate ได้ที่แท็บ "ตั้งค่า API Key" ด้านบน เพื่อใช้งานโมเดลเหล่านี้
+                        ทุกโมเดลข้างบน (minimax, seedance, kling, veo-3) ทำงานผ่านผู้ให้บริการ Replicate ตั้ง API Key ของ Replicate ได้ที่แท็บ "ตั้งค่า API Key"
                     </p>
                 </div>
             </div>
@@ -147,8 +153,8 @@
 </div>
 
 <!-- ============ TAB: KEYS ============ -->
-<div id="ai-pane-keys" class="ai-pane" style="display:none">
-    <div class="card" style="max-width:720px">
+<div id="ai-pane-keys" class="ai-pane" hidden>
+    <div class="card ai-narrow">
         <div class="card-header"><span class="card-title">API Keys</span></div>
         <div class="card-body">
             <p class="form-hint mb-4">
@@ -158,7 +164,7 @@
         </div>
     </div>
 
-    <div class="card mt-6" style="max-width:720px">
+    <div class="card ai-narrow mt-6">
         <div class="card-header"><span class="card-title">วิธีขอ API Key</span></div>
         <div class="card-body">
             <ul class="ai-help-list">
@@ -174,14 +180,15 @@
 </div>
 
 <!-- ============ TAB: HISTORY ============ -->
-<div id="ai-pane-history" class="ai-pane" style="display:none">
+<div id="ai-pane-history" class="ai-pane" hidden>
     <div class="card">
         <div class="card-header"><span class="card-title">ประวัติการสร้าง</span></div>
         <div class="card-body">
             <div class="form-group mb-4">
-                <input type="text" class="form-control" id="aiHistorySearch" placeholder="ค้นหาในประวัติ...">
+                <label class="sr-only" for="aiHistorySearch">ค้นหาในประวัติ</label>
+                <input type="search" class="form-control" id="aiHistorySearch" placeholder="ค้นหาในประวัติ" autocomplete="off">
             </div>
-            <div id="aiHistoryList"><div class="text-xs text-muted text-center">กำลังโหลด...</div></div>
+            <div id="aiHistoryList"><div class="skel-row"><span class="skel skel-w-60"></span></div><div class="skel-row"><span class="skel skel-w-45"></span></div></div>
         </div>
     </div>
 </div>

@@ -272,22 +272,11 @@
         });
 
         // Load when tab activated
-        let loaded = false;
-        $$('.settings-tab').forEach(t => t.addEventListener('click', () => {
-            if (t.dataset.tab === 'categories' && !loaded) {
-                loaded = true;
-                loadFinCategories();
-                loadExCategories();
-                loadNoteTags();
-            }
-        }));
-        // Load immediately if the tab is restored as active
-        if ($('#tab-categories')?.style.display !== 'none') {
-            loaded = true;
+        onSettingsTab('categories', () => {
             loadFinCategories();
             loadExCategories();
             loadNoteTags();
-        }
+        });
     }
 
 

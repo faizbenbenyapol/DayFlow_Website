@@ -31,14 +31,16 @@
     const setResult = (key, mainHTML, subHTML) => {
         const el = document.querySelector(`[data-result="${key}"]`);
         if (!el) return;
+        const copy = el.querySelector('.calc-copy-btn');
         if (mainHTML === null || mainHTML === undefined || mainHTML === '') {
             el.classList.remove('has-value');
             el.innerHTML = '—';
-            return;
+        } else {
+            el.classList.add('has-value');
+            el.innerHTML = `<span class="calc-result-main">${mainHTML}</span>` +
+                           (subHTML ? `<span class="calc-result-sub">${subHTML}</span>` : '');
         }
-        el.classList.add('has-value');
-        el.innerHTML = `<span class="calc-result-main">${mainHTML}</span>` +
-                       (subHTML ? `<span class="calc-result-sub">${subHTML}</span>` : '');
+        if (copy) el.appendChild(copy);
     };
 
     // ------- History -------
@@ -63,80 +65,155 @@
             const box = $('#calcHistory');
             if (!box) return;
             if (!this.list.length) {
-                box.innerHTML = '<div class="text-xs text-muted text-center">ยังไม่มีประวัติ</div>';
+                box.innerHTML = '<p class="calc-history-empty">ยังไม่มีประวัติ ผลที่คำนวณจะมาอยู่ตรงนี้</p>';
                 return;
             }
             box.innerHTML = this.list.map(h =>
-                `<div class="calc-history-item" data-expr="${encodeURIComponent(h.expr)}">` +
+                `<button type="button" class="calc-history-item" data-expr="${encodeURIComponent(h.expr)}" title="ใช้นิพจน์นี้อีกครั้ง">` +
                 `<div class="hi-cat">${escHtml(h.category)}</div>` +
                 `<div class="hi-expr">${escHtml(h.expr)}</div>` +
                 `<div class="hi-result">= ${escHtml(h.result)}</div>` +
-                `</div>`
+                `</button>`
             ).join('');
         }
     };
 
     // ------- Tabs -------
+    function selectTab(name, remember) {
+        const tabs = $$('#calcTabs .tab');
+        const tab = tabs.find(t => t.dataset.tab === name);
+        if (!tab) return;
+        tabs.forEach(t => {
+            t.setAttribute('aria-selected', String(t === tab));
+            t.tabIndex = t === tab ? 0 : -1;
+        });
+        $$('.calc-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === name));
+        if (remember) { try { localStorage.setItem('calc_last_tab', name); } catch (_) { /* not remembered */ } }
+    }
+
     function initTabs() {
-        const tabs = $$('.calc-tab');
-        const panels = $$('.calc-panel');
-        const last = localStorage.getItem('calc_last_tab');
-        if (last) activate(last);
+        const tabs = $$('#calcTabs .tab');
+        let last = null;
+        try { last = localStorage.getItem('calc_last_tab'); } catch (_) { /* first tab */ }
+        selectTab(last && tabs.some(t => t.dataset.tab === last) ? last : tabs[0].dataset.tab);
 
-        tabs.forEach(t => t.addEventListener('click', () => activate(t.dataset.tab)));
+        tabs.forEach((tab, i) => {
+            tab.addEventListener('click', () => selectTab(tab.dataset.tab, true));
+            tab.addEventListener('keydown', e => {
+                const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+                if (!step) return;
+                e.preventDefault();
+                const next = tabs[(i + step + tabs.length) % tabs.length];
+                selectTab(next.dataset.tab, true);
+                next.focus();
+            });
+        });
+    }
 
-        function activate(name) {
-            const tab = tabs.find(t => t.dataset.tab === name);
-            if (!tab) return;
-            tabs.forEach(t => t.classList.toggle('active', t === tab));
-            panels.forEach(p => p.classList.toggle('active', p.dataset.panel === name));
-            localStorage.setItem('calc_last_tab', name);
-        }
+    /** Ties each label to the field that follows it, so a click on the label reaches the field. */
+    function linkLabels() {
+        let n = 0;
+        $$('.form-group').forEach(group => {
+            const label = group.querySelector('label.form-label:not([for])');
+            const field = group.querySelector('input:not([type="hidden"]), select, textarea');
+            if (!label || !field) return;
+            if (!field.id) field.id = 'calc-field-' + (++n);
+            label.htmlFor = field.id;
+        });
     }
 
     // ============================================================
     // GENERAL: expression evaluator (safe — no eval)
     // ============================================================
     const CalcEngine = {
-        // Tokenize + convert implicit operators + use Function with strict whitelist
-        sanitize(expr) {
-            // Replace visual operators with JS ones
-            let s = expr
-                .replace(/×/g, '*')
-                .replace(/÷/g, '/')
-                .replace(/−/g, '-')
-                .replace(/π/g, '(Math.PI)')
-                .replace(/(^|[^a-zA-Z])e(?![a-zA-Z])/g, '$1(Math.E)')
-                .replace(/\bpi\b/g, '(Math.PI)')
-                .replace(/sin\(/g, 'Math.sin(')
-                .replace(/cos\(/g, 'Math.cos(')
-                .replace(/tan\(/g, 'Math.tan(')
-                .replace(/log\(/g, 'Math.log10(')
-                .replace(/ln\(/g, 'Math.log(')
-                .replace(/sqrt\(/g, 'Math.sqrt(');
-            // factorial: replace N! with fact(N)
-            s = s.replace(/(\d+(?:\.\d+)?|\))\s*!/g, 'fact($1)');
-            // power ^ → **
-            s = s.replace(/\^/g, '**');
-            // Only allow these chars after substitution:
-            if (!/^[-+*/().\d\s,eE*MathPIsincotaglqrfa]*$/.test(s)) {
-                // permissive check is tricky; just rely on try/catch from Function
-            }
-            return s;
+        FUNCTIONS: {
+            sin: Math.sin, cos: Math.cos, tan: Math.tan,
+            log: Math.log10, ln: Math.log, sqrt: Math.sqrt,
         },
+
+        tokenize(expr) {
+            const s = expr.toLowerCase()
+                .replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-').replace(/π/g, ' pi ');
+            const tokens = [];
+            const pattern = /\s*(?:(\d+\.?\d*|\.\d+)|([a-z]+)|([-+*/^!(),]))/gy;
+            let m;
+            let at = 0;
+            while (at < s.length && (m = pattern.exec(s)) !== null) {
+                at = pattern.lastIndex;
+                if (m[1] !== undefined) tokens.push({ n: parseFloat(m[1]) });
+                else if (m[2] !== undefined) tokens.push({ w: m[2] });
+                else tokens.push({ o: m[3] });
+            }
+            if (s.slice(at).trim() !== '') throw new Error('unexpected input');
+            return tokens;
+        },
+
+        // expr = term (("+" | "-") term)* ; term = unary (("*" | "/") unary)* ;
+        // unary = ("-" | "+") unary | power ; power = postfix ("^" unary)? ;
+        // postfix = primary "!"* ; primary = number | constant | name "(" expr ")" | "(" expr ")"
+        parse(tokens) {
+            let i = 0;
+            const peek = () => tokens[i];
+            const isOp = o => tokens[i] && tokens[i].o === o;
+            const fact = n => {
+                if (n < 0 || n !== Math.floor(n) || n > 170) return NaN;
+                let r = 1; for (let k = 2; k <= n; k++) r *= k; return r;
+            };
+
+            const expr = () => {
+                let v = term();
+                while (isOp('+') || isOp('-')) { const op = tokens[i++].o; const r = term(); v = op === '+' ? v + r : v - r; }
+                return v;
+            };
+            const term = () => {
+                let v = unary();
+                while (isOp('*') || isOp('/')) { const op = tokens[i++].o; const r = unary(); v = op === '*' ? v * r : v / r; }
+                return v;
+            };
+            const unary = () => {
+                if (isOp('-')) { i++; return -unary(); }
+                if (isOp('+')) { i++; return unary(); }
+                return power();
+            };
+            const power = () => {
+                const base = postfix();
+                if (isOp('^')) { i++; return Math.pow(base, unary()); }
+                return base;
+            };
+            const postfix = () => {
+                let v = primary();
+                while (isOp('!')) { i++; v = fact(v); }
+                return v;
+            };
+            const primary = () => {
+                const t = peek();
+                if (!t) throw new Error('unexpected end');
+                if (t.n !== undefined) { i++; return t.n; }
+                if (t.o === '(') { i++; const v = expr(); if (!isOp(')')) throw new Error('missing )'); i++; return v; }
+                if (t.w === 'pi') { i++; return Math.PI; }
+                if (t.w === 'e')  { i++; return Math.E; }
+                if (t.w && CalcEngine.FUNCTIONS[t.w]) {
+                    i++;
+                    if (!isOp('(')) throw new Error('missing (');
+                    i++;
+                    const v = expr();
+                    if (!isOp(')')) throw new Error('missing )');
+                    i++;
+                    return CalcEngine.FUNCTIONS[t.w](v);
+                }
+                throw new Error('unexpected token');
+            };
+
+            const value = expr();
+            if (i !== tokens.length) throw new Error('trailing input');
+            return value;
+        },
+
         evaluate(expr) {
             if (!expr || !expr.trim()) return null;
-            const s = this.sanitize(expr);
             try {
-                // eslint-disable-next-line no-new-func
-                const f = new Function('fact', '"use strict"; return (' + s + ');');
-                const fact = (n) => {
-                    if (n < 0 || n !== Math.floor(n)) return NaN;
-                    let r = 1; for (let i = 2; i <= n; i++) r *= i; return r;
-                };
-                const v = f(fact);
-                if (typeof v !== 'number' || !isFinite(v)) return null;
-                return v;
+                const v = this.parse(this.tokenize(expr));
+                return typeof v === 'number' && isFinite(v) ? v : null;
             } catch (e) { return null; }
         }
     };
@@ -229,6 +306,16 @@
             div.querySelector('.btn-remove').addEventListener('click', () => { div.remove(); DFCalc.recalc.recalcCompare(); });
         });
 
+        // A history line goes back into the pocket calculator.
+        $('#calcHistory')?.addEventListener('click', (e) => {
+            const item = e.target.closest('.calc-history-item');
+            if (!item) return;
+            selectTab('general', true);
+            const display = $('#calcDisplay');
+            display.value = decodeURIComponent(item.dataset.expr);
+            display.focus();
+        });
+
         // Clear history
         $('#btnClearHistory')?.addEventListener('click', () => {
             if (!History.list.length) return;
@@ -264,11 +351,12 @@
     // What the feature files (calculator-*.js, loaded next) share. They add
     // their recalc functions and init hooks here; the calls below are made on
     // DOMContentLoaded, after every file has registered.
-    window.DFCalc = { $, $$, fmt, money, num, hasAll, setResult, getInputs, recalc: {}, init: {} };
+    window.DFCalc = { $, $$, fmt, money, num, hasAll, setResult, getInputs, selectTab, recalc: {}, init: {} };
 
     // ------- Init -------
     document.addEventListener('DOMContentLoaded', () => {
         initTabs();
+        linkLabels();
         initGeneral();
         DFCalc.init.convert();
         initBindings();

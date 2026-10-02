@@ -12,7 +12,7 @@
     if (!controls) return;
 
     const $id = id => document.getElementById(id);
-    const show = (id, visible) => { const el = $id(id); if (el) el.style.display = visible ? 'block' : 'none'; };
+    const show = (id, visible) => { const el = $id(id); if (el) el.hidden = !visible; };
 
     function setBadge(text, kind) {
         const badge = $id('pushBadge');
@@ -49,9 +49,9 @@
         show('pushControls', true);
         show('pushUnavailable', false);
         $id('pushDeviceCount').textContent = config.devices;
-        $id('btnPushEnable').style.display = subscribed ? 'none' : 'inline-flex';
-        $id('btnPushDisable').style.display = subscribed ? 'inline-flex' : 'none';
-        $id('btnPushTest').style.display = subscribed ? 'inline-flex' : 'none';
+        $id('btnPushEnable').hidden = subscribed;
+        $id('btnPushDisable').hidden = !subscribed;
+        $id('btnPushTest').hidden = !subscribed;
 
         if (subscribed) setBadge('เปิดอยู่บนอุปกรณ์นี้', 'badge-success');
         else if (Notification.permission === 'denied') setBadge('ถูกบล็อกในเบราว์เซอร์', 'badge-danger');

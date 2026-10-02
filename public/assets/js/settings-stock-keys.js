@@ -31,18 +31,18 @@
                     <div>
                         <div class="stock-key-provider">${p.label}</div>
                         <div class="stock-key-status ${statusClass}">${escHtml(statusText)}</div>
-                        <div class="text-xs text-muted" style="margin-top:2px">${escHtml(p.help)}</div>
+                        <div class="key-help">${escHtml(p.help)}</div>
                     </div>
                     <input type="password" class="form-control" placeholder="${info.set ? 'กรอกเพื่อเปลี่ยน' : 'API key'}" data-key-input="${p.id}">
                     <div class="stock-key-actions">
                         <button class="btn btn-primary btn-sm" data-key-act="save" data-provider="${p.id}">บันทึก</button>
                         <button class="btn btn-ghost btn-sm" data-key-act="test" data-provider="${p.id}">ทดสอบ</button>
-                        ${info.set ? `<button class="btn btn-ghost btn-sm" style="color:var(--color-danger)" data-key-act="delete" data-provider="${p.id}">ลบ</button>` : ''}
+                        ${info.set ? `<button class="btn btn-sm btn-danger" data-key-act="delete" data-provider="${p.id}">ลบ</button>` : ''}
                     </div>
                 </div>`;
             }).join('');
         } catch (err) {
-            container.innerHTML = '<div class="text-sm" style="color:var(--color-danger)">โหลดไม่สำเร็จ: ' + escHtml(err.message || '') + '</div>';
+            container.innerHTML = '<div class="alert alert-danger" role="alert">โหลดไม่สำเร็จ: ' + escHtml(err.message || '') + '</div>';
         }
     }
 
@@ -110,22 +110,22 @@
                 else if (p.id === 'openrouter') borderColor = '#6366f1'; // openrouter indigo
 
                 return `
-                <div class="stock-key-row" data-provider="${p.id}" style="border-left-color: ${borderColor}">
+                <div class="stock-key-row" data-provider="${p.id}">
                     <div>
                         <div class="stock-key-provider">${p.label}</div>
                         <div class="stock-key-status ${statusClass}">${escHtml(statusText)}</div>
-                        <div class="text-xs text-muted" style="margin-top:2px">${escHtml(p.help)}</div>
+                        <div class="key-help">${escHtml(p.help)}</div>
                     </div>
                     <input type="password" class="form-control" placeholder="${info.set ? 'กรอกเพื่อเปลี่ยน' : 'API key'}" data-ai-key-input="${p.id}">
                     <div class="stock-key-actions">
                         <button class="btn btn-primary btn-sm" data-ai-key-act="save" data-provider="${p.id}">บันทึก</button>
                         <button class="btn btn-ghost btn-sm" data-ai-key-act="test" data-provider="${p.id}">ทดสอบ</button>
-                        ${info.set ? `<button class="btn btn-ghost btn-sm" style="color:var(--color-danger)" data-ai-key-act="delete" data-provider="${p.id}">ลบ</button>` : ''}
+                        ${info.set ? `<button class="btn btn-sm btn-danger" data-ai-key-act="delete" data-provider="${p.id}">ลบ</button>` : ''}
                     </div>
                 </div>`;
             }).join('');
         } catch (err) {
-            container.innerHTML = '<div class="text-sm" style="color:var(--color-danger)">โหลดไม่สำเร็จ: ' + escHtml(err.message || '') + '</div>';
+            container.innerHTML = '<div class="alert alert-danger" role="alert">โหลดไม่สำเร็จ: ' + escHtml(err.message || '') + '</div>';
         }
     }
 
@@ -188,19 +188,10 @@
             else if (act === 'delete') deleteStockAiKey(provider);
         });
 
-        let loaded = false;
-        $$('.settings-tab').forEach(t => t.addEventListener('click', () => {
-            if (t.dataset.tab === 'stock-api' && !loaded) {
-                loaded = true;
-                loadStockKeys();
-                loadStockAiKeys();
-            }
-        }));
-        if ($('#tab-stock-api')?.style.display !== 'none') {
-            loaded = true;
+        onSettingsTab('stock-api', () => {
             loadStockKeys();
             loadStockAiKeys();
-        }
+        });
     }
 
 

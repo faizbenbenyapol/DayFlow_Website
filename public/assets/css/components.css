@@ -1517,6 +1517,10 @@ body.modal-open {
     .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
+.ml-auto {
+    margin-left: auto;
+}
+
 .mr-auto { margin-right: auto; }
 .mt-2 { margin-top: var(--space-2); }
 .mt-3 { margin-top: var(--space-3); }

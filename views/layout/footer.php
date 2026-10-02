@@ -50,7 +50,7 @@ if ('serviceWorker' in navigator) {
     // the main one. They are classic scripts, so they share the page's globals.
     $pageScriptParts = [
         'finance'    => ['finance-report'],
-        'settings'   => ['settings-categories', 'settings-stock-keys', 'settings-menus', 'settings-telegram', 'settings-two-factor', 'settings-push', 'shares'],
+        'settings'   => ['settings-categories', 'settings-stock-keys', 'settings-menus', 'settings-telegram', 'settings-two-factor', 'settings-push', 'settings-app-shares', 'shares'],
         'projects'   => ['projects-board', 'projects-team', 'projects-share'],
         'stocks'     => ['stocks-analysis', 'stocks-capital', 'stocks-screenshots'],
         'calculator' => ['calculator-finance', 'calculator-convert', 'calculator-math'],

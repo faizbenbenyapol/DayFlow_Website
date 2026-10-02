@@ -215,7 +215,30 @@ $empty = array_map(fn($v) => is_array($v) && array_is_list($v) ? [] : $v, $data)
 $empty['settings'] = $data['settings'];
 
 try {
-    $counts = AccountData::import(account(SHOTS_USERNAME, SHOTS_EMAIL, 'บัญชีถ่ายภาพ'), $data);
+    $shotsId = account(SHOTS_USERNAME, SHOTS_EMAIL, 'บัญชีถ่ายภาพ');
+    $counts = AccountData::import($shotsId, $data);
+
+    // The file manager's rows. Files and folders are not part of a backup, so they
+    // are put in directly; the files have no bytes behind them, which is enough to
+    // photograph the list.
+    DB::run('DELETE FROM files WHERE user_id = ?', [$shotsId]);
+    $folder = function (string $name, ?int $parent = null) use ($shotsId): int {
+        DB::run("INSERT INTO files (user_id, parent_id, name, type) VALUES (?, ?, ?, 'folder')", [$shotsId, $parent, $name]);
+        return (int)DB::conn()->lastInsertId();
+    };
+    $docs = $folder('เอกสารงาน');
+    $folder('รูปภาพ');
+    $folder('สัญญาและใบเสร็จ', $docs);
+    foreach ([
+        ['รายงาน Q3 ฉบับร่าง.pdf', 'application/pdf', 1843200],
+        ['ตารางงบประมาณ.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 96256],
+        ['โน้ตประชุมลูกค้า ABC.txt', 'text/plain', 3412],
+        ['พอร์ตโฟลิโอ 2569.zip', 'application/zip', 24117248],
+        ['ภาพหน้าจอ 2569-10-01.png', 'image/png', 512000],
+    ] as [$name, $mime, $size]) {
+        DB::run('INSERT INTO files (user_id, parent_id, name, type, mime_type, file_path, file_size) VALUES (?, NULL, ?, \'file\', ?, ?, ?)',
+            [$shotsId, $name, $mime, 'seed/missing-' . md5($name), $size]);
+    }
     AccountData::import(account(SHOTS_USERNAME . '_empty', 'shots-empty@example.test', 'ผู้ใช้ใหม่'), $empty);
 } catch (Throwable $e) {
     fwrite(STDERR, $e->getMessage() . ($e->getPrevious() ? ' — ' . $e->getPrevious()->getMessage() : '') . "\n");

@@ -65,9 +65,9 @@ final class AccountData
     private const UUID_IDS = ['skills', 'skill_logs'];
 
     /** user_settings columns a backup may carry. Telegram credentials are not among them. */
-    private const SETTINGS = ['theme', 'day_color', 'language', 'timezone', 'telegram_notify_events', 'hidden_menus', 'menu_order'];
+    private const SETTINGS = ['theme', 'day_color', 'language', 'timezone', 'telegram_notify_events', 'hidden_menus', 'menu_order', 'mobile_tabs'];
 
-    private const JSON_SETTINGS = ['telegram_notify_events', 'hidden_menus', 'menu_order'];
+    private const JSON_SETTINGS = ['telegram_notify_events', 'hidden_menus', 'menu_order', 'mobile_tabs'];
 
     /**
      * The user's data as a portable document.

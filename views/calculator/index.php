@@ -1,33 +1,45 @@
-<div class="page-header flex items-center justify-between">
+<?php
+// =====================================================
+// views/calculator/index.php — calculators
+//
+// Forty-odd small tools in tabs; each result is worked out as the figures are
+// typed. assets/js/calculator*.js do the arithmetic (nothing is sent anywhere);
+// the history is kept in this browser only.
+// =====================================================
+?>
+<div class="page-head">
     <div>
-        <h1 class="page-title">คำนวณ</h1>
-        <div class="text-xs text-muted">เครื่องคำนวณครบทุกฟังก์ชัน — กว่า 40 เครื่องมือในที่เดียว</div>
+        <h1>เครื่องคิดเลข</h1>
+        <p class="sub">เครื่องคิดเลขและเครื่องมือคำนวณกว่า 40 อย่างในที่เดียว</p>
     </div>
-    <button class="btn btn-ghost btn-sm" id="btnClearHistory" type="button">ล้างประวัติ</button>
+    <div class="page-head-actions">
+        <button class="btn btn-ghost" id="btnClearHistory" type="button">ล้างประวัติ</button>
+    </div>
 </div>
 
 <!-- Search bar -->
 <div class="calc-search">
-    <input type="search" class="form-control" id="calcSearch"
-           placeholder="ค้นหาเครื่องมือ… เช่น ส่วนลด, VAT, BMI, อายุ, ผ่อนรถ, ค่าไฟ, รหัสผ่าน">
-    <div class="calc-search-hint text-xs text-muted">กด <kbd>/</kbd> เพื่อค้นหา · <kbd>Esc</kbd> เคลียร์</div>
+    <label class="sr-only" for="calcSearch">ค้นหาเครื่องมือ</label>
+    <input type="search" class="form-control" id="calcSearch" autocomplete="off"
+           placeholder="ค้นหาเครื่องมือ เช่น ส่วนลด, VAT, BMI, อายุ, ผ่อนรถ, ค่าไฟ, รหัสผ่าน">
+    <p class="calc-search-hint">กด <kbd class="kbd">/</kbd> เพื่อค้นหา · <kbd class="kbd">Esc</kbd> เพื่อล้าง</p>
 </div>
 
 <!-- Tab bar -->
-<div class="calc-tabs" id="calcTabs">
-    <button type="button" class="calc-tab active" data-tab="general">ทั่วไป</button>
-    <button type="button" class="calc-tab" data-tab="percent">เปอร์เซ็นต์</button>
-    <button type="button" class="calc-tab" data-tab="price">ราคา</button>
-    <button type="button" class="calc-tab" data-tab="finance">การเงิน</button>
-    <button type="button" class="calc-tab" data-tab="tax">ภาษี</button>
-    <button type="button" class="calc-tab" data-tab="bills">บิล</button>
-    <button type="button" class="calc-tab" data-tab="invest">ลงทุน</button>
-    <button type="button" class="calc-tab" data-tab="convert">แปลงหน่วย</button>
-    <button type="button" class="calc-tab" data-tab="health">สุขภาพ</button>
-    <button type="button" class="calc-tab" data-tab="date">วันที่</button>
-    <button type="button" class="calc-tab" data-tab="math">คณิต</button>
-    <button type="button" class="calc-tab" data-tab="numbers">ตัวเลข</button>
-    <button type="button" class="calc-tab" data-tab="tools">เครื่องมือ</button>
+<div class="tabs calc-tabs" id="calcTabs" role="tablist" aria-label="หมวดเครื่องมือ">
+    <button type="button" class="tab" role="tab" aria-selected="true" data-tab="general">ทั่วไป</button>
+    <button type="button" class="tab" role="tab" aria-selected="false" data-tab="percent">เปอร์เซ็นต์</button>
+    <button type="button" class="tab" role="tab" aria-selected="false" data-tab="price">ราคา</button>
+    <button type="button" class="tab" role="tab" aria-selected="false" data-tab="finance">การเงิน</button>
+    <button type="button" class="tab" role="tab" aria-selected="false" data-tab="tax">ภาษี</button>
+    <button type="button" class="tab" role="tab" aria-selected="false" data-tab="bills">บิล</button>
+    <button type="button" class="tab" role="tab" aria-selected="false" data-tab="invest">ลงทุน</button>
+    <button type="button" class="tab" role="tab" aria-selected="false" data-tab="convert">แปลงหน่วย</button>
+    <button type="button" class="tab" role="tab" aria-selected="false" data-tab="health">สุขภาพ</button>
+    <button type="button" class="tab" role="tab" aria-selected="false" data-tab="date">วันที่</button>
+    <button type="button" class="tab" role="tab" aria-selected="false" data-tab="math">คณิต</button>
+    <button type="button" class="tab" role="tab" aria-selected="false" data-tab="numbers">ตัวเลข</button>
+    <button type="button" class="tab" role="tab" aria-selected="false" data-tab="tools">เครื่องมือ</button>
 </div>
 
 <div class="calc-layout">
@@ -38,8 +50,8 @@
     <div class="card">
         <div class="card-header">
             <span class="card-title">เครื่องคิดเลข</span>
-            <label class="flex items-center gap-2 text-xs text-muted" style="gap:.4rem">
-                <input type="checkbox" id="sciToggle"> เครื่องคิดเลขวิทยาศาสตร์
+            <label class="calc-check">
+                <input type="checkbox" id="sciToggle"> โหมดวิทยาศาสตร์
             </label>
         </div>
         <div class="card-body">
@@ -328,14 +340,14 @@
                     <label class="form-label">จาก</label>
                     <div class="flex gap-2">
                         <input type="number" step="any" class="form-control" id="convFromValue" placeholder="1">
-                        <select class="form-control" id="convFromUnit" style="max-width:140px"></select>
+                        <select class="form-control calc-unit" id="convFromUnit" aria-label="หน่วยต้นทาง"></select>
                     </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">ไป</label>
                     <div class="flex gap-2">
                         <input type="text" class="form-control" id="convToValue" readonly>
-                        <select class="form-control" id="convToUnit" style="max-width:140px"></select>
+                        <select class="form-control calc-unit" id="convToUnit" aria-label="หน่วยปลายทาง"></select>
                     </div>
                 </div>
             </div>
@@ -745,7 +757,7 @@
         <div class="card-header"><span class="card-title">สถิติพื้นฐาน</span></div>
         <div class="card-body">
             <div class="form-row">
-                <div class="form-group" style="grid-column:1 / -1"><label class="form-label">ชุดข้อมูล (คั่นด้วย , หรือเว้นวรรค)</label>
+                <div class="form-group calc-wide"><label class="form-label">ชุดข้อมูล (คั่นด้วย , หรือเว้นวรรค)</label>
                     <textarea class="form-control js-calc" data-calc="n4" rows="2" placeholder="10, 20, 25, 30, 35, 40"></textarea>
                 </div>
             </div>
@@ -791,12 +803,12 @@
                 <div class="form-group"><label class="form-label">จำนวนที่สร้าง</label>
                     <input type="number" step="1" min="1" max="20" class="form-control" id="pwCount" value="3"></div>
             </div>
-            <div class="flex flex-wrap gap-4 mb-4">
-                <label class="flex items-center" style="gap:.3rem"><input type="checkbox" id="pwUpper" checked> A–Z</label>
-                <label class="flex items-center" style="gap:.3rem"><input type="checkbox" id="pwLower" checked> a–z</label>
-                <label class="flex items-center" style="gap:.3rem"><input type="checkbox" id="pwDigit" checked> 0–9</label>
-                <label class="flex items-center" style="gap:.3rem"><input type="checkbox" id="pwSym" checked> !@#$%</label>
-                <label class="flex items-center" style="gap:.3rem"><input type="checkbox" id="pwExclude"> ไม่ใช้ตัวคล้ายกัน (0,O,1,l,I)</label>
+            <div class="calc-checks">
+                <label class="calc-check"><input type="checkbox" id="pwUpper" checked> A–Z</label>
+                <label class="calc-check"><input type="checkbox" id="pwLower" checked> a–z</label>
+                <label class="calc-check"><input type="checkbox" id="pwDigit" checked> 0–9</label>
+                <label class="calc-check"><input type="checkbox" id="pwSym" checked> !@#$%</label>
+                <label class="calc-check"><input type="checkbox" id="pwExclude"> ไม่ใช้ตัวคล้ายกัน (0,O,1,l,I)</label>
             </div>
             <button type="button" class="btn btn-primary btn-sm" id="btnGenPw">สร้างรหัสผ่าน</button>
             <div class="calc-result" data-result="pw">—</div>
@@ -855,7 +867,7 @@
     <div class="card calc-tool">
         <div class="card-header"><span class="card-title">ประวัติการคำนวณ</span></div>
         <div class="card-body calc-history" id="calcHistory">
-            <div class="text-xs text-muted text-center">ยังไม่มีประวัติ</div>
+            <p class="calc-history-empty">ยังไม่มีประวัติ ผลที่คำนวณจะมาอยู่ตรงนี้</p>
         </div>
     </div>
 </aside>
