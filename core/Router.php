@@ -43,6 +43,7 @@ class Router
         $this->add('GET', '/calculator',    'CalculatorController', 'index',   true);
         $this->add('GET', '/ai',            'AiController',         'index',   true);
         $this->add('GET', '/review',        'ReviewController',     'index',   true);
+        $this->add('GET', '/dev/components', 'DevController',   'components', true);
 
         // --- API: Auth ---
         $this->add('POST', '/api/auth/login',    'AuthController', 'apiLogin',    false);

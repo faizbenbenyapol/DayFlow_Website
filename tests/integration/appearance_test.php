@@ -65,13 +65,24 @@ test('the page loads the design tokens before the stylesheets that use them', fu
     $body = $client->get('/')['body'];
 
     $tokens = strpos($body, '/assets/css/tokens.css');
-    $app    = strpos($body, '/assets/css/app.css');
+    $components = strpos($body, '/assets/css/components.css');
     assertTrue($tokens !== false, 'tokens.css is linked');
-    assertTrue($tokens < $app, 'tokens.css comes before app.css');
+    assertTrue($tokens < $components, 'tokens.css comes before components.css');
     assertFalse(str_contains($body, 'inter-latin'), 'Inter is gone');
+    assertFalse(str_contains($body, '/assets/css/app.css'), 'app.css is gone, folded into components.css');
 });
 
 test('the demo account cannot change the weekday colour', function (TestClient $_c): void {
     $visitor = demoVisitor();
     assertSame(403, $visitor->post('/api/settings/day-color', ['enabled' => false])['status']);
+});
+
+test('the component gallery opens in development and needs a login', function (TestClient $_c): void {
+    $client = appearanceClient('look_gallery');
+    $page = $client->get('/dev/components');
+    assertSame(200, $page['status'], 'the gallery should open while developing');
+    assertStringContains('ชุด component', $page['body']);
+
+    $anonymous = new TestClient(TEST_BASE_URL);
+    assertContains($anonymous->get('/dev/components')['status'], [302, 401, 403], 'a visitor must not see it');
 });

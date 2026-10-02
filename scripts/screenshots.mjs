@@ -44,6 +44,7 @@ const PAGES = [
     ['files', '/files'], ['file-tools', '/file-tools'], ['transfer', '/transfer'],
     ['ai', '/ai'], ['calculator', '/calculator'], ['settings', '/settings'],
     ['settings-appearance', '/settings', '[data-tab="appearance"]'],
+    ['dev-components', '/dev/components'],
     // States that need something opened first. The fourth item limits a state to some viewports.
     ['sheet-menu', '/', '.tabbar [data-act="openMenuSheet"]', ['mobile']],
     ['sheet-quick', '/', '.tabbar [data-act="openQuickAdd"]', ['mobile']],

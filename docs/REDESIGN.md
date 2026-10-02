@@ -294,7 +294,7 @@ public/assets/css/
 | **0 เตรียม** ✅ | `scripts/seed-screenshots.php` (บัญชี `shots` ข้อมูลครบ + `shots_empty` ว่างเปล่า) · `scripts/screenshots.mjs` (ขับ Edge ผ่าน DevTools ไม่ต้องติดตั้งอะไร: ทุกหน้า × สว่าง/มืด × 1366/390) · ถ่ายชุด "ก่อน" 92 ภาพไว้ที่ `docs/screenshots/before/` (ไม่ commit, สร้างใหม่ได้) · สคริปต์ตรวจ contrast ย้ายไปทำใน Phase 1 เพราะต้องมี `tokens.css` ก่อน · สถานะ modal เปิดจะเพิ่มในสคริปต์ทีละหน้าตอนทำหน้านั้น | รันคำสั่งเดียวได้ภาพครบ |
 | **1 รากฐาน** ✅ | `tokens.css` (สี/ขนาด/เวลา + ธีมมืด + สีประจำวัน + ชั้นแปลชื่อเก่า) · `base.css` · ฟอนต์ Plex Sans/Serif/Mono self-host (ลบ Inter) · migration 027 · `Auth::appearance()` · สวิตช์สีประจำวันในตั้งค่า (เหลือธีม สว่าง/มืด/ตามระบบ) · `scripts/check-contrast.mjs` + job ใน CI · `sw.js` v5 | ทุกหน้ายังใช้งานได้, contrast ผ่านทุกคู่, เทสต์ 363 ผ่าน |
 | **2 โครงหลัก** ✅ | `AppMenus` เป็นแหล่งเดียวของชื่อ/กลุ่ม/เส้นทางเมนู (เพิ่มทักษะกับเครื่องคิดเลข) · rail ซ้าย (ตัวหนังสือ 220px / ไอคอน 64px บน tablet) · แถบล่างมือถือ 5 ช่อง · sheet "เมนูทั้งหมด" และ "เพิ่มอย่างรวดเร็ว" (งาน/จดด่วน/รายรับรายจ่าย ใช้ `<dialog>`) · ⌘K เพิ่มคำสั่ง "ทำ" · sprite ไอคอนกลาง `views/partials/icons.php` · `shell.css`/`shell.js` · ลบ topbar + hamburger + แถบค้นหากลางหน้า · `scripts/e2e-shell.mjs` (32 การตรวจในเบราว์เซอร์จริง) | เดินทั่วแอปด้วยคีย์บอร์ดได้, มือถือถึงทุกหน้าใน ≤2 แตะ |
-| **3 component** | `components.css` ใหม่ + หน้าทดสอบ component ภายใน `/dev/components` (เปิดเฉพาะ `APP_ENV=local`) | ทุก component มีครบทุกสถานะในหน้าทดสอบ |
+| **3 component** ✅ | `components.css` เขียนใหม่ทั้งไฟล์ (ชื่อ class เดิมครบ + `.page-head` `.ruled-list` `.ledger` `.date-block` `.skel`) · ลบ `app.css` · radio/checkbox ใช้ `:where()` ให้ `.sr-only` ชนะ · `/dev/components` (เฉพาะ development) · `scripts/check-css.mjs` ห้ามสีนอก tokens ใน base/components/shell · เพิ่ม job ใน CI | ทุก component มีครบทุกสถานะในหน้าทดสอบ |
 | **4 หน้าวันนี้** | ทำหน้าวันนี้ใหม่ทั้งหน้า + `dashboard.js` + การจัดเรียงในตั้งค่า | ใช้เป็นต้นแบบให้หน้าอื่น |
 | **5A ใช้ทุกวัน** | งาน, แพลนเนอร์, นิสัย, โฟกัส, จดด่วน | ตาม checklist ข้อ 8 |
 | **5B เงิน** | รายรับรายจ่าย, รายจ่ายประจำ, หุ้น | ตาม checklist ข้อ 8 |
@@ -340,7 +340,7 @@ public/assets/css/
 |---|---|
 | ป้ายแกนและคำอธิบายกราฟ Chart.js ในโหมดมืดมองไม่เห็น (สีตัวหนังสือเป็นค่าตายตัว) | 5B: `chartTheme()` อ่านสีจาก token |
 | วันที่ในตารางรายการเงินตัดบรรทัดกลางวันที่ ("2 ต.ค. / 2569") | 5B |
-| `.sr-only` แพ้ `input[type="radio"]` ใน `components.css` (specificity ต่ำกว่า) ทำให้ radio ของการ์ดธีมโผล่ขึ้นมา | 3: ให้ `.sr-only` ชนะเสมอ |
+| `.sr-only` แพ้ `input[type="radio"]` ใน `components.css` (specificity ต่ำกว่า) ทำให้ radio ของการ์ดธีมโผล่ขึ้นมา | แก้แล้วใน Phase 3 |
 | ตัวหนังสือในกราฟและ `stocks.js` ยังเขียนชื่อฟอนต์ตายตัวใน JS | 5B |
 | `Response::abort` (หน้า 403/404/500) และ `views/share` มี CSS ของตัวเอง ไม่ได้ใช้ tokens | 5E |
 | ตัวตรวจ contrast จับได้ว่าเขียว `#2E7D4F` ของแผนเดิมได้ 4.47 บน paper-sunk (ต่ำกว่า 4.5) จึงปรับเป็น `#2D7B4D` | แก้แล้วใน Phase 1 |
@@ -349,3 +349,4 @@ public/assets/css/
 | ปุ่มค้นหาใน rail ย่อเหลือคำว่า "ค้นหา" เพราะ "ค้นหาหรือสั่งงาน" + Ctrl K ไม่พอดีความกว้าง 220px (แถบคำสั่งยังทำได้ทั้งสองอย่าง) | แก้แล้วใน Phase 2 |
 | บนจอกว้างยังไม่มีปุ่มเพิ่มเร็วในทุกหน้า (มีแต่ใน ⌘K และบนมือถือ) ปุ่ม "จดด่วน" อยู่ในหัวหน้าวันนี้ตามแบบ | Phase 4 |
 | หน้าตั้งค่าแท็บเมนูยังแสดงรายการเมนูแบบเรียงยาว ยังไม่แบ่งกลุ่มตาม rail และยังไม่มีที่เลือกช่องแถบล่างมือถือ (คอลัมน์ `mobile_tabs` พร้อมแล้ว อ่านที่ `AppMenus::mobileTabs`) | 5D |
+| `settings.js` Phase 1: `String.replace` ตีความ `$$` ใน replacement เป็น `$` ทำให้ `$$('input[name="theme"]')` กลายเป็น `$(...)` ธีมในหน้าตั้งค่าเปลี่ยนไม่ได้ ตัวตรวจ console ใน `screenshots.mjs` จับได้ตอน Phase 3 | แก้แล้ว (บทเรียน: เขียนไฟล์ด้วยเครื่องมือแก้ไฟล์ ไม่ใช้ replace ที่มี `$`) |

@@ -112,7 +112,6 @@ $chromeColors = ['light' => '#FBFAF7', 'dark' => '#15181D'];
     <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/fonts.css?v=<?= @filemtime(PUBLIC_ROOT . '/assets/css/fonts.css') ?>">
     <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/tokens.css?v=<?= @filemtime(PUBLIC_ROOT . '/assets/css/tokens.css') ?>">
     <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/base.css?v=<?= @filemtime(PUBLIC_ROOT . '/assets/css/base.css') ?>">
-    <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/app.css?v=<?= @filemtime(PUBLIC_ROOT . '/assets/css/app.css') ?>">
     <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/components.css?v=<?= @filemtime(PUBLIC_ROOT . '/assets/css/components.css') ?>">
     <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/shell.css?v=<?= @filemtime(PUBLIC_ROOT . '/assets/css/shell.css') ?>">
     <?php if (isset($pageStyle)): ?>

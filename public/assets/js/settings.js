@@ -404,7 +404,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         initTabs();
         $('#btnSaveProfile')?.addEventListener('click', saveProfile);
-        $('input[name="theme"]').forEach(r => r.addEventListener('change', () => setTheme(r.value)));
+        $$('input[name="theme"]').forEach(r => r.addEventListener('change', () => setTheme(r.value)));
         $('#dayColorSwitch')?.addEventListener('change', e => setDayColor(e.target));
         initPasswordForm();
         initTimezone();

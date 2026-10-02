@@ -45,6 +45,10 @@ jobs:
       - name: Check the palette
         run: node scripts/check-contrast.mjs
 
+      # Redesigned stylesheets may not write colours of their own.
+      - name: Check for stray colours
+        run: node scripts/check-css.mjs
+
   unit:
     name: Unit tests
     runs-on: ubuntu-latest

@@ -17,7 +17,6 @@ const SHELL = [
     `${BASE}/assets/css/fonts.css`,
     `${BASE}/assets/css/tokens.css`,
     `${BASE}/assets/css/base.css`,
-    `${BASE}/assets/css/app.css`,
     `${BASE}/assets/css/components.css`,
     `${BASE}/assets/css/shell.css`,
     `${BASE}/assets/js/html.js`,
