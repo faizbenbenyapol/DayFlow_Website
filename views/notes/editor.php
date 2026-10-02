@@ -1,98 +1,59 @@
 <?php
+// =====================================================
+// views/notes/editor.php — one note
+//
+// A title, tags, and blocks (text, link, checklist) that save as they are
+// typed. An encrypted note asks for its password before showing anything.
+// $note comes from NoteController; assets/js/notes.js runs the editor.
+// =====================================================
 $noteData = jsonForScript($note);
 $tags = Note::getTagsForNote($note['id']);
 $tagsData = jsonForScript($tags);
+$encrypted = (bool)$note['is_encrypted'];
 ?>
-
 <div class="note-editor" id="noteEditor"
      data-note-id="<?= (int)$note['id'] ?>"
      data-encrypted="<?= (int)$note['is_encrypted'] ?>">
 
-    <div class="note-editor-toolbar">
-        <a href="<?= APP_URL ?>/notes" class="btn btn-ghost btn-sm">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-            กลับ
-        </a>
-
-        <!-- Tags -->
-        <div class="note-tag-input-wrap" id="tagWrap">
-            <?php foreach ($tags as $t): ?>
-            <span class="tag active" data-tag="<?= h($t['name']) ?>">
-                <?= h($t['name']) ?>
-                <button data-act="removeTag" data-args="<?= h(json_encode([$t['name']], JSON_UNESCAPED_UNICODE)) ?>" style="background:none;border:none;cursor:pointer;margin-left:2px;font-size:0.7rem">&#10005;</button>
-            </span>
-            <?php endforeach; ?>
-            <div class="tag-input-container" style="display:inline-flex;align-items:center;position:relative;">
-                <input type="text" id="tagInput" placeholder="+ แท็ก"
-                       style="border:none;outline:none;background:transparent;font-size:0.85rem;color:var(--color-muted);width:80px;font-family:inherit"
-                       data-act="handleTagInput" data-args="[&quot;$event&quot;]" data-on="keydown"
-                       data-act="handleTagOnInput" data-args="[&quot;$el&quot;]" data-on="input"
-                       data-act="submitTagInputSoon" data-args="[&quot;$el&quot;]" data-on="blur">
-                <button id="tagAddBtn" style="display:none;background:#6366f1;color:white;border:none;border-radius:50%;width:18px;height:18px;font-size:0.75rem;cursor:pointer;align-items:center;justify-content:center;margin-left:4px;padding:0;line-height:1;font-weight:bold;box-shadow:var(--shadow-sm);transition:transform 0.1s ease;"
-                        data-act="submitTagInputById" data-args="[&quot;tagInput&quot;]"
-                        type="button">+</button>
-            </div>
-        </div>
-
-        <?php if (!$note['is_encrypted']): ?>
-        <span class="save-status" id="saveStatus">บันทึกอัตโนมัติ</span>
-        <?php else: ?>
-        <span class="badge badge-dark" style="margin-left:auto">เข้ารหัสแล้ว</span>
+    <div class="note-bar">
+        <a href="<?= APP_URL ?>/notes" class="btn btn-ghost btn-sm"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>โน้ตทั้งหมด</a>
+        <?php if ($encrypted): ?>
+        <span class="badge badge-dark">เข้ารหัสแล้ว</span>
         <?php endif; ?>
+        <span class="note-status" id="saveStatus" role="status" aria-live="polite">บันทึกอัตโนมัติ</span>
     </div>
 
-    <!-- Encrypted: password prompt -->
-    <?php if ($note['is_encrypted']): ?>
-    <div id="encryptedPrompt" class="card" style="max-width:400px;margin:0 auto">
-        <div class="card-header">
-            <span class="card-title">โน้ตนี้เข้ารหัสอยู่</span>
+    <?php if ($encrypted): ?>
+    <form class="note-unlock" id="encryptedPrompt" data-act="unlockNote" novalidate>
+        <h2>โน้ตนี้เข้ารหัสอยู่</h2>
+        <div class="form-group">
+            <label class="form-label" for="notePassword">รหัสผ่านของโน้ต</label>
+            <input type="password" class="form-control" id="notePassword" autocomplete="off">
+            <p class="form-error" id="unlockError" role="alert" hidden></p>
         </div>
-        <div class="card-body">
-            <div class="form-group">
-                <label class="form-label">รหัสผ่าน</label>
-                <input type="password" class="form-control" id="notePassword" placeholder="กรอกรหัสผ่าน...">
-            </div>
-        </div>
-        <div style="padding:0 var(--space-6) var(--space-6)">
-            <button class="btn btn-primary btn-block" data-act="unlockNote">ปลดล็อก</button>
-        </div>
-    </div>
-    <div id="editorBody" style="display:none">
-    <?php else: ?>
-    <div id="editorBody">
+        <button class="btn btn-primary" type="submit">ปลดล็อก</button>
+    </form>
     <?php endif; ?>
 
-        <!-- Title -->
-        <textarea class="note-editor-title" id="noteTitle"
-                  placeholder="ชื่อโน้ต..."
-                  rows="1"
-                  data-act="autoResizeAndSave" data-args="[&quot;$el&quot;]" data-on="input"><?= h($note['title']) ?></textarea>
+    <div id="editorBody"<?= $encrypted ? ' hidden' : '' ?>>
+        <label class="sr-only" for="noteTitle">ชื่อโน้ต</label>
+        <textarea class="note-title" id="noteTitle" placeholder="ชื่อโน้ต" rows="1" maxlength="255"
+                  data-act="autoResizeAndSave" data-args='["$el"]' data-on="input"><?= h($note['title']) ?></textarea>
 
-        <!-- Blocks container -->
-        <div class="blocks-container" id="blocksContainer"></div>
-
-        <!-- Add block -->
-        <button class="add-block-btn" id="addBlockBtn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            เพิ่มบล็อก
-        </button>
-
-        <!-- Add block type menu -->
-        <div id="blockTypeMenu" class="block-type-menu" style="display:none">
-            <button class="btn btn-ghost btn-sm" data-act="addBlock" data-args="[&quot;text&quot;]">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                ข้อความ
-            </button>
-            <button class="btn btn-ghost btn-sm" data-act="addBlock" data-args="[&quot;link&quot;]">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                ลิงก์
-            </button>
-            <button class="btn btn-ghost btn-sm" data-act="addBlock" data-args="[&quot;checklist&quot;]">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                Checklist
-            </button>
+        <div class="note-tagbar" id="tagWrap">
+            <ul class="note-taglist" id="noteTagList" aria-label="แท็กของโน้ตนี้"></ul>
+            <label class="sr-only" for="tagInput">เพิ่มแท็ก</label>
+            <input type="text" class="note-taginput" id="tagInput" placeholder="เพิ่มแท็ก แล้วกด Enter" maxlength="50" autocomplete="off">
         </div>
 
+        <div class="blocks" id="blocksContainer" aria-busy="true"></div>
+
+        <div class="note-add" role="group" aria-label="เพิ่มบล็อก">
+            <span class="note-add-label">เพิ่ม</span>
+            <button class="btn btn-sm" type="button" data-act="addBlock" data-args='["text"]'><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>ข้อความ</button>
+            <button class="btn btn-sm" type="button" data-act="addBlock" data-args='["link"]'><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>ลิงก์</button>
+            <button class="btn btn-sm" type="button" data-act="addBlock" data-args='["checklist"]'><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>เช็กลิสต์</button>
+        </div>
     </div>
 </div>
 

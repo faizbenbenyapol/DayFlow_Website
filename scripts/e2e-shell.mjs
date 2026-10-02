@@ -52,7 +52,7 @@ const api = (tab, path, options = {}) => tab.eval(`(async () => {
 
 async function main() {
     const { cdp, stop } = await launch();
-    const made = { tasks: [], items: [], finance: [], todos: [], events: [], subs: [], stocks: [] };
+    const made = { tasks: [], items: [], finance: [], todos: [], events: [], subs: [], stocks: [], bookmarks: [], foods: [], workouts: [], skills: [], notes: [] };
     let tab;
 
     try {
@@ -424,6 +424,177 @@ async function main() {
         await tab.eval(`document.querySelector('[data-stk-tab="transactions"]').click()`);
         check(await tab.eval(`document.getElementById('stkTxnList').textContent.includes('E2ETEST')`), 'and appears in the trades');
 
+        // ---------- the notes pages ----------
+        console.log('Review');
+        await tab.goto(BASE + '/review');
+        await tab.settle();
+        check(await tab.eval(`document.querySelectorAll('#rvTasksBody .ledger tr').length`) >= 4, 'the task ledger is drawn');
+        const weekRange = await tab.eval(`document.getElementById('reviewRange').textContent`);
+        await click(tab, '#reviewPeriods [data-period="month"]');
+        await sleep(700);
+        check(await tab.eval(`document.getElementById('reviewRange').textContent`) !== weekRange, 'the month button changes the period');
+        check(await tab.eval(`document.querySelector('#reviewPeriods [data-period="month"]').getAttribute('aria-pressed')`) === 'true', 'and is marked pressed');
+        check(await tab.eval(`document.querySelectorAll('.rv-days li').length`) >= 28, 'the focus chart has a column for every day');
+
+        console.log('Bookmarks');
+        await tab.goto(BASE + '/bookmarks');
+        await tab.settle();
+        await click(tab, '[data-act="openBookmark"]');
+        await sleep(300);
+        await click(tab, '#bookmarkForm [type="submit"]');
+        await sleep(200);
+        check(await tab.eval(`!document.getElementById('bookmarkError').hidden`), 'an empty link shows an error in the form');
+        await fill(tab, '#bookmarkName', `ลิงก์ ${STAMP}`);
+        await fill(tab, '#bookmarkUrl', 'not a url');
+        await click(tab, '#bookmarkForm [type="submit"]');
+        await sleep(200);
+        check(await tab.eval(`document.getElementById('bookmarkError').textContent.includes('http')`), 'a bad address is explained');
+        await fill(tab, '#bookmarkUrl', 'https://example.com/e2e');
+        await fill(tab, '#bookmarkCategory', 'e2e');
+        await click(tab, '#bookmarkForm [type="submit"]');
+        await sleep(900);
+        check(await tab.eval(`document.getElementById('bookmarksGrid').textContent.includes(${JSON.stringify(STAMP)})`), 'a saved link is listed');
+        const marks = await api(tab, '/api/bookmarks');
+        const mark = (marks.body.bookmarks || []).find(b => b.title.includes(STAMP));
+        check(!!mark, 'it reached the server');
+        if (mark) made.bookmarks.push(mark.id);
+
+        console.log('Food notes');
+        await tab.goto(BASE + '/food-notes');
+        await tab.settle();
+        await click(tab, '[data-act="openAdd"]');
+        await sleep(300);
+        await click(tab, '[data-act="saveItem"]');
+        await sleep(200);
+        check(await tab.eval(`!document.getElementById('fnError').hidden`), 'an empty item shows an error in the form');
+        await fill(tab, '#fnName', `อาหาร ${STAMP}`);
+        await fill(tab, '#fnReaction', 'caution');
+        await click(tab, '[data-act="saveItem"]');
+        await sleep(900);
+        check(await tab.eval(`document.getElementById('fnList').textContent.includes(${JSON.stringify(STAMP)})`), 'a saved item is listed');
+        const foods = await api(tab, '/api/food-notes');
+        const food = (foods.body.items || []).find(i => i.name.includes(STAMP));
+        check(!!food && food.reaction === 'caution', 'it reached the server with its reaction');
+        if (food) made.foods.push(food.id);
+        await click(tab, '#fnTypeFilter [data-type="drink"]');
+        await sleep(600);
+        check(await tab.eval(`!document.getElementById('fnList').textContent.includes(${JSON.stringify(STAMP)})`), 'the drink filter hides a food');
+        check(await tab.eval(`document.querySelector('#fnTypeFilter [data-type="drink"]').getAttribute('aria-pressed')`) === 'true', 'and is marked pressed');
+
+        console.log('Exercise');
+        await tab.goto(BASE + '/exercise');
+        await tab.settle();
+        const exLabel = await tab.eval(`document.getElementById('monthLabel').textContent`);
+        await click(tab, '[data-act="moveMonth"][data-args="[-1]"]');
+        await sleep(600);
+        check(await tab.eval(`document.getElementById('monthLabel').textContent`) !== exLabel, 'the month arrow moves the month');
+        await click(tab, '[data-act="moveMonth"][data-args="[1]"]');
+        await sleep(600);
+        await click(tab, '[data-act="openAddWorkout"]');
+        await sleep(300);
+        await click(tab, '[data-act="saveWorkout"]');
+        await sleep(200);
+        check(await tab.eval(`!document.getElementById('workoutError').hidden`), 'an empty workout shows an error in the form');
+        await fill(tab, '#workoutType', `ทดสอบ ${STAMP}`);
+        await fill(tab, '#workoutDuration', '20');
+        await click(tab, '[data-act="saveWorkout"]');
+        await sleep(900);
+        check(await tab.eval(`document.getElementById('workoutList').textContent.includes(${JSON.stringify(STAMP)})`), 'a saved workout is listed');
+        const works = await api(tab, '/api/exercise?limit=100');
+        const work = (works.body.workouts || []).find(w => w.type.includes(STAMP));
+        check(!!work, 'it reached the server');
+        if (work) made.workouts.push(work.id);
+
+        console.log('Skills');
+        await tab.goto(BASE + '/skills');
+        await tab.settle();
+        check(await tab.eval(`getComputedStyle(document.getElementById('timerDisplay')).fontFamily.includes('Mono')`), 'the clock is set in the mono face');
+        await click(tab, '#btnTimerToggle');
+        await sleep(300);
+        check(await tab.eval(`!document.getElementById('timerError').hidden`), 'starting without a skill explains what is missing');
+        await click(tab, '[data-act="openSkillModal"]');
+        await sleep(300);
+        await fill(tab, '#skillName', `ทักษะ ${STAMP}`);
+        await fill(tab, '#skillTargetHours', '50');
+        await click(tab, '#skillForm [type="submit"]');
+        await sleep(900);
+        check(await tab.eval(`document.getElementById('skillsListContainer').textContent.includes(${JSON.stringify(STAMP)})`), 'a saved skill is listed with its goal');
+        const skillList = await api(tab, '/api/skills');
+        const skill = (skillList.body || []).find(s => s.name.includes(STAMP));
+        check(!!skill, 'it reached the server');
+        if (skill) {
+            made.skills.push(skill.id);
+            await fill(tab, '#timerSkillSelect', skill.id);
+            await click(tab, '#btnTimerToggle');
+            await sleep(1500);
+            check(await tab.eval(`document.getElementById('btnTimerToggle').textContent.includes('หยุด')`), 'the button turns into a stop button');
+            check(await tab.eval(`document.getElementById('timerDisplay').textContent !== '00:00:00'`), 'the clock counts');
+            check(await tab.eval(`document.getElementById('timerSkillSelect').disabled`), 'the skill cannot be changed while it runs');
+            await tab.goto(BASE + '/skills');
+            await tab.settle();
+            check(await tab.eval(`document.getElementById('timerDisplay').classList.contains('running')`), 'a reload finds the timer still running');
+            await api(tab, '/api/skills/timer/stop', { method: 'POST' });
+        }
+
+        console.log('Notes');
+        await tab.goto(BASE + '/notes');
+        await tab.settle();
+        check(await tab.eval(`document.querySelectorAll('#notesGrid .note-row').length`) >= 1, 'the notes are listed');
+        await click(tab, '[data-act="openCreateNote"][data-args="[true]"]');
+        await sleep(300);
+        check(await tab.eval(`!document.getElementById('createNotePwGroup').hidden`), 'an encrypted note asks for a password');
+        await click(tab, '#createNoteForm [type="submit"]');
+        await sleep(200);
+        check(await tab.eval(`!document.getElementById('createNoteError').hidden`), 'without one it shows an error in the form');
+        await tab.eval(`closeModal('createNoteModal')`);
+        await click(tab, '[data-act="openCreateNote"][data-args="[false]"]');
+        await sleep(300);
+        await fill(tab, '#createNoteTitle', `โน้ต ${STAMP}`);
+        await click(tab, '#createNoteForm [type="submit"]');
+        await sleep(1500);
+        const editorPath = await tab.eval('location.pathname');
+        check(/\/notes\/\d+$/.test(editorPath), 'a new note opens its editor');
+        const newNoteId = Number(editorPath.split('/').pop());
+        made.notes.push(newNoteId);
+        await tab.settle();
+
+        await click(tab, '.note-add button:nth-of-type(1)');
+        await sleep(700);
+        check(await tab.eval(`document.querySelectorAll('.block').length`) === 1, 'adding a text block shows it');
+        check(await tab.eval(`document.activeElement.classList.contains('block-textarea')`), 'and puts the cursor in it');
+        await fill(tab, '.block-textarea', `ข้อความ ${STAMP}`);
+        await sleep(300);
+        check(await tab.eval(`document.getElementById('saveStatus').textContent.includes('กำลังบันทึก')`), 'typing shows that a save is waiting');
+        await sleep(1700);
+        const saved = await api(tab, `/api/notes/${newNoteId}/blocks`);
+        check((saved.body.blocks || []).some(b => (b.content || '').includes(STAMP)), 'the text was saved on its own');
+
+        await click(tab, '.note-add button:nth-of-type(3)');
+        await sleep(700);
+        check(await tab.eval(`document.querySelectorAll('.block').length`) === 2, 'a checklist block can be added');
+        await tab.eval(`document.querySelector('.block:last-child .checklist-add').click()`);
+        await sleep(200);
+        check(await tab.eval(`document.querySelectorAll('.block:last-child .checklist-row').length`) === 1, 'it takes a first item');
+        await fill(tab, '.block:last-child .checklist-input', 'รายการแรก');
+        await click(tab, '.block:last-child .checklist-box');
+        await sleep(1700);
+        const withList = await api(tab, `/api/notes/${newNoteId}/blocks`);
+        const listBlock = (withList.body.blocks || []).find(b => b.type === 'checklist');
+        check(!!listBlock && JSON.parse(listBlock.content)[0].checked === true, 'a ticked item is saved as ticked');
+
+        await tab.eval(`document.getElementById('tagInput').focus()`);
+        await fill(tab, '#tagInput', 'e2etag');
+        await key(tab, 'Enter');
+        await sleep(900);
+        check(await tab.eval(`document.getElementById('noteTagList').textContent.includes('e2etag')`), 'a tag typed and entered becomes a chip');
+        const tagged = await api(tab, '/api/notes');
+        check((tagged.body.notes || []).some(n => n.id === newNoteId && (n.tags_list || '').includes('e2etag')), 'and is saved with the note');
+
+        await click(tab, '.block:last-child [aria-label="ย้ายบล็อกขึ้น"]');
+        await sleep(900);
+        const moved = await api(tab, `/api/notes/${newNoteId}/blocks`);
+        check((moved.body.blocks || [])[0].type === 'checklist', 'the move-up button reorders the blocks on the server');
+
         // ---------- phone ----------
         console.log('Phone');
         await tab.viewport({ width: 390, height: 844, mobile: true });
@@ -455,6 +626,11 @@ async function main() {
             for (const id of made.todos) await api(tab, `/api/planner/todos/${id}`, { method: 'DELETE' }).catch(() => {});
             for (const id of made.subs) await api(tab, `/api/subscriptions/${id}`, { method: 'DELETE' }).catch(() => {});
             for (const id of made.stocks) await api(tab, `/api/stocks/${id}`, { method: 'DELETE' }).catch(() => {});
+            for (const id of made.bookmarks) await api(tab, `/api/bookmarks/${id}`, { method: 'DELETE' }).catch(() => {});
+            for (const id of made.foods) await api(tab, `/api/food-notes/${id}`, { method: 'DELETE' }).catch(() => {});
+            for (const id of made.workouts) await api(tab, `/api/exercise/${id}`, { method: 'DELETE' }).catch(() => {});
+            for (const id of made.skills) await api(tab, `/api/skills/${id}`, { method: 'DELETE' }).catch(() => {});
+            for (const id of made.notes) await api(tab, `/api/notes/${id}`, { method: 'DELETE' }).catch(() => {});
             for (const id of made.events) await api(tab, `/api/planner/events/${id}`, { method: 'DELETE' }).catch(() => {});
         }
         stop();

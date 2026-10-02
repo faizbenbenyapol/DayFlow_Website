@@ -1,129 +1,111 @@
 /* =====================================================
-   exercise.css — Workout type colors & Custom Dropdown
-   (workout-type-badge styles live in components.css)
-   ===================================================== */
+   exercise.css — the workout log
 
-/* ── Progress bar colors per type ── */
-.wt-progress[data-wtype="วิ่ง"]          .progress-bar { background: var(--palette-green-500); }
-.wt-progress[data-wtype="ยกน้ำหนัก"]    .progress-bar { background: var(--palette-rose-500); }
-.wt-progress[data-wtype="ว่ายน้ำ"]      .progress-bar { background: var(--palette-blue-500); }
-.wt-progress[data-wtype="ปั่นจักรยาน"]  .progress-bar { background: var(--palette-orange-500); }
-.wt-progress[data-wtype="โยคะ"]          .progress-bar { background: var(--palette-violet-500); }
-.wt-progress[data-wtype="HIIT"]           .progress-bar { background: #ec4899; }
-.wt-progress[data-wtype="เดิน"]          .progress-bar { background: var(--palette-teal-500); }
-.wt-progress[data-wtype="กระโดดเชือก"]  .progress-bar { background: var(--palette-purple-500); }
+   A ruled log by month, and one thin bar per type sized by --v. No colour per
+   type: a type is told apart by its name.
+===================================================== */
 
-/* ── Custom Dropdown ── */
-.custom-dropdown {
-    position: relative;
-    width: 100%;
+.ex-facts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-bottom: var(--space-2);
 }
 
-.dropdown-trigger-wrap {
-    position: relative;
+.fact .v.ex-top {
+    font-family: var(--font);
+    font-size: 1.375rem;
+    font-weight: 500;
+}
+
+.ex-monthnav {
     display: flex;
     align-items: center;
 }
 
-.dropdown-trigger-wrap .form-control {
-    padding-right: 2.5rem;
+.ex-monthlabel {
+    min-width: 9rem;
+    text-align: center;
+    font-weight: 500;
 }
 
-.dropdown-caret {
-    position: absolute;
-    right: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    pointer-events: none;
-    color: var(--color-muted-2);
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), color var(--transition);
+.ex-monthnav .icon-btn {
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.ex-row {
+    align-items: flex-start;
+}
+
+.ex-date {
+    flex: none;
+    width: 7.5rem;
+    padding-top: 2px;
+    font-size: 0.875rem;
+    color: var(--pencil);
+}
+
+.ex-row .icon-btn {
+    align-self: center;
+}
+
+.ex-empty {
+    padding: var(--space-3) 0;
+    color: var(--pencil);
+}
+
+.ex-types {
+    padding: 0;
+    list-style: none;
+}
+
+.ex-types li {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--rule);
+}
+
+.ex-type-line {
     display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.custom-dropdown.open .dropdown-caret {
-    transform: translateY(-50%) rotate(180deg);
-    color: var(--color-text);
-}
-
-.dropdown-menu {
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 0;
-    width: 100%;
-    background: color-mix(in srgb, var(--color-bg) 85%, transparent);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid var(--color-border-2);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-lg);
-    z-index: 1000;
-    max-height: 200px;
-    overflow-y: auto;
-    opacity: 0;
-    transform: translateY(-8px) scale(0.98);
-    pointer-events: none;
-    transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    padding: var(--space-2) 0;
-}
-
-.custom-dropdown.open .dropdown-menu {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    pointer-events: auto;
-}
-
-.dropdown-item {
-    display: flex;
-    align-items: center;
+    align-items: baseline;
     justify-content: space-between;
-    padding: var(--space-2) var(--space-4);
-    font-size: 0.9rem;
-    color: var(--color-text);
-    cursor: pointer;
-    transition: background-color var(--transition), transform var(--transition);
-    min-height: 38px;
+    gap: var(--space-3);
 }
 
-.dropdown-item:hover,
-.dropdown-item.focused {
-    background-color: var(--color-surface-2);
-    transform: translateX(4px);
+.ex-type-count {
+    font-size: 0.8125rem;
+    color: var(--pencil);
+    white-space: nowrap;
 }
 
-.dropdown-item.active {
-    background-color: var(--color-surface-2);
+.ex-bar {
+    margin-top: 6px;
 }
 
-.dropdown-item-check {
-    font-size: 0.85rem;
-    font-weight: bold;
-    color: var(--color-success);
-    animation: fadeIn 0.2s ease;
+.ex-bar .progress-bar {
+    width: var(--v, 0%);
 }
 
-.dropdown-menu::-webkit-scrollbar {
-    width: 6px;
-}
+@media (max-width: 767px) {
+    .ex-facts {
+        grid-template-columns: minmax(0, 1fr);
+    }
 
-.dropdown-menu::-webkit-scrollbar-track {
-    background: transparent;
-}
+    .ex-facts .fact + .fact {
+        padding-left: 0;
+        border-left: 0;
+        border-top: 1px solid var(--rule);
+    }
 
-.dropdown-menu::-webkit-scrollbar-thumb {
-    background: var(--color-border-2);
-    border-radius: 99px;
-}
+    .ex-row {
+        flex-wrap: wrap;
+    }
 
-.dropdown-menu::-webkit-scrollbar-thumb:hover {
-    background: var(--color-muted-2);
-}
+    .ex-date {
+        flex: 1 1 100%;
+        width: auto;
+        padding-top: 0;
+    }
 
-/* Custom value styling */
-.dropdown-item.custom-val {
-    border-top: 1px dashed var(--color-border);
-    margin-top: 4px;
-    padding-top: 8px;
+    .ex-row .grow {
+        flex: 1 1 0;
+    }
 }
-

@@ -56,6 +56,13 @@ const PAGES = [
     ['stocks-shots', '/stocks', '[data-stk-tab="screenshots"]'],
     ['stocks-chart', '/stocks', '[data-stk-tab="chart"]'],
     ['stocks-analysis', '/stocks', '[data-stk-tab="analysis"]'],
+    ['notes-editor', '/notes', '.note-row a.title'],
+    ['notes-create', '/notes', '[data-act="openCreateNote"]'],
+    ['bookmarks-add', '/bookmarks', '[data-act="openBookmark"]'],
+    ['skills-add', '/skills', '[data-act="openSkillModal"]'],
+    ['exercise-add', '/exercise', '[data-act="openAddWorkout"]'],
+    ['food-notes-add', '/food-notes', '[data-act="openAdd"]'],
+    ['review-month', '/review', '[data-period="month"]'],
     // States that need something opened first. The fourth item limits a state to some viewports.
     ['sheet-menu', '/', '.tabbar [data-act="openMenuSheet"]', ['mobile']],
     ['sheet-quick', '/', '.tabbar [data-act="openQuickAdd"]', ['mobile']],

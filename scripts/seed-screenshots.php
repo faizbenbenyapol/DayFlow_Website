@@ -154,9 +154,9 @@ $data = [
     ],
     'note_blocks' => [
         ['note_id' => 'n1', 'type' => 'text', 'content' => 'หน้าแรกเปิดด้วยผลงานล่าสุด ไม่ต้องมีรูปประกอบ ให้ตัวหนังสือเป็นพระเอก', 'position' => 0],
-        ['note_id' => 'n1', 'type' => 'link', 'content' => 'https://example.com/portfolio-reference', 'position' => 1],
-        ['note_id' => 'n1', 'type' => 'checklist', 'content' => '[{"text":"เลือกฟอนต์","done":true},{"text":"ร่างหน้า case study","done":false},{"text":"ซื้อโดเมน","done":true}]', 'position' => 2],
-        ['note_id' => 'n2', 'type' => 'checklist', 'content' => '[{"text":"นมถั่วเหลือง","done":false},{"text":"ไข่ไก่ 1 แผง","done":false},{"text":"ผงซักฟอก","done":true}]', 'position' => 0],
+        ['note_id' => 'n1', 'type' => 'link', 'content' => '{"url":"https://example.com/portfolio-reference","label":"พอร์ตโฟลิโอที่ชอบ"}', 'position' => 1],
+        ['note_id' => 'n1', 'type' => 'checklist', 'content' => '[{"text":"เลือกฟอนต์","checked":true},{"text":"ร่างหน้า case study","checked":false},{"text":"ซื้อโดเมน","checked":true}]', 'position' => 2],
+        ['note_id' => 'n2', 'type' => 'checklist', 'content' => '[{"text":"นมถั่วเหลือง","checked":false},{"text":"ไข่ไก่ 1 แผง","checked":false},{"text":"ผงซักฟอก","checked":true}]', 'position' => 0],
         ['note_id' => 'n3', 'type' => 'text', 'content' => 'ลูกค้าขอเลื่อนส่งมอบเป็นปลายเดือน ต้องปรับตารางงานของทีม และแจ้งฝ่ายบัญชีเรื่องใบแจ้งหนี้งวดที่สอง', 'position' => 0],
     ],
     'note_tags' => [['id' => 't1', 'name' => 'งาน'], ['id' => 't2', 'name' => 'ส่วนตัว']],

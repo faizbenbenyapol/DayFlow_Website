@@ -14,8 +14,9 @@ class SkillController
 
     public function index()
     {
-        $pageTitle = 'เป้าหมายเวลา';
+        $pageTitle = 'ทักษะ';
         $pageStyle = 'skills';
+        $pageScript = 'skills';
         require dirname(__DIR__) . '/views/layout/header.php';
         require dirname(__DIR__) . '/views/skills/index.php';
         require dirname(__DIR__) . '/views/layout/footer.php';

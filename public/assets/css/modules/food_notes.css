@@ -1,220 +1,86 @@
 /* =====================================================
-   food_notes.css
+   food_notes.css — foods and drinks to avoid
+
+   Grouped by reaction, most serious first. Severity is three squares filled up
+   to the level and a word, so it never rests on colour alone.
 ===================================================== */
 
-/* Summary badges row */
-.fn-summary {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.6rem;
-    margin-bottom: 1.2rem;
-}
-
-.fn-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.45rem 1rem;
-    border-radius: 999px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    border: 1px solid transparent;
-    box-shadow: var(--shadow-sm);
-    transition: transform var(--transition), box-shadow var(--transition), background-color var(--transition), border-color var(--transition);
-}
-
-.fn-badge:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow);
-}
-
-
-.fn-badge span {
-    font-weight: 700;
-    min-width: 1.2rem;
-    text-align: center;
-}
-
-.fn-allergy     { background: #fdf0ef; color: #c0392b; border-color: #e8b4b0; }
-.fn-intolerance { background: #fff8e6; color: #b8860b; border-color: #f0d88a; }
-.fn-avoid       { background: #f0f4ff; color: #2c5282; border-color: #c3d0f8; }
-.fn-caution     { background: #f0faf0; color: #276749; border-color: #b2dfcc; }
-
-[data-theme="dark"] .fn-allergy     { background: rgba(192,57,43,.15); border-color: rgba(192,57,43,.3); color: #fc8181; }
-[data-theme="dark"] .fn-intolerance { background: rgba(184,134,11,.15); border-color: rgba(184,134,11,.3); color: #f6d860; }
-[data-theme="dark"] .fn-avoid       { background: rgba(66,153,225,.12); border-color: rgba(66,153,225,.3); color: #90cdf4; }
-[data-theme="dark"] .fn-caution     { background: rgba(72,187,120,.12); border-color: rgba(72,187,120,.3); color: #9ae6b4; }
-
-/* Filters */
 .fn-filters {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.6rem 1.2rem;
-    margin-bottom: 1.4rem;
+    align-items: center;
+    gap: var(--space-3);
 }
 
-.fn-filter-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
+.fn-reaction-filter {
+    width: auto;
 }
 
-.fn-filter-btn {
-    padding: 0.4rem 1rem;
-    border-radius: 999px;
-    border: 1px solid var(--color-border);
-    background: var(--color-surface);
-    color: var(--color-muted);
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-    box-shadow: var(--shadow-sm);
-    transition: transform var(--transition), box-shadow var(--transition), background-color var(--transition), color var(--transition), border-color var(--transition);
-}
-
-.fn-filter-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow);
-    color: var(--color-text);
-    border-color: var(--color-border-2);
-}
-
-.fn-filter-btn.active {
-    background: var(--color-surface-2);
-    color: var(--color-accent);
-    border-color: var(--color-accent);
-    box-shadow: var(--shadow-nm-recessed);
-    transform: translateY(1px);
-}
-
-
-/* List grid */
-.fn-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1rem;
-}
-
-/* Card */
-.fn-card {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    padding: 1.1rem 1.3rem;
-    cursor: pointer;
-    box-shadow: var(--shadow-sm);
-    transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
-    position: relative;
-}
-
-.fn-card:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow);
-    border-color: var(--color-border-2);
-}
-
-
-.fn-card-top {
-    display: flex;
+.fn-row {
     align-items: flex-start;
-    justify-content: space-between;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
 }
 
-.fn-card-name {
-    font-weight: 600;
-    font-size: 0.95rem;
-    line-height: 1.35;
+.fn-type {
+    margin-left: var(--space-2);
+    padding: 0 6px;
+    cursor: default;
 }
 
-.fn-card-type {
-    font-size: 0.72rem;
-    padding: 0.2rem 0.55rem;
-    border-radius: 999px;
-    background: var(--color-border);
-    color: var(--color-muted);
+.fn-type:hover {
+    border-color: var(--rule-strong);
+    color: var(--pencil);
+}
+
+.fn-sev {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding-top: 2px;
     white-space: nowrap;
-    flex-shrink: 0;
 }
 
-.fn-card-reaction {
-    display: inline-block;
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 0.2rem 0.6rem;
-    border-radius: 4px;
-    margin-bottom: 0.5rem;
+.fn-sev[data-level="severe"] {
+    color: var(--stamp-red);
+    font-weight: 500;
 }
 
-.fn-card-reaction.allergy     { background: #fdf0ef; color: #c0392b; }
-.fn-card-reaction.intolerance { background: #fff8e6; color: #b8860b; }
-.fn-card-reaction.avoid       { background: #f0f4ff; color: #2c5282; }
-.fn-card-reaction.caution     { background: #f0faf0; color: #276749; }
-
-[data-theme="dark"] .fn-card-reaction.allergy     { background: rgba(192,57,43,.15); color: #fc8181; }
-[data-theme="dark"] .fn-card-reaction.intolerance { background: rgba(184,134,11,.15); color: #f6d860; }
-[data-theme="dark"] .fn-card-reaction.avoid       { background: rgba(66,153,225,.12); color: #90cdf4; }
-[data-theme="dark"] .fn-card-reaction.caution     { background: rgba(72,187,120,.12); color: #9ae6b4; }
-
-.fn-severity-dots {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 0.5rem;
+.fn-marks {
+    display: inline-flex;
+    gap: 2px;
 }
 
-.fn-dot {
+.fn-marks i {
     width: 8px;
     height: 8px;
-    border-radius: 50%;
-    background: var(--color-border);
+    border: 1px solid currentColor;
 }
 
-.fn-dot.on.mild     { background: #48bb78; }
-.fn-dot.on.moderate { background: #ed8936; }
-.fn-dot.on.severe   { background: #e53e3e; }
-
-.fn-card-symptoms,
-.fn-card-notes {
-    font-size: 0.8rem;
-    color: var(--color-muted);
-    line-height: 1.5;
-    margin-top: 0.3rem;
-    white-space: pre-wrap;
-    word-break: break-word;
+.fn-marks i.on {
+    background: currentColor;
 }
 
-/* Severity radio group in modal */
-.fn-severity-group {
-    display: flex;
-    gap: 1rem;
-}
-
-.fn-severity-opt {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    cursor: pointer;
-    font-size: 0.875rem;
-}
-
-/* Empty state */
-.fn-empty {
-    grid-column: 1 / -1;
-    text-align: center;
-    padding: 4rem 1rem;
-    color: var(--color-muted);
-}
-
-/* Mobile */
-@media (max-width: 640px) {
-    .fn-list {
-        grid-template-columns: 1fr;
+@media (max-width: 767px) {
+    .fn-filters .seg-pair {
+        width: 100%;
     }
 
-    .fn-filters {
-        flex-direction: column;
-        gap: 0.4rem;
+    .fn-filters .seg-pair button {
+        flex: 1;
+    }
+
+    .fn-reaction-filter {
+        width: 100%;
+    }
+
+    .fn-row {
+        flex-wrap: wrap;
+    }
+
+    .fn-row .grow {
+        flex: 1 1 100%;
+    }
+
+    .fn-row .side {
+        margin-right: auto;
     }
 }

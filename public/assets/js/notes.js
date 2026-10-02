@@ -1,24 +1,23 @@
 /* =====================================================
-   notes.js — Notes list + Block editor
+   notes.js — the notes list and the block editor
+
+   The list is one script with the editor because both are "the notes" page
+   family; each half starts only when its own markup is on the page.
 ===================================================== */
 
 /* =====================================================
    LIST PAGE
 ===================================================== */
-let currentTagId   = 0;
-let currentSearch  = '';
+let currentTagId  = 0;
+let currentSearch = '';
 
 if (document.getElementById('notesGrid')) {
-    document.addEventListener('DOMContentLoaded', function () {
-        loadNotes();
-    });
+    document.addEventListener('DOMContentLoaded', loadNotes);
 }
 
 async function loadNotes() {
     const grid = document.getElementById('notesGrid');
     if (!grid) return;
-
-    grid.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
 
     try {
         const params = new URLSearchParams();
@@ -26,74 +25,105 @@ async function loadNotes() {
         if (currentTagId)  params.set('tag', currentTagId);
 
         const data = await apiFetch(BASE_URL + '/api/notes?' + params.toString());
+        grid.removeAttribute('aria-busy');
         renderNotesList(data.notes || []);
     } catch {
-        grid.innerHTML = '<div class="empty-state"><span class="text-muted">โหลดไม่สำเร็จ</span></div>';
+        grid.removeAttribute('aria-busy');
+        document.getElementById('noteTally').textContent = 'โหลดโน้ตไม่ได้';
+        grid.innerHTML = '<div class="alert alert-danger" role="alert">โหลดโน้ตไม่สำเร็จ ตรวจการเชื่อมต่อแล้วลองใหม่ '
+            + '<button type="button" class="btn btn-sm" data-act="loadNotes">ลองอีกครั้ง</button></div>';
     }
+}
+
+function noteRow(n) {
+    const title = escHtml(n.title);
+    const tags = n.tags_list ? n.tags_list.split(',') : [];
+    const pinned = !!Number(n.pinned);
+    const date = formatDate(n.updated_at ? n.updated_at.split(' ')[0] : '');
+
+    return '<li class="ruled-row note-row">'
+        + '<span class="grow">'
+        + '<a class="title" href="' + BASE_URL + '/notes/' + n.id + '">' + title
+        + (Number(n.is_encrypted) ? '<span class="tag note-lock"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>เข้ารหัส</span>' : '') + '</a>'
+        + (n.preview && !Number(n.is_encrypted) ? '<span class="meta">' + escHtml(n.preview.substring(0, 100)) + '</span>' : '')
+        + (tags.length ? '<span class="note-rowtags">' + tags.map(t => '<span class="tag">' + escHtml(t) + '</span>').join('') + '</span>' : '')
+        + '</span>'
+        + '<span class="side">' + escHtml(date) + '</span>'
+        + '<button type="button" class="icon-btn sm note-pin" data-act="togglePin" data-args="[' + n.id + ',' + (pinned ? 1 : 0) + ']" aria-pressed="' + pinned + '" aria-label="' + (pinned ? 'เลิกปักหมุด: ' : 'ปักหมุด: ') + title + '"><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg></button>'
+        + '<button type="button" class="icon-btn sm" data-act="deleteNote" data-args="[' + n.id + ']" aria-label="ลบโน้ต: ' + title + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>'
+        + '</li>';
 }
 
 function renderNotesList(notes) {
     const grid = document.getElementById('notesGrid');
-    if (!grid) return;
+    const filtered = currentSearch || currentTagId;
+
+    document.getElementById('noteTally').textContent = notes.length
+        ? notes.length + ' โน้ต' + (filtered ? ' ที่ตรงกับตัวกรอง' : '')
+        : (filtered ? 'ไม่พบโน้ตที่ตรงกับตัวกรอง' : 'ยังไม่มีโน้ต');
 
     if (!notes.length) {
-        grid.innerHTML = '<div class="empty-state"><div class="empty-state-title">ยังไม่มีโน้ต</div><div class="empty-state-text">กดปุ่ม "โน้ตใหม่" เพื่อเริ่มสร้าง</div></div>';
+        grid.innerHTML = filtered
+            ? '<div class="empty-state"><p class="empty-state-text">ไม่พบโน้ตที่ตรงกับตัวกรอง</p><button type="button" class="btn btn-sm" data-act="clearNoteFilters">ล้างตัวกรอง</button></div>'
+            : '<div class="empty-state"><p class="empty-state-title">ยังไม่มีโน้ต</p>'
+              + '<p class="empty-state-text">จดความคิด รายการ หรือลิงก์ไว้ที่นี่ โน้ตหนึ่งอันประกอบด้วยข้อความ ลิงก์ และเช็กลิสต์ และเข้ารหัสด้วยรหัสผ่านได้</p>'
+              + '<button type="button" class="btn btn-primary" data-act="openCreateNote" data-args="[false]">สร้างโน้ตแรก</button></div>';
         return;
     }
 
-    grid.innerHTML = notes.map(n => {
-        const tagsArr = n.tags_list ? n.tags_list.split(',') : [];
-        const tagsHtml = tagsArr.length 
-            ? `<div class="note-card-tags">${tagsArr.map(t => `<span class="note-card-tag">${escHtml(t)}</span>`).join('')}</div>` 
-            : '';
-            
-        const isPinned = !!n.pinned;
-        const pinTitle = isPinned ? 'เลิกปักหมุด' : 'ปักหมุด';
-        const bookmarkFill = isPinned ? 'currentColor' : 'none';
+    const pinned = notes.filter(n => Number(n.pinned));
+    const rest = notes.filter(n => !Number(n.pinned));
+    const section = (label, list) => list.length
+        ? '<section class="sec" aria-label="' + label + '"><div class="sec-head"><h2>' + label + '<span class="count">' + list.length + '</span></h2></div>'
+          + '<ul class="ruled-list">' + list.map(noteRow).join('') + '</ul></section>'
+        : '';
 
-        return `
-            <div class="note-card ${isPinned ? 'pinned' : ''}" data-nav="'${BASE_URL}/notes/${n.id}'">
-                <div class="note-card-actions">
-                    <button class="note-card-btn ${isPinned ? 'active' : ''}" data-act="togglePin" data-args="[${n.id}, ${n.pinned}]" data-stop title="${pinTitle}">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="${bookmarkFill}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
-                    </button>
-                    <button class="note-card-btn danger" data-act="deleteNote" data-args="[${n.id}]" data-stop title="ลบ">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                    </button>
-                </div>
-                <div class="note-card-title">${escHtml(n.title)} ${n.is_encrypted ? '<span class="note-lock-icon" title="โน้ตเข้ารหัส" style="display: inline-flex; align-items: center; color: var(--color-muted);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px; opacity: 0.8;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span>' : ''}</div>
-                ${n.preview && !n.is_encrypted ? `<div class="note-card-preview">${escHtml(n.preview.substring(0, 100))}</div>` : ''}
-                <div class="note-card-footer">
-                    <span class="note-card-date">${formatDate(n.updated_at ? n.updated_at.split(' ')[0] : '')}</span>
-                    ${tagsHtml}
-                </div>
-            </div>
-        `;
-    }).join('');
+    // A heading only helps when there are two groups to tell apart.
+    grid.innerHTML = pinned.length
+        ? section('ปักหมุด', pinned) + section('โน้ตอื่น', rest)
+        : '<ul class="ruled-list note-list">' + rest.map(noteRow).join('') + '</ul>';
 }
 
 // Exported below: a top-level const is not a window property, and the
 // declarative actions in the markup resolve their names through window.
-const searchNotes = debounce(function(val) {
-    currentSearch = val;
+const searchNotes = debounce(function (value) {
+    currentSearch = value;
     loadNotes();
 }, 400);
 window.searchNotes = searchNotes;
 
 function filterByTag(tagId, el) {
     currentTagId = tagId;
-    document.querySelectorAll('#tagList .tag').forEach(t => t.classList.remove('active'));
-    if (el) el.classList.add('active');
+    document.querySelectorAll('#tagList .tag').forEach(t => {
+        t.classList.toggle('active', t === el);
+        t.setAttribute('aria-pressed', String(t === el));
+    });
     loadNotes();
+}
+
+function clearNoteFilters() {
+    currentTagId = 0;
+    currentSearch = '';
+    document.getElementById('noteSearch').value = '';
+    const all = document.querySelector('#tagList [data-tag-id="0"]');
+    if (all) filterByTag(0, all); else loadNotes();
+}
+
+function createNoteError(message) {
+    const line = document.getElementById('createNoteError');
+    line.textContent = message;
+    line.hidden = message === '';
 }
 
 function openCreateNote(encrypted) {
     document.getElementById('createNoteEncrypted').value = encrypted ? '1' : '0';
-    document.getElementById('createNoteModalTitle').textContent = encrypted ? 'โน้ตเข้ารหัส' : 'สร้างโน้ตใหม่';
+    document.getElementById('createNoteModalTitle').textContent = encrypted ? 'โน้ตเข้ารหัส' : 'โน้ตใหม่';
     document.getElementById('createNoteTitle').value = '';
     document.getElementById('createNotePw').value = '';
-    document.getElementById('createNotePwGroup').style.display = encrypted ? 'block' : 'none';
+    document.getElementById('createNotePwGroup').hidden = !encrypted;
+    createNoteError('');
     openModal('createNoteModal');
+    document.getElementById('createNoteTitle').focus();
 }
 
 async function submitCreateNote() {
@@ -101,7 +131,7 @@ async function submitCreateNote() {
     const encrypted = document.getElementById('createNoteEncrypted').value === '1';
     const password  = document.getElementById('createNotePw').value;
 
-    if (encrypted && !password) { toast('กรุณากรอกรหัสผ่าน', 'danger'); return; }
+    if (encrypted && !password) { createNoteError('ใส่รหัสผ่านของโน้ตก่อน'); document.getElementById('createNotePw').focus(); return; }
 
     try {
         const data = await apiFetch(BASE_URL + '/api/notes', {
@@ -111,27 +141,36 @@ async function submitCreateNote() {
         closeModal('createNoteModal');
         window.location.href = BASE_URL + '/notes/' + data.note.id;
     } catch (err) {
-        toast(err.message || 'สร้างไม่สำเร็จ', 'danger');
+        createNoteError(err.message || 'สร้างโน้ตไม่สำเร็จ ลองอีกครั้ง');
     }
 }
 
 async function togglePin(id, isPinned) {
-    await apiFetch(BASE_URL + '/api/notes/' + id, {
-        method: 'PUT',
-        body: JSON.stringify({ pinned: isPinned ? 0 : 1 })
-    });
-    loadNotes();
+    try {
+        await apiFetch(BASE_URL + '/api/notes/' + id, { method: 'PUT', body: JSON.stringify({ pinned: isPinned ? 0 : 1 }) });
+        loadNotes();
+    } catch (err) {
+        toast(err.message || 'ปักหมุดไม่สำเร็จ ลองอีกครั้ง', 'danger');
+    }
 }
 
 async function deleteNote(id) {
-    if (!await confirmAction('ต้องการลบโน้ตนี้?', 'ลบ')) return;
-    await apiFetch(BASE_URL + '/api/notes/' + id, { method: 'DELETE' });
-    loadNotes();
-    toast('ลบแล้ว');
+    if (!await confirmAction('ลบโน้ตนี้แล้วกู้คืนไม่ได้ เนื้อหาในโน้ตจะหายทั้งหมด', 'ลบโน้ต', 'ลบโน้ตนี้?')) return;
+    try {
+        await apiFetch(BASE_URL + '/api/notes/' + id, { method: 'DELETE' });
+        toast('ลบโน้ตแล้ว');
+        loadNotes();
+    } catch (err) {
+        toast(err.message || 'ลบไม่สำเร็จ ลองอีกครั้ง', 'danger');
+    }
 }
 
 /* =====================================================
    EDITOR PAGE
+
+   Every edit is saved a moment after the last keystroke. What is still waiting
+   (a keystroke less than a second old) is sent as the page is left, so closing
+   the tab does not lose it.
 ===================================================== */
 let noteId      = null;
 let noteEncrypt = false;
@@ -139,50 +178,137 @@ let notePass    = '';
 let noteTags    = [];
 let blocks      = [];
 
+const SAVE_DELAY = 800;
+const pendingBlocks = new Map();   // block id -> { type, content }
+const blockTimers = {};
+let pendingTitle = null;
+let titleTimer = null;
+let statusTimer = null;
+
 if (document.getElementById('noteEditor')) {
     document.addEventListener('DOMContentLoaded', function () {
         const el = document.getElementById('noteEditor');
-        noteId      = parseInt(el.dataset.noteId);
+        noteId      = parseInt(el.dataset.noteId, 10);
         noteEncrypt = el.dataset.encrypted === '1';
         noteTags    = (window.NOTE_TAGS || []).map(t => t.name);
 
-        if (!noteEncrypt) {
-            loadBlocks();
-        }
+        renderTagList();
+        autoResize(document.getElementById('noteTitle'));
+        wireTagInput();
 
-        // Init Sortable for blocks
+        if (!noteEncrypt) loadBlocks();
+        else document.getElementById('notePassword').focus();
+
         const container = document.getElementById('blocksContainer');
         if (container && typeof Sortable !== 'undefined') {
             Sortable.create(container, {
                 animation: 150,
-                handle: '.block-drag-handle',
+                handle: '.block-grip',
                 ghostClass: 'sortable-ghost',
-                delay: 120, // Smooth touch delay to avoid scroll locking
-                delayOnTouchOnly: true, // Maintain instant dragging on desktop
-                touchStartThreshold: 7, // Tolerates tiny finger tremors before starting drag
+                delay: 120,                // a short hold, so scrolling by touch does not start a drag
+                delayOnTouchOnly: true,
+                touchStartThreshold: 7,
                 onEnd: saveBlockOrder
             });
         }
 
-        // Add block toggle
-        document.getElementById('addBlockBtn').addEventListener('click', function() {
-            const menu = document.getElementById('blockTypeMenu');
-            menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
-        });
+        window.addEventListener('pagehide', flushAll);
+        document.addEventListener('visibilitychange', () => { if (document.hidden) flushAll(); });
     });
 }
 
+/* ── Saving ── */
+function setSaveStatus(message, state) {
+    const el = document.getElementById('saveStatus');
+    if (!el) return;
+    clearTimeout(statusTimer);
+    el.textContent = message;
+    el.classList.toggle('error', state === 'error');
+    // A failure stays until the next save; success settles back to the quiet text.
+    if (state === 'ok') statusTimer = setTimeout(() => { el.textContent = 'บันทึกอัตโนมัติ'; }, 2000);
+}
+
+function queueBlockSave(id, type, content) {
+    pendingBlocks.set(id, { type, content });
+    setSaveStatus('กำลังบันทึก…');
+    clearTimeout(blockTimers[id]);
+    blockTimers[id] = setTimeout(() => flushBlock(id), SAVE_DELAY);
+}
+
+async function flushBlock(id, leaving) {
+    const item = pendingBlocks.get(id);
+    if (!item) return;
+    pendingBlocks.delete(id);
+    clearTimeout(blockTimers[id]);
+
+    const body = { type: item.type, content: item.content };
+    if (noteEncrypt && notePass) body.password = notePass;
+    try {
+        await apiFetch(BASE_URL + '/api/notes/' + noteId + '/blocks/' + id, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+            keepalive: leaving === true,
+        });
+        setSaveStatus('บันทึกแล้ว', 'ok');
+    } catch {
+        // Keep it for the next change, unless something newer is already queued.
+        if (!pendingBlocks.has(id)) pendingBlocks.set(id, item);
+        setSaveStatus('บันทึกไม่สำเร็จ แก้ไขอีกครั้งเพื่อลองบันทึกใหม่', 'error');
+    }
+}
+
+function queueTitleSave() {
+    const title = document.getElementById('noteTitle').value.trim();
+    if (!title) return;                  // an empty title is not saved over the old one
+    pendingTitle = title;
+    setSaveStatus('กำลังบันทึก…');
+    clearTimeout(titleTimer);
+    titleTimer = setTimeout(flushTitle, SAVE_DELAY);
+}
+
+async function flushTitle(leaving) {
+    if (pendingTitle === null) return;
+    const title = pendingTitle;
+    pendingTitle = null;
+    clearTimeout(titleTimer);
+    try {
+        await apiFetch(BASE_URL + '/api/notes/' + noteId, { method: 'PUT', body: JSON.stringify({ title }), keepalive: leaving === true });
+        setSaveStatus('บันทึกแล้ว', 'ok');
+    } catch {
+        if (pendingTitle === null) pendingTitle = title;
+        setSaveStatus('บันทึกไม่สำเร็จ แก้ไขอีกครั้งเพื่อลองบันทึกใหม่', 'error');
+    }
+}
+
+function flushAll() {
+    for (const id of Array.from(pendingBlocks.keys())) flushBlock(id, true);
+    flushTitle(true);
+}
+
+/* ── Loading and unlocking ── */
 async function loadBlocks() {
+    const container = document.getElementById('blocksContainer');
     try {
         const data = await apiFetch(BASE_URL + '/api/notes/' + noteId + '/blocks');
         blocks = data.blocks || [];
+        container.removeAttribute('aria-busy');
         renderBlocks();
-    } catch {}
+    } catch {
+        container.removeAttribute('aria-busy');
+        container.innerHTML = '<div class="alert alert-danger" role="alert">โหลดเนื้อหาโน้ตไม่สำเร็จ '
+            + '<button type="button" class="btn btn-sm" data-act="loadBlocks">ลองอีกครั้ง</button></div>';
+    }
+}
+
+function unlockError(message) {
+    const line = document.getElementById('unlockError');
+    line.textContent = message;
+    line.hidden = message === '';
 }
 
 async function unlockNote() {
     notePass = document.getElementById('notePassword').value;
-    if (!notePass) { toast('กรุณากรอกรหัสผ่าน', 'danger'); return; }
+    if (!notePass) { unlockError('ใส่รหัสผ่านของโน้ต'); return; }
 
     try {
         const data = await apiFetch(BASE_URL + '/api/notes/' + noteId + '/verify', {
@@ -190,490 +316,331 @@ async function unlockNote() {
             body: JSON.stringify({ password: notePass })
         });
         blocks = data.blocks || [];
-        document.getElementById('encryptedPrompt').style.display = 'none';
-        document.getElementById('editorBody').style.display = 'block';
+        document.getElementById('encryptedPrompt').hidden = true;
+        document.getElementById('editorBody').hidden = false;
+        document.getElementById('blocksContainer').removeAttribute('aria-busy');
         renderBlocks();
-    } catch {
-        toast('รหัสผ่านไม่ถูกต้อง', 'danger');
+        autoResize(document.getElementById('noteTitle'));
+    } catch (err) {
+        notePass = '';
+        unlockError(err.message || 'รหัสผ่านไม่ถูกต้อง');
+        document.getElementById('notePassword').select();
     }
 }
 
+/* ── Blocks ── */
 function renderBlocks() {
     const container = document.getElementById('blocksContainer');
-    if (!container) return;
-
     container.innerHTML = '';
+    if (!blocks.length) {
+        container.innerHTML = '<p class="blocks-empty">โน้ตนี้ยังว่างอยู่ เพิ่มข้อความ ลิงก์ หรือเช็กลิสต์ด้านล่าง</p>';
+        return;
+    }
     blocks.forEach(b => container.appendChild(createBlockEl(b)));
+}
+
+const BLOCK_LABEL = { text: 'ข้อความ', link: 'ลิงก์', checklist: 'เช็กลิสต์' };
+
+function iconButton(icon, label, handler, extraClass) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'icon-btn sm' + (extraClass ? ' ' + extraClass : '');
+    btn.setAttribute('aria-label', label);
+    btn.title = label;
+    btn.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#' + icon + '"/></svg>';
+    btn.addEventListener('click', handler);
+    return btn;
 }
 
 function createBlockEl(block) {
     const div = document.createElement('div');
-    div.className = 'block-item';
+    div.className = 'block';
     div.dataset.id   = block.id;
     div.dataset.type = block.type;
 
-    const handle = document.createElement('span');
-    handle.className = 'block-drag-handle';
-    handle.innerHTML = `<svg width="12" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.35;"><circle cx="9" cy="5" r="1.2"></circle><circle cx="9" cy="12" r="1.2"></circle><circle cx="9" cy="19" r="1.2"></circle><circle cx="15" cy="5" r="1.2"></circle><circle cx="15" cy="12" r="1.2"></circle><circle cx="15" cy="19" r="1.2"></circle></svg>`;
+    const grip = document.createElement('span');
+    grip.className = 'block-grip';
+    grip.setAttribute('aria-hidden', 'true');
+    grip.innerHTML = '<svg class="icon"><use href="#i-grip"/></svg>';
 
-    const content = document.createElement('div');
-    content.className = 'block-content';
-    content.appendChild(renderBlockContent(block));
+    const body = document.createElement('div');
+    body.className = 'block-body';
+    body.appendChild(renderBlockContent(block));
 
-    const controls = document.createElement('div');
-    controls.className = 'block-controls';
+    const tools = document.createElement('div');
+    tools.className = 'block-tools';
 
     const typeSelect = document.createElement('select');
-    typeSelect.className = 'block-type-select';
-    typeSelect.innerHTML = '<option value="text">ข้อความ</option><option value="link">ลิงก์</option><option value="checklist">Checklist</option>';
+    typeSelect.className = 'block-type';
+    typeSelect.setAttribute('aria-label', 'ชนิดของบล็อก');
+    typeSelect.innerHTML = Object.entries(BLOCK_LABEL).map(([v, l]) => '<option value="' + v + '">' + l + '</option>').join('');
     typeSelect.value = block.type;
-    typeSelect.onchange = function() {
-        block.type = this.value;
-        div.dataset.type = this.value;
-        content.innerHTML = '';
-        content.appendChild(renderBlockContent({ ...block, content: '', type: this.value }));
-    };
+    typeSelect.addEventListener('change', async function () {
+        const next = this.value;
+        if (block.content && !await confirmAction('เปลี่ยนชนิดแล้วเนื้อหาของบล็อกนี้จะถูกล้าง', 'เปลี่ยนชนิด', 'เปลี่ยนชนิดบล็อก?')) {
+            this.value = block.type;
+            return;
+        }
+        block.type = next;
+        block.content = '';
+        div.dataset.type = next;
+        body.innerHTML = '';
+        body.appendChild(renderBlockContent(block));
+        queueBlockSave(block.id, next, '');
+    });
 
-    const delBtn = document.createElement('button');
-    delBtn.className = 'block-ctrl-btn danger';
-    delBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
-    delBtn.title = 'ลบบล็อก';
-    delBtn.onclick = () => deleteBlock(block.id, div);
+    tools.appendChild(iconButton('i-up', 'ย้ายบล็อกขึ้น', () => moveBlock(div, -1)));
+    tools.appendChild(iconButton('i-down', 'ย้ายบล็อกลง', () => moveBlock(div, 1)));
+    tools.appendChild(typeSelect);
+    tools.appendChild(iconButton('i-trash', 'ลบบล็อก', () => deleteBlock(block.id, div)));
 
-    controls.appendChild(typeSelect);
-    controls.appendChild(delBtn);
-
-    div.appendChild(handle);
-    div.appendChild(content);
-    div.appendChild(controls);
+    div.appendChild(grip);
+    div.appendChild(body);
+    div.appendChild(tools);
     return div;
+}
+
+function field(tag, className, label, attrs) {
+    const el = document.createElement(tag);
+    el.className = className;
+    el.setAttribute('aria-label', label);
+    Object.entries(attrs || {}).forEach(([k, v]) => { el[k] = v; });
+    return el;
 }
 
 function renderBlockContent(block) {
     const wrap = document.createElement('div');
+    wrap.className = 'block-' + block.type;
 
     if (block.type === 'text') {
-        const editWrap = document.createElement('div');
-        editWrap.className = 'block-text-edit-wrap';
-        editWrap.style.display = block.content ? 'none' : 'block';
-
-        const ta = document.createElement('textarea');
-        ta.className = 'block-textarea';
-        ta.value = block.content || '';
-        ta.rows = 1;
-        ta.placeholder = 'พิมพ์ข้อความ...';
-        autoResize(ta);
-
-        editWrap.appendChild(ta);
-
-        const previewWrap = document.createElement('div');
-        previewWrap.className = 'block-text-preview';
-        previewWrap.style.display = block.content ? 'block' : 'none';
-        
-        function updatePreview() {
-            previewWrap.textContent = block.content || '';
-        }
-        
-        updatePreview();
-
-        ta.oninput = function() {
+        const ta = field('textarea', 'block-textarea', 'ข้อความ', { rows: 1, placeholder: 'พิมพ์ข้อความ', value: block.content || '' });
+        ta.addEventListener('input', function () {
             autoResize(this);
             block.content = this.value;
-            debouncedSaveBlock(block.id, 'text', this.value);
-        };
-
-        ta.onblur = function() {
-            if (this.value.trim()) {
-                updatePreview();
-                editWrap.style.display = 'none';
-                previewWrap.style.display = 'block';
-            }
-        };
-
-        previewWrap.onclick = function() {
-            previewWrap.style.display = 'none';
-            editWrap.style.display = 'block';
-            ta.focus();
-            autoResize(ta);
-        };
-
-        wrap.appendChild(editWrap);
-        wrap.appendChild(previewWrap);
+            queueBlockSave(block.id, 'text', this.value);
+        });
+        wrap.appendChild(ta);
+        // Sized once it is in the page and has a width to wrap to.
+        requestAnimationFrame(() => autoResize(ta));
 
     } else if (block.type === 'link') {
-        let linkData = {};
-        try { linkData = JSON.parse(block.content) || {}; } catch {}
+        let link = {};
+        try { link = JSON.parse(block.content) || {}; } catch { /* a link block starts empty */ }
 
-        const editWrap = document.createElement('div');
-        editWrap.className = 'block-link-wrap';
-        editWrap.style.display = linkData.url ? 'none' : 'flex';
-        editWrap.style.flexDirection = 'column';
-        editWrap.style.gap = 'var(--space-2)';
+        const urlInput = field('input', 'block-link-url', 'ที่อยู่เว็บ (URL)', { type: 'url', placeholder: 'https://example.com', value: link.url || '' });
+        const labelInput = field('input', 'block-link-label', 'ชื่อลิงก์', { type: 'text', placeholder: 'ชื่อลิงก์ (ไม่ใส่ก็ได้)', value: link.label || '' });
+        const open = document.createElement('a');
+        open.className = 'btn btn-sm block-link-open';
+        open.target = '_blank';
+        open.rel = 'noopener noreferrer';
+        open.textContent = 'เปิดลิงก์';
 
-        const urlInput = document.createElement('input');
-        urlInput.className = 'block-link-url';
-        urlInput.type = 'url';
-        urlInput.placeholder = 'URL (เช่น https://example.com)...';
-        urlInput.value = linkData.url || '';
-
-        const labelInput = document.createElement('input');
-        labelInput.className = 'block-link-label';
-        labelInput.type = 'text';
-        labelInput.placeholder = 'ชื่อลิงก์ (ไม่บังคับ)';
-        labelInput.value = linkData.label || '';
-
-        const saveBtn = document.createElement('button');
-        saveBtn.className = 'btn btn-primary btn-sm';
-        saveBtn.style.alignSelf = 'flex-start';
-        saveBtn.style.fontSize = '0.75rem';
-        saveBtn.style.padding = '4px 12px';
-        saveBtn.style.marginTop = '4px';
-        saveBtn.textContent = 'เสร็จสิ้น';
-
-        editWrap.appendChild(urlInput);
-        editWrap.appendChild(labelInput);
-        editWrap.appendChild(saveBtn);
-
-        const previewWrap = document.createElement('div');
-        previewWrap.className = 'block-link-preview-wrap';
-        previewWrap.style.display = linkData.url ? 'block' : 'none';
-
-        function updatePreview() {
-            previewWrap.innerHTML = '';
-            if (!linkData.url) return;
-
-            let targetUrl = linkData.url.trim();
-            if (!/^https?:\/\//i.test(targetUrl)) {
-                targetUrl = 'https://' + targetUrl;
-            }
-
-            const linkDisplay = document.createElement('a');
-            linkDisplay.className = 'block-link-display';
-            linkDisplay.href = targetUrl;
-            linkDisplay.target = '_blank';
-            linkDisplay.rel = 'noopener noreferrer';
-            
-            linkDisplay.innerHTML = `
-                <span class="block-link-icon" style="margin-right: var(--space-2); display: inline-flex; align-items: center; justify-content: center; color: var(--color-muted);">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-                </span>
-                <div style="display: flex; flex-direction: column; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; text-align: left;">
-                    <strong class="link-title" style="font-size: 0.9rem; color: var(--color-text); font-weight: 600;">${escHtml(linkData.label || 'เปิดลิงก์')}</strong>
-                    <span class="link-url-sub" style="font-size: 0.75rem; color: var(--color-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; display: block;">${escHtml(linkData.url)}</span>
-                </div>
-                <span style="color: var(--color-muted); font-size: 0.72rem; display: flex; align-items: center; gap: 4px; padding-left: 8px; flex-shrink: 0; font-weight: 500;">
-                    เปิดลิงก์ 
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
-                </span>
-            `;
-
-            const editBtn = document.createElement('button');
-            editBtn.className = 'btn btn-ghost btn-sm';
-            editBtn.style.marginTop = 'var(--space-2)';
-            editBtn.style.fontSize = '0.72rem';
-            editBtn.style.padding = '3px 8px';
-            editBtn.innerHTML = `
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; vertical-align: middle; display: inline-block;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"></path></svg>
-                แก้ไขลิงก์
-            `;
-            editBtn.onclick = function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                previewWrap.style.display = 'none';
-                editWrap.style.display = 'flex';
-                urlInput.focus();
-            };
-
-            previewWrap.appendChild(linkDisplay);
-            previewWrap.appendChild(editBtn);
-        }
-
-        updatePreview();
-
-        function saveLink() {
+        const sync = () => {
             const url = urlInput.value.trim();
-            const label = labelInput.value.trim();
-            linkData = { url, label };
-            block.content = JSON.stringify(linkData);
-            debouncedSaveBlock(block.id, 'link', block.content);
-        }
-
-        urlInput.oninput = saveLink;
-        labelInput.oninput = saveLink;
-
-        function commitLink() {
-            saveLink();
-            const url = urlInput.value.trim();
-            if (url) {
-                updatePreview();
-                editWrap.style.display = 'none';
-                previewWrap.style.display = 'block';
-            } else {
-                toast('กรุณากรอก URL ลิงก์', 'warning');
-            }
-        }
-
-        saveBtn.onclick = function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            commitLink();
+            open.hidden = url === '';
+            open.href = /^https?:\/\//i.test(url) ? url : 'https://' + url;
         };
-
-        urlInput.onkeydown = function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                commitLink();
-            }
+        const save = () => {
+            sync();
+            block.content = JSON.stringify({ url: urlInput.value.trim(), label: labelInput.value.trim() });
+            queueBlockSave(block.id, 'link', block.content);
         };
-        labelInput.onkeydown = function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                commitLink();
-            }
-        };
+        urlInput.addEventListener('input', save);
+        labelInput.addEventListener('input', save);
+        sync();
 
-        wrap.appendChild(editWrap);
-        wrap.appendChild(previewWrap);
+        wrap.appendChild(urlInput);
+        wrap.appendChild(labelInput);
+        wrap.appendChild(open);
 
     } else if (block.type === 'checklist') {
         let items = [];
-        try { items = JSON.parse(block.content) || []; } catch {}
+        try { items = JSON.parse(block.content) || []; } catch { /* a checklist starts empty */ }
 
-        const listDiv = document.createElement('div');
-        listDiv.className = 'block-checklist';
+        const list = document.createElement('div');
+        list.className = 'checklist';
 
-        function renderItems() {
-            listDiv.innerHTML = '';
+        const commit = () => {
+            block.content = JSON.stringify(items);
+            queueBlockSave(block.id, 'checklist', block.content);
+        };
+
+        const focusRow = index => {
+            const rows = list.querySelectorAll('.checklist-input');
+            if (rows[index]) rows[index].focus();
+        };
+
+        const draw = () => {
+            list.innerHTML = '';
             items.forEach((item, i) => {
                 const row = document.createElement('div');
-                row.className = 'checklist-item-row';
+                row.className = 'checklist-row';
 
-                const cb = document.createElement('input');
-                cb.type = 'checkbox';
-                cb.checked = item.checked;
-                cb.onchange = function() {
+                const cb = field('input', 'checklist-box', 'ทำแล้ว', { type: 'checkbox', checked: !!item.checked });
+                const text = field('input', 'checklist-input' + (item.checked ? ' done' : ''), 'รายการที่ ' + (i + 1), { type: 'text', placeholder: 'รายการ', value: item.text || '' });
+
+                cb.addEventListener('change', function () {
                     items[i].checked = this.checked;
-                    inp.classList.toggle('checked-item', this.checked);
-                    block.content = JSON.stringify(items);
-                    debouncedSaveBlock(block.id, 'checklist', block.content);
-                };
-
-                const inp = document.createElement('input');
-                inp.type = 'text';
-                inp.className = 'checklist-item-input' + (item.checked ? ' checked-item' : '');
-                inp.value = item.text || '';
-                inp.placeholder = 'รายการ...';
-                inp.oninput = function() {
-                    items[i].text = this.value;
-                    block.content = JSON.stringify(items);
-                    debouncedSaveBlock(block.id, 'checklist', block.content);
-                };
-                inp.onkeydown = function(e) {
+                    text.classList.toggle('done', this.checked);
+                    commit();
+                });
+                text.addEventListener('input', function () { items[i].text = this.value; commit(); });
+                text.addEventListener('keydown', function (e) {
                     if (e.key === 'Enter') {
                         e.preventDefault();
                         items.splice(i + 1, 0, { text: '', checked: false });
-                        renderItems();
-                        const rows = listDiv.querySelectorAll('.checklist-item-input');
-                        if (rows[i + 1]) rows[i + 1].focus();
+                        draw();
+                        focusRow(i + 1);
+                        commit();
+                    } else if (e.key === 'Backspace' && this.value === '' && items.length > 1) {
+                        e.preventDefault();
+                        items.splice(i, 1);
+                        draw();
+                        focusRow(Math.max(0, i - 1));
+                        commit();
                     }
-                };
-
-                const del = document.createElement('button');
-                del.className = 'checklist-del';
-                del.innerHTML = '&#10005;';
-                del.onclick = function() {
-                    items.splice(i, 1);
-                    renderItems();
-                    block.content = JSON.stringify(items);
-                    debouncedSaveBlock(block.id, 'checklist', block.content);
-                };
+                });
 
                 row.appendChild(cb);
-                row.appendChild(inp);
-                row.appendChild(del);
-                listDiv.appendChild(row);
+                row.appendChild(text);
+                row.appendChild(iconButton('i-close', 'ลบรายการที่ ' + (i + 1), () => {
+                    items.splice(i, 1);
+                    draw();
+                    commit();
+                }));
+                list.appendChild(row);
             });
 
-            const addBtn = document.createElement('button');
-            addBtn.className = 'add-checklist-item';
-            addBtn.textContent = '+ เพิ่มรายการ';
-            addBtn.onclick = function() {
+            const add = document.createElement('button');
+            add.type = 'button';
+            add.className = 'btn btn-link checklist-add';
+            add.textContent = 'เพิ่มรายการ';
+            add.addEventListener('click', () => {
                 items.push({ text: '', checked: false });
-                renderItems();
-                const rows = listDiv.querySelectorAll('.checklist-item-input');
-                if (rows.length) rows[rows.length - 1].focus();
-            };
-            listDiv.appendChild(addBtn);
-        }
+                draw();
+                focusRow(items.length - 1);
+            });
+            list.appendChild(add);
+        };
 
-        renderItems();
-        wrap.appendChild(listDiv);
+        draw();
+        wrap.appendChild(list);
     }
 
     return wrap;
 }
 
 async function addBlock(type) {
-    document.getElementById('blockTypeMenu').style.display = 'none';
     try {
         const body = { type, content: '' };
         if (noteEncrypt && notePass) body.password = notePass;
 
-        const data = await apiFetch(BASE_URL + '/api/notes/' + noteId + '/blocks', {
-            method: 'POST',
-            body: JSON.stringify(body)
-        });
-        const newBlock = { id: data.id, type, content: '' };
-        blocks.push(newBlock);
+        const data = await apiFetch(BASE_URL + '/api/notes/' + noteId + '/blocks', { method: 'POST', body: JSON.stringify(body) });
+        const created = { id: data.id, type, content: '' };
+        blocks.push(created);
+
         const container = document.getElementById('blocksContainer');
-        if (container) container.appendChild(createBlockEl(newBlock));
+        container.querySelector('.blocks-empty')?.remove();
+        const el = createBlockEl(created);
+        container.appendChild(el);
+        el.querySelector('textarea, input[type="url"], .checklist-input')?.focus();
     } catch (err) {
-        toast('เพิ่มบล็อกไม่สำเร็จ', 'danger');
+        toast(err.message || 'เพิ่มบล็อกไม่สำเร็จ ลองอีกครั้ง', 'danger');
     }
 }
 
 async function deleteBlock(id, el) {
-    if (!await confirmAction('ต้องการลบบล็อกนี้?', 'ลบ')) return;
-    await apiFetch(BASE_URL + '/api/notes/' + noteId + '/blocks/' + id, { method: 'DELETE' });
-    blocks = blocks.filter(b => b.id !== id);
-    el.remove();
-}
-
-const _blockTimers = {};
-function debouncedSaveBlock(id, type, content) {
-    clearTimeout(_blockTimers[id]);
-    _blockTimers[id] = setTimeout(async function() {
-        try {
-            const body = { type, content };
-            if (noteEncrypt && notePass) body.password = notePass;
-            await apiFetch(BASE_URL + '/api/notes/' + noteId + '/blocks/' + id, {
-                method: 'PUT',
-                body: JSON.stringify(body)
-            });
-            setSaveStatus('บันทึกแล้ว');
-        } catch {
-            setSaveStatus('บันทึกไม่สำเร็จ');
-        }
-    }, 800);
-}
-
-const debouncedSaveTitle = debounce(async function() {
-    const title = document.getElementById('noteTitle')?.value?.trim();
-    if (!title) return;
+    if (!await confirmAction('ลบบล็อกนี้แล้วกู้คืนไม่ได้', 'ลบบล็อก', 'ลบบล็อกนี้?')) return;
     try {
-        await apiFetch(BASE_URL + '/api/notes/' + noteId, {
-            method: 'PUT',
-            body: JSON.stringify({ title })
-        });
-        setSaveStatus('บันทึกแล้ว');
-    } catch {}
-}, 800);
+        await apiFetch(BASE_URL + '/api/notes/' + noteId + '/blocks/' + id, { method: 'DELETE' });
+        pendingBlocks.delete(id);
+        clearTimeout(blockTimers[id]);
+        blocks = blocks.filter(b => b.id !== id);
+        el.remove();
+        if (!blocks.length) renderBlocks();
+    } catch (err) {
+        toast(err.message || 'ลบไม่สำเร็จ ลองอีกครั้ง', 'danger');
+    }
+}
 
-function setSaveStatus(msg) {
-    const el = document.getElementById('saveStatus');
-    if (el) { el.textContent = msg; setTimeout(() => { el.textContent = 'บันทึกอัตโนมัติ'; }, 2000); }
+function moveBlock(el, step) {
+    const target = step < 0 ? el.previousElementSibling : el.nextElementSibling;
+    if (!target || !target.classList.contains('block')) return;
+    if (step < 0) target.before(el); else target.after(el);
+    saveBlockOrder();
 }
 
 async function saveBlockOrder() {
-    const container = document.getElementById('blocksContainer');
-    if (!container) return;
     const items = [];
-    container.querySelectorAll('.block-item[data-id]').forEach((el, idx) => {
-        items.push({ id: parseInt(el.dataset.id), position: idx });
+    document.querySelectorAll('#blocksContainer .block[data-id]').forEach((el, idx) => {
+        items.push({ id: parseInt(el.dataset.id, 10), position: idx });
     });
-    await apiFetch(BASE_URL + '/api/notes/' + noteId + '/blocks/reorder', {
-        method: 'POST',
-        body: JSON.stringify({ items })
+    try {
+        await apiFetch(BASE_URL + '/api/notes/' + noteId + '/blocks/reorder', { method: 'POST', body: JSON.stringify({ items }) });
+        setSaveStatus('บันทึกลำดับแล้ว', 'ok');
+    } catch {
+        setSaveStatus('บันทึกลำดับไม่สำเร็จ', 'error');
+    }
+}
+
+/* ── Tags ── */
+function wireTagInput() {
+    const input = document.getElementById('tagInput');
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ',' || e.key === ';') {
+            e.preventDefault();
+            submitTagInput(input);
+        } else if (e.key === 'Backspace' && input.value === '' && noteTags.length) {
+            removeTag(noteTags[noteTags.length - 1]);
+        }
     });
+    // A space or a comma typed or pasted at the end also closes a tag.
+    input.addEventListener('input', () => {
+        if (/[\s,;，；]$/.test(input.value)) submitTagInput(input);
+    });
+    input.addEventListener('blur', () => submitTagInput(input));
 }
 
-/* --- Tags --- */
-function handleTagInput(e) {
-    if (e.key === 'Enter' || e.key === ',' || e.key === ';') {
-        e.preventDefault();
-        submitTagInput(e.target);
-    }
-}
-
-function handleTagOnInput(inputEl) {
-    const btn = document.getElementById('tagAddBtn');
-    if (!btn) return;
-    const val = inputEl.value;
-    
-    // Show/hide the tiny add button
-    if (val.trim().length > 0) {
-        btn.style.display = 'inline-flex';
-    } else {
-        btn.style.display = 'none';
-    }
-
-    // Auto-commit on space, comma, semicolon
-    if (val.endsWith(' ') || val.endsWith(',') || val.endsWith('，') || val.endsWith(';') || val.endsWith('；')) {
-        submitTagInput(inputEl);
-    }
-}
-
-function submitTagInput(inputEl) {
-    const val = inputEl.value.trim().replace(/[,;，；]/g, '');
-    if (val && !noteTags.includes(val)) {
-        noteTags.push(val);
-        renderTagWrap();
+function submitTagInput(input) {
+    const value = input.value.replace(/[,;，；]/g, '').trim();
+    input.value = '';
+    if (value && !noteTags.includes(value)) {
+        noteTags.push(value);
+        renderTagList();
         saveTags();
     }
-    inputEl.value = '';
-    
-    const btn = document.getElementById('tagAddBtn');
-    if (btn) btn.style.display = 'none';
 }
 
 function removeTag(name) {
     noteTags = noteTags.filter(t => t !== name);
-    renderTagWrap();
+    renderTagList();
     saveTags();
 }
 
-function renderTagWrap() {
-    const wrap = document.getElementById('tagWrap');
-    if (!wrap) return;
-    const existing = wrap.querySelectorAll('.tag');
-    existing.forEach(el => el.remove());
-
-    noteTags.forEach(name => {
-        const span = document.createElement('span');
-        span.className = 'tag active';
-        span.dataset.tag = name;
-        span.innerHTML = escHtml(name) + ` <button data-act="removeTag" data-args="[&quot;${escHtml(name)}&quot;]" style="background:none;border:none;cursor:pointer;margin-left:2px;font-size:0.7rem">&#10005;</button>`;
-        wrap.insertBefore(span, document.getElementById('tagInput'));
-    });
+function renderTagList() {
+    document.getElementById('noteTagList').innerHTML = noteTags.map(name =>
+        '<li class="tag active">' + escHtml(name)
+        + '<button type="button" class="tag-remove" data-act="removeTag" data-args="' + escHtml(JSON.stringify([name])) + '" aria-label="ลบแท็ก ' + escHtml(name) + '">&times;</button></li>'
+    ).join('');
 }
 
 async function saveTags() {
-    await apiFetch(BASE_URL + '/api/notes/' + noteId, {
-        method: 'PUT',
-        body: JSON.stringify({ tags: noteTags })
-    });
+    try {
+        await apiFetch(BASE_URL + '/api/notes/' + noteId, { method: 'PUT', body: JSON.stringify({ tags: noteTags }) });
+        setSaveStatus('บันทึกแล้ว', 'ok');
+    } catch {
+        setSaveStatus('บันทึกแท็กไม่สำเร็จ', 'error');
+    }
 }
 
-/* --- Helpers --- */
+/* ── Helpers ── */
+// Sizing to the text is the one inline style: it follows what was typed.
 function autoResize(el) {
     el.style.height = 'auto';
     el.style.height = el.scrollHeight + 'px';
 }
 
-/* --- Helpers named by the declarative actions in the editor markup --- */
-
-// The tag input submits on blur, but a click on the "add" button next to it
-// blurs the field first; the short wait lets that click land.
-function submitTagInputSoon(input) {
-    setTimeout(() => submitTagInput(input), 200);
-}
-
-function submitTagInputById(id) {
-    const input = document.getElementById(id);
-    if (input) submitTagInput(input);
-}
-
 function autoResizeAndSave(el) {
     autoResize(el);
-    debouncedSaveTitle();
+    queueTitleSave();
 }

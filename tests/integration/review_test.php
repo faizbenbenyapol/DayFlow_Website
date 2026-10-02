@@ -93,7 +93,7 @@ test('the review page renders for a signed-in user', function (TestClient $clien
     $page = $client->get('/review');
 
     assertSame(200, $page['status']);
-    assertStringContains('id="reviewStrip"', $page['body']);
+    assertStringContains('id="reviewPeriods"', $page['body']);
     assertStringContains('review.js', $page['body'], 'the page must load its own script');
     assertStringContains('modules/review.css', $page['body']);
 });
