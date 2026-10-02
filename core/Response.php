@@ -59,20 +59,6 @@ class Response
             }
         }
         
-        $menuLabels = [
-            'tasks' => 'งาน', 
-            'notes' => 'โน้ต', 
-            'planner' => 'แพลนเนอร์',
-            'exercise' => 'ออกกำลังกาย', 
-            'food-notes' => 'อาหาร',
-            'finance' => 'การเงิน', 
-            'subscriptions' => 'แจ้งเตือน', 
-            'stocks' => 'หุ้น',
-            'files' => 'ไฟล์', 
-            'ai' => 'ผู้ช่วยอัจฉริยะ', 
-            'file-tools' => 'เครื่องมือจัดการไฟล์',
-            'transfer' => 'ย้ายไฟล์'
-        ];
         ?>
 <!doctype html>
 <html lang="th" data-theme="<?= h($theme) ?>">
@@ -283,7 +269,7 @@ class Response
                 <div class="menu-tags">
                     <?php foreach ($sharedMenus as $m): ?>
                         <a href="<?= APP_URL ?>/<?= h($m) ?>" class="menu-tag">
-                            <?= h($menuLabels[$m] ?? $m) ?>
+                            <?= h(AppMenus::label($m)) ?>
                         </a>
                     <?php endforeach; ?>
                 </div>

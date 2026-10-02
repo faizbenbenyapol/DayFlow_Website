@@ -305,22 +305,11 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
                 return !in_array($menu, $hiddenMenus);
             };
             ?>
-            <?php
-            $menuLabels = [
-                'projects' => 'Projects', 'tasks' => 'งาน (Tasks)', 'notes' => 'โน้ต (Notes)',
-                'planner' => 'แพลนเนอร์ (Planner)', 'focus' => 'โฟกัส (Focus/Pomodoro)', 'habits' => 'นิสัยประจำวัน (Habits)',
-                'exercise' => 'ออกกำลังกาย (Workout)', 'food-notes' => 'อาหาร-เครื่องดื่ม (Food Notes)',
-                'finance' => 'การเงิน (Finance)', 'subscriptions' => 'การแจ้งเตือน (Subscriptions)',
-                'stocks' => 'ระบบหุ้น (Stocks)', 'ai' => 'ผู้ช่วยอัจฉริยะ (AI Helper)',
-                'file-tools' => 'เครื่องมือจัดการไฟล์ (File Tools)', 'transfer' => 'ย้ายไฟล์ (File Transfer)',
-                'files' => 'ไฟล์ (Files)', 'quick-notes' => 'จดด่วน (Quick Notes)', 'bookmarks' => 'ลิงก์สำคัญ (Bookmarks)',
-            ];
-            ?>
             <div class="menu-order-list" id="menuVisibilityList" data-menu-order="<?= h(json_encode($menuOrder, JSON_UNESCAPED_UNICODE)) ?>">
                 <?php foreach (AppMenus::KEYS as $menu): ?>
                 <label class="flex items-center gap-3 settings-check">
                     <input type="checkbox" name="visible_menus[]" value="<?= h($menu) ?>" <?= $isMenuVisible($menu) ? 'checked' : '' ?>>
-                    <span><?= h($menuLabels[$menu]) ?></span>
+                    <span><?= h(AppMenus::label($menu)) ?></span>
                 </label>
                 <?php endforeach; ?>
             </div>

@@ -10,7 +10,8 @@
 //   --label     folder under docs/screenshots (default "shots")
 //   --account   shots | shots_empty         (default shots; see seed-screenshots.php)
 //   --only      comma list of page names
-//   --viewports desktop,mobile              (default both)
+//   --viewports desktop,tablet,mobile       (default desktop and mobile)
+//   --strict    exit 1 when a page logs a script error to the console
 //   --themes    light,dark                  (default both)
 //
 // Needs Microsoft Edge or Chrome and Node 22+. It drives the browser over the
@@ -27,6 +28,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const VIEWPORTS = {
     desktop: { width: 1366, height: 900, mobile: false },
+    tablet: { width: 820, height: 1100, mobile: false },
     mobile: { width: 390, height: 844, mobile: true },
 };
 
@@ -42,6 +44,10 @@ const PAGES = [
     ['files', '/files'], ['file-tools', '/file-tools'], ['transfer', '/transfer'],
     ['ai', '/ai'], ['calculator', '/calculator'], ['settings', '/settings'],
     ['settings-appearance', '/settings', '[data-tab="appearance"]'],
+    // States that need something opened first. The fourth item limits a state to some viewports.
+    ['sheet-menu', '/', '.tabbar [data-act="openMenuSheet"]', ['mobile']],
+    ['sheet-quick', '/', '.tabbar [data-act="openQuickAdd"]', ['mobile']],
+    ['palette', '/', '.rail-search', ['desktop', 'tablet']],
 ];
 
 // Live values that change every second and would make two shots differ.
@@ -83,18 +89,18 @@ function findBrowser() {
 }
 
 /** The password the seed script gave the account, read from that script so the two never drift. */
-function accountPassword() {
+export function accountPassword() {
     const seed = readFileSync(join(ROOT, 'scripts', 'seed-screenshots.php'), 'utf8');
     const match = seed.match(/SHOTS_PASSWORD\s*=\s*'([^']+)'/);
     if (!match) throw new Error('หารหัสผ่านใน scripts/seed-screenshots.php ไม่เจอ');
     return match[1];
 }
 
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+export const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // ---------------------------------------------------------------- DevTools
 
-class Cdp {
+export class Cdp {
     constructor(url) {
         this.nextId = 1;
         this.pending = new Map();
@@ -139,7 +145,7 @@ class Cdp {
     }
 }
 
-async function launch() {
+export async function launch() {
     const profile = mkdtempSync(join(tmpdir(), 'dayflow-shots-'));
     const proc = spawn(findBrowser(), [
         '--headless=new', '--disable-gpu', '--hide-scrollbars', '--no-first-run',
@@ -163,7 +169,7 @@ async function launch() {
     return { cdp, stop };
 }
 
-async function openPage(cdp) {
+export async function openPage(cdp) {
     const { targetId } = await cdp.send('Target.createTarget', { url: 'about:blank' });
     const { sessionId } = await cdp.send('Target.attachToTarget', { targetId, flatten: true });
     await cdp.send('Page.enable', {}, sessionId);
@@ -173,8 +179,22 @@ async function openPage(cdp) {
 
 // ---------------------------------------------------------------- one page
 
-class Tab {
-    constructor(cdp, sessionId) { this.cdp = cdp; this.sid = sessionId; }
+export class Tab {
+    constructor(cdp, sessionId) {
+        this.cdp = cdp;
+        this.sid = sessionId;
+        this.errors = [];
+        // A script error on a page is worth knowing about even when it still draws.
+        cdp.listeners.push(msg => {
+            if (msg.sessionId !== sessionId) return;
+            if (msg.method === 'Runtime.exceptionThrown') {
+                this.errors.push(msg.params.exceptionDetails.exception?.description?.split('\n')[0] || msg.params.exceptionDetails.text);
+            }
+            if (msg.method === 'Runtime.consoleAPICalled' && msg.params.type === 'error') {
+                this.errors.push(msg.params.args.map(a => a.value ?? a.description ?? '').join(' ').slice(0, 200));
+            }
+        });
+    }
 
     send(method, params) { return this.cdp.send(method, params, this.sid); }
 
@@ -253,7 +273,7 @@ class Tab {
 
 // ---------------------------------------------------------------- main
 
-async function signIn(tab, password) {
+export async function signIn(tab, password) {
     await tab.goto(`${BASE}/login`);
     const result = await tab.eval(`(async () => {
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
@@ -276,6 +296,7 @@ async function main() {
     mkdirSync(OUT, { recursive: true });
     const { cdp, stop } = await launch();
     const failures = [];
+    const consoleErrors = [];
     let count = 0;
 
     try {
@@ -286,6 +307,7 @@ async function main() {
         const shoot = async (name, path, viewportName, theme, click) => {
             const vp = VIEWPORTS[viewportName];
             await tab.viewport(vp);
+            tab.errors.length = 0;
             await tab.goto(BASE + path);
             await tab.freeze();
             await tab.settle();
@@ -299,6 +321,7 @@ async function main() {
             await tab.theme(theme);
             await tab.capture(join(OUT, `${name}-${viewportName}-${theme}.png`), vp);
             count++;
+            for (const message of new Set(tab.errors)) consoleErrors.push(`${name} ${viewportName}: ${message}`);
         };
 
         if (wants('login')) {
@@ -309,8 +332,8 @@ async function main() {
 
         await signIn(tab, accountPassword());
 
-        for (const [name, path, click] of PAGES.filter(([n]) => wants(n))) {
-            for (const v of VIEWPORT_NAMES) for (const t of THEMES) {
+        for (const [name, path, click, only] of PAGES.filter(([n]) => wants(n))) {
+            for (const v of VIEWPORT_NAMES.filter(n => !only || only.includes(n))) for (const t of THEMES) {
                 try {
                     await shoot(name, path, v, t, click);
                     process.stdout.write('.');
@@ -325,10 +348,17 @@ async function main() {
     }
 
     console.log(`\nถ่ายแล้ว ${count} ภาพ → ${OUT}`);
+    if (consoleErrors.length) {
+        console.warn(`พบ error ในคอนโซล ${consoleErrors.length} รายการ:\n  ` + [...new Set(consoleErrors)].join('\n  '));
+        if (opt.strict) process.exitCode = 1;
+    }
     if (failures.length) {
         console.error(`ไม่สำเร็จ ${failures.length} ภาพ:\n  ` + failures.join('\n  '));
         process.exitCode = 1;
     }
 }
 
-main().catch(e => { console.error(e.message); process.exit(1); });
+// Other scripts (e2e-shell.mjs) import the helpers above without taking a photograph.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+    main().catch(e => { console.error(e.message); process.exit(1); });
+}

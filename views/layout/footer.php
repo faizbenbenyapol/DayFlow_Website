@@ -29,6 +29,7 @@ if (isset($pageScript) && in_array($pageScript, $sortablePages, true)):
 <!-- Global JS -->
 <script src="<?= APP_URL ?>/assets/js/actions.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/actions.js') ?>"></script>
 <script src="<?= APP_URL ?>/assets/js/app.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/app.js') ?>"></script>
+<script src="<?= APP_URL ?>/assets/js/shell.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/shell.js') ?>"></script>
 
 <script nonce="<?= h(Security::nonce()) ?>">
 // Service worker: caches the static shell only (CSS/JS/fonts), never pages or
@@ -57,52 +58,6 @@ if ('serviceWorker' in navigator) {
     foreach (array_merge([$pageScript], $pageScriptParts[$pageScript] ?? []) as $script): ?>
 <script src="<?= APP_URL ?>/assets/js/<?= h($script) ?>.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/' . $script . '.js') ?>"></script>
 <?php endforeach; endif; ?>
-
-<script nonce="<?= h(Security::nonce()) ?>">
-// Mobile sidebar toggle and hamburger icon animation
-(function() {
-    const btn     = document.getElementById('menuToggle');
-    const sidebar = document.getElementById('appSidebar');
-    if (!btn || !sidebar) return;
-
-    btn.addEventListener('click', function() {
-        const isOpen = sidebar.classList.toggle('open');
-        btn.classList.toggle('active', isOpen);
-        btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-    });
-
-    // Close sidebar when nav item clicked on mobile
-    sidebar.querySelectorAll('.nav-item').forEach(function(el) {
-        el.addEventListener('click', function() {
-            sidebar.classList.remove('open');
-            btn.classList.remove('active');
-            btn.setAttribute('aria-expanded', 'false');
-        });
-    });
-
-    // Close sidebar when clicking outside
-    document.addEventListener('click', function(e) {
-        if (window.innerWidth > 768) return;
-        if (!sidebar.contains(e.target) && !btn.contains(e.target)) {
-            sidebar.classList.remove('open');
-            btn.classList.remove('active');
-            btn.setAttribute('aria-expanded', 'false');
-        }
-    });
-
-    // Touch device soft keyboard scroll-into-view helper
-    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-        document.addEventListener('focusin', function(e) {
-            const el = e.target;
-            if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT') {
-                setTimeout(function() {
-                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 280);
-            }
-        });
-    }
-})();
-</script>
 
 <?php if (Auth::isReadOnly()): ?>
 <script nonce="<?= h(Security::nonce()) ?>">
