@@ -9,6 +9,7 @@
 - [ ] Rebuild image (`docker compose ... build app cron`) เพราะ config ของ Apache อยู่ใน image
 - [ ] รัน `php scripts/migrate.php` บนเซิร์ฟเวอร์ (มี migration ใหม่ 024–026 และแอปไม่สร้างตารางเองแล้ว)
 - [ ] รัน `php scripts/migrate.php` กับฐานข้อมูล XAMPP ในเครื่อง (`mylife_db`) ด้วย
+- [ ] หลัง deploy: ตั้งข้อมูล demo ให้เรียบร้อยแล้วรัน `php scripts/demo-reset.php --snapshot` หนึ่งครั้ง ไม่งั้นการรีเซ็ตรายคืนจะไม่ทำงาน
 - [ ] ย้ายหัวข้อ `[Unreleased]` ใน `CHANGELOG.md` เป็นเลขเวอร์ชัน และแก้เวอร์ชันใน `README.md`
 
 ## 2. ทดสอบบนเว็บจริงด้วยมือ (เทสต์อัตโนมัติทำไม่ได้)
@@ -37,12 +38,12 @@
 
 - [ ] PHPStan ระดับ 6 ขึ้นไป (ตอนนี้ระดับ 5 ผ่าน 0 error) ส่วนใหญ่ต้องเพิ่ม type ให้ array
 - [ ] ตัดสินใจเรื่อง Composer + namespace เมื่อจะเริ่มใช้ library ภายนอก (รอบนี้เลือกข้ามไปก่อน)
-- [ ] บัญชี demo: รีเซ็ตข้อมูลทุกคืน หรือทำเป็นอ่านอย่างเดียวทั้งหมด (ตอนนี้บล็อกเฉพาะการเขียนที่เสี่ยง)
+- [ ] บัญชี demo: snapshot ยังไม่ครอบคลุมโปรเจคที่ผู้เยี่ยมชมสร้างไว้ (ตอนนี้ค้างจนกว่าจะลบเอง)
 
 ---
 
 ## เครื่องมือตรวจที่ใช้ในรอบนี้
 
-- `php tests/run.php http://localhost` รันใน container (341 เทสต์) ถ้าชื่อ container ชนกับโปรเจกต์เก่า ใช้ `docker compose -p dayflowtest -f docker-compose.yml -f <override>` ที่เปลี่ยน `container_name` และพอร์ต
+- `php tests/run.php http://localhost` รันใน container (358 เทสต์) ถ้าชื่อ container ชนกับโปรเจกต์เก่า ใช้ `docker compose -p dayflowtest -f docker-compose.yml -f <override>` ที่เปลี่ยน `container_name` และพอร์ต
 - PHPStan: `docker run --rm -v "$PWD":/app -w /app ghcr.io/phpstan/phpstan:2.2.16 analyse`
 - งาน CSS/JS ตรวจด้วยการเทียบภาพหน้าจอก่อน/หลังทีละพิกเซลผ่าน headless Edge (สคริปต์อยู่นอก repo ถ้าจะใช้อีกให้ขอให้สร้างใหม่)

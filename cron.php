@@ -12,6 +12,8 @@ require_once ROOT . '/core/TelegramService.php';
 require_once ROOT . '/core/WebPush.php';
 require_once ROOT . '/core/NotificationDigest.php';
 require_once ROOT . '/models/User.php';
+require_once ROOT . '/models/AccountData.php';
+require_once ROOT . '/core/DemoReset.php';
 require_once ROOT . '/models/PushSubscription.php';
 
 // Security check: production is CLI-only. The web endpoint is intentionally
@@ -50,6 +52,21 @@ echo "Starting DayFlow Cron Job...\n";
 
 // The tables this job uses come from scripts/migrate.php, which a deploy
 // runs before starting the worker.
+
+// 0. Demo account: put it back as the owner left it, once a night after 03:00.
+//    Skipped until a snapshot exists (php scripts/demo-reset.php --snapshot).
+if ((int)date('G') >= 3 && DemoReset::hasSnapshot() && ($demo = User::findDemo())) {
+    $demoId = (int)$demo['id'];
+    if (shouldNotify($demoId, 'demo_reset', $demoId, date('Y-m-d'))) {
+        try {
+            $restored = DemoReset::restore($demoId);
+            logNotification($demoId, 'demo_reset', $demoId, date('Y-m-d'));
+            echo 'Demo account reset (' . array_sum($restored) . " rows).\n";
+        } catch (Throwable $e) {
+            echo 'Demo reset failed: ' . $e->getMessage() . "\n";
+        }
+    }
+}
 
 // 1. Web Push digest.
 //
