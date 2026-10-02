@@ -257,8 +257,10 @@ function formatDateTime(dateStr) {
     return d.getDate() + ' ' + months[d.getMonth()] + ' ' + (d.getFullYear() + 543) + ' ' + time + ' น.';
 }
 
+/** Today as YYYY-MM-DD in the visitor's own time zone (toISOString would give UTC's date). */
 function todayISO() {
-    return new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
 
 function daysUntil(dateStr) {
@@ -289,102 +291,71 @@ function debounce(fn, delay) {
 }
 
 /* =====================================================
-   Global Search
+   Chart colours
+   A chart draws on a canvas, which cannot read CSS, so its colours are looked up
+   from the same tokens as the page and redrawn when the theme changes. Nothing
+   that draws a chart should write a colour of its own.
 ===================================================== */
-(function initGlobalSearch() {
-    const input = document.getElementById('globalSearchInput');
-    const results = document.getElementById('globalSearchResults');
-    if (!input || !results) return;
-
-    const render = items => {
-        if (!items.length) {
-            results.innerHTML = '<div class="global-search-empty">ไม่พบข้อมูลที่ตรงกัน</div>';
-        } else {
-            results.innerHTML = items.map((item, index) => `
-                <a class="global-search-item" role="option" data-search-index="${index}" href="${escHtml(item.url)}">
-                    <span class="global-search-type">${escHtml(item.type)}</span>
-                    <span class="global-search-copy"><strong>${escHtml(item.title)}</strong><small>${escHtml(item.subtitle)}</small></span>
-                </a>`).join('');
-        }
-        results.hidden = false;
+function chartTheme() {
+    const css = getComputedStyle(document.documentElement);
+    const token = name => css.getPropertyValue(name).trim();
+    return {
+        ink: token('--ink'),
+        pencil: token('--pencil'),
+        rule: token('--rule'),
+        paper: token('--paper'),
+        income: token('--ledger-green'),
+        expense: token('--stamp-red'),
+        font: token('--font'),
     };
+}
 
-    // Typing fast queues several requests, and they do not necessarily come
-    // back in order — a slow early response would otherwise overwrite the
-    // results for what the user has actually typed.
-    let inFlight = null;
+/** Chart.js animation is canvas drawing, which the CSS reduced-motion rule cannot reach. */
+function chartAnimation() {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? false : { duration: 400 };
+}
 
-    const search = debounce(async () => {
-        const q = input.value.trim();
-        if (inFlight) inFlight.abort();
-        if (q.length < 2) { results.hidden = true; inFlight = null; return; }
+/** A six-digit hex colour with some transparency (alpha 0 to 1). */
+function withAlpha(hex, alpha) {
+    return /^#[0-9a-fA-F]{6}$/.test(hex) ? hex + Math.round(alpha * 255).toString(16).padStart(2, '0') : hex;
+}
 
-        const controller = new AbortController();
-        inFlight = controller;
-        try {
-            const data = await apiFetch(`${BASE_URL}/api/search?q=${encodeURIComponent(q)}`, { signal: controller.signal });
-            if (controller.signal.aborted) return;
-            render(data.results || []);
-        } catch (error) {
-            if (error.name === 'AbortError') return;
-            results.innerHTML = '<div class="global-search-empty">ค้นหาไม่สำเร็จ ลองใหม่อีกครั้ง</div>';
-            results.hidden = false;
-        } finally {
-            if (inFlight === controller) inFlight = null;
-        }
-    }, 220);
-
-    input.addEventListener('input', search);
-    input.addEventListener('focus', search);
-    input.addEventListener('keydown', event => {
-        if (results.hidden) return;
-        const items = Array.from(results.querySelectorAll('.global-search-item'));
-        if (!items.length) return;
-        const current = items.findIndex(item => item.classList.contains('keyboard-focus'));
-        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-            event.preventDefault();
-            const next = event.key === 'ArrowDown' ? (current + 1) % items.length : (current - 1 + items.length) % items.length;
-            items.forEach(item => item.classList.remove('keyboard-focus'));
-            items[next].classList.add('keyboard-focus');
-            items[next].scrollIntoView({ block: 'nearest' });
-        }
-        if (event.key === 'Enter' && current >= 0) {
-            event.preventDefault();
-            items[current].click();
-        }
-    });
-    document.addEventListener('keydown', event => {
-        const tag = document.activeElement?.tagName;
-        if (event.key === '/' && document.activeElement !== input && !['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) {
-            event.preventDefault(); input.focus();
-        }
-        if (event.key === 'Escape') { input.value = ''; results.hidden = true; input.blur(); }
-    });
-    document.addEventListener('click', event => {
-        if (!event.target.closest('#globalSearch')) results.hidden = true;
-    });
-})();
+/** Calls back when the theme changes: the settings page, or the system switching under "auto". */
+function onThemeChange(callback) {
+    new MutationObserver(callback).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+}
 
 /* =====================================================
    Command Palette (Ctrl/Cmd + K)
    One keystroke to reach any of the app's twenty-odd modules, or anything
-   inside them. Navigation targets are read from the sidebar that the server
+   inside them. Navigation targets are read from the rail that the server
    already rendered, so hidden menus and share mode are respected without
    duplicating that logic here.
 ===================================================== */
 (function initCommandPalette() {
-    const sidebar = document.getElementById('appSidebar');
-    if (!sidebar) return; // login, share and other chrome-less pages
+    const rail = document.getElementById('appRail');
+    if (!rail) return; // login, share and other chrome-less pages
 
-    const navCommands = Array.from(sidebar.querySelectorAll('a.nav-item'))
+    const navCommands = Array.from(rail.querySelectorAll('a.nav-item:not(.rail-logout)'))
         .map(link => ({
-            title: (link.querySelector('span')?.textContent || link.textContent || '').trim(),
+            title: (link.querySelector('.nav-text')?.textContent || link.title || '').trim(),
             url: link.href,
             type: 'ไปที่',
         }))
         .filter(cmd => cmd.title !== '');
 
     if (navCommands.length === 0) return;
+
+    // Things to do rather than places to go. They open the quick-add sheet
+    // (shell.js), so they are only offered when it is on the page.
+    const doCommands = typeof window.openQuickAdd === 'function' || document.getElementById('quickSheet')
+        ? [
+            { title: 'เพิ่มงาน', url: '#', type: 'ทำ', action: () => window.openQuickAdd('task') },
+            { title: 'จดด่วน', url: '#', type: 'ทำ', action: () => window.openQuickAdd('note') },
+            { title: 'บันทึกรายรับรายจ่าย', url: '#', type: 'ทำ', action: () => window.openQuickAdd('money') },
+        ]
+        : [];
+    const allCommands = doCommands.concat(navCommands);
 
     const overlay = document.createElement('div');
     overlay.className = 'cmdk-backdrop';
@@ -424,9 +395,15 @@ function debounce(fn, delay) {
     };
 
     const matchNav = query => {
-        if (query === '') return navCommands;
+        if (query === '') return allCommands;
         const needle = query.toLowerCase();
-        return navCommands.filter(cmd => cmd.title.toLowerCase().includes(needle));
+        return allCommands.filter(cmd => cmd.title.toLowerCase().includes(needle));
+    };
+
+    // A command that does something instead of going somewhere.
+    const runAction = item => {
+        close();
+        item.action();
     };
 
     const update = async () => {
@@ -460,7 +437,7 @@ function debounce(fn, delay) {
         overlay.hidden = false;
         document.body.classList.add('modal-open');
         input.value = '';
-        items = navCommands;
+        items = allCommands;
         active = 0;
         render();
         input.focus();
@@ -491,6 +468,15 @@ function debounce(fn, delay) {
         if (event.target === overlay) close();
     });
 
+    list.addEventListener('click', event => {
+        const el = event.target.closest('.cmdk-item');
+        const item = el ? items[Number(el.dataset.index)] : null;
+        if (item && item.action) {
+            event.preventDefault();
+            runAction(item);
+        }
+    });
+
     list.addEventListener('mousemove', event => {
         const el = event.target.closest('.cmdk-item');
         if (el && Number(el.dataset.index) !== active) {
@@ -505,7 +491,8 @@ function debounce(fn, delay) {
         if (event.key === 'ArrowUp')   { event.preventDefault(); move(-1); }
         if (event.key === 'Enter' && items[active]) {
             event.preventDefault();
-            window.location.href = items[active].url;
+            if (items[active].action) runAction(items[active]);
+            else window.location.href = items[active].url;
         }
     });
 
@@ -531,13 +518,3 @@ function hideElement(id) {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
 }
-
-// A dashboard widget is clickable as a whole, except where something inside
-// it already handles the click.
-document.addEventListener('click', function (event) {
-    const widget = event.target.closest('[data-widget-nav]');
-    if (!widget) return;
-    if (event.target.closest('a, .drag-handle, .btn-copy-code, .widget-note-item')) return;
-
-    window.location.href = widget.dataset.widgetNav;
-});

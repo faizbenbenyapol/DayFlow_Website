@@ -39,7 +39,7 @@ test('no page script defines its own HTML escaper', function (): void {
 
 test('login and the other standalone pages do not rely on the shared escaper', function (): void {
     // They do not include views/layout/header.php, so html.js is not there.
-    foreach (['auth/login.php', 'share/index.php', 'share/expired.php'] as $view) {
+    foreach (['auth/login.php', 'share/index.php', 'share/expired.php', 'partials/outside-head.php', 'partials/statement.php'] as $view) {
         $src = file_get_contents(ROOT . '/views/' . $view);
         if (str_contains($src, 'header.php')) continue;
         assertFalse((bool)preg_match('/\bescHtml\(|\bcssColor\(/', $src), "{$view} calls the escaper without loading it");

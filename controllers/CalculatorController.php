@@ -7,7 +7,7 @@ class CalculatorController
 {
     public function index(): void
     {
-        $pageTitle  = 'คำนวณ';
+        $pageTitle  = 'เครื่องคิดเลข';
         $pageScript = 'calculator';
         $pageStyle  = 'calculator';
 

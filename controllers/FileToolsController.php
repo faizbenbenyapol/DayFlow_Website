@@ -7,7 +7,7 @@ class FileToolsController
 {
     public function index(): void
     {
-        $pageTitle   = 'จัดการไฟล์';
+        $pageTitle   = 'แปลงไฟล์';
         $pageStyle   = 'file-tools';
         $pageScript  = 'file-tools';
         $loadPdfLibs = true;

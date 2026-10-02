@@ -21,12 +21,12 @@
     async function loadShares() {
         const tbody = document.getElementById('sharesTableBody');
         if (!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="5" class="text-muted text-sm p-4">กำลังโหลด...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5"><span class="skel skel-w-52"></span></td></tr>';
         try {
             const data = await apiFetch(BASE_URL + '/api/shares');
             const shares = data.shares || [];
             if (!shares.length) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-muted text-sm" style="padding:1rem;text-align:center">ยังไม่มีลิงก์แชร์ — ไปที่ <a href="' + BASE_URL + '/files" style="color:var(--color-text);font-weight:500">หน้าไฟล์</a> แล้วคลิกขวาที่ไฟล์เพื่อสร้าง</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5"><div class="share-empty">ยังไม่มีลิงก์แชร์ ไปที่หน้า <a href="' + BASE_URL + '/files">ไฟล์</a> กดปุ่มตัวเลือกของไฟล์แล้วเลือก "แชร์ลิงก์"</div></td></tr>';
                 return;
             }
             tbody.innerHTML = shares.map(s => {
@@ -38,20 +38,20 @@
 
                 return `<tr>
                     <td>
-                        <div class="font-medium">${escHtml(s.label || s.file_name)}</div>
-                        <div class="text-xs text-muted">${s.file_type === 'folder' ? '📁' : '📄'} ${escHtml(s.file_name)}</div>
+                        <div class="share-name">${escHtml(s.label || s.file_name)}</div>
+                        <div class="share-sub">${s.file_type === 'folder' ? 'โฟลเดอร์' : 'ไฟล์'} · ${escHtml(s.file_name)}</div>
                     </td>
                     <td>
                         <a class="share-link-url" href="${escHtml(link)}" target="_blank" rel="noopener">${escHtml(link)}</a>
                     </td>
-                    <td><span class="share-perm-badge ${escHtml(s.permission)}">${s.permission === 'download' ? 'ดาวน์โหลด' : 'ดูอย่างเดียว'}</span></td>
+                    <td><span class="badge ${s.permission === 'download' ? 'badge-dark' : 'badge-gray'}">${s.permission === 'download' ? 'ดาวน์โหลด' : 'ดูอย่างเดียว'}</span></td>
                     <td>${exp}</td>
                     <td>
                         <div class="share-actions">
-                            <button class="btn btn-ghost btn-sm" data-act="copy" data-link="${escHtml(link)}" title="คัดลอกลิงก์">คัดลอก</button>
-                            <button class="btn btn-ghost btn-sm" data-act="edit" data-id="${s.id}" data-file-id="${s.file_id}"
+                            <button class="btn btn-sm" data-act="copy" data-link="${escHtml(link)}" title="คัดลอกลิงก์">คัดลอก</button>
+                            <button class="btn btn-sm" data-act="edit" data-id="${s.id}" data-file-id="${s.file_id}"
                                 data-label="${escHtml(s.label)}" data-perm="${escHtml(s.permission)}" data-exp="${escHtml(s.expires_at||'')}">แก้ไข</button>
-                            <button class="btn btn-ghost btn-sm" style="color:var(--color-danger)" data-act="del" data-id="${s.id}">ลบ</button>
+                            <button class="btn btn-sm btn-danger" data-act="del" data-id="${s.id}">ลบ</button>
                         </div>
                     </td>
                 </tr>`;
@@ -70,7 +70,6 @@
     // ---- Edit share modal ----
     function openEditModal(btn) {
         editingShareId = parseInt(btn.dataset.id);
-        const overlay = document.getElementById('shareModalOverlay');
         $('#smLabel').value = btn.dataset.label || '';
         $('#smPermission').value = btn.dataset.perm || 'view';
         if (btn.dataset.exp) {
@@ -82,11 +81,11 @@
         } else {
             $('#smExpires').value = '';
         }
-        overlay.style.display = 'flex';
+        openModal('shareModalOverlay');
     }
 
     function closeShareModal() {
-        document.getElementById('shareModalOverlay').style.display = 'none';
+        closeModal('shareModalOverlay');
         editingShareId = null;
     }
 
@@ -120,18 +119,8 @@
     // ---- Init ----
     document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('btnSaveShare')?.addEventListener('click', saveShare);
-        document.getElementById('btnCloseShareModal')?.addEventListener('click', closeShareModal);
-        document.getElementById('shareModalOverlay')?.addEventListener('click', e => {
-            if (e.target === document.getElementById('shareModalOverlay')) closeShareModal();
-        });
 
-        // Load when tab activated
-        let loaded = false;
-        document.querySelectorAll('.settings-tab').forEach(t => t.addEventListener('click', () => {
-            if (t.dataset.tab === 'shares' && !loaded) { loaded = true; loadShares(); }
-        }));
-        if (document.getElementById('tab-shares')?.style.display !== 'none') {
-            loaded = true; loadShares();
-        }
+        // Load when the topic is first shown
+        onSettingsTab('shares', loadShares);
     });
 })();

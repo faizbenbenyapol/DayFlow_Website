@@ -15,7 +15,7 @@ class FileTransferController
         // Cleanup expired transfers on page load (lightweight)
         FileTransfer::cleanup();
 
-        $pageTitle  = 'ย้ายไฟล์';
+        $pageTitle  = 'ส่งไฟล์';
         $pageStyle  = 'transfer';
         $pageScript = 'transfer';
         $loadQrLib  = true;
@@ -241,7 +241,7 @@ class FileTransferController
             echo '.btn{display:inline-block;padding:12px 32px;background:#1d1d1f;color:#fff;border-radius:10px;text-decoration:none;font-weight:500;}</style>';
             echo '</head><body><div class="card"><div class="code">410</div>';
             echo '<div class="msg">ลิงก์นี้หมดอายุหรือไม่ถูกต้องแล้ว</div>';
-            echo '<a href="' . h(APP_URL) . '/transfer" class="btn">ไปหน้าย้ายไฟล์</a>';
+            echo '<a href="' . h(APP_URL) . '/transfer" class="btn">ไปหน้าส่งไฟล์</a>';
             echo '</div></body></html>';
             return;
         }

@@ -1,274 +1,299 @@
 /* =====================================================
-   ai.css — AI Content Generator
+   ai.css — AI content assistant
+
+   Three tabs: make, keys, history. The result is a set of ruled sections whose
+   text can be edited in place. No brand colours for the services: a provider is
+   told apart by its name.
 ===================================================== */
 
-.ai-tab {
-    transition: all .15s;
+.ai-tabs {
+    margin-bottom: var(--space-6);
+}
+
+.ai-narrow {
+    max-width: 720px;
+}
+
+.ai-more {
+    font-size: 0.9375rem;
+    color: var(--pencil);
+    cursor: pointer;
+}
+
+.ai-more:hover {
+    color: var(--ink);
+}
+
+.ai-gen-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.ai-shortcut {
+    margin-left: auto;
+    font-size: 0.8125rem;
+    color: var(--pencil);
+}
+
+.ai-note {
+    font-size: 0.8125rem;
+    color: var(--pencil);
+}
+
+.ai-wait {
+    margin-bottom: var(--space-3);
+    color: var(--pencil);
+}
+
+.ai-ok,
+.ai-bad,
+.ai-warn {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.ai-ok {
+    color: var(--ledger-green);
+}
+
+.ai-bad {
+    color: var(--stamp-red);
+}
+
+.ai-warn {
+    color: var(--caution);
+}
+
+.ai-video {
+    display: block;
+    width: 100%;
+    max-width: 480px;
+    border: 1px solid var(--rule);
 }
 
 .ai-help-list {
-    list-style: disc;
-    padding-left: 1.25rem;
-    margin: 0;
     display: flex;
     flex-direction: column;
-    gap: .5rem;
-    font-size: .9rem;
+    gap: var(--space-2);
+    padding-left: 1.25rem;
+    list-style: disc;
+    font-size: 0.9375rem;
 }
+
 .ai-help-list a {
-    color: var(--color-primary);
-    word-break: break-all;
+    overflow-wrap: anywhere;
+    text-decoration: underline;
 }
 
-/* ---------- API Keys ---------- */
-.ai-key-row[data-provider="openai"]     { border-left: 3px solid #10a37f; }
-.ai-key-row[data-provider="gemini"]     { border-left: 3px solid #4285f4; }
-.ai-key-row[data-provider="anthropic"]  { border-left: 3px solid var(--palette-amber-600); }
-.ai-key-row[data-provider="replicate"]  { border-left: 3px solid #7c3aed; }
-
+/* ---------- API keys ---------- */
 .ai-key-row {
-    padding: .75rem;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-surface-alt, var(--color-surface));
-    margin-bottom: .5rem;
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--rule);
 }
+
 .ai-key-head {
     display: flex;
     align-items: center;
-    gap: .5rem;
-    margin-bottom: .5rem;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
 }
+
 .ai-key-body {
     display: flex;
-    gap: .5rem;
-    align-items: center;
     flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
 }
+
 .ai-key-body input {
     flex: 1;
     min-width: 200px;
 }
 
-/* ---------- Result sections ---------- */
+.ai-key-msg {
+    min-height: 1rem;
+    margin-top: var(--space-2);
+}
+
+/* ---------- Result ---------- */
 .ai-section {
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    padding: .75rem 1rem;
-    margin-bottom: .75rem;
-    background: var(--color-surface);
     position: relative;
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--rule);
 }
+
+.ai-section-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin-bottom: 4px;
+}
+
 .ai-section-label {
-    font-size: .8rem;
-    color: var(--color-muted);
-    margin-bottom: .35rem;
-    font-weight: 600;
+    margin-bottom: 4px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--pencil);
 }
+
 .ai-section-val {
     font-size: 1rem;
-    line-height: 1.55;
+    line-height: 1.7;
     white-space: pre-wrap;
-    word-break: break-word;
+    overflow-wrap: anywhere;
 }
+
+.ai-section-val[contenteditable="true"] {
+    padding: 2px 4px;
+    margin: 0 -4px;
+}
+
+.ai-section-val[contenteditable="true"]:hover {
+    background: var(--paper-sunk);
+}
+
+.ai-section-val[contenteditable="true"]:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 0;
+    background: var(--paper);
+}
+
 .ai-section button[data-copy] {
-    margin-top: .5rem;
+    margin-top: var(--space-2);
 }
+
 .ai-hashtags {
-    color: var(--color-primary);
     font-weight: 500;
 }
 
-/* ---------- Scenes ---------- */
 .ai-scenes {
     display: flex;
     flex-direction: column;
-    gap: .5rem;
-    margin-top: .5rem;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
 }
+
 .ai-scene {
-    border-left: 3px solid var(--color-primary);
-    padding: .5rem .75rem;
-    background: var(--color-bg, var(--color-surface));
-    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: var(--space-2) 0 var(--space-2) var(--space-3);
+    border-left: 2px solid var(--ink);
 }
+
 .ai-scene-head {
     display: flex;
-    gap: .5rem;
     align-items: center;
-    margin-bottom: .35rem;
+    gap: var(--space-2);
+    margin-bottom: 4px;
 }
+
 .ai-scene-row {
-    font-size: .9rem;
-    line-height: 1.5;
-    margin-bottom: .2rem;
+    margin-bottom: 2px;
+    font-size: 0.9375rem;
+    line-height: 1.6;
 }
+
 .ai-scene-row em {
-    color: var(--color-muted);
-    font-style: italic;
+    color: var(--pencil);
+    font-style: normal;
+}
+
+/* ---------- Ideas ---------- */
+.ai-preset-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+}
+
+.ai-chip-label {
+    font-size: 0.8125rem;
+    color: var(--pencil);
+}
+
+.ai-chip {
+    min-height: 32px;
+    padding: 2px 12px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 4px;
+    background: none;
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+}
+
+.ai-chip:hover {
+    border-color: var(--ink);
+    background: var(--paper-sunk);
+}
+
+.ai-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    padding: var(--space-3);
+    background: var(--paper-sunk);
+}
+
+.ai-option-btn {
+    padding: 8px 12px;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--r-control);
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.9375rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.ai-option-btn:hover {
+    border-color: var(--ink);
 }
 
 /* ---------- History ---------- */
 .ai-history-item {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: .75rem;
-    padding: .75rem;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    margin-bottom: .5rem;
     flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--rule);
 }
+
 .ai-history-main {
     flex: 1;
     min-width: 200px;
 }
+
 .ai-history-title {
-    font-weight: 600;
-    margin-bottom: .25rem;
+    margin-bottom: 2px;
+    font-weight: 500;
 }
+
 .ai-history-actions {
     display: flex;
-    gap: .35rem;
     flex-wrap: wrap;
+    gap: var(--space-1);
 }
 
-/* ---------- Preset chips ---------- */
-.ai-preset-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: .35rem;
-    margin-top: .5rem;
-    align-items: center;
-}
-.ai-chip-label {
-    font-size: .75rem;
-    color: var(--color-muted);
-    margin-right: .25rem;
-}
-.ai-chip {
-    font-size: .8rem;
-    padding: .25rem .65rem;
-    background: var(--color-surface-alt, transparent);
-    border: 1px solid var(--color-border);
-    border-radius: 999px;
-    color: var(--color-text);
-    cursor: pointer;
-    font-family: inherit;
-    transition: all .15s;
-}
-.ai-chip:hover {
-    background: var(--color-primary);
-    color: #fff;
-    border-color: var(--color-primary);
-}
-
-/* ---------- Section head (label + regen btn) ---------- */
-.ai-section-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: .5rem;
-    margin-bottom: .35rem;
-}
-.ai-section-val[contenteditable="true"] {
-    outline: none;
-    padding: .25rem;
-    border-radius: var(--radius-sm);
-    transition: background .15s;
-}
-.ai-section-val[contenteditable="true"]:hover,
-.ai-section-val[contenteditable="true"]:focus {
-    background: var(--color-surface-alt, rgba(0, 0, 0, .03));
-}
-
-/* ---------- Options picker (regenerate) ---------- */
-.ai-options {
-    margin-top: .75rem;
-    padding: .75rem;
-    background: var(--color-surface-alt, rgba(0, 0, 0, .03));
-    border-radius: var(--radius-md);
-    display: flex;
-    flex-direction: column;
-    gap: .4rem;
-}
-.ai-option-btn {
-    text-align: left;
-    padding: .5rem .75rem;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    font-family: inherit;
-    font-size: .92rem;
-    color: var(--color-text);
-    transition: all .15s;
-}
-.ai-option-btn:hover {
-    border-color: var(--color-primary);
-    background: var(--color-primary);
-    color: #fff;
-}
-
-/* ---------- Skeleton loader ---------- */
-@keyframes ai-skel-pulse {
-    0%, 100% { opacity: .6; }
-    50%      { opacity: 1; }
-}
-.ai-skel {
-    background: linear-gradient(90deg,
-        var(--color-border) 0%,
-        var(--color-surface-alt, rgba(0,0,0,.05)) 50%,
-        var(--color-border) 100%);
-    border-radius: var(--radius-sm);
-    animation: ai-skel-pulse 1.4s ease-in-out infinite;
-}
-.ai-skel-line {
-    height: 14px;
-    margin-bottom: .6rem;
-}
-.ai-skel-block {
-    height: 80px;
-    margin: 1rem 0;
-}
-
-/* ---------- kbd ---------- */
-kbd {
-    display: inline-block;
-    padding: 1px 6px;
-    font-size: .75rem;
-    font-family: ui-monospace, monospace;
-    background: var(--color-surface-alt, #f0f0f0);
-    border: 1px solid var(--color-border);
-    border-bottom-width: 2px;
-    border-radius: 3px;
-    color: var(--color-text);
-}
-
-/* ---------- Key test message ---------- */
-.ai-key-msg {
-    margin-top: .4rem;
-    min-height: 1rem;
-}
-
-/* ---------- Mobile ---------- */
 @media (max-width: 640px) {
-    .ai-tabs {
-        overflow-x: auto;
-        flex-wrap: nowrap !important;
-    }
-    .ai-tab {
-        flex: 0 0 auto;
-    }
     .ai-section-head {
         flex-wrap: wrap;
     }
+
     .ai-history-actions {
         width: 100%;
         justify-content: flex-end;
     }
-    .ai-gen-actions kbd {
+
+    .ai-shortcut {
         display: none;
     }
 }

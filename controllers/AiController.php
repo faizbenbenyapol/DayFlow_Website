@@ -10,7 +10,7 @@ class AiController
 {
     public function index(): void
     {
-        $pageTitle  = 'AI สร้างคอนเทนต์';
+        $pageTitle  = 'ผู้ช่วย AI';
         $pageScript = 'ai';
         $pageStyle  = 'ai';
 

@@ -1,21 +1,21 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ลิงก์หมดอายุหรือไม่พบไฟล์</title>
-    <style>
-        body { font-family: sans-serif; background: #f8f9fb; display: flex; align-items: center; justify-content: center; min-height: 100dvh; }
-        .box { text-align: center; padding: 2rem; }
-        h1 { font-size: 1.5rem; color: #111; margin-bottom: .5rem; }
-        p  { color: #6b7280; }
-    </style>
-</head>
-<body>
-<div class="box">
-    <div style="font-size:3rem;margin-bottom:1rem">🔗</div>
-    <h1>ลิงก์นี้ไม่สามารถใช้งานได้</h1>
-    <p>ลิงก์อาจหมดอายุ ถูกลบ หรือไม่มีอยู่ในระบบ</p>
-</div>
-</body>
-</html>
+<?php
+// =====================================================
+// views/share/expired.php
+// A share link that cannot be opened: expired, switched off, or pointing at a
+// file that is gone. The controller sets the status (410 or 404) and $pageTitle.
+// =====================================================
+
+$status = http_response_code();
+$missing = $status === 404;
+
+$statement = [
+    'code'    => (string)$status,
+    'title'   => $missing ? 'ไม่พบไฟล์ที่แชร์' : 'ลิงก์นี้ใช้ไม่ได้แล้ว',
+    'text'    => $missing
+        ? 'ไฟล์นี้อาจถูกลบไปแล้ว ขอลิงก์ใหม่จากคนที่ส่งให้คุณ'
+        : 'ลิงก์อาจหมดอายุ เจ้าของอาจปิดการแชร์ หรือลิงก์พิมพ์ผิด ขอลิงก์ใหม่จากคนที่ส่งให้คุณ',
+    'primary' => ['เปิด DayFlow', APP_URL . '/'],
+    'back'    => false,
+];
+
+require ROOT . '/views/partials/statement.php';

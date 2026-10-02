@@ -72,3 +72,6 @@ yarn-error.log*
 
 # Demo account snapshot (php scripts/demo-reset.php --snapshot)
 /storage/demo-snapshot.json
+
+# Screenshots from scripts/screenshots.mjs: regenerate them, do not commit them
+docs/screenshots/

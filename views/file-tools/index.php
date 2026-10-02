@@ -1,28 +1,24 @@
-<div class="page-header">
+<?php
+// =====================================================
+// views/file-tools/index.php — tools for PDF, images, data and ZIP
+//
+// Every tool runs in the browser on the file the person picks; nothing is
+// uploaded. assets/js/file-tools*.js do the work.
+// =====================================================
+?>
+<div class="page-head">
     <div>
-        <h1 class="page-title">จัดการไฟล์</h1>
-        <div class="text-xs text-muted">เครื่องมือไฟล์ครบวงจร — PDF · รูปภาพ · แปลงข้อมูล · ZIP</div>
+        <h1>แปลงไฟล์</h1>
+        <p class="sub">เครื่องมือ PDF รูปภาพ ข้อมูล และ ZIP ทำงานในเบราว์เซอร์ของคุณ ไฟล์ไม่ถูกส่งขึ้นเซิร์ฟเวอร์</p>
     </div>
 </div>
 
 <!-- Tab bar -->
-<div class="ft-tabs" id="ftTabs">
-    <button type="button" class="ft-tab active" data-tab="pdf">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        PDF
-    </button>
-    <button type="button" class="ft-tab" data-tab="image">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        รูปภาพ
-    </button>
-    <button type="button" class="ft-tab" data-tab="data">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
-        แปลงข้อมูล
-    </button>
-    <button type="button" class="ft-tab" data-tab="zip">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-        ZIP
-    </button>
+<div class="tabs ft-tabs" id="ftTabs" role="tablist" aria-label="ประเภทเครื่องมือ">
+    <button type="button" class="tab ft-tab" role="tab" aria-selected="true" data-tab="pdf">PDF</button>
+    <button type="button" class="tab ft-tab" role="tab" aria-selected="false" data-tab="image">รูปภาพ</button>
+    <button type="button" class="tab ft-tab" role="tab" aria-selected="false" data-tab="data">แปลงข้อมูล</button>
+    <button type="button" class="tab ft-tab" role="tab" aria-selected="false" data-tab="zip">ZIP</button>
 </div>
 
 <div class="ft-panels">
@@ -34,7 +30,7 @@
 
     <!-- ── รวมไฟล์ PDF (Merge) ── -->
     <div class="card ft-tool-card">
-        <div class="card-header"><span class="card-title">รวมไฟล์ PDF (Merge)</span><span class="text-xs text-muted">รวมหลายไฟล์เป็นไฟล์เดียว</span></div>
+        <div class="card-header"><span class="card-title">รวมไฟล์ PDF (Merge)</span><span class="ft-hint">รวมหลายไฟล์เป็นไฟล์เดียว</span></div>
         <div class="card-body">
             <div class="ft-drop-zone" id="mergeDrop" data-target="mergeInput">
                 <div>ลากไฟล์ PDF มาวาง หรือ <label for="mergeInput" class="ft-link">คลิกเพื่อเลือก</label></div>
@@ -50,7 +46,7 @@
 
     <!-- ── แยกไฟล์ PDF (Split) ── -->
     <div class="card ft-tool-card">
-        <div class="card-header"><span class="card-title">แยกไฟล์ PDF (Split)</span><span class="text-xs text-muted">ระบุช่วงหน้าที่ต้องการ</span></div>
+        <div class="card-header"><span class="card-title">แยกไฟล์ PDF (Split)</span><span class="ft-hint">ระบุช่วงหน้าที่ต้องการ</span></div>
         <div class="card-body">
             <div class="ft-drop-zone" id="splitDrop" data-target="splitInput">
                 <div>ลากไฟล์ PDF หรือ <label for="splitInput" class="ft-link">คลิกเลือก</label></div>
@@ -58,7 +54,7 @@
             </div>
             <div id="splitFileName" class="ft-chosen-file"></div>
             <div class="form-group mt-2">
-                <label class="form-label">ช่วงหน้า <span class="text-xs text-muted">(เช่น 1-3,5,7-9)</span></label>
+                <label class="form-label">ช่วงหน้า <span class="ft-hint">(เช่น 1-3,5,7-9)</span></label>
                 <input type="text" class="form-control" id="splitRange" placeholder="1-3,5,7-9">
             </div>
             <div class="ft-actions">
@@ -70,7 +66,7 @@
 
     <!-- ── ลบหน้า PDF ── -->
     <div class="card ft-tool-card">
-        <div class="card-header"><span class="card-title">ลบหน้า PDF</span><span class="text-xs text-muted">เลือกหน้าที่ต้องการลบออก</span></div>
+        <div class="card-header"><span class="card-title">ลบหน้า PDF</span><span class="ft-hint">เลือกหน้าที่ต้องการลบออก</span></div>
         <div class="card-body">
             <div class="ft-drop-zone" id="deleteDrop" data-target="deleteInput">
                 <div>ลากไฟล์ PDF หรือ <label for="deleteInput" class="ft-link">คลิกเลือก</label></div>
@@ -78,7 +74,7 @@
             </div>
             <div id="deleteFileName" class="ft-chosen-file"></div>
             <div id="deletePageGrid" class="ft-page-grid" hidden></div>
-            <div id="deleteSelInfo" class="text-xs text-muted" hidden></div>
+            <div id="deleteSelInfo" class="ft-hint" hidden></div>
             <div class="ft-actions">
                 <button class="btn btn-primary" id="btnDeletePages" disabled>ลบหน้าที่เลือก</button>
             </div>
@@ -88,7 +84,7 @@
 
     <!-- ── หมุนหน้า PDF ── -->
     <div class="card ft-tool-card">
-        <div class="card-header"><span class="card-title">หมุนหน้า PDF</span><span class="text-xs text-muted">หมุนเฉพาะหน้าที่เลือก</span></div>
+        <div class="card-header"><span class="card-title">หมุนหน้า PDF</span><span class="ft-hint">หมุนเฉพาะหน้าที่เลือก</span></div>
         <div class="card-body">
             <div class="ft-drop-zone" id="rotateDrop" data-target="rotateInput">
                 <div>ลากไฟล์ PDF หรือ <label for="rotateInput" class="ft-link">คลิกเลือก</label></div>
@@ -113,7 +109,7 @@
 
     <!-- ── ใส่ลายน้ำ ── -->
     <div class="card ft-tool-card">
-        <div class="card-header"><span class="card-title">ใส่ลายน้ำข้อความ</span><span class="text-xs text-muted">เพิ่มข้อความบนทุกหน้า</span></div>
+        <div class="card-header"><span class="card-title">ใส่ลายน้ำข้อความ</span><span class="ft-hint">เพิ่มข้อความบนทุกหน้า</span></div>
         <div class="card-body">
             <div class="ft-drop-zone" id="wmDrop" data-target="wmInput">
                 <div>ลากไฟล์ PDF หรือ <label for="wmInput" class="ft-link">คลิกเลือก</label></div>
@@ -135,7 +131,7 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">สีข้อความ</label>
-                    <input type="color" class="form-control" id="wmColor" value="#ff0000" style="height:2.5rem">
+                    <input type="color" class="form-control ft-color" id="wmColor" value="#ff0000">
                 </div>
             </div>
             <div class="ft-actions">
@@ -147,7 +143,7 @@
 
     <!-- ── รูปเป็น PDF ── -->
     <div class="card ft-tool-card">
-        <div class="card-header"><span class="card-title">แปลงรูปภาพเป็น PDF</span><span class="text-xs text-muted">รวมรูป JPG/PNG หลายรูปเป็น PDF</span></div>
+        <div class="card-header"><span class="card-title">แปลงรูปภาพเป็น PDF</span><span class="ft-hint">รวมรูป JPG/PNG หลายรูปเป็น PDF</span></div>
         <div class="card-body">
             <div class="ft-drop-zone" id="img2pdfDrop" data-target="img2pdfInput">
                 <div>ลากรูปภาพมาวาง หรือ <label for="img2pdfInput" class="ft-link">คลิกเลือก</label></div>
@@ -163,7 +159,7 @@
 
     <!-- ── PDF เป็นรูป ── -->
     <div class="card ft-tool-card">
-        <div class="card-header"><span class="card-title">แปลง PDF เป็นรูปภาพ</span><span class="text-xs text-muted">แปลงแต่ละหน้าเป็น PNG → ดาวน์โหลด ZIP</span></div>
+        <div class="card-header"><span class="card-title">แปลง PDF เป็นรูปภาพ</span><span class="ft-hint">แปลงแต่ละหน้าเป็น PNG → ดาวน์โหลด ZIP</span></div>
         <div class="card-body">
             <div class="ft-drop-zone" id="pdf2imgDrop" data-target="pdf2imgInput">
                 <div>ลากไฟล์ PDF หรือ <label for="pdf2imgInput" class="ft-link">คลิกเลือก</label></div>
@@ -191,7 +187,7 @@
 
     <!-- ── ใส่รหัสผ่าน PDF ── -->
     <div class="card ft-tool-card">
-        <div class="card-header"><span class="card-title">ใส่รหัสผ่าน PDF</span><span class="text-xs text-muted">ป้องกันการเปิดอ่านด้วยรหัสผ่าน</span></div>
+        <div class="card-header"><span class="card-title">ใส่รหัสผ่าน PDF</span><span class="ft-hint">ป้องกันการเปิดอ่านด้วยรหัสผ่าน</span></div>
         <div class="card-body">
             <div class="ft-drop-zone" id="pwdDrop" data-target="pwdInput">
                 <div>ลากไฟล์ PDF หรือ <label for="pwdInput" class="ft-link">คลิกเลือก</label></div>
@@ -224,7 +220,7 @@
 
     <!-- ── แปลงนามสกุล ── -->
     <div class="card ft-tool-card">
-        <div class="card-header"><span class="card-title">แปลงนามสกุลรูปภาพ</span><span class="text-xs text-muted">JPG · PNG · WEBP · GIF · BMP</span></div>
+        <div class="card-header"><span class="card-title">แปลงนามสกุลรูปภาพ</span><span class="ft-hint">JPG · PNG · WEBP · GIF · BMP</span></div>
         <div class="card-body">
             <div class="ft-drop-zone" id="imgConvDrop" data-target="imgConvInput">
                 <div>ลากรูปภาพมาวาง หรือ <label for="imgConvInput" class="ft-link">คลิกเลือก</label></div>
@@ -250,7 +246,7 @@
 
     <!-- ── ปรับขนาด ── -->
     <div class="card ft-tool-card">
-        <div class="card-header"><span class="card-title">ปรับขนาดรูป</span><span class="text-xs text-muted">ตั้งความกว้าง/สูง</span></div>
+        <div class="card-header"><span class="card-title">ปรับขนาดรูป</span><span class="ft-hint">ตั้งความกว้าง/สูง</span></div>
         <div class="card-body">
             <div class="ft-drop-zone" id="imgResizeDrop" data-target="imgResizeInput">
                 <div>ลากรูปภาพมาวาง หรือ <label for="imgResizeInput" class="ft-link">คลิกเลือก</label></div>
@@ -267,7 +263,7 @@
                     <input type="number" class="form-control" id="resizeH" placeholder="เช่น 600" min="1">
                 </div>
             </div>
-            <label class="flex items-center gap-2" style="gap:.5rem;margin-bottom:.5rem;font-size:.875rem">
+            <label class="ft-check">
                 <input type="checkbox" id="resizeRatio" checked> รักษาอัตราส่วน
             </label>
             <div class="ft-actions">
@@ -279,7 +275,7 @@
 
     <!-- ── บีบอัด ── -->
     <div class="card ft-tool-card">
-        <div class="card-header"><span class="card-title">บีบอัดรูปภาพ</span><span class="text-xs text-muted">ลดขนาดไฟล์โดยปรับคุณภาพ</span></div>
+        <div class="card-header"><span class="card-title">บีบอัดรูปภาพ</span><span class="ft-hint">ลดขนาดไฟล์โดยปรับคุณภาพ</span></div>
         <div class="card-body">
             <div class="ft-drop-zone" id="imgCmpDrop" data-target="imgCmpInput">
                 <div>ลากรูปภาพมาวาง หรือ <label for="imgCmpInput" class="ft-link">คลิกเลือก</label></div>
@@ -444,7 +440,7 @@
 
     <!-- ── Hash ── -->
     <div class="card ft-tool-card">
-        <div class="card-header"><span class="card-title">Hash ไฟล์ / ข้อความ</span><span class="text-xs text-muted">SHA-256 · SHA-1 · MD5</span></div>
+        <div class="card-header"><span class="card-title">Hash ไฟล์ / ข้อความ</span><span class="ft-hint">SHA-256 · SHA-1 · MD5</span></div>
         <div class="card-body">
             <div class="ft-tabs-inner mb-2">
                 <button type="button" class="btn btn-sm btn-ghost ft-hash-tab active" data-hsrc="text">ข้อความ</button>
@@ -490,7 +486,7 @@
 
     <!-- ── บีบอัดเป็น ZIP ── -->
     <div class="card ft-tool-card">
-        <div class="card-header"><span class="card-title">บีบอัดเป็น ZIP</span><span class="text-xs text-muted">รวมหลายไฟล์เป็น ZIP เดียว</span></div>
+        <div class="card-header"><span class="card-title">บีบอัดเป็น ZIP</span><span class="ft-hint">รวมหลายไฟล์เป็น ZIP เดียว</span></div>
         <div class="card-body">
             <div class="ft-drop-zone" id="zipCreateDrop" data-target="zipCreateInput">
                 <div>ลากไฟล์มาวาง หรือ <label for="zipCreateInput" class="ft-link">คลิกเลือก</label></div>
@@ -510,7 +506,7 @@
 
     <!-- ── ตรวจสอบไฟล์ใน ZIP ── -->
     <div class="card ft-tool-card">
-        <div class="card-header"><span class="card-title">ตรวจสอบไฟล์ใน ZIP</span><span class="text-xs text-muted">แสดงรายการไฟล์ภายใน</span></div>
+        <div class="card-header"><span class="card-title">ตรวจสอบไฟล์ใน ZIP</span><span class="ft-hint">แสดงรายการไฟล์ภายใน</span></div>
         <div class="card-body">
             <div class="ft-drop-zone" id="zipInspDrop" data-target="zipInspInput">
                 <div>ลากไฟล์ ZIP มาวาง หรือ <label for="zipInspInput" class="ft-link">คลิกเลือก</label></div>
@@ -526,7 +522,7 @@
 
     <!-- ── แตกไฟล์ ZIP (Extract) ── -->
     <div class="card ft-tool-card">
-        <div class="card-header"><span class="card-title">แตกไฟล์ ZIP (Extract)</span><span class="text-xs text-muted">เลือกไฟล์ที่ต้องการดาวน์โหลด</span></div>
+        <div class="card-header"><span class="card-title">แตกไฟล์ ZIP (Extract)</span><span class="ft-hint">เลือกไฟล์ที่ต้องการดาวน์โหลด</span></div>
         <div class="card-body">
             <div class="ft-drop-zone" id="zipExtDrop" data-target="zipExtInput">
                 <div>ลากไฟล์ ZIP มาวาง หรือ <label for="zipExtInput" class="ft-link">คลิกเลือก</label></div>

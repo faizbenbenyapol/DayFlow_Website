@@ -46,7 +46,7 @@ function accountFixture(): array
 {
     return [
         'format' => 'dayflow-export', 'version' => 2,
-        'settings' => ['theme' => 'ocean', 'timezone' => 'Asia/Tokyo', 'menu_order' => '["notes","tasks"]'],
+        'settings' => ['theme' => 'dark', 'day_color' => 0, 'timezone' => 'Asia/Tokyo', 'menu_order' => '["notes","tasks"]'],
         'tasks'               => [['id' => 9001, 'title' => 'งานสำรอง', 'quadrant' => 1, 'status' => 'open']],
         'notes'               => [['id' => 9002, 'title' => 'โน้ตสำรอง']],
         'note_tags'           => [['id' => 9003, 'name' => 'แท็กสำรอง']],
@@ -168,13 +168,20 @@ test('settings travel, credentials do not', function (TestClient $_c): void {
     accountImport($client, accountFixture());
 
     $settings = $client->json($client->get('/api/settings'))['settings'] ?? [];
-    assertSame('ocean', $settings['theme'] ?? null);
+    assertSame('dark', $settings['theme'] ?? null);
+    assertSame(0, (int)($settings['day_color'] ?? 1), 'the weekday colour switch travels');
     assertSame('Asia/Tokyo', $settings['timezone'] ?? null);
 
     // An invalid value keeps the current one instead of failing the import.
     assertSame(200, accountImport($client, ['settings' => ['theme' => 'hacker', 'timezone' => 'Mars/Base']])['status']);
     $settings = $client->json($client->get('/api/settings'))['settings'] ?? [];
-    assertSame('ocean', $settings['theme'] ?? null);
+    assertSame('dark', $settings['theme'] ?? null);
+
+    // v1 offered four more palettes. A backup that names one gets light, the
+    // closest theme that still exists, rather than an error.
+    assertSame(200, accountImport($client, ['settings' => ['theme' => 'ocean']])['status']);
+    $settings = $client->json($client->get('/api/settings'))['settings'] ?? [];
+    assertSame('light', $settings['theme'] ?? null);
 
     $export = accountExport($client);
     assertSame('dayflow-export', $export['format'] ?? null);

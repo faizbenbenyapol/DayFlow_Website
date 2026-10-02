@@ -11,7 +11,7 @@
     if (!card) return;
 
     const $id = id => document.getElementById(id);
-    const show = (id, visible) => { const el = $id(id); if (el) el.style.display = visible ? 'block' : 'none'; };
+    const show = (id, visible) => { const el = $id(id); if (el) el.hidden = !visible; };
 
     function setBadge(text, kind) {
         const badge = $id('tfaBadge');
@@ -49,7 +49,7 @@
         if (!target) return;
         if (typeof qrcode === 'undefined') {
             // The secret below the QR is still enough to finish setup by hand.
-            target.innerHTML = '<p class="text-xs text-muted">แสดง QR ไม่ได้ กรุณากรอกรหัสด้านล่างในแอปแทน</p>';
+            target.innerHTML = '<p class="form-hint">แสดง QR ไม่ได้ กรุณากรอกรหัสด้านล่างในแอปแทน</p>';
             return;
         }
         const qr = qrcode(0, 'M');

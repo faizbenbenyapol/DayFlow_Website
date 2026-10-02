@@ -6,7 +6,10 @@
 class User
 {
     /** Every value user_settings.theme accepts. */
-    public const THEMES = ['light', 'dark', 'soft', 'lavender', 'ocean', 'peach', 'auto'];
+    public const THEMES = ['light', 'dark', 'auto'];
+
+    /** Palettes v1 offered and v2 removed. Old backups still name them. */
+    public const LEGACY_THEMES = ['soft', 'lavender', 'ocean', 'peach'];
 
     public static function findById(int $id): ?array
     {
@@ -131,6 +134,15 @@ class User
         );
     }
 
+    public static function updateDayColor(int $userId, bool $on): void
+    {
+        DB::run(
+            'INSERT INTO user_settings (user_id, day_color) VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE day_color = VALUES(day_color)',
+            [$userId, $on ? 1 : 0]
+        );
+    }
+
     public static function updateTimezone(int $userId, string $tz): void
     {
         DB::run(
@@ -155,6 +167,16 @@ class User
             'INSERT INTO user_settings (user_id, menu_order) VALUES (?, ?)
              ON DUPLICATE KEY UPDATE menu_order = VALUES(menu_order)',
             [$userId, $menuOrder]
+        );
+    }
+
+    /** The two places in the phone's bottom bar, as a JSON list of menu keys (or NULL for the defaults). */
+    public static function updateMobileTabs(int $userId, ?string $mobileTabs): void
+    {
+        DB::run(
+            'INSERT INTO user_settings (user_id, mobile_tabs) VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE mobile_tabs = VALUES(mobile_tabs)',
+            [$userId, $mobileTabs]
         );
     }
 

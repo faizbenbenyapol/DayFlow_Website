@@ -6,21 +6,39 @@
 class DashboardLayout
 {
     private const ALLOWED_WIDGETS = [
-        'tasks', 'calendar', 'finance', 'workout', 'subscriptions',
+        'tasks', 'calendar', 'habits', 'finance', 'subscriptions', 'workout',
         'projects', 'notes', 'stocks', 'transfer',
+    ];
+
+    /**
+     * Where each section sits on the Today page. The page has a wide column of
+     * things to do, a narrow one of money and body, and a strip of extras below;
+     * a saved position orders sections within their own area.
+     */
+    public const AREAS = [
+        'main' => ['tasks', 'calendar', 'habits'],
+        'side' => ['finance', 'subscriptions', 'workout'],
+        'more' => ['projects', 'notes', 'stocks', 'transfer'],
     ];
 
     private const DEFAULTS = [
         ['widget_key' => 'tasks',         'position' => 0, 'is_visible' => 1],
         ['widget_key' => 'calendar',      'position' => 1, 'is_visible' => 1],
-        ['widget_key' => 'finance',       'position' => 2, 'is_visible' => 1],
-        ['widget_key' => 'workout',       'position' => 3, 'is_visible' => 1],
+        ['widget_key' => 'habits',        'position' => 2, 'is_visible' => 1],
+        ['widget_key' => 'finance',       'position' => 3, 'is_visible' => 1],
         ['widget_key' => 'subscriptions', 'position' => 4, 'is_visible' => 1],
-        ['widget_key' => 'projects',      'position' => 5, 'is_visible' => 1],
-        ['widget_key' => 'notes',         'position' => 6, 'is_visible' => 1],
-        ['widget_key' => 'stocks',        'position' => 7, 'is_visible' => 1],
-        ['widget_key' => 'transfer',      'position' => 8, 'is_visible' => 1],
+        ['widget_key' => 'workout',       'position' => 5, 'is_visible' => 1],
+        ['widget_key' => 'projects',      'position' => 6, 'is_visible' => 1],
+        ['widget_key' => 'notes',         'position' => 7, 'is_visible' => 1],
+        ['widget_key' => 'stocks',        'position' => 8, 'is_visible' => 1],
+        ['widget_key' => 'transfer',      'position' => 9, 'is_visible' => 1],
     ];
+
+    /** The layout a new account gets, and what "reset" restores. */
+    public static function defaults(): array
+    {
+        return self::DEFAULTS;
+    }
 
     public static function getForUser(int $userId): array
     {
@@ -34,6 +52,17 @@ class DashboardLayout
         if (empty($rows)) {
             self::seedDefaults($userId);
             return self::DEFAULTS;
+        }
+
+        // A section added after this account saved its layout shows up too, at
+        // the end and switched on, instead of silently never appearing. It is
+        // written the next time the layout is saved.
+        $have = array_column($rows, 'widget_key');
+        $next = (int)max(array_column($rows, 'position')) + 1;
+        foreach (self::ALLOWED_WIDGETS as $key) {
+            if (!in_array($key, $have, true)) {
+                $rows[] = ['widget_key' => $key, 'position' => $next++, 'is_visible' => 1];
+            }
         }
         return $rows;
     }

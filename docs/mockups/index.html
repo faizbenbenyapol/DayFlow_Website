@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>DayFlow v2 — mockup board</title>
+<style>
+    body { margin: 0; padding: 24px 32px 48px; background: #E9E7E1; color: #1B2330; font: 15px/1.6 system-ui, "Leelawadee UI", sans-serif; }
+    h1 { font-size: 20px; margin: 0 0 4px; font-weight: 600; }
+    p { margin: 0 0 20px; color: #5E6673; }
+    h2 { font-size: 15px; font-weight: 600; margin: 28px 0 10px; }
+    .row { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+    figure { margin: 0; }
+    figcaption { font-size: 13px; color: #5E6673; margin-top: 6px; }
+    .desk { width: 683px; height: 500px; overflow: hidden; border: 1px solid #C9C5BA; background: #fff; }
+    .desk iframe { width: 1366px; height: 1000px; border: 0; transform: scale(.5); transform-origin: 0 0; }
+    .phone { width: 390px; height: 844px; border: 1px solid #C9C5BA; background: #fff; overflow: hidden; }
+    .phone iframe { width: 390px; height: 100%; border: 0; display: block; }
+    [data-full] .phone { height: 1900px; }
+    [data-only="mobile"] .only-desk, [data-only="desk"] .only-mobile { display: none; }
+</style>
+</head>
+<body>
+<script>
+    var q = new URLSearchParams(location.search);
+    if (q.get('full')) document.body.dataset.full = '1';
+    if (q.get('only')) document.body.dataset.only = q.get('only');
+</script>
+<h1>หน้าวันนี้ — DayFlow v2</h1>
+<p>แนวทางปฏิทินฉีก + สมุดบัญชี · ศุกร์ 2 ต.ค. 2569 · เปิด <a href="today.html">today.html</a> เพื่อลองสลับธีม วัน และสถานะเอง</p>
+
+<section class="only-desk">
+    <h2>Desktop 1366 × 1000 (ย่อ 50%)</h2>
+    <div class="row">
+        <figure><div class="desk"><iframe src="today.html?chrome=off&theme=light" title="desktop สว่าง"></iframe></div><figcaption>สว่าง</figcaption></figure>
+        <figure><div class="desk"><iframe src="today.html?chrome=off&theme=dark" title="desktop มืด"></iframe></div><figcaption>มืด</figcaption></figure>
+    </div>
+</section>
+
+<section class="only-mobile">
+    <h2>มือถือ 390 × 844 (ขนาดจริง)</h2>
+    <div class="row">
+        <figure><div class="phone"><iframe src="today.html?chrome=off&theme=light" title="มือถือ สว่าง"></iframe></div><figcaption>สว่าง</figcaption></figure>
+        <figure><div class="phone"><iframe src="today.html?chrome=off&theme=dark" title="มือถือ มืด"></iframe></div><figcaption>มืด</figcaption></figure>
+        <figure><div class="phone"><iframe src="today.html?chrome=off&theme=light&state=empty&day=mon" title="มือถือ ว่าง"></iframe></div><figcaption>ผู้ใช้ใหม่ (ว่าง) · วันจันทร์</figcaption></figure>
+        <figure><div class="phone"><iframe src="today.html?chrome=off&theme=dark&state=loading&day=sun" title="มือถือ กำลังโหลด"></iframe></div><figcaption>กำลังโหลด · วันอาทิตย์ · มืด</figcaption></figure>
+    </div>
+</section>
+</body>
+</html>

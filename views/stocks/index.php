@@ -1,351 +1,295 @@
+<?php
+// =====================================================
+// views/stocks/index.php — the portfolio
+//
+// What the holdings are worth and what they have earned, then the working
+// parts: the holdings table, the trades, the money put in and taken out, the
+// screenshots of the broker app, the charts and the AI read of one ticker.
+// A shared (read-only) link gets a short page: the totals, the cash and the
+// latest screenshot. assets/js/stocks*.js draw it all from /api/stocks/*.
+// =====================================================
+$readOnly = Auth::isReadOnly();
+?>
 <script nonce="<?= h(Security::nonce()) ?>">
-    const IS_READ_ONLY = <?= Auth::isReadOnly() ? 'true' : 'false' ?>;
+    const IS_READ_ONLY = <?= $readOnly ? 'true' : 'false' ?>;
 </script>
 
-<?php if (Auth::isReadOnly()): ?>
-    <!-- Shared Mode Layout (Only show header, 3 summary cards, THB Capital, and Latest Screenshot in full size) -->
-    <div class="stk-share-layout">
-        <div class="page-header flex items-center justify-between">
-            <h1 class="page-title">สรุปพอร์ตหุ้น</h1>
-            <span class="text-sm text-muted" id="stkRefreshedAt"></span>
-        </div>
-
-        <!-- Summary cards (Only 3 cards) -->
-        <div class="stk-summary-bar mb-8" style="grid-template-columns: repeat(3, 1fr);">
-            <div class="stk-stat-card">
-                <div class="stk-stat-label">มูลค่ารวม (ตลาด)</div>
-                <div class="stk-stat-amount" id="stkMarketValue">—</div>
-            </div>
-            <div class="stk-stat-card">
-                <div class="stk-stat-label">ต้นทุน</div>
-                <div class="stk-stat-amount" id="stkCostBasis">—</div>
-            </div>
-            <div class="stk-stat-card">
-                <div class="stk-stat-label">กำไร/ขาดทุน (Unrealized)</div>
-                <div class="stk-stat-amount" id="stkUnrealized">—</div>
-                <div class="stk-stat-sub" id="stkUnrealizedPct"></div>
-            </div>
-        </div>
-
-        <div class="stk-share-grid">
-            <!-- THB Capital Card -->
-            <div class="card mb-6">
-                <div class="card-header" style="padding-bottom: var(--space-3)">
-                    <h3 class="card-title" style="font-size:1.05rem; font-weight:700">เงินลงทุน (THB)</h3>
-                </div>
-                <div class="card-body flex flex-col gap-5" style="padding-top: var(--space-4); padding-bottom: var(--space-5)">
-                    <div class="stk-sidebar-stat">
-                        <span class="stk-sidebar-label">เงินลงทุนทั้งหมด (Net Capital)</span>
-                        <span class="stk-sidebar-value" id="sideNetTHB">0.00 THB</span>
-                    </div>
-                    <div class="stk-sidebar-stat">
-                        <span class="stk-sidebar-label">เงินสดคงเหลือ (Cash Balance)</span>
-                        <span class="stk-sidebar-value" id="sideCashTHB">0.00 THB</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Latest Screenshot Card -->
-            <div class="card">
-                <div class="card-header" style="padding-bottom: var(--space-3)">
-                    <h3 class="card-title" style="font-size:1.05rem; font-weight:700">รูปภาพพอร์ตล่าสุด</h3>
-                </div>
-                <div class="card-body" id="sideScreenshotContainer" style="padding-top: var(--space-4)">
-                    <div class="text-center text-muted py-6">ไม่มีรูปภาพพอร์ตแนบไว้</div>
-                </div>
-            </div>
-        </div>
+<?php if ($readOnly): ?>
+<div class="page-head">
+    <div>
+        <h1>สรุปพอร์ตหุ้น</h1>
+        <p class="sub" id="stkRefreshedAt" aria-live="polite"></p>
     </div>
+</div>
+
+<div class="facts stk-facts stk-facts-3">
+    <div class="fact"><div class="k">มูลค่าตลาด</div><div class="v" id="stkMarketValue">—</div></div>
+    <div class="fact"><div class="k">ต้นทุน</div><div class="v" id="stkCostBasis">—</div></div>
+    <div class="fact"><div class="k">กำไร/ขาดทุนที่ยังไม่ปิด</div><div class="v" id="stkUnrealized">—</div><div class="note" id="stkUnrealizedPct"></div></div>
+</div>
+
+<div class="cols">
+    <div class="col-main">
+        <section class="sec" aria-labelledby="shotTitle">
+            <div class="sec-head"><h2 id="shotTitle">รูปภาพพอร์ตล่าสุด</h2></div>
+            <div id="sideScreenshotContainer" class="stk-latest-shot">
+                <p class="stk-empty">ยังไม่มีรูปภาพพอร์ต</p>
+            </div>
+        </section>
+    </div>
+    <aside class="col-side">
+        <section class="sec" aria-labelledby="capTitle">
+            <div class="sec-head"><h2 id="capTitle">เงินลงทุน (บาท)</h2></div>
+            <table class="ledger" aria-labelledby="capTitle">
+                <tr><td>เงินต้นสะสม</td><td class="num" id="sideNetTHB">—</td></tr>
+                <tr><td>เงินสดคงเหลือ</td><td class="num" id="sideCashTHB">—</td></tr>
+            </table>
+        </section>
+    </aside>
+</div>
 <?php else: ?>
-    <!-- Normal Mode Layout (Full Width) -->
-    <div class="page-header flex items-center justify-between">
-        <h1 class="page-title">หุ้น</h1>
-        <div class="flex items-center gap-3">
-            <span class="text-sm text-muted" id="stkRefreshedAt"></span>
-            <button class="btn btn-ghost btn-sm" id="stkRefreshBtn" data-act="refreshPrices" title="ดึงราคาล่าสุดจากผู้ให้บริการ"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:text-bottom"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v6h6"/></svg>รีเฟรชราคา</button>
-            <button class="btn btn-primary btn-sm mode-readonly-hide" data-act="openAddStock">+ บันทึกรายการ</button>
-        </div>
+<div class="page-head">
+    <div>
+        <h1>หุ้น</h1>
+        <p class="sub" id="stkRefreshedAt" aria-live="polite"></p>
+    </div>
+    <div class="page-head-actions">
+        <button class="btn btn-ghost" type="button" id="stkRefreshBtn" data-act="refreshPrices" title="ดึงราคาล่าสุดจากผู้ให้บริการ"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span>รีเฟรชราคา</span></button>
+        <button class="btn btn-primary" type="button" data-act="openAddStock"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>บันทึกรายการ</button>
+    </div>
+</div>
+
+<div class="facts stk-facts">
+    <div class="fact"><div class="k">มูลค่าตลาด</div><div class="v" id="stkMarketValue">—</div></div>
+    <div class="fact"><div class="k">ต้นทุน</div><div class="v" id="stkCostBasis">—</div></div>
+    <div class="fact"><div class="k">กำไร/ขาดทุนที่ยังไม่ปิด</div><div class="v" id="stkUnrealized">—</div><div class="note" id="stkUnrealizedPct"></div></div>
+    <div class="fact"><div class="k">กำไร/ขาดทุนที่ปิดแล้ว</div><div class="v" id="stkRealized">—</div></div>
+</div>
+
+<!-- The holdings, and the tickers being watched -->
+<section class="sec" aria-labelledby="holdTitle">
+    <div class="sec-head"><h2 id="holdTitle">ราคาและตัวชี้วัด</h2></div>
+    <div class="tabs" role="tablist" aria-label="กลุ่มหุ้น" id="stkMainTabs">
+        <button class="tab" type="button" role="tab" aria-selected="false" data-main-tab="watchlists">ที่ติดตาม</button>
+        <button class="tab" type="button" role="tab" aria-selected="true" data-main-tab="portfolio">พอร์ตปัจจุบัน</button>
+        <button class="tab" type="button" role="tab" aria-selected="false" data-main-tab="all">ทั้งหมด</button>
+        <button class="tab" type="button" role="tab" aria-selected="false" data-main-tab="US">US</button>
+        <button class="tab" type="button" role="tab" aria-selected="false" data-main-tab="SET">SET</button>
+        <button class="tab" type="button" role="tab" aria-selected="false" data-main-tab="OTHER">อื่นๆ</button>
+    </div>
+    <div class="table-wrap">
+        <table class="table stk-table" id="stkTable" data-view="portfolio" aria-label="ตารางหุ้น">
+            <thead>
+                <tr>
+                    <th scope="col" class="stk-sticky">หุ้น</th>
+                    <th scope="col" class="num">ราคาล่าสุด</th>
+                    <th scope="col" class="num">เปลี่ยนวันนี้</th>
+                    <th scope="col" class="num"><button type="button" class="metric-help" data-act="showMetricExplain" data-args='["pe"]' aria-label="อธิบาย P/E">P/E</button></th>
+                    <th scope="col" class="num"><button type="button" class="metric-help" data-act="showMetricExplain" data-args='["forward_pe"]' aria-label="อธิบาย Forward P/E">Forward P/E</button></th>
+                    <th scope="col" class="num"><button type="button" class="metric-help" data-act="showMetricExplain" data-args='["peg"]' aria-label="อธิบาย PEG">PEG</button></th>
+                    <th scope="col" class="num"><button type="button" class="metric-help" data-act="showMetricExplain" data-args='["p_fcf"]' aria-label="อธิบาย P/FCF">P/FCF</button></th>
+                    <th scope="col" class="num"><button type="button" class="metric-help" data-act="showMetricExplain" data-args='["eps"]' aria-label="อธิบาย EPS">EPS</button></th>
+                    <th scope="col" class="num stk-col-portfolio">จำนวน</th>
+                    <th scope="col" class="num stk-col-portfolio">ต้นทุนเฉลี่ย</th>
+                    <th scope="col" class="num stk-col-portfolio">มูลค่าตลาด</th>
+                    <th scope="col" class="num stk-col-portfolio">กำไร/ขาดทุน</th>
+                    <th scope="col"><span class="sr-only">วิเคราะห์</span></th>
+                </tr>
+            </thead>
+            <tbody id="stkUnifiedList">
+                <tr><td colspan="13"><span class="skel skel-w-60"></span></td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- Trades, money in and out, screenshots, charts, analysis -->
+<section class="sec" aria-labelledby="workTitle">
+    <div class="sec-head"><h2 id="workTitle">บันทึกและวิเคราะห์</h2></div>
+    <div class="tabs" role="tablist" aria-label="หมวดบันทึก" id="stkSubTabs">
+        <button class="tab" type="button" role="tab" aria-selected="true" data-stk-tab="transactions">ซื้อขาย</button>
+        <button class="tab" type="button" role="tab" aria-selected="false" data-stk-tab="capital">เงินลงทุน</button>
+        <button class="tab" type="button" role="tab" aria-selected="false" data-stk-tab="screenshots">รูปภาพพอร์ต</button>
+        <button class="tab" type="button" role="tab" aria-selected="false" data-stk-tab="chart">กราฟ</button>
+        <button class="tab" type="button" role="tab" aria-selected="false" data-stk-tab="analysis">วิเคราะห์ด้วย AI</button>
     </div>
 
-    <!-- Summary cards -->
-    <div class="stk-summary-bar">
-        <div class="stk-stat-card">
-            <div class="stk-stat-label">มูลค่ารวม (ตลาด)</div>
-            <div class="stk-stat-amount" id="stkMarketValue">—</div>
+    <!-- Trades -->
+    <div class="stk-panel" data-stk-panel="transactions">
+        <div class="stk-filters">
+            <label class="sr-only" for="stkTickerFilter">กรองตามชื่อหุ้น</label>
+            <input type="search" class="form-control stk-filter-ticker" id="stkTickerFilter" placeholder="กรองตามชื่อหุ้น" autocomplete="off" data-act="loadStockTransactions" data-on="input">
+            <label class="sr-only" for="stkMarketFilter">ตลาด</label>
+            <select class="form-control" id="stkMarketFilter" data-act="loadStockTransactions" data-on="change">
+                <option value="">ทุกตลาด</option>
+                <option value="US">US</option>
+                <option value="SET">SET</option>
+                <option value="OTHER">อื่นๆ</option>
+            </select>
         </div>
-        <div class="stk-stat-card">
-            <div class="stk-stat-label">ต้นทุน</div>
-            <div class="stk-stat-amount" id="stkCostBasis">—</div>
-        </div>
-        <div class="stk-stat-card">
-            <div class="stk-stat-label">กำไร/ขาดทุน (Unrealized)</div>
-            <div class="stk-stat-amount" id="stkUnrealized">—</div>
-            <div class="stk-stat-sub" id="stkUnrealizedPct"></div>
-        </div>
-        <div class="stk-stat-card">
-            <div class="stk-stat-label">กำไร/ขาดทุน (Realized)</div>
-            <div class="stk-stat-amount" id="stkRealized">—</div>
-        </div>
-    </div>
-
-    <!-- Main Tabbed Table for Stocks -->
-    <div class="card mb-8">
-        <div class="card-header" style="border-bottom: 1px solid var(--color-border); padding-bottom: 0;">
-            <div class="stk-main-tabs" role="tablist">
-                <button class="stk-main-tab" data-main-tab="watchlists" type="button">Watchlists</button>
-                <button class="stk-main-tab active" data-main-tab="portfolio" type="button">พอร์ตปัจจุบัน</button>
-                <button class="stk-main-tab" data-main-tab="all" type="button">All Stocks</button>
-                <button class="stk-main-tab" data-main-tab="US" type="button">US</button>
-                <button class="stk-main-tab" data-main-tab="SET" type="button">SET</button>
-                <button class="stk-main-tab" data-main-tab="OTHER" type="button">OTHER</button>
-            </div>
-        </div>
-        
         <div class="table-wrap">
-            <table class="table stk-holdings-table">
+            <table class="table" aria-label="รายการซื้อขาย">
                 <thead>
                     <tr>
-                        <th style="width:40px;text-align:center">★</th>
-                        <th>Ticker</th>
-                        <th style="text-align:right">ราคาล่าสุด</th>
-                        <th style="text-align:right">เปลี่ยนแปลง</th>
-                        <th style="text-align:right" class="stk-clickable-header" data-act="showMetricExplain" data-args="[&quot;pe&quot;]" title="คลิกดูคำอธิบาย P/E">P/E</th>
-                        <th style="text-align:right" class="stk-clickable-header" data-act="showMetricExplain" data-args="[&quot;forward_pe&quot;]" title="คลิกดูคำอธิบาย Forward P/E">Forward P/E</th>
-                        <th style="text-align:right" class="stk-clickable-header" data-act="showMetricExplain" data-args="[&quot;peg&quot;]" title="คลิกดูคำอธิบาย PEG">PEG</th>
-                        <th style="text-align:right" class="stk-clickable-header" data-act="showMetricExplain" data-args="[&quot;p_fcf&quot;]" title="คลิกดูคำอธิบาย P/FCF">P/FCF</th>
-                        <th style="text-align:right" class="stk-clickable-header" data-act="showMetricExplain" data-args="[&quot;eps&quot;]" title="คลิกดูคำอธิบาย EPS">EPS</th>
-                        <th style="text-align:right" class="stk-col-portfolio">จำนวน</th>
-                        <th style="text-align:right" class="stk-col-portfolio">ต้นทุนเฉลี่ย</th>
-                        <th style="text-align:right" class="stk-col-portfolio">มูลค่าตลาด</th>
-                        <th style="text-align:right" class="stk-col-portfolio">กำไร/ขาดทุน</th>
-                        <th style="width:140px;text-align:center">AI</th>
+                        <th scope="col">วันที่</th>
+                        <th scope="col">หุ้น</th>
+                        <th scope="col">ฝั่ง</th>
+                        <th scope="col" class="num">จำนวน</th>
+                        <th scope="col" class="num">ราคา</th>
+                        <th scope="col" class="num">ค่าธรรมเนียม</th>
+                        <th scope="col" class="num">มูลค่า</th>
+                        <th scope="col"><span class="sr-only">แก้ไข</span></th>
                     </tr>
                 </thead>
-                <tbody id="stkUnifiedList">
-                    <tr><td colspan="14" class="text-center text-muted" style="padding:2rem">กำลังโหลด...</td></tr>
+                <tbody id="stkTxnList">
+                    <tr><td colspan="8"><span class="skel skel-w-52"></span></td></tr>
                 </tbody>
             </table>
         </div>
     </div>
 
-    <!-- Sub-tabs -->
-    <div class="card">
-        <div class="card-header">
-            <div class="stk-tabs" role="tablist">
-                <button class="stk-tab active" data-stk-tab="transactions" type="button">รายการซื้อ-ขาย</button>
-                <button class="stk-tab" data-stk-tab="capital" type="button">เงินลงทุน</button>
-                <button class="stk-tab" data-stk-tab="screenshots" type="button">รูปภาพพอร์ต</button>
-                <button class="stk-tab" data-stk-tab="chart" type="button">กราฟ</button>
-                <button class="stk-tab" data-stk-tab="analysis" type="button">วิเคราะห์หุ้นด้วย AI</button>
-            </div>
-            <div class="flex gap-3" id="stkTxnFilters">
-                <input type="text" class="form-control" id="stkTickerFilter" placeholder="กรอง Ticker"
-                       style="width:140px;text-transform:uppercase" data-act="loadStockTransactions" data-on="input">
-                <select class="form-control" id="stkMarketFilter" style="width:auto" data-act="loadStockTransactions" data-on="change">
-                    <option value="">ทุกตลาด</option>
-                    <option value="US">US</option>
-                    <option value="SET">SET</option>
-                    <option value="OTHER">อื่นๆ</option>
-                </select>
-            </div>
+    <!-- Money in and out -->
+    <div class="stk-panel" data-stk-panel="capital" hidden>
+        <div class="stk-panel-head">
+            <p class="stk-note">เงินที่เติมเข้าพอร์ตและถอนออกจากพอร์ต แยกตามสกุลเงิน</p>
+            <button class="btn btn-sm" type="button" data-act="openAddCapital"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>บันทึกเงินลงทุน</button>
         </div>
-
-        <!-- Transactions panel -->
-        <div class="stk-panel active" data-stk-panel="transactions">
-            <div class="table-wrap">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>วันที่</th>
-                            <th>Ticker</th>
-                            <th>ฝั่ง</th>
-                            <th style="text-align:right">จำนวน</th>
-                            <th style="text-align:right">ราคา</th>
-                            <th style="text-align:right">ค่าธรรมเนียม</th>
-                            <th style="text-align:right">มูลค่า</th>
-                            <th class="mode-readonly-hide"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="stkTxnList">
-                        <tr><td colspan="8" class="text-center text-muted" style="padding:2rem">กำลังโหลด...</td></tr>
-                    </tbody>
+        <div class="stk-cap">
+            <div>
+                <h3 class="subhead">พอร์ตเงินบาท (THB)</h3>
+                <table class="ledger" aria-label="เงินลงทุนสกุลบาท">
+                    <tr><td>เงินต้นสะสม</td><td class="num" id="capNetTHB">—</td></tr>
+                    <tr><td>เงินสดคงเหลือ</td><td class="num" id="capCashTHB">—</td></tr>
+                </table>
+            </div>
+            <div>
+                <h3 class="subhead">พอร์ตเงินดอลลาร์ (USD)</h3>
+                <table class="ledger" aria-label="เงินลงทุนสกุลดอลลาร์">
+                    <tr><td>เงินต้นสะสม</td><td class="num" id="capNetUSD">—</td></tr>
+                    <tr><td>เงินสดคงเหลือ</td><td class="num" id="capCashUSD">—</td></tr>
                 </table>
             </div>
         </div>
-
-        <!-- Capital panel -->
-        <div class="stk-panel" data-stk-panel="capital" style="display:none">
-            <div class="card-body">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="stk-analysis-title" style="margin:0">สรุปเงินลงทุน & เงินสดคงเหลือ</h3>
-                    <button class="btn btn-primary btn-sm mode-readonly-hide" data-act="openAddCapital">+ บันทึกเงินลงทุน</button>
-                </div>
-                
-                <!-- Net capital and cash balance dashboards -->
-                <div class="stk-capital-dashboard mb-6">
-                    <div class="stk-cap-card">
-                        <div class="stk-cap-header">พอร์ตเงินบาท (THB)</div>
-                        <div class="stk-cap-grid">
-                            <div class="stk-cap-item">
-                                <span class="stk-cap-label">เงินต้นสะสม</span>
-                                <span class="stk-cap-val" id="capNetTHB">0.00 THB</span>
-                            </div>
-                            <div class="stk-cap-item">
-                                <span class="stk-cap-label">เงินสดคงเหลือ</span>
-                                <span class="stk-cap-val" id="capCashTHB">0.00 THB</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="stk-cap-card">
-                        <div class="stk-cap-header">พอร์ตเงินดอลลาร์ (USD)</div>
-                        <div class="stk-cap-grid">
-                            <div class="stk-cap-item">
-                                <span class="stk-cap-label">เงินต้นสะสม</span>
-                                <span class="stk-cap-val" id="capNetUSD">0.00 USD</span>
-                            </div>
-                            <div class="stk-cap-item">
-                                <span class="stk-cap-label">เงินสดคงเหลือ</span>
-                                <span class="stk-cap-val" id="capCashUSD">0.00 USD</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Capital flows table -->
-                <div class="table-wrap">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>วันที่</th>
-                                <th>ประเภทรายการ</th>
-                                <th style="text-align:right">จำนวนเงิน</th>
-                                <th>สกุลเงิน</th>
-                                <th>หมายเหตุ</th>
-                                <th class="mode-readonly-hide"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="stkCapitalList">
-                            <tr><td colspan="6" class="text-center text-muted" style="padding:2rem">กำลังโหลด...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Screenshots panel -->
-        <div class="stk-panel" data-stk-panel="screenshots" style="display:none">
-            <div class="card-body">
-                <div class="stk-upload-header mb-6">
-                    <h3 class="stk-analysis-title" style="margin:0">รูปภาพพอร์ต Dime</h3>
-                    <p class="text-sm text-muted" style="margin-top:4px">แนบรูปภาพภาพหน้าจอพอร์ตของคุณจากแอป Dime เพื่อความสะดวกในการติดตามดูการเติบโตแบบ Visual</p>
-                </div>
-
-                <?php if (!Auth::isReadOnly()): ?>
-                <!-- Upload drag and drop zone -->
-                <div class="stk-dropzone mb-8" id="stkDropzone" data-click="#stkFileSelect">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-2" style="color:var(--color-accent)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    <div class="stk-dropzone-text">ลากและวางรูปภาพตรงนี้ หรือ <span>คลิกเพื่อเลือกไฟล์</span></div>
-                    <div class="stk-dropzone-sub">เฉพาะ JPG, PNG, WEBP, GIF (สูงสุด 20MB)</div>
-                    <input type="file" id="stkFileSelect" style="display:none" accept="image/*" data-act="uploadScreenshot" data-args="[&quot;$el&quot;]" data-on="change">
-                </div>
-                <?php endif; ?>
-
-                <!-- Screenshots gallery grid -->
-                <div class="stk-screenshots-grid" id="stkScreenshotsGrid">
-                    <!-- Dynamic screenshots cards will go here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Chart panel -->
-        <div class="stk-panel" data-stk-panel="chart" style="display:none">
-            <div class="card-body">
-                <div class="flex items-center gap-3 mb-3">
-                    <label class="form-label" style="margin:0">ปี</label>
-                    <select class="form-control" id="stkChartYear" style="width:auto" data-act="loadStockChart" data-args="[&quot;$value&quot;]" data-on="change">
-                        <?php for ($y = (int)date('Y'); $y >= (int)date('Y') - 4; $y--): ?>
-                        <option value="<?= $y ?>" <?= $y == (int)date('Y') ? 'selected' : '' ?>><?= $y + 543 ?></option>
-                        <?php endfor; ?>
-                    </select>
-                </div>
-                <div class="stk-chart-grid">
-                    <div class="chart-wrap">
-                        <canvas id="stkValueChart" role="img" aria-label="กราฟมูลค่าหุ้น"></canvas>
-                    </div>
-                    <div class="chart-wrap">
-                        <canvas id="stkPlChart" role="img" aria-label="กราฟกำไรขาดทุนหุ้น"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Analysis panel -->
-        <div class="stk-panel" data-stk-panel="analysis" style="display:none">
-            <div class="card-body">
-                <div class="stk-analysis-header">
-                    <h3 class="stk-analysis-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ai-glow-icon" style="margin-right:6px;vertical-align:text-bottom;color:var(--color-accent)"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>วิเคราะห์หุ้นเชิงลึกด้วย AI</h3>
-                    <p class="text-sm text-muted">เพียงระบุสัญลักษณ์หุ้นที่ต้องการ ระบบจะทำการตรวจสอบราคาปัจจุบัน วิเคราะห์ปัจจัยพื้นฐาน ข้อมูลทางเทคนิค แนวรับ-แนวต้าน และสรุปข้อเสนอแนะการลงทุนด้วยปัญญาประดิษฐ์</p>
-                </div>
-                
-                <div class="stk-analysis-form-wrap">
-                    <div class="stk-analysis-form">
-                        <div class="form-group mb-0">
-                            <label class="form-label">สัญลักษณ์หุ้น (Ticker)</label>
-                            <input type="text" class="form-control text-upper" id="stkAnalyzeTicker" placeholder="เช่น AAPL, PTT.BK, CPALL" style="text-transform:uppercase" maxlength="20">
-                        </div>
-                        <div class="form-group mb-0">
-                            <label class="form-label">ตลาด</label>
-                            <select class="form-control" id="stkAnalyzeMarket">
-                                <option value="US">US (ตลาดหุ้นสหรัฐฯ)</option>
-                                <option value="SET">SET (ตลาดหุ้นไทย)</option>
-                                <option value="OTHER">อื่นๆ</option>
-                            </select>
-                        </div>
-                        <div class="form-group mb-0 flex items-end">
-                            <button class="btn btn-ai-sparkle" id="stkAnalyzeBtn" data-act="runStockAnalysis" style="width:100%;height:38px">
-                                <svg class="sparkle-svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right:6px;vertical-align:middle"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6C8.57 12.05 8 10.61 8 9c0-2.21 1.79-4 4-4s4 1.79 4 4c0 1.61-.57 3.05-2.15 4.1z"/></svg>
-                                วิเคราะห์ด้วย AI
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Loading State Skeleton -->
-                <div id="stkAnalyzeLoading" class="stk-analysis-loading-box" style="display:none">
-                    <div class="ai-scanner-line"></div>
-                    <div class="loading-spinner-wrap">
-                        <div class="ai-loading-sparkle">✦</div>
-                        <div class="ai-loading-spinner"></div>
-                    </div>
-                    <div class="loading-text-anim" id="stkAnalyzeLoadingText">กำลังดึงข้อมูล...</div>
-                    <div class="loading-sub-text">ขุมพลัง AI กำลังทำการคำนวณและประเมินผลเชิงลึกระดับพรีเมียม</div>
-                </div>
-
-                <!-- Analysis Result Output Container -->
-                <div id="stkAnalyzeResult" class="stk-analysis-result-container" style="display:none">
-                    <!-- Will be dynamically generated by JS -->
-                </div>
-            </div>
+        <div class="table-wrap">
+            <table class="table" aria-label="รายการเงินลงทุน">
+                <thead>
+                    <tr>
+                        <th scope="col">วันที่</th>
+                        <th scope="col">รายการ</th>
+                        <th scope="col" class="num">จำนวนเงิน</th>
+                        <th scope="col">สกุลเงิน</th>
+                        <th scope="col">หมายเหตุ</th>
+                        <th scope="col"><span class="sr-only">แก้ไข</span></th>
+                    </tr>
+                </thead>
+                <tbody id="stkCapitalList">
+                    <tr><td colspan="6"><span class="skel skel-w-52"></span></td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
+
+    <!-- Screenshots of the broker app -->
+    <div class="stk-panel" data-stk-panel="screenshots" hidden>
+        <p class="stk-note">เก็บภาพหน้าจอพอร์ตจากแอปโบรกเกอร์ไว้เทียบย้อนหลัง ภาพล่าสุดจะแสดงในหน้าที่แชร์</p>
+        <button type="button" class="stk-dropzone" id="stkDropzone" data-click="#stkFileSelect">
+            <svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>
+            <span class="stk-dropzone-text">ลากรูปมาวาง หรือกดเพื่อเลือกไฟล์</span>
+            <span class="stk-dropzone-sub">JPG, PNG, WEBP, GIF ไม่เกิน 20MB</span>
+        </button>
+        <input type="file" id="stkFileSelect" hidden accept="image/*" aria-label="เลือกรูปภาพพอร์ต" data-act="uploadScreenshot" data-args='["$el"]' data-on="change">
+        <div class="stk-shots" id="stkScreenshotsGrid"></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="stk-panel" data-stk-panel="chart" hidden>
+        <div class="stk-filters">
+            <label class="form-label" for="stkChartYear">ปี</label>
+            <select class="form-control" id="stkChartYear" data-act="loadStockChart" data-args='["$value"]' data-on="change">
+                <?php for ($y = (int)date('Y'); $y >= (int)date('Y') - 4; $y--): ?>
+                <option value="<?= $y ?>"<?= $y === (int)date('Y') ? ' selected' : '' ?>><?= $y + 543 ?></option>
+                <?php endfor; ?>
+            </select>
+        </div>
+        <div class="stk-charts">
+            <figure>
+                <figcaption>ต้นทุนสะสมกับมูลค่าตลาด (ประมาณ)</figcaption>
+                <div class="stk-chart"><canvas id="stkValueChart" role="img" aria-label="กราฟต้นทุนสะสมและมูลค่าตลาดรายเดือน"></canvas></div>
+            </figure>
+            <figure>
+                <figcaption>กำไร/ขาดทุนที่ยังไม่ปิด แยกตามหุ้น</figcaption>
+                <div class="stk-chart"><canvas id="stkPlChart" role="img" aria-label="กราฟกำไรขาดทุนที่ยังไม่ปิดของแต่ละหุ้น"></canvas></div>
+            </figure>
+        </div>
+    </div>
+
+    <!-- AI read of one ticker -->
+    <div class="stk-panel" data-stk-panel="analysis" hidden>
+        <p class="stk-note">ใส่ชื่อหุ้นแล้วให้ AI สรุปปัจจัยพื้นฐาน แนวโน้มราคา และความเสี่ยงให้ ผลที่ได้เป็นความเห็นของโมเดล อาจผิดพลาดหรือล้าหลังได้ ใช้ประกอบการตัดสินใจเท่านั้น ไม่ใช่คำแนะนำการลงทุน</p>
+        <form class="stk-analyze-form" id="stkAnalyzeForm" data-act="runStockAnalysis" novalidate>
+            <div class="form-group">
+                <label class="form-label" for="stkAnalyzeTicker">ชื่อหุ้น (Ticker)</label>
+                <input type="text" class="form-control" id="stkAnalyzeTicker" placeholder="เช่น AAPL, PTT.BK, CPALL" maxlength="20" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="stkAnalyzeMarket">ตลาด</label>
+                <select class="form-control" id="stkAnalyzeMarket">
+                    <option value="US">US (สหรัฐฯ)</option>
+                    <option value="SET">SET (ไทย)</option>
+                    <option value="OTHER">อื่นๆ</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" type="submit" id="stkAnalyzeBtn">วิเคราะห์</button>
+        </form>
+
+        <div id="stkAnalyzeLoading" class="stk-analyzing" role="status" hidden>
+            <p id="stkAnalyzeLoadingText">กำลังวิเคราะห์ อาจใช้เวลาครู่หนึ่ง</p>
+            <div class="skel-row"><span class="skel skel-w-60"></span></div>
+            <div class="skel-row"><span class="skel skel-w-45"></span></div>
+            <div class="skel-row"><span class="skel skel-w-52"></span></div>
+        </div>
+
+        <div id="stkAnalyzeResult" class="stk-result" aria-live="polite" hidden></div>
+    </div>
+</section>
+
+<!-- What a ratio means -->
+<div class="modal-backdrop" id="metricModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-labelledby="metricTitle">
+        <div class="modal-header">
+            <h2 class="modal-title" id="metricTitle">ตัวชี้วัด</h2>
+            <button class="modal-close" type="button" aria-label="ปิด" data-close-modal>&times;</button>
+        </div>
+        <div class="modal-body stk-metric" id="metricBody"></div>
+        <div class="modal-footer">
+            <button class="btn" type="button" data-close-modal>ปิด</button>
+        </div>
+    </div>
+</div>
 <?php endif; ?>
 
-<!-- Add/Edit modal -->
-<div class="modal-backdrop" id="stockModal">
-    <div class="modal">
+<!-- Add/Edit trade -->
+<div class="modal-backdrop" id="stockModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-labelledby="stockModalTitle">
         <div class="modal-header">
-            <span class="modal-title" id="stockModalTitle">บันทึกรายการหุ้น</span>
-            <button class="modal-close">&times;</button>
+            <h2 class="modal-title" id="stockModalTitle">บันทึกรายการหุ้น</h2>
+            <button class="modal-close" type="button" aria-label="ปิด" data-close-modal>&times;</button>
         </div>
         <div class="modal-body">
             <input type="hidden" id="editStockId">
+            <div class="form-group">
+                <div class="seg-pair" role="radiogroup" aria-label="ซื้อหรือขาย">
+                    <label><input type="radio" name="stkSide" value="buy" checked><span>ซื้อ</span></label>
+                    <label><input type="radio" name="stkSide" value="sell"><span>ขาย</span></label>
+                </div>
+            </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">Ticker</label>
-                    <input type="text" class="form-control" id="stkTicker" placeholder="AAPL, PTT.BK" style="text-transform:uppercase" maxlength="20">
+                    <label class="form-label" for="stkTicker">ชื่อหุ้น (Ticker)</label>
+                    <input type="text" class="form-control" id="stkTicker" placeholder="AAPL, PTT.BK" maxlength="20" autocomplete="off">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">ตลาด</label>
+                    <label class="form-label" for="stkMarket">ตลาด</label>
                     <select class="form-control" id="stkMarket" data-act="onStkMarketChange" data-on="change">
                         <option value="US">US</option>
                         <option value="SET">SET</option>
@@ -355,112 +299,100 @@
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">ฝั่ง</label>
-                    <select class="form-control" id="stkSide">
-                        <option value="buy">ซื้อ</option>
-                        <option value="sell">ขาย</option>
-                    </select>
+                    <label class="form-label" for="stkQty">จำนวน (หุ้น)</label>
+                    <input type="number" class="form-control" id="stkQty" step="0.0001" min="0.0001" inputmode="decimal">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">สกุลเงิน</label>
-                    <input type="text" class="form-control" id="stkCurrency" value="USD" maxlength="3" style="text-transform:uppercase">
+                    <label class="form-label" for="stkPrice">ราคาต่อหุ้น</label>
+                    <input type="number" class="form-control" id="stkPrice" step="0.0001" min="0" inputmode="decimal">
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">จำนวน (หุ้น)</label>
-                    <input type="number" class="form-control" id="stkQty" step="0.0001" min="0.0001">
+                    <label class="form-label" for="stkCurrency">สกุลเงิน</label>
+                    <input type="text" class="form-control" id="stkCurrency" value="USD" maxlength="3" autocomplete="off">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">ราคา / หุ้น</label>
-                    <input type="number" class="form-control" id="stkPrice" step="0.0001" min="0">
+                    <label class="form-label" for="stkFee">ค่าธรรมเนียม</label>
+                    <input type="number" class="form-control" id="stkFee" step="0.0001" min="0" value="0" inputmode="decimal">
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">ค่าธรรมเนียม</label>
-                    <input type="number" class="form-control" id="stkFee" step="0.0001" min="0" value="0">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">วันที่</label>
+                    <label class="form-label" for="stkDate">วันที่</label>
                     <input type="date" class="form-control" id="stkDate" value="<?= date('Y-m-d') ?>">
                 </div>
+                <div class="form-group">
+                    <label class="form-label" for="stkNotes">หมายเหตุ</label>
+                    <input type="text" class="form-control" id="stkNotes" maxlength="500">
+                </div>
             </div>
-            <div class="form-group">
-                <label class="form-label">หมายเหตุ</label>
-                <input type="text" class="form-control" id="stkNotes" maxlength="500">
-            </div>
+            <p class="form-error" id="stkError" role="alert" hidden></p>
         </div>
-        <div class="modal-footer justify-between">
-            <button class="btn btn-ghost" id="deleteStockBtn" data-act="deleteStock" style="color:var(--color-danger);display:none">ลบ</button>
-            <div class="flex gap-3" style="margin-left:auto">
-                <button class="btn btn-ghost" data-close-modal>ยกเลิก</button>
-                <button class="btn btn-primary" data-act="saveStock">บันทึก</button>
-            </div>
+        <div class="modal-footer">
+            <button class="btn btn-danger mr-auto" type="button" id="deleteStockBtn" data-act="deleteStock" hidden>ลบรายการ</button>
+            <button class="btn" type="button" data-close-modal>ยกเลิก</button>
+            <button class="btn btn-primary" type="button" data-act="saveStock">บันทึกรายการ</button>
         </div>
     </div>
 </div>
 
-<!-- Add/Edit Capital modal -->
-<div class="modal-backdrop" id="capitalModal">
-    <div class="modal">
+<!-- Add/Edit money in or out -->
+<div class="modal-backdrop" id="capitalModal" aria-hidden="true">
+    <div class="modal modal-narrow" role="dialog" aria-labelledby="capitalModalTitle">
         <div class="modal-header">
-            <span class="modal-title" id="capitalModalTitle">บันทึกรายการเงินลงทุน</span>
-            <button class="modal-close" data-close-modal>&times;</button>
+            <h2 class="modal-title" id="capitalModalTitle">บันทึกเงินลงทุน</h2>
+            <button class="modal-close" type="button" aria-label="ปิด" data-close-modal>&times;</button>
         </div>
         <div class="modal-body">
             <input type="hidden" id="editCapitalId">
+            <div class="form-group">
+                <div class="seg-pair" role="radiogroup" aria-label="เติมเงินหรือถอนเงิน">
+                    <label><input type="radio" name="capType" value="deposit" checked><span>เติมเงิน</span></label>
+                    <label><input type="radio" name="capType" value="withdrawal"><span>ถอนเงิน</span></label>
+                </div>
+            </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">ประเภทรายการ</label>
-                    <select class="form-control" id="capType">
-                        <option value="deposit">เติมเงิน (Deposit)</option>
-                        <option value="withdrawal">ถอนเงิน (Withdrawal)</option>
-                    </select>
+                    <label class="form-label" for="capAmount">จำนวนเงิน</label>
+                    <input type="number" class="form-control" id="capAmount" step="0.01" min="0.01" inputmode="decimal" placeholder="0.00">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">สกุลเงิน</label>
+                    <label class="form-label" for="capCurrency">สกุลเงิน</label>
                     <select class="form-control" id="capCurrency">
                         <option value="THB">THB (บาท)</option>
                         <option value="USD">USD (ดอลลาร์)</option>
                     </select>
                 </div>
             </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">จำนวนเงิน</label>
-                    <input type="number" class="form-control" id="capAmount" step="0.01" min="0.01" placeholder="0.00">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">วันที่</label>
-                    <input type="date" class="form-control" id="capDate" value="<?= date('Y-m-d') ?>">
-                </div>
+            <div class="form-group">
+                <label class="form-label" for="capDate">วันที่</label>
+                <input type="date" class="form-control" id="capDate" value="<?= date('Y-m-d') ?>">
             </div>
             <div class="form-group">
-                <label class="form-label">หมายเหตุ</label>
-                <input type="text" class="form-control" id="capNotes" maxlength="500" placeholder="เช่น เงินเดือนเข้า, ปันผล, โอนเงินกลับ">
+                <label class="form-label" for="capNotes">หมายเหตุ</label>
+                <input type="text" class="form-control" id="capNotes" maxlength="500" placeholder="เช่น เงินเดือนเข้า, ปันผล, โอนกลับ">
             </div>
+            <p class="form-error" id="capError" role="alert" hidden></p>
         </div>
-        <div class="modal-footer justify-between">
-            <button class="btn btn-ghost" id="deleteCapitalBtn" data-act="deleteCapital" style="color:var(--color-danger);display:none">ลบ</button>
-            <div class="flex gap-3" style="margin-left:auto">
-                <button class="btn btn-ghost" data-close-modal>ยกเลิก</button>
-                <button class="btn btn-primary" data-act="saveCapital">บันทึก</button>
-            </div>
+        <div class="modal-footer">
+            <button class="btn btn-danger mr-auto" type="button" id="deleteCapitalBtn" data-act="deleteCapital" hidden>ลบรายการ</button>
+            <button class="btn" type="button" data-close-modal>ยกเลิก</button>
+            <button class="btn btn-primary" type="button" data-act="saveCapital">บันทึกรายการ</button>
         </div>
     </div>
 </div>
 
-<!-- Screenshot Lightbox modal -->
-<div class="modal-backdrop" id="screenshotLightboxModal" style="--modal-width: 90vw; --modal-max-width: 1000px;">
-    <div class="modal" style="background:transparent;box-shadow:none;border:none;padding:0">
-        <div class="flex justify-between items-center mb-2" style="position:relative;margin-bottom:10px">
-            <span id="lightboxTitle" style="color:white;font-weight:600;font-size:1.1rem;text-shadow:0 2px 4px rgba(0,0,0,0.5)">ดูรูปภาพ</span>
-            <button class="btn btn-ghost" data-close-modal style="color:white;font-size:2rem;padding:0 10px;line-height:1;background:rgba(0,0,0,0.3);border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center">&times;</button>
+<!-- A screenshot at full size -->
+<div class="modal-backdrop" id="screenshotLightboxModal" aria-hidden="true">
+    <div class="modal modal-wide" role="dialog" aria-labelledby="lightboxTitle">
+        <div class="modal-header">
+            <h2 class="modal-title" id="lightboxTitle">รูปภาพพอร์ต</h2>
+            <button class="modal-close" type="button" aria-label="ปิด" data-close-modal>&times;</button>
         </div>
-        <div class="modal-body" style="text-align:center;padding:0">
-            <img id="lightboxImage" src="" alt="Screenshot" style="max-width:100%;max-height:75vh;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);border:1px solid rgba(255,255,255,0.1);display:inline-block">
-            <div id="lightboxDesc" style="color:rgba(255,255,255,0.8);margin-top:12px;font-size:0.95rem;text-shadow:0 1px 2px rgba(0,0,0,0.5)"></div>
+        <div class="modal-body">
+            <img class="stk-lightbox-img" id="lightboxImage" src="" alt="">
+            <p class="stk-note" id="lightboxDesc"></p>
         </div>
     </div>
 </div>

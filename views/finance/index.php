@@ -1,254 +1,198 @@
-<div class="page-header flex items-center justify-between">
-    <h1 class="page-title">การเงิน</h1>
-    <div class="flex gap-2">
-        <button class="btn btn-ghost" data-act="openExportModal" style="border-color: var(--color-border-2); display: flex; align-items: center; gap: 6px;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            <span>ส่งออก PDF</span>
-        </button>
-        <button class="btn btn-primary" data-act="openAddTransaction">+ บันทึกรายการ</button>
+<?php
+// =====================================================
+// views/finance/index.php — the month's accounts
+//
+// One month at a time: what came in, what went out, what is left; a line to
+// add an entry; the entries by day; where the expenses went; and the year as a
+// chart. $cats comes from FinanceController. assets/js/finance.js draws it all.
+// =====================================================
+?>
+<div class="page-head">
+    <div>
+        <h1>รายรับรายจ่าย</h1>
+        <p class="sub" id="financeTally" aria-live="polite">กำลังโหลดบัญชี…</p>
+    </div>
+    <div class="page-head-actions">
+        <button class="btn btn-ghost" type="button" data-act="openExportModal">ส่งออก PDF</button>
+        <button class="btn btn-primary" type="button" data-act="openAddTransaction"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>บันทึกรายการ</button>
     </div>
 </div>
 
-<!-- Summary bar -->
-<div class="finance-summary-bar">
-    <div class="finance-stat-card">
-        <div class="finance-stat-label">รายรับเดือนนี้</div>
-        <div class="finance-stat-amount income" id="sumIncome">—</div>
-    </div>
-    <div class="finance-stat-card">
-        <div class="finance-stat-label">รายจ่ายเดือนนี้</div>
-        <div class="finance-stat-amount expense" id="sumExpense">—</div>
-    </div>
-    <div class="finance-stat-card">
-        <div class="finance-stat-label">คงเหลือ</div>
-        <div class="finance-stat-amount balance" id="sumBalance">—</div>
+<div class="month-bar">
+    <button class="icon-btn" type="button" id="monthPrev" aria-label="เดือนก่อน">&lsaquo;</button>
+    <h2 class="month-bar-label" id="monthLabel"></h2>
+    <button class="icon-btn" type="button" id="monthNext" aria-label="เดือนถัดไป">&rsaquo;</button>
+    <button class="btn btn-sm" type="button" id="monthNow" hidden>กลับมาเดือนนี้</button>
+</div>
+
+<div id="financeError" role="alert" hidden></div>
+
+<div class="fin-summary">
+    <table class="ledger ledger-lg" aria-label="สรุปเดือนนี้">
+        <tr><td>รายรับ</td><td class="num in" id="sumIncome">—</td></tr>
+        <tr><td>รายจ่าย</td><td class="num out" id="sumExpense">—</td></tr>
+        <tr class="total"><td>คงเหลือ</td><td class="num" id="sumBalance">—</td></tr>
+    </table>
+    <div class="fin-ratio" id="financeRatio" hidden>
+        <div class="progress" role="img" id="spendingRatioTrack" aria-label="สัดส่วนรายจ่ายต่อรายรับ"><div class="progress-bar" id="spendingRatioBar"></div></div>
+        <p class="fin-ratio-text" id="spendingRatioText"></p>
     </div>
 </div>
 
-<!-- Spending ratio / Financial Health indicator -->
-<div class="finance-ratio-card" id="financeRatioCard" style="display:none; margin-bottom: var(--space-8);">
-    <div class="card" style="padding: var(--space-5);">
-        <div class="flex justify-between items-center mb-2">
-            <span class="text-sm font-semibold" style="letter-spacing: -0.01em;">สัดส่วนการใช้จ่าย (Spending Rate)</span>
-            <span class="text-xs text-muted font-medium" id="spendingRatioText">—</span>
-        </div>
-        <div class="progress" style="height: 10px; background: var(--color-surface-2); border-radius: 99px; overflow: hidden; position: relative;">
-            <div id="spendingRatioBar" class="progress-bar" style="width: 0%; background: var(--color-success); height: 100%; transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1), background-color var(--transition);"></div>
-        </div>
+<!-- Add an entry in one line -->
+<form id="quickAddForm" class="entry-form" data-act="saveQuickTransaction" novalidate>
+    <div class="seg-pair" role="radiogroup" aria-label="ประเภทรายการ">
+        <label><input type="radio" name="qaType" value="expense" checked><span>รายจ่าย</span></label>
+        <label><input type="radio" name="qaType" value="income"><span>รายรับ</span></label>
     </div>
-</div>
+    <label class="sr-only" for="qaAmount">จำนวนเงิน (บาท)</label>
+    <input class="form-control entry-amount" id="qaAmount" inputmode="decimal" autocomplete="off" placeholder="จำนวนเงิน">
+    <label class="sr-only" for="qaCategory">หมวดหมู่</label>
+    <select class="form-control entry-category" id="qaCategory"><option value="">ไม่ระบุหมวด</option></select>
+    <label class="sr-only" for="qaDesc">รายการ</label>
+    <input class="form-control entry-desc" id="qaDesc" maxlength="255" autocomplete="off" placeholder="รายการ เช่น ข้าวมันไก่ + ชาเย็น">
+    <button class="btn btn-primary" type="submit" id="qaSubmit">บันทึกรายจ่าย</button>
+</form>
 
-<!-- Quick Add Bar -->
-<div class="card mb-8" style="padding: 1.25rem; border-left: 3px solid var(--color-text);">
-    <form id="quickAddForm" class="flex gap-4 items-center justify-between flex-wrap" data-act="saveQuickTransaction">
-        <span style="font-weight: 600; font-size: 0.9rem; white-space: nowrap; display: flex; align-items: center; gap: 6px;">
-            <span style="font-size: 1.2rem;"></span> บันทึกด่วน:
-        </span>
-        <div style="display: flex; gap: 10px; flex: 1; min-width: 280px; flex-wrap: wrap;">
-            <select class="form-control" id="qaType" style="width: auto; cursor: pointer;" data-act="filterQaCategoryOptions" data-on="change">
-                <option value="expense">รายจ่าย</option>
-                <option value="income">รายรับ</option>
-            </select>
-            <input type="number" class="form-control" id="qaAmount" placeholder="จำนวนเงิน (บาท)..." step="0.01" min="0.01" required style="width: 140px; flex: 1;">
-            <select class="form-control" id="qaCategory" style="min-width: 150px; flex: 1; cursor: pointer;">
-                <option value="">— หมวดหมู่ —</option>
-                <?php foreach ($cats as $cat): ?>
-                <option value="<?= (int)$cat['id'] ?>" data-type="<?= h($cat['type']) ?>">
-                    <?= h($cat['name']) ?>
-                </option>
-                <?php endforeach; ?>
-            </select>
-            <input type="text" class="form-control" id="qaDesc" placeholder="รายละเอียดรายการ / หมายเหตุ..." maxlength="255" style="flex: 2; min-width: 180px;">
-        </div>
-        <button class="btn btn-ghost" type="submit" style="padding: var(--space-2) var(--space-5); font-weight: 600;">+ บันทึก</button>
-    </form>
-</div>
-
-<!-- Chart -->
-<div class="card mb-8">
-    <div class="card-header">
-        <span class="card-title">เปรียบเทียบ รายรับ vs รายจ่าย รายปี</span>
-        <div class="flex items-center gap-3">
-            <!-- Chart type segmented buttons -->
-            <div class="segmented-control" id="chartTypeToggle">
-                <button class="segmented-btn active" data-chart-type="bar" data-act="changeChartType" data-args="[&quot;bar&quot;]">แท่ง</button>
-                <button class="segmented-btn" data-chart-type="line" data-act="changeChartType" data-args="[&quot;line&quot;]">พื้นที่</button>
+<div class="cols fin-cols">
+    <div class="col-main">
+        <section class="sec" aria-labelledby="txnTitle">
+            <div class="sec-head">
+                <h2 id="txnTitle">รายการของเดือน<span class="count" id="txnCount"></span></h2>
             </div>
-            <select class="form-control" id="chartYear" style="width:auto; padding-top: 4px; padding-bottom: 4px; font-size: 0.85rem;" data-act="loadChart" data-args="[&quot;$value&quot;]" data-on="change">
+            <div class="txn-filters">
+                <label class="sr-only" for="searchFilter">ค้นหารายการ</label>
+                <input type="search" class="form-control" id="searchFilter" placeholder="ค้นหารายการ" autocomplete="off">
+                <div class="seg-pair" role="group" aria-label="แสดง" id="typeFilter">
+                    <button type="button" data-type="" aria-pressed="true">ทั้งหมด</button>
+                    <button type="button" data-type="income" aria-pressed="false">รายรับ</button>
+                    <button type="button" data-type="expense" aria-pressed="false">รายจ่าย</button>
+                </div>
+                <label class="sr-only" for="categoryFilter">หมวดหมู่</label>
+                <select class="form-control" id="categoryFilter"><option value="">ทุกหมวดหมู่</option></select>
+            </div>
+            <div id="transactionList" aria-busy="true">
+                <div class="skel-row"><span class="skel skel-w-60"></span></div>
+                <div class="skel-row"><span class="skel skel-w-45"></span></div>
+                <div class="skel-row"><span class="skel skel-w-52"></span></div>
+            </div>
+            <div id="txnLoadMoreWrap" class="txn-more" hidden>
+                <button class="btn btn-sm" type="button" id="txnLoadMore">โหลดเพิ่ม</button>
+            </div>
+        </section>
+    </div>
+
+    <aside class="col-side">
+        <section class="sec" aria-labelledby="catTitle">
+            <div class="sec-head"><h2 id="catTitle">รายจ่ายแยกตามหมวด</h2></div>
+            <div id="categoryBreakdown"></div>
+        </section>
+    </aside>
+</div>
+
+<section class="sec" aria-labelledby="chartTitle">
+    <div class="sec-head">
+        <h2 id="chartTitle">รายรับกับรายจ่ายตลอดปี</h2>
+        <div class="chart-controls">
+            <div class="seg-pair" role="group" aria-label="แบบกราฟ" id="chartTypeToggle">
+                <button type="button" data-chart-type="bar" aria-pressed="true" data-act="changeChartType" data-args="[&quot;bar&quot;]">แท่ง</button>
+                <button type="button" data-chart-type="line" aria-pressed="false" data-act="changeChartType" data-args="[&quot;line&quot;]">เส้น</button>
+            </div>
+            <label class="sr-only" for="chartYear">ปี</label>
+            <select class="form-control chart-year" id="chartYear" data-act="loadChart" data-args="[&quot;$value&quot;]" data-on="change">
                 <?php for ($y = (int)date('Y'); $y >= (int)date('Y') - 3; $y--): ?>
-                <option value="<?= $y ?>" <?= $y == (int)date('Y') ? 'selected' : '' ?>><?= $y + 543 ?></option>
+                <option value="<?= $y ?>"<?= $y === (int)date('Y') ? ' selected' : '' ?>><?= $y + 543 ?></option>
                 <?php endfor; ?>
             </select>
         </div>
     </div>
-    <div class="card-body">
-        <div class="chart-wrap">
-            <canvas id="financeChart" role="img" aria-label="กราฟสรุปการเงิน"></canvas>
-        </div>
+    <div class="chart-wrap">
+        <canvas id="financeChart" role="img" aria-label="กราฟรายรับและรายจ่ายรายเดือนตลอดปี"></canvas>
     </div>
-</div>
+</section>
 
-<!-- Two Column Dashboard Layout (Table list + Categories distribution) -->
-<div class="grid-2-custom mb-8">
-    <!-- Left Column: Transaction list -->
-    <div class="card" style="display: flex; flex-direction: column; overflow: hidden; padding-bottom: var(--space-4);">
-        <div class="card-header flex items-center justify-between flex-wrap gap-3 mb-4">
-            <span class="card-title">ประวัติการทำรายการ</span>
-            <div class="flex gap-2" style="flex-wrap: wrap; width: auto;">
-                <input type="text" class="form-control filter-input" id="searchFilter" placeholder="ค้นหารายการ..." style="width: 150px; font-size: 0.85rem;" data-act="filterTransactionsLocal" data-on="input">
-                <input type="month" class="form-control" id="monthFilter" value="<?= date('Y-m') ?>" style="width: auto; font-size: 0.85rem;" data-act="loadTransactions" data-on="change">
-                <select class="form-control" id="typeFilter" style="width: auto; font-size: 0.85rem;" data-act="loadTransactions" data-on="change">
-                    <option value="">ทั้งหมด</option>
-                    <option value="income">รายรับ</option>
-                    <option value="expense">รายจ่าย</option>
-                </select>
-                <select class="form-control" id="categoryFilter" style="width: auto; font-size: 0.85rem;" data-act="filterTransactionsLocal" data-on="change">
-                    <option value="">ทุกหมวดหมู่</option>
-                    <?php foreach ($cats as $cat): ?>
-                    <option value="<?= h($cat['name']) ?>"><?= h($cat['name']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-        </div>
-        <div class="table-wrap" style="flex: 1; overflow-x: auto;">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>วันที่</th>
-                        <th>ประเภท</th>
-                        <th>หมวดหมู่</th>
-                        <th>รายการ</th>
-                        <th style="text-align:right">จำนวน (บาท)</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody id="transactionList">
-                    <tr><td colspan="6" class="text-center text-muted" style="padding:2rem">กำลังโหลด...</td></tr>
-                </tbody>
-            </table>
-            <div id="txnLoadMoreWrap" class="text-center" style="display:none; padding: var(--space-4) 0;">
-                <button class="btn btn-ghost btn-sm" id="txnLoadMore">โหลดเพิ่ม</button>
-                <p class="text-xs text-muted" id="txnCount" style="margin-top:6px"></p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Right Column: Visual category analytics + Financial Insight advices -->
-    <div class="flex-col gap-6">
-        <!-- Breakdown progress bars -->
-        <div class="card" style="height: 100%;">
-            <div class="card-header mb-4">
-                <span class="card-title">สัดส่วนการใช้จ่ายรายจ่าย</span>
-            </div>
-            <div id="categoryBreakdown" class="card-body flex-col" style="display: flex; flex-direction: column; gap: 12px;">
-                <div class="text-center text-muted" style="padding: 2rem 0;">ไม่มีข้อมูลการใช้จ่ายในเดือนนี้</div>
-            </div>
-        </div>
-
-        <!-- Financial advise insights box -->
-        <div class="card" style="border-left: 4px solid #3b82f6; background: var(--color-surface);">
-            <div class="card-header mb-2">
-                <span class="card-title" style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: #3b82f6; font-weight: 700; display: flex; align-items: center; gap: 6px;">
-                     การประเมินผลสุขภาพการเงิน
-                </span>
-            </div>
-            <div class="card-body" id="financialAdviceText" style="font-size: 0.875rem; color: var(--color-muted); line-height: 1.65;">
-                กำลังประเมินข้อมูล...
-            </div>
-        </div>
-    </div>
-</div>
+<script nonce="<?= h(Security::nonce()) ?>">
+// The categories the entry forms offer, so they can be filtered by income or expense.
+window.financeCategories = <?= jsonForScript($cats) ?>;
+</script>
 
 <!-- Add/Edit Transaction Modal -->
-<div class="modal-backdrop" id="txnModal">
-    <div class="modal">
+<div class="modal-backdrop" id="txnModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-labelledby="txnModalTitle">
         <div class="modal-header">
-            <span class="modal-title" id="txnModalTitle">บันทึกรายการ</span>
-            <button class="modal-close">&times;</button>
+            <h2 class="modal-title" id="txnModalTitle">บันทึกรายการ</h2>
+            <button class="modal-close" type="button" aria-label="ปิด">&times;</button>
         </div>
         <div class="modal-body">
             <input type="hidden" id="editTxnId">
             <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">ประเภท</label>
+                    <label class="form-label" for="txnType">ประเภท</label>
                     <select class="form-control" id="txnType">
                         <option value="expense">รายจ่าย</option>
                         <option value="income">รายรับ</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">จำนวนเงิน (บาท)</label>
-                    <input type="number" class="form-control" id="txnAmount" step="0.01" min="0.01">
+                    <label class="form-label" for="txnAmount">จำนวนเงิน (บาท)</label>
+                    <input type="text" inputmode="decimal" class="form-control" id="txnAmount" autocomplete="off">
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">หมวดหมู่</label>
-                    <select class="form-control" id="txnCategory">
-                        <option value="">— เลือกหมวดหมู่ —</option>
-                        <?php foreach ($cats as $cat): ?>
-                        <option value="<?= (int)$cat['id'] ?>" data-type="<?= h($cat['type']) ?>">
-                            <?= h($cat['name']) ?>
-                        </option>
-                        <?php endforeach; ?>
-                    </select>
+                    <label class="form-label" for="txnCategory">หมวดหมู่</label>
+                    <select class="form-control" id="txnCategory"><option value="">ไม่ระบุหมวด</option></select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">วันที่</label>
-                    <input type="date" class="form-control" id="txnDate" value="<?= date('Y-m-d') ?>">
+                    <label class="form-label" for="txnDate">วันที่</label>
+                    <input type="date" class="form-control" id="txnDate">
                 </div>
             </div>
             <div class="form-group">
-                <label class="form-label">รายการ / หมายเหตุ</label>
-                <input type="text" class="form-control" id="txnDesc" placeholder="รายละเอียดการเงิน..." maxlength="255">
+                <label class="form-label" for="txnDesc">รายการ</label>
+                <input type="text" class="form-control" id="txnDesc" placeholder="เช่น ค่าไฟเดือนตุลาคม" maxlength="255">
             </div>
+            <p class="form-error" id="txnError" role="alert" hidden></p>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-ghost" data-close-modal>ยกเลิก</button>
-            <button class="btn btn-primary" data-act="saveTransaction">บันทึก</button>
+            <button class="btn" type="button" data-close-modal>ยกเลิก</button>
+            <button class="btn btn-primary" type="button" data-act="saveTransaction">บันทึกรายการ</button>
         </div>
     </div>
 </div>
 
 <!-- Export PDF Modal -->
-<div class="modal-backdrop" id="exportPdfModal">
-    <div class="modal" style="max-width: 440px;">
+<div class="modal-backdrop" id="exportPdfModal" aria-hidden="true">
+    <div class="modal modal-narrow" role="dialog" aria-labelledby="exportTitle">
         <div class="modal-header">
-            <span class="modal-title">ส่งออกรายงานการเงิน (PDF)</span>
-            <button class="modal-close" data-act="closeModal" data-args="[&quot;exportPdfModal&quot;]">&times;</button>
+            <h2 class="modal-title" id="exportTitle">ส่งออกรายงานเป็น PDF</h2>
+            <button class="modal-close" type="button" aria-label="ปิด" data-act="closeModal" data-args="[&quot;exportPdfModal&quot;]">&times;</button>
         </div>
         <div class="modal-body">
-            <div class="segmented-control" id="exportTypeToggle" style="display: flex; width: 100%; margin-bottom: var(--space-4);">
-                <button class="segmented-btn active" data-type="month" data-act="setExportType" data-args="[&quot;month&quot;]" style="flex: 1; text-align: center;">รายเดือน</button>
-                <button class="segmented-btn" data-type="range" data-act="setExportType" data-args="[&quot;range&quot;]" style="flex: 1; text-align: center;">เลือกช่วงเวลาเอง</button>
+            <div class="seg-pair export-toggle" role="group" aria-label="ช่วงเวลา" id="exportTypeToggle">
+                <button type="button" data-type="month" aria-pressed="true" data-act="setExportType" data-args="[&quot;month&quot;]">รายเดือน</button>
+                <button type="button" data-type="range" aria-pressed="false" data-act="setExportType" data-args="[&quot;range&quot;]">เลือกช่วงเอง</button>
             </div>
 
-            <!-- Month Selection -->
             <div id="exportMonthGroup" class="form-group">
-                <label class="form-label">เลือกเดือน</label>
+                <label class="form-label" for="exportMonthValue">เดือน</label>
                 <input type="month" class="form-control" id="exportMonthValue" value="<?= date('Y-m') ?>">
             </div>
 
-            <!-- Range Selection -->
-            <div id="exportRangeGroup" class="form-group" style="display: none;">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">วันที่เริ่มต้น</label>
-                        <input type="date" class="form-control" id="exportStartDate" value="<?= date('Y-m-01') ?>">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">วันที่สิ้นสุด</label>
-                        <input type="date" class="form-control" id="exportEndDate" value="<?= date('Y-m-d') ?>">
-                    </div>
+            <div id="exportRangeGroup" class="form-row" hidden>
+                <div class="form-group">
+                    <label class="form-label" for="exportStartDate">ตั้งแต่วันที่</label>
+                    <input type="date" class="form-control" id="exportStartDate" value="<?= date('Y-m-01') ?>">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="exportEndDate">ถึงวันที่</label>
+                    <input type="date" class="form-control" id="exportEndDate" value="<?= date('Y-m-d') ?>">
                 </div>
             </div>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-ghost" data-act="closeModal" data-args="[&quot;exportPdfModal&quot;]">ยกเลิก</button>
-            <button class="btn btn-primary" id="btnExportSubmit" data-act="generatePdfReport">ดาวน์โหลด PDF</button>
+            <button class="btn" type="button" data-act="closeModal" data-args="[&quot;exportPdfModal&quot;]">ยกเลิก</button>
+            <button class="btn btn-primary" type="button" id="btnExportSubmit" data-act="generatePdfReport">ดาวน์โหลด PDF</button>
         </div>
     </div>
 </div>
-
-<!-- Print template container (hidden) -->
-<div id="printReportContainer" style="display: none;"></div>

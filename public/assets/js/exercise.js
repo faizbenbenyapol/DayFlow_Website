@@ -1,87 +1,143 @@
 /* =====================================================
-   exercise.js
+   exercise.js — the workout log
+
+   The log is read a month at a time. The type suggestions come from the
+   person's own categories, and anything else typed is accepted as a new type.
 ===================================================== */
 
 let workouts = [];
 let editingId = null;
+let exMonth = new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0');
 
-document.addEventListener('DOMContentLoaded', async function () {
-    await Promise.all([loadWorkouts(), loadStats()]);
-    await initWorkoutTypeDropdown();
+const MONTHS_FULL = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+
+const DEFAULT_TYPES = ['วิ่ง', 'ยกน้ำหนัก', 'ว่ายน้ำ', 'ปั่นจักรยาน', 'โยคะ', 'HIIT', 'เดิน', 'กระโดดเชือก'];
+
+document.addEventListener('DOMContentLoaded', function () {
+    loadWorkouts();
+    loadStats();
+    loadTypeSuggestions();
 });
 
-async function loadWorkouts(month) {
-    const m = month || document.getElementById('monthFilter')?.value || '';
+function showListError(id, retry) {
+    const el = document.getElementById(id);
+    el.removeAttribute('aria-busy');
+    el.innerHTML = '<div class="alert alert-danger" role="alert">โหลดข้อมูลไม่สำเร็จ ตรวจการเชื่อมต่อแล้วลองใหม่ '
+        + '<button type="button" class="btn btn-sm" data-act="' + retry + '">ลองอีกครั้ง</button></div>';
+}
+
+async function loadWorkouts() {
+    const [year, month] = exMonth.split('-').map(Number);
+    document.getElementById('monthLabel').textContent = MONTHS_FULL[month - 1] + ' ' + (year + 543);
     try {
-        const data = await apiFetch(BASE_URL + '/api/exercise?limit=100' + (m ? '&month=' + m : ''));
+        const data = await apiFetch(BASE_URL + '/api/exercise?limit=100&month=' + exMonth);
         workouts = data.workouts || [];
+        document.getElementById('workoutList').removeAttribute('aria-busy');
         renderWorkouts();
     } catch {
-        toast('โหลดข้อมูลไม่สำเร็จ', 'danger');
+        document.getElementById('exTally').textContent = 'โหลดบันทึกไม่ได้';
+        showListError('workoutList', 'loadWorkouts');
     }
 }
 
 async function loadStats() {
     try {
         const data = await apiFetch(BASE_URL + '/api/exercise/stats');
-        document.getElementById('statSessions').textContent = data.month_sessions || 0;
-        document.getElementById('statMinutes').textContent  = data.month_minutes  || 0;
-
-        const topType = data.by_type && data.by_type[0] ? data.by_type[0].type : 'ยังไม่มี';
-        document.getElementById('statTopType').textContent = topType;
-
+        const sessions = data.month_sessions || 0;
+        document.getElementById('statSessions').innerHTML = sessions + '<small>ครั้ง</small>';
+        document.getElementById('statMinutes').innerHTML = (data.month_minutes || 0) + '<small>นาที</small>';
+        document.getElementById('statTopType').textContent = data.by_type && data.by_type[0] ? data.by_type[0].type : '—';
         renderTypeStats(data.by_type || []);
-    } catch {}
+    } catch {
+        showListError('typeStats', 'loadStats');
+    }
+}
+
+/** Offers the person's own categories when typing a type, else a starter list. */
+async function loadTypeSuggestions() {
+    let types = DEFAULT_TYPES;
+    try {
+        const data = await apiFetch(BASE_URL + '/api/exercise/categories');
+        if (data.categories && data.categories.length) types = data.categories.map(c => c.name);
+    } catch { /* the starter list does */ }
+    document.getElementById('workoutTypes').innerHTML = types.map(t => '<option value="' + escHtml(t) + '"></option>').join('');
+}
+
+/* --- The log --- */
+function workoutDetails(w) {
+    const parts = [];
+    if (w.duration_min) parts.push(w.duration_min + ' นาที');
+    if (w.sets || w.reps) parts.push((w.sets || '—') + ' เซต × ' + (w.reps || '—') + ' ครั้ง');
+    if (w.weight_kg) parts.push(w.weight_kg + ' กก.');
+    return parts.join(' · ');
+}
+
+function workoutRow(w) {
+    const label = escHtml(w.type) + ' ' + escHtml(formatDate(w.workout_date));
+    const details = workoutDetails(w);
+    return '<li class="ruled-row ex-row">'
+        + '<span class="ex-date">' + escHtml(formatDate(w.workout_date)) + '</span>'
+        + '<span class="grow"><span class="title">' + escHtml(w.type) + '</span>'
+        + (details ? '<span class="meta">' + details + '</span>' : '')
+        + (w.notes ? '<span class="meta">' + escHtml(w.notes) + '</span>' : '') + '</span>'
+        + '<button type="button" class="icon-btn sm" data-act="openEditWorkout" data-args="[' + w.id + ']" aria-label="แก้ไข: ' + label + '"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button>'
+        + '<button type="button" class="icon-btn sm" data-act="deleteWorkout" data-args="[' + w.id + ']" aria-label="ลบ: ' + label + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>'
+        + '</li>';
 }
 
 function renderWorkouts() {
-    const tbody = document.getElementById('workoutList');
+    const el = document.getElementById('workoutList');
+    const count = document.getElementById('exCount');
+    const now = new Date();
+    const thisMonth = exMonth === now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+
+    document.getElementById('exTally').textContent = workouts.length
+        ? workouts.length + ' ครั้งในเดือนที่เลือก'
+        : 'ยังไม่มีบันทึกในเดือนที่เลือก';
+
     if (!workouts.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted" style="padding:2rem">ยังไม่มีการบันทึก</td></tr>';
+        count.textContent = '';
+        el.innerHTML = '<div class="empty-state"><p class="empty-state-title">ไม่มีบันทึกในเดือนนี้</p>'
+            + '<p class="empty-state-text">' + (thisMonth ? 'บันทึกการออกกำลังกายครั้งแรกของเดือน แล้วสถิติจะขึ้นด้านบน' : 'เลือกเดือนอื่น หรือเพิ่มบันทึกย้อนหลัง') + '</p>'
+            + '<button type="button" class="btn btn-primary" data-act="openAddWorkout">บันทึกการออกกำลังกาย</button></div>';
         return;
     }
 
-    tbody.innerHTML = workouts.map(w => `
-        <tr>
-            <td>${escHtml(formatDate(w.workout_date))}</td>
-            <td><span class="workout-type-badge" data-wtype="${escHtml(w.type)}">${escHtml(w.type)}</span></td>
-            <td>${w.duration_min ? w.duration_min + ' นาที' : '—'}</td>
-            <td>${w.sets || w.reps ? (w.sets || '—') + ' x ' + (w.reps || '—') : '—'}</td>
-            <td>${w.weight_kg ? w.weight_kg + ' กก.' : '—'}</td>
-            <td class="text-sm text-muted">${escHtml(w.notes || '')}</td>
-            <td>
-                <button class="btn-link" data-act="openEditWorkout" data-args="[${w.id}]">แก้ไข</button>
-                <button class="btn-link" style="color:var(--color-danger)" data-act="deleteWorkout" data-args="[${w.id}]">ลบ</button>
-            </td>
-        </tr>
-    `).join('');
+    count.textContent = workouts.length;
+    el.innerHTML = '<ul class="ruled-list">' + workouts.map(workoutRow).join('') + '</ul>';
 }
 
 function renderTypeStats(byType) {
     const el = document.getElementById('typeStats');
+    el.removeAttribute('aria-busy');
     if (!byType.length) {
-        el.innerHTML = '<div class="text-sm text-muted">ยังไม่มีสถิติ</div>';
+        el.innerHTML = '<p class="ex-empty">ยังไม่มีสถิติ บันทึกการออกกำลังกายสักครั้งก่อน</p>';
         return;
     }
 
     const max = Math.max(...byType.map(t => t.sessions));
-
-    el.innerHTML = byType.map(t => `
-        <div style="margin-bottom:12px">
-            <div class="flex justify-between mb-1">
-                <span class="text-sm">${escHtml(t.type)}</span>
-                <span class="text-xs text-muted">${t.sessions} ครั้ง${t.total_min > 0 ? ' · ' + t.total_min + ' นาที' : ''}</span>
-            </div>
-            <div class="progress wt-progress" data-wtype="${escHtml(t.type)}"><div class="progress-bar" style="width:${Math.round(t.sessions / max * 100)}%"></div></div>
-        </div>
-    `).join('');
+    el.innerHTML = '<ul class="ex-types">' + byType.map(t => {
+        const minutes = Number(t.total_min) > 0 ? ' · ' + t.total_min + ' นาที' : '';
+        return '<li><div class="ex-type-line"><span>' + escHtml(t.type) + '</span><span class="ex-type-count">' + t.sessions + ' ครั้ง' + minutes + '</span></div>'
+            + '<div class="progress ex-bar" aria-hidden="true"><div class="progress-bar" style="--v:' + Math.round(t.sessions / max * 100) + '%"></div></div></li>';
+    }).join('') + '</ul>';
 }
 
-function filterByMonth(m) {
-    loadWorkouts(m);
+function moveMonth(delta) {
+    const [year, month] = exMonth.split('-').map(Number);
+    const moved = new Date(year, month - 1 + delta, 1);
+    exMonth = moved.getFullYear() + '-' + String(moved.getMonth() + 1).padStart(2, '0');
+    loadWorkouts();
 }
 
-/* --- Modal --- */
+/* --- The form --- */
+function workoutError(message) {
+    const line = document.getElementById('workoutError');
+    line.textContent = message;
+    line.hidden = message === '';
+}
+
 function openAddWorkout() {
     editingId = null;
     document.getElementById('workoutModalTitle').textContent = 'บันทึกการออกกำลังกาย';
@@ -93,8 +149,9 @@ function openAddWorkout() {
     document.getElementById('workoutReps').value     = '';
     document.getElementById('workoutWeight').value   = '';
     document.getElementById('workoutNotes').value    = '';
-    document.getElementById('workoutTypeDropdown')?.classList.remove('open');
+    workoutError('');
     openModal('workoutModal');
+    document.getElementById('workoutType').focus();
 }
 
 function openEditWorkout(id) {
@@ -110,7 +167,7 @@ function openEditWorkout(id) {
     document.getElementById('workoutReps').value      = w.reps || '';
     document.getElementById('workoutWeight').value    = w.weight_kg || '';
     document.getElementById('workoutNotes').value     = w.notes || '';
-    document.getElementById('workoutTypeDropdown')?.classList.remove('open');
+    workoutError('');
     openModal('workoutModal');
 }
 
@@ -125,197 +182,27 @@ async function saveWorkout() {
         notes:        document.getElementById('workoutNotes').value
     };
 
-    if (!body.type) { toast('กรุณากรอกประเภท', 'danger'); return; }
-    if (!body.workout_date) { toast('กรุณาเลือกวันที่', 'danger'); return; }
+    if (!body.type) { workoutError('ใส่ประเภทการออกกำลังกายก่อน'); document.getElementById('workoutType').focus(); return; }
+    if (!body.workout_date) { workoutError('เลือกวันที่ก่อน'); return; }
 
     try {
         const url    = editingId ? BASE_URL + '/api/exercise/' + editingId : BASE_URL + '/api/exercise';
-        const method = editingId ? 'PUT' : 'POST';
-        await apiFetch(url, { method, body: JSON.stringify(body) });
+        await apiFetch(url, { method: editingId ? 'PUT' : 'POST', body: JSON.stringify(body) });
         closeModal('workoutModal');
         await Promise.all([loadWorkouts(), loadStats()]);
-        toast('บันทึกแล้ว');
+        toast('บันทึกรายการแล้ว');
     } catch (err) {
-        toast(err.message || 'บันทึกไม่สำเร็จ', 'danger');
+        workoutError(err.message || 'บันทึกไม่สำเร็จ ลองอีกครั้ง');
     }
 }
 
 async function deleteWorkout(id) {
-    if (!await confirmAction('ต้องการลบรายการนี้?', 'ลบ')) return;
-    await apiFetch(BASE_URL + '/api/exercise/' + id, { method: 'DELETE' });
-    await Promise.all([loadWorkouts(), loadStats()]);
-    toast('ลบแล้ว');
-}
-
-/* ── Custom Workout Type Dropdown Implementation ── */
-async function initWorkoutTypeDropdown() {
-    const dropdown = document.getElementById('workoutTypeDropdown');
-    const input = document.getElementById('workoutType');
-    const menu = document.getElementById('workoutTypeMenu');
-    if (!dropdown || !input || !menu) return;
-
-    let defaultTypes = ['วิ่ง', 'ยกน้ำหนัก', 'ว่ายน้ำ', 'ปั่นจักรยาน', 'โยคะ', 'HIIT', 'เดิน', 'กระโดดเชือก'];
+    if (!await confirmAction('ลบรายการนี้แล้วกู้คืนไม่ได้', 'ลบรายการ', 'ลบรายการนี้?')) return;
     try {
-        const data = await apiFetch(BASE_URL + '/api/exercise/categories');
-        if (data.categories && data.categories.length > 0) {
-            defaultTypes = data.categories.map(c => c.name);
-        }
-    } catch (e) {
-        console.error('Failed to load exercise categories', e);
+        await apiFetch(BASE_URL + '/api/exercise/' + id, { method: 'DELETE' });
+        await Promise.all([loadWorkouts(), loadStats()]);
+        toast('ลบรายการแล้ว');
+    } catch (err) {
+        toast(err.message || 'ลบไม่สำเร็จ ลองอีกครั้ง', 'danger');
     }
-
-    function renderOptions(filterText = '') {
-        const query = filterText.trim().toLowerCase();
-        let html = '';
-        
-        // Filter the default list
-        const filtered = defaultTypes.filter(t => t.toLowerCase().includes(query));
-        
-        if (filtered.length > 0) {
-            html = filtered.map(t => {
-                const isActive = input.value.trim() === t;
-                return `
-                    <div class="dropdown-item ${isActive ? 'active' : ''}" data-value="${escHtml(t)}">
-                        <span class="workout-type-badge" data-wtype="${escHtml(t)}">${escHtml(t)}</span>
-                        ${isActive ? '<span class="dropdown-item-check">✓</span>' : ''}
-                    </div>
-                `;
-            }).join('');
-        } else if (query) {
-            // Show option to use the custom typed value if nothing matched
-            html = `
-                <div class="dropdown-item custom-val" data-value="${escHtml(filterText.trim())}">
-                    <span class="text-xs text-muted" style="margin-right: var(--space-2)">ใช้:</span>
-                    <span class="workout-type-badge" style="background: var(--color-surface-2); color: var(--color-text);">${escHtml(filterText.trim())}</span>
-                </div>
-            `;
-        } else {
-            // Show all
-            html = defaultTypes.map(t => {
-                const isActive = input.value.trim() === t;
-                return `
-                    <div class="dropdown-item ${isActive ? 'active' : ''}" data-value="${escHtml(t)}">
-                        <span class="workout-type-badge" data-wtype="${escHtml(t)}">${escHtml(t)}</span>
-                        ${isActive ? '<span class="dropdown-item-check">✓</span>' : ''}
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        menu.innerHTML = html;
-        
-        // Attach click listeners to options
-        menu.querySelectorAll('.dropdown-item').forEach(item => {
-            item.addEventListener('mousedown', function(e) {
-                // Use mousedown instead of click to fire before input blur
-                e.preventDefault();
-                const val = this.getAttribute('data-value');
-                input.value = val;
-                closeDropdown();
-                input.dispatchEvent(new Event('input'));
-            });
-        });
-    }
-
-    function openDropdown() {
-        dropdown.classList.add('open');
-        renderOptions(input.value);
-    }
-
-    function closeDropdown() {
-        dropdown.classList.remove('open');
-        // Clear focus highlighting
-        menu.querySelectorAll('.dropdown-item').forEach(item => item.classList.remove('focused'));
-    }
-
-    // Toggle dropdown when input focused or clicked
-    input.addEventListener('focus', openDropdown);
-    input.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openDropdown();
-    });
-
-    // Handle caret click
-    const caret = dropdown.querySelector('.dropdown-caret');
-    if (caret) {
-        caret.style.cursor = 'pointer';
-        caret.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            if (dropdown.classList.contains('open')) {
-                closeDropdown();
-            } else {
-                input.focus();
-            }
-        });
-    }
-
-    // Filter list as user types
-    input.addEventListener('input', () => {
-        if (!dropdown.classList.contains('open')) {
-            openDropdown();
-        } else {
-            renderOptions(input.value);
-        }
-    });
-
-    // Close when input blurs (with a slight delay to allow item clicks, though mousedown preventDefault handles most)
-    input.addEventListener('blur', () => {
-        setTimeout(closeDropdown, 180);
-    });
-
-    // Close when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!dropdown.contains(e.target)) {
-            closeDropdown();
-        }
-    });
-
-    // Handle keys: Escape to close, ArrowDown / ArrowUp to navigate, Enter to select
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closeDropdown();
-            input.blur();
-        } else if (e.key === 'ArrowDown') {
-            if (!dropdown.classList.contains('open')) {
-                openDropdown();
-            } else {
-                const items = menu.querySelectorAll('.dropdown-item');
-                if (items.length > 0) {
-                    let activeIndex = Array.from(items).findIndex(item => item.classList.contains('focused'));
-                    if (activeIndex !== -1) items[activeIndex].classList.remove('focused');
-                    
-                    activeIndex = (activeIndex + 1) % items.length;
-                    items[activeIndex].classList.add('focused');
-                    items[activeIndex].scrollIntoView({ block: 'nearest' });
-                }
-            }
-            e.preventDefault();
-        } else if (e.key === 'ArrowUp') {
-            if (dropdown.classList.contains('open')) {
-                const items = menu.querySelectorAll('.dropdown-item');
-                if (items.length > 0) {
-                    let activeIndex = Array.from(items).findIndex(item => item.classList.contains('focused'));
-                    if (activeIndex !== -1) items[activeIndex].classList.remove('focused');
-                    
-                    activeIndex = (activeIndex - 1 + items.length) % items.length;
-                    items[activeIndex].classList.add('focused');
-                    items[activeIndex].scrollIntoView({ block: 'nearest' });
-                }
-            }
-            e.preventDefault();
-        } else if (e.key === 'Enter') {
-            if (dropdown.classList.contains('open')) {
-                const focusedItem = menu.querySelector('.dropdown-item.focused');
-                if (focusedItem) {
-                    const val = focusedItem.getAttribute('data-value');
-                    input.value = val;
-                    closeDropdown();
-                    input.dispatchEvent(new Event('input'));
-                    e.preventDefault();
-                } else {
-                    closeDropdown();
-                }
-            }
-        }
-    });
 }

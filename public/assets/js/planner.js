@@ -1,57 +1,85 @@
 /* =====================================================
-   planner.js — Calendar + Daily todos
-   ===================================================== */
+   planner.js — the month grid, the day sheet, and the day's to-dos
+===================================================== */
 
 const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
                      'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 const THAI_DAYS_SHORT = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+const THAI_DAYS_FULL = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+// The keys tokens.css uses for the weekday colour.
+const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+const DEFAULT_EVENT_COLOR = '#3b82f6';
 
 let currentYear  = new Date().getFullYear();
 let currentMonth = new Date().getMonth() + 1; // 1-based
-let selectedDate = todayISO();
+let selectedDate = localToday();
 let monthEvents  = [];
 
-document.addEventListener('DOMContentLoaded', function () {
-    loadMonth(currentYear, currentMonth);
-    loadDayPanel(selectedDate);
+/** Today as YYYY-MM-DD in the visitor's own time zone (toISOString would give UTC's date). */
+function localToday() {
+    const now = new Date();
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
+document.addEventListener('DOMContentLoaded', async function () {
     initColorSelector();
+    await loadMonth(currentYear, currentMonth);
+    loadDayPanel(selectedDate, false);
 });
 
-function initColorSelector() {
-    const dots = document.querySelectorAll('.color-dot');
-    const colorInput = document.getElementById('eventColor');
-    
-    dots.forEach(dot => {
-        dot.addEventListener('click', function () {
-            dots.forEach(d => d.classList.remove('active'));
-            this.classList.add('active');
-            if (colorInput) {
-                colorInput.value = this.dataset.color;
-            }
-        });
+/* --- Colour choice in the dialog --- */
+function setEventColor(hex) {
+    document.getElementById('eventColor').value = hex;
+    document.querySelectorAll('.color-dot').forEach(dot => {
+        const on = dot.dataset.color === hex;
+        dot.classList.toggle('active', on);
+        dot.setAttribute('aria-checked', on ? 'true' : 'false');
     });
 }
 
+function initColorSelector() {
+    document.querySelectorAll('.color-dot').forEach(dot => {
+        dot.addEventListener('click', () => setEventColor(dot.dataset.color));
+    });
+}
+
+/* --- The month --- */
 async function loadMonth(year, month) {
+    const error = document.getElementById('monthError');
     try {
         const data = await apiFetch(BASE_URL + '/api/planner/events?year=' + year + '&month=' + month);
         monthEvents = data.events || [];
-        renderCalendar(year, month);
+        error.hidden = true;
     } catch {
         monthEvents = [];
-        renderCalendar(year, month);
+        error.hidden = false;
+        error.className = 'alert alert-danger';
+        error.innerHTML = 'โหลดกิจกรรมของเดือนนี้ไม่สำเร็จ ตรวจการเชื่อมต่อแล้วลองใหม่ '
+            + '<button type="button" class="btn btn-sm" data-act="reloadMonth">ลองอีกครั้ง</button>';
     }
+    renderCalendar(year, month);
+}
+
+function reloadMonth() {
+    return loadMonth(currentYear, currentMonth).then(() => loadDayPanel(selectedDate, false));
+}
+
+function eventsOn(date) {
+    return monthEvents
+        .filter(e => e.start_datetime && e.start_datetime.startsWith(date))
+        .sort((a, b) => (b.is_all_day - a.is_all_day) || a.start_datetime.localeCompare(b.start_datetime));
 }
 
 function renderCalendar(year, month) {
-    document.getElementById('calMonthLabel').textContent =
-        THAI_MONTHS[month - 1] + ' ' + (year + 543);
+    document.getElementById('calMonthLabel').textContent = THAI_MONTHS[month - 1] + ' ' + (year + 543);
+
+    const total = monthEvents.length;
+    document.getElementById('plannerTally').textContent =
+        total === 0 ? 'เดือนนี้ยังไม่มีกิจกรรม' : 'เดือนนี้มี ' + total + ' กิจกรรม';
 
     const grid = document.getElementById('calendarGrid');
     grid.innerHTML = '';
-    grid.className = 'calendar-grid';
 
-    // Day name headers
     THAI_DAYS_SHORT.forEach(d => {
         const cell = document.createElement('div');
         cell.className = 'calendar-day-name';
@@ -62,47 +90,50 @@ function renderCalendar(year, month) {
     const firstDay = new Date(year, month - 1, 1).getDay(); // 0=Sun
     const daysInMonth = new Date(year, month, 0).getDate();
     const prevDays = new Date(year, month - 1, 0).getDate();
-    const today = todayISO();
+    const today = localToday();
 
     let dayCount = 1;
     let nextCount = 1;
 
     for (let i = 0; i < 42; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'calendar-cell';
-
         let date, isOther = false;
 
         if (i < firstDay) {
-            const d = prevDays - firstDay + i + 1;
-            date = isoDate(year, month - 1 || 12, d);
+            date = isoDate(year, month - 1, prevDays - firstDay + i + 1);
             isOther = true;
         } else if (dayCount <= daysInMonth) {
             date = isoDate(year, month, dayCount);
             dayCount++;
         } else {
-            date = isoDate(year, month + 1 > 12 ? 1 : month + 1, nextCount);
+            date = isoDate(year, month + 1, nextCount);
             nextCount++;
             isOther = true;
         }
 
+        const evs = eventsOn(date);
+        const when = new Date(date + 'T12:00:00');
+
+        // A button, so the keyboard reaches every day and a screen reader hears the date.
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = 'calendar-cell';
+        cell.setAttribute('aria-label', when.getDate() + ' ' + THAI_MONTHS[when.getMonth()] + ' ' + (when.getFullYear() + 543)
+            + (evs.length ? ' มี ' + evs.length + ' กิจกรรม' : ''));
+        cell.setAttribute('aria-pressed', date === selectedDate ? 'true' : 'false');
         if (isOther) cell.classList.add('other-month');
         if (date === today) cell.classList.add('today');
         if (date === selectedDate) cell.classList.add('selected');
 
-        const dayNum = document.createElement('div');
+        const dayNum = document.createElement('span');
         dayNum.className = 'calendar-day-number';
-        dayNum.textContent = new Date(date + 'T12:00:00').getDate();
-
+        dayNum.textContent = when.getDate();
         cell.appendChild(dayNum);
 
-        // Events for this day
-        const evs = monthEvents.filter(e => e.start_datetime && e.start_datetime.startsWith(date));
         evs.slice(0, 2).forEach(ev => {
             const dot = document.createElement('span');
             dot.className = 'calendar-event-dot';
             dot.textContent = ev.title;
-            dot.style.background = ev.color || '#3b82f6';
+            dot.style.setProperty('--ev', cssColor(ev.color, DEFAULT_EVENT_COLOR));
             cell.appendChild(dot);
         });
         if (evs.length > 2) {
@@ -113,15 +144,18 @@ function renderCalendar(year, month) {
         }
 
         cell.addEventListener('click', function () {
-            document.querySelectorAll('.calendar-cell.selected').forEach(c => c.classList.remove('selected'));
+            grid.querySelectorAll('.calendar-cell.selected').forEach(c => {
+                c.classList.remove('selected');
+                c.setAttribute('aria-pressed', 'false');
+            });
             cell.classList.add('selected');
-            selectedDate = date;
-            loadDayPanel(date);
+            cell.setAttribute('aria-pressed', 'true');
+            loadDayPanel(date, true);
         });
 
         grid.appendChild(cell);
 
-        // Stop at end of last row if all days filled
+        // Stop at the end of the last row once every day is placed.
         if (dayCount > daysInMonth && nextCount > 1 && (i + 1) % 7 === 0) break;
     }
 }
@@ -129,7 +163,7 @@ function renderCalendar(year, month) {
 function isoDate(year, month, day) {
     if (month < 1)  { year--; month = 12; }
     if (month > 12) { year++; month = 1; }
-    return year + '-' + String(month).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
 }
 
 function prevMonth() {
@@ -144,25 +178,41 @@ function nextMonth() {
     loadMonth(currentYear, currentMonth);
 }
 
-/* --- Day Panel --- */
-async function loadDayPanel(date) {
+/* --- The day sheet --- */
+function turnSheet() {
+    const sheet = document.getElementById('daySheet');
+    sheet.classList.remove('turn');
+    void sheet.offsetWidth; // restart the animation
+    sheet.classList.add('turn');
+}
+
+async function loadDayPanel(date, animate) {
     selectedDate = date;
     const d = new Date(date + 'T12:00:00');
-    const label = d.getDate() + ' ' + THAI_MONTHS[d.getMonth()] + ' ' + (d.getFullYear() + 543);
-    document.getElementById('dayPanelDate').textContent = label;
+    const days = daysUntil(date);
+
+    document.getElementById('daySheet').dataset.day = DAY_KEYS[d.getDay()];
+    document.getElementById('dayNum').textContent = d.getDate();
+    document.getElementById('dayMon').textContent = THAI_MONTHS[d.getMonth()].slice(0, 3) + '.';
+    document.getElementById('dayPanelDate').textContent = 'วัน' + THAI_DAYS_FULL[d.getDay()];
+    document.getElementById('dayPanelSub').textContent =
+        d.getDate() + ' ' + THAI_MONTHS[d.getMonth()] + ' ' + (d.getFullYear() + 543)
+        + ' · ' + (days === 0 ? 'วันนี้' : days > 0 ? 'อีก ' + days + ' วัน' : Math.abs(days) + ' วันที่แล้ว');
+    if (animate) turnSheet();
 
     const evEl = document.getElementById('dayEvents');
-    const evs = monthEvents.filter(e => e.start_datetime && e.start_datetime.startsWith(date));
+    const evs = eventsOn(date);
     if (evs.length === 0) {
-        evEl.innerHTML = '<div class="text-sm text-muted" style="padding: 12px 0;">ไม่มีกิจกรรม</div>';
+        evEl.innerHTML = '<p class="day-empty">ไม่มีกิจกรรมในวันนี้ · <button type="button" class="btn-link" data-act="openAddEvent">เพิ่มกิจกรรม</button></p>';
     } else {
         evEl.innerHTML = evs.map(ev => {
             const timeStr = ev.is_all_day ? 'ทั้งวัน' : ev.start_datetime.slice(11, 16);
-            return `<div class="day-event-item" style="--event-color: ${cssColor(ev.color, '#3b82f6')}">
-                <span class="day-event-time">${escHtml(timeStr)}</span>
-                <span class="day-event-title">${escHtml(ev.title)}</span>
-                <button class="btn-link" data-act="openEditEvent" data-args="[${ev.id}]" style="padding: 2px 6px;">แก้ไข</button>
-            </div>`;
+            const title = escHtml(ev.title);
+            return '<div class="day-event-item" style="--ev: ' + cssColor(ev.color, DEFAULT_EVENT_COLOR) + '">'
+                + '<span class="day-event-time">' + escHtml(timeStr) + '</span>'
+                + '<span class="day-event-title">' + title + '</span>'
+                + '<button type="button" class="icon-btn sm" data-act="openEditEvent" data-args="[' + ev.id + ']" aria-label="แก้ไข: ' + title + '"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button>'
+                + '</div>';
         }).join('');
     }
 
@@ -173,11 +223,14 @@ async function loadDayPanel(date) {
 let todosCache = [];
 
 async function loadTodos(date) {
+    const el = document.getElementById('dayTodos');
     try {
         const data = await apiFetch(BASE_URL + '/api/planner/todos?date=' + date);
         todosCache = data.todos || [];
         renderTodos();
-    } catch {}
+    } catch {
+        el.innerHTML = '<p class="day-empty text-danger">โหลดสิ่งที่ต้องทำไม่สำเร็จ ลองเลือกวันอีกครั้ง</p>';
+    }
 }
 
 function renderTodos() {
@@ -185,18 +238,18 @@ function renderTodos() {
     if (!el) return;
 
     if (!todosCache.length) {
-        el.innerHTML = '<div class="text-sm text-muted" style="padding:12px 0">ไม่มีรายการ</div>';
+        el.innerHTML = '<p class="day-empty">ยังไม่มีสิ่งที่ต้องทำในวันนี้ พิมพ์ในช่องด้านล่างแล้วกด Enter</p>';
         return;
     }
 
-    el.innerHTML = todosCache.map(t =>
-        `<div class="day-todo-item ${t.is_done ? 'done' : ''}" data-id="${t.id}">
-            <input type="checkbox" ${t.is_done ? 'checked' : ''} style="accent-color:var(--color-text);cursor:pointer; width:16px; height:16px;"
-                   data-act="toggleTodo" data-args="[${t.id}, &quot;$checked&quot;]" data-on="change">
-            <span class="day-todo-text">${escHtml(t.title)}</span>
-            <button class="btn-link" data-act="deleteTodo" data-args="[${t.id}]" style="margin-left:auto; color:var(--color-danger); padding: 2px 6px;">ลบ</button>
-        </div>`
-    ).join('');
+    el.innerHTML = todosCache.map(t => {
+        const title = escHtml(t.title);
+        return '<div class="day-todo-item' + (t.is_done ? ' done' : '') + '" data-id="' + t.id + '">'
+            + '<input type="checkbox" ' + (t.is_done ? 'checked' : '') + ' aria-label="เสร็จแล้ว: ' + title + '" data-act="toggleTodo" data-args="[' + t.id + ', &quot;$checked&quot;]" data-on="change">'
+            + '<span class="day-todo-text">' + title + '</span>'
+            + '<button type="button" class="icon-btn sm danger" data-act="deleteTodo" data-args="[' + t.id + ']" aria-label="ลบ: ' + title + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>'
+            + '</div>';
+    }).join('');
 }
 
 async function addTodo() {
@@ -204,24 +257,37 @@ async function addTodo() {
     const title = inp.value.trim();
     if (!title) return;
 
-    await apiFetch(BASE_URL + '/api/planner/todos', {
-        method: 'POST',
-        body: JSON.stringify({ title, date: selectedDate })
-    });
-    inp.value = '';
-    loadTodos(selectedDate);
+    try {
+        await apiFetch(BASE_URL + '/api/planner/todos', {
+            method: 'POST',
+            body: JSON.stringify({ title, date: selectedDate })
+        });
+        inp.value = '';
+        loadTodos(selectedDate);
+    } catch (err) {
+        toast(err.message || 'เพิ่มไม่สำเร็จ ลองอีกครั้ง', 'danger');
+    }
 }
 
 async function toggleTodo(id, isDone) {
-    await apiFetch(BASE_URL + '/api/planner/todos/' + id, {
-        method: 'PUT',
-        body: JSON.stringify({ is_done: isDone ? 1 : 0 })
-    });
+    try {
+        await apiFetch(BASE_URL + '/api/planner/todos/' + id, {
+            method: 'PUT',
+            body: JSON.stringify({ is_done: isDone ? 1 : 0 })
+        });
+    } catch (err) {
+        toast(err.message || 'บันทึกไม่สำเร็จ ลองอีกครั้ง', 'danger');
+    }
     loadTodos(selectedDate);
 }
 
 async function deleteTodo(id) {
-    await apiFetch(BASE_URL + '/api/planner/todos/' + id, { method: 'DELETE' });
+    try {
+        await apiFetch(BASE_URL + '/api/planner/todos/' + id, { method: 'DELETE' });
+        toast('ลบแล้ว');
+    } catch (err) {
+        toast(err.message || 'ลบไม่สำเร็จ ลองอีกครั้ง', 'danger');
+    }
     loadTodos(selectedDate);
 }
 
@@ -237,19 +303,13 @@ function openAddEvent() {
     document.getElementById('eventAllDay').checked = false;
     document.getElementById('eventStart').value = selectedDate + 'T08:00';
     document.getElementById('eventEnd').value = '';
+    document.getElementById('eventDate').value = selectedDate;
     document.getElementById('eventRepeat').value = 'none';
     document.getElementById('eventRepeatUntil').value = '';
-    document.getElementById('eventRepeatHint').style.display = 'none';
-    document.getElementById('deleteEventBtn').style.display = 'none';
-    
-    // Set default color blue
-    document.getElementById('eventColor').value = '#3b82f6';
-    const dots = document.querySelectorAll('.color-dot');
-    dots.forEach(d => {
-        if (d.dataset.color === '#3b82f6') d.classList.add('active');
-        else d.classList.remove('active');
-    });
+    document.getElementById('eventRepeatHint').hidden = true;
+    document.getElementById('deleteEventBtn').hidden = true;
 
+    setEventColor(DEFAULT_EVENT_COLOR);
     toggleAllDay(false);
     openModal('eventModal');
 }
@@ -264,16 +324,8 @@ function openEditEvent(id) {
     document.getElementById('eventTitle').value = ev.title;
     document.getElementById('eventDesc').value = ev.description || '';
     document.getElementById('eventAllDay').checked = ev.is_all_day == 1;
-    document.getElementById('deleteEventBtn').style.display = 'block';
-
-    // Set color from event
-    const eventCol = ev.color || '#3b82f6';
-    document.getElementById('eventColor').value = eventCol;
-    const dots = document.querySelectorAll('.color-dot');
-    dots.forEach(d => {
-        if (d.dataset.color === eventCol) d.classList.add('active');
-        else d.classList.remove('active');
-    });
+    document.getElementById('deleteEventBtn').hidden = false;
+    setEventColor(ev.color || DEFAULT_EVENT_COLOR);
 
     // A repeating event is rendered once per occurrence, all sharing one id.
     // Editing has to work from the series' own dates, or saving would drag the
@@ -283,8 +335,7 @@ function openEditEvent(id) {
 
     document.getElementById('eventRepeat').value = ev.repeat_rule || 'none';
     document.getElementById('eventRepeatUntil').value = ev.repeat_until || '';
-    document.getElementById('eventRepeatHint').style.display =
-        (ev.repeat_rule && ev.repeat_rule !== 'none') ? 'block' : 'none';
+    document.getElementById('eventRepeatHint').hidden = !(ev.repeat_rule && ev.repeat_rule !== 'none');
 
     if (ev.is_all_day) {
         toggleAllDay(true);
@@ -299,24 +350,26 @@ function openEditEvent(id) {
 }
 
 function toggleAllDay(checked) {
-    document.getElementById('dateTimeFields').style.display = checked ? 'none' : 'grid';
-    document.getElementById('dateOnlyFields').style.display = checked ? 'block' : 'none';
+    document.getElementById('dateTimeFields').hidden = checked;
+    document.getElementById('dateOnlyFields').hidden = !checked;
 }
 
 async function saveEvent() {
     const title   = document.getElementById('eventTitle').value.trim();
     const isAllDay = document.getElementById('eventAllDay').checked;
-    const selectedColor = document.getElementById('eventColor').value || '#3b82f6';
+    const selectedColor = document.getElementById('eventColor').value || DEFAULT_EVENT_COLOR;
 
-    if (!title) { toast('กรุณากรอกชื่อกิจกรรม', 'danger'); return; }
+    if (!title) { toast('ใส่ชื่อกิจกรรมก่อน', 'danger'); return; }
 
     let startDt, endDt = '';
     if (isAllDay) {
         const d = document.getElementById('eventDate').value;
-        if (!d) { toast('กรุณาเลือกวันที่', 'danger'); return; }
+        if (!d) { toast('เลือกวันที่ก่อน', 'danger'); return; }
         startDt = d + ' 00:00:00';
     } else {
-        startDt = document.getElementById('eventStart').value.replace('T', ' ') + ':00';
+        const startValue = document.getElementById('eventStart').value;
+        if (!startValue) { toast('เลือกเวลาเริ่มก่อน', 'danger'); return; }
+        startDt = startValue.replace('T', ' ') + ':00';
         endDt   = document.getElementById('eventEnd').value ? document.getElementById('eventEnd').value.replace('T', ' ') + ':00' : '';
     }
 
@@ -350,10 +403,10 @@ async function saveEvent() {
         }
         closeModal('eventModal');
         await loadMonth(currentYear, currentMonth);
-        loadDayPanel(selectedDate);
-        toast('บันทึกแล้ว');
+        loadDayPanel(selectedDate, false);
+        toast('บันทึกกิจกรรมแล้ว');
     } catch (err) {
-        toast(err.message || 'บันทึกไม่สำเร็จ', 'danger');
+        toast(err.message || 'บันทึกไม่สำเร็จ ลองอีกครั้ง', 'danger');
     }
 }
 
@@ -362,14 +415,19 @@ async function deleteEvent() {
     const editing = monthEvents.find(e => e.id === editingEventId);
     const repeats = editing && editing.repeat_rule && editing.repeat_rule !== 'none';
     const question = repeats
-        ? 'กิจกรรมนี้ทำซ้ำอยู่ การลบจะลบทุกครั้งในชุดนี้ ต้องการลบหรือไม่?'
-        : 'ต้องการลบกิจกรรมนี้?';
-    if (!await confirmAction(question, 'ลบ')) return;
-    await apiFetch(BASE_URL + '/api/planner/events/' + editingEventId, { method: 'DELETE' });
-    closeModal('eventModal');
-    await loadMonth(currentYear, currentMonth);
-    loadDayPanel(selectedDate);
-    toast('ลบแล้ว');
+        ? 'กิจกรรมนี้ทำซ้ำอยู่ การลบจะลบทุกครั้งในชุดนี้ และกู้คืนไม่ได้'
+        : 'ลบกิจกรรมนี้แล้วกู้คืนไม่ได้';
+    if (!await confirmAction(question, 'ลบกิจกรรม', 'ลบกิจกรรมนี้?')) return;
+
+    try {
+        await apiFetch(BASE_URL + '/api/planner/events/' + editingEventId, { method: 'DELETE' });
+        closeModal('eventModal');
+        await loadMonth(currentYear, currentMonth);
+        loadDayPanel(selectedDate, false);
+        toast('ลบกิจกรรมแล้ว');
+    } catch (err) {
+        toast(err.message || 'ลบไม่สำเร็จ ลองอีกครั้ง', 'danger');
+    }
 }
 
 /* --- Calendar import (.ics) ---
@@ -380,7 +438,7 @@ async function importIcs(input) {
     if (!file) return;
 
     if (file.size > 2 * 1024 * 1024) {
-        toast('ไฟล์ใหญ่เกิน 2 MB', 'danger');
+        toast('ไฟล์ใหญ่เกิน 2 MB ลองส่งออกช่วงเวลาที่สั้นลง', 'danger');
         return;
     }
 
@@ -393,11 +451,11 @@ async function importIcs(input) {
             body: form
         });
         await loadMonth(currentYear, currentMonth);
-        loadDayPanel(selectedDate);
+        loadDayPanel(selectedDate, false);
 
         const skipped = result.skipped ? ' (ข้ามที่มีอยู่แล้ว ' + result.skipped + ')' : '';
         toast('นำเข้า ' + result.imported + ' กิจกรรม' + skipped);
     } catch (err) {
-        toast(err.message || 'นำเข้าไม่สำเร็จ', 'danger');
+        toast(err.message || 'นำเข้าไม่สำเร็จ ตรวจว่าเป็นไฟล์ .ics แล้วลองใหม่', 'danger');
     }
 }

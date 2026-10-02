@@ -17,25 +17,32 @@
 
     // ---------- Tabs ----------
     function initTabs() {
-        const tabs = document.querySelectorAll('.ai-tab');
+        const tabs = Array.from(document.querySelectorAll('.ai-tab'));
         const panes = document.querySelectorAll('.ai-pane');
-        tabs.forEach(t => t.addEventListener('click', () => {
-            const name = t.dataset.tab;
+        const select = (tab, focus) => {
+            const name = tab.dataset.tab;
             tabs.forEach(x => {
-                x.classList.toggle('active', x === t);
-                x.classList.toggle('btn-primary', x === t);
-                x.classList.toggle('btn-ghost', x !== t);
+                x.setAttribute('aria-selected', String(x === tab));
+                x.tabIndex = x === tab ? 0 : -1;
             });
-            panes.forEach(p => {
-                p.style.display = (p.id === 'ai-pane-' + name) ? '' : 'none';
-            });
-            localStorage.setItem('ai_tab', name);
+            panes.forEach(p => { p.hidden = p.id !== 'ai-pane-' + name; });
+            try { localStorage.setItem('ai_tab', name); } catch (_) { /* not remembered */ }
+            if (focus) tab.focus();
             if (name === 'keys') loadKeys();
             if (name === 'history') loadHistory();
-        }));
-        const saved = localStorage.getItem('ai_tab') || 'generate';
-        const target = document.querySelector('.ai-tab[data-tab="' + saved + '"]');
-        if (target) target.click();
+        };
+        tabs.forEach((tab, i) => {
+            tab.addEventListener('click', () => select(tab));
+            tab.addEventListener('keydown', e => {
+                const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+                if (!step) return;
+                e.preventDefault();
+                select(tabs[(i + step + tabs.length) % tabs.length], true);
+            });
+        });
+        let saved = 'generate';
+        try { saved = localStorage.getItem('ai_tab') || 'generate'; } catch (_) { /* first tab */ }
+        select(tabs.find(t => t.dataset.tab === saved) || tabs[0]);
     }
 
     // ---------- Draft autosave ----------
@@ -73,7 +80,7 @@
     // ---------- Keys ----------
     async function loadKeys() {
         const box = document.getElementById('aiKeysList');
-        box.innerHTML = '<div class="text-xs text-muted">กำลังโหลด...</div>';
+        box.innerHTML = '<div class="ai-note">กำลังโหลด...</div>';
         try {
             const data = await apiFetch(BASE_URL + '/api/ai/keys');
             const providers = data.providers || ['openai', 'gemini', 'anthropic', 'replicate'];
@@ -91,7 +98,7 @@
                         ${cur ? `<span class="badge badge-success">บันทึกแล้ว</span>` : `<span class="badge">ยังไม่ได้ตั้ง</span>`}
                     </div>
                     <div class="ai-key-body">
-                        <input type="password" class="form-control" placeholder="${cur ? cur.masked : 'sk-... / AIza... / r8_...'}" data-prov="${p}">
+                        <input type="password" class="form-control" autocomplete="off" aria-label="API Key ของ ${PROVIDER_LABEL[p] || p}" placeholder="${cur ? cur.masked : 'sk-... / AIza... / r8_...'}" data-prov="${p}">
                         <button class="btn btn-primary btn-sm" data-save="${p}">บันทึก</button>
                         <button class="btn btn-ghost btn-sm" data-test="${p}">ทดสอบ</button>
                         ${cur ? `<button class="btn btn-ghost btn-sm" data-del="${p}">ลบ</button>` : ''}
@@ -123,16 +130,16 @@
                     const input = box.querySelector(`input[data-prov="${prov}"]`);
                     const msgEl = box.querySelector(`[data-msg="${prov}"]`);
                     const apiKey = input.value.trim(); // empty → use stored
-                    msgEl.innerHTML = '<span class="text-xs text-muted">กำลังทดสอบ...</span>';
+                    msgEl.innerHTML = '<span class="ai-note">กำลังทดสอบ…</span>';
                     btn.disabled = true;
                     try {
                         const r = await apiFetch(BASE_URL + '/api/ai/keys/test', {
                             method: 'POST',
                             body: JSON.stringify({ provider: prov, api_key: apiKey })
                         });
-                        msgEl.innerHTML = '<span class="text-xs" style="color:var(--color-success)">✓ ' + (r.message || 'ใช้งานได้') + '</span>';
+                        msgEl.innerHTML = '<span class="ai-ok">ใช้งานได้ · ' + escHtml(r.message || 'ผ่านการทดสอบ') + '</span>';
                     } catch (e) {
-                        msgEl.innerHTML = '<span class="text-xs" style="color:var(--color-danger)">✗ ' + escHtml(e.message) + '</span>';
+                        msgEl.innerHTML = '<span class="ai-bad">ใช้ไม่ได้ · ' + escHtml(e.message) + '</span>';
                     } finally {
                         btn.disabled = false;
                     }
@@ -150,7 +157,7 @@
                 });
             });
         } catch (e) {
-            box.innerHTML = '<div class="text-xs" style="color:var(--color-danger)">' + escHtml(e.message) + '</div>';
+            box.innerHTML = '<div class="alert alert-danger" role="alert">' + escHtml(e.message) + '</div>';
         }
     }
 
@@ -228,9 +235,9 @@
                     ${scenes.map((s, i) => `
                         <div class="ai-scene">
                             <div class="ai-scene-head">
-                                <span class="badge badge-primary">ฉาก ${escHtml(s.scene || (i + 1))}</span>
-                                <span class="text-xs text-muted">${escHtml(s.time || '')}</span>
-                                <button class="btn btn-ghost btn-sm" data-use-visual="${i}" style="margin-left:auto">ใช้เป็น Prompt สร้างวิดีโอ</button>
+                                <span class="badge badge-dark">ฉาก ${escHtml(s.scene || (i + 1))}</span>
+                                <span class="ai-note">${escHtml(s.time || '')}</span>
+                                <button type="button" class="btn btn-ghost btn-sm ml-auto" data-use-visual="${i}">ใช้เป็น Prompt สร้างวิดีโอ</button>
                             </div>
                             <div class="ai-scene-row"><strong>บรรยาย:</strong> <span contenteditable="true" data-scene-narr="${i}">${escHtml(s.narration || '')}</span></div>
                             <div class="ai-scene-row"><strong>ภาพ:</strong> <em contenteditable="true" data-scene-vis="${i}">${escHtml(s.visual || '')}</em></div>
@@ -421,7 +428,7 @@
         const btn = document.getElementById('btnGenVideo');
         btn.disabled = true;
         const status = document.getElementById('aiVideoStatus');
-        status.innerHTML = '<div class="text-xs text-muted">กำลังส่งคำขอ...</div>';
+        status.innerHTML = '<div class="ai-note">กำลังส่งคำขอ...</div>';
         document.getElementById('aiVideoPlayer').innerHTML = '';
 
         try {
@@ -432,11 +439,11 @@
                     model: val('aiVideoModel')
                 })
             });
-            status.innerHTML = '<div class="text-xs text-muted">กำลังสร้างวิดีโอ... (โดยทั่วไป 1-5 นาที)</div>';
+            status.innerHTML = '<div class="ai-note">กำลังสร้างวิดีโอ... (โดยทั่วไป 1-5 นาที)</div>';
             pollVideoStatus(data.id, btn, status);
         } catch (e) {
             btn.disabled = false;
-            status.innerHTML = '<div style="color:var(--color-danger)">' + escHtml(e.message) + '</div>';
+            status.innerHTML = '<div class="ai-bad">' + escHtml(e.message) + '</div>';
         }
     }
 
@@ -451,28 +458,28 @@
                 const data = await apiFetch(BASE_URL + '/api/ai/video/' + id + '/status');
                 if (data.status === 'completed' && data.video_url) {
                     btn.disabled = false;
-                    status.innerHTML = '<div style="color:var(--color-success)">✓ เสร็จแล้ว</div>';
+                    status.innerHTML = '<div class="ai-ok">วิดีโอเสร็จแล้ว</div>';
                     document.getElementById('aiVideoPlayer').innerHTML = `
-                        <video src="${escHtml(data.video_url)}" controls style="width:100%;max-width:480px;border-radius:var(--radius-md)"></video>
+                        <video class="ai-video" src="${escHtml(data.video_url)}" controls></video>
                         <div class="mt-2"><a href="${escHtml(data.video_url)}" download class="btn btn-ghost btn-sm">ดาวน์โหลด</a></div>
                     `;
                     return;
                 }
                 if (data.status === 'failed') {
                     btn.disabled = false;
-                    status.innerHTML = '<div style="color:var(--color-danger)">✗ ล้มเหลว: ' + escHtml(data.error || '') + '</div>';
+                    status.innerHTML = '<div class="ai-bad">สร้างวิดีโอไม่สำเร็จ: ' + escHtml(data.error || 'ไม่ทราบสาเหตุ') + '</div>';
                     return;
                 }
                 if (tries >= MAX) {
                     btn.disabled = false;
-                    status.innerHTML = '<div style="color:var(--color-warning)">หมดเวลารอ — ลองเช็คในประวัติภายหลัง</div>';
+                    status.innerHTML = '<div class="ai-warn">รอนานเกินไป ลองดูในแท็บ "ประวัติ" อีกครั้งภายหลัง</div>';
                     return;
                 }
-                status.innerHTML = `<div class="text-xs text-muted">กำลังสร้าง... (${tries * 3} วิ)</div>`;
+                status.innerHTML = `<div class="ai-note">กำลังสร้าง... (${tries * 3} วิ)</div>`;
                 videoPollTimer = setTimeout(check, 3000);
             } catch (e) {
                 btn.disabled = false;
-                status.innerHTML = '<div style="color:var(--color-danger)">' + escHtml(e.message) + '</div>';
+                status.innerHTML = '<div class="ai-bad">' + escHtml(e.message) + '</div>';
             }
         };
         videoPollTimer = setTimeout(check, 3000);
@@ -483,20 +490,20 @@
 
     async function loadHistory() {
         const box = document.getElementById('aiHistoryList');
-        box.innerHTML = '<div class="text-xs text-muted text-center">กำลังโหลด...</div>';
+        box.innerHTML = '<div class="ai-note">กำลังโหลด...</div>';
         try {
             const data = await apiFetch(BASE_URL + '/api/ai/history');
             historyItems = data.items || [];
             renderHistory(historyItems);
         } catch (e) {
-            box.innerHTML = '<div class="text-xs" style="color:var(--color-danger)">' + escHtml(e.message) + '</div>';
+            box.innerHTML = '<div class="alert alert-danger" role="alert">' + escHtml(e.message) + '</div>';
         }
     }
 
     function renderHistory(items) {
         const box = document.getElementById('aiHistoryList');
         if (!items.length) {
-            box.innerHTML = '<div class="text-xs text-muted text-center">ไม่พบรายการ</div>';
+            box.innerHTML = '<div class="ai-note">ไม่พบรายการ</div>';
             return;
         }
         box.innerHTML = items.map(it => {
@@ -511,7 +518,7 @@
                 <div class="ai-history-item" data-id="${it.id}">
                     <div class="ai-history-main">
                         <div class="ai-history-title">${escHtml(title)}</div>
-                        <div class="text-xs text-muted">${kindLabel} · ${escHtml(it.platform || '-')} · ${escHtml(it.created_at)} ${statusBadge}</div>
+                        <div class="ai-note">${kindLabel} · ${escHtml(it.platform || '-')} · ${escHtml(it.created_at)} ${statusBadge}</div>
                     </div>
                     <div class="ai-history-actions">
                         ${it.kind === 'script' && it.result ? `<button class="btn btn-ghost btn-sm" data-reopen="${it.id}">เปิดดู</button>` : ''}
@@ -595,7 +602,7 @@
             // Ctrl+Enter anywhere = generate
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 const genPane = document.getElementById('ai-pane-generate');
-                if (genPane && genPane.style.display !== 'none') {
+                if (genPane && !genPane.hidden) {
                     e.preventDefault();
                     generateScript();
                 }

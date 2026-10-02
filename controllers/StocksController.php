@@ -155,14 +155,10 @@ class StocksController
         ]);
     }
 
-    /** A cached quote that is recent and already carries valuation ratios. */
+    /** A cached quote that is recent enough not to ask the provider again. */
     private static function isFresh(?array $cached): bool
     {
-        if (!$cached || !$cached['fetched_at']) return false;
-
-        $hasMetrics = $cached['pe_ratio'] !== null || $cached['forward_pe'] !== null
-            || $cached['peg_ratio'] !== null || $cached['p_fcf_ratio'] !== null || $cached['eps'] !== null;
-        return $hasMetrics && (time() - strtotime($cached['fetched_at'])) < self::CACHE_COOLDOWN_SECONDS;
+        return $cached && $cached['fetched_at'] && (time() - strtotime($cached['fetched_at'])) < self::CACHE_COOLDOWN_SECONDS;
     }
 
     // ============================================================

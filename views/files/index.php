@@ -1,243 +1,177 @@
-<div class="page-header flex items-center justify-between">
-    <h1 class="page-title">จัดการไฟล์</h1>
-    <div class="flex gap-2">
-        <button class="btn btn-ghost btn-sm" id="btnListView" title="มุมมองรายการ" aria-label="List view">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-        </button>
-        <button class="btn btn-ghost btn-sm" id="btnGridView" title="มุมมองกริด" aria-label="Grid view">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-        </button>
-        <div class="files-sort-wrap">
-            <select class="form-control form-control-sm" id="sortSelect">
-                <option value="type-name">โฟลเดอร์ก่อน</option>
-                <option value="name">ชื่อ A→Z</option>
-                <option value="name-desc">ชื่อ Z→A</option>
-                <option value="size">ขนาดน้อย→มาก</option>
-                <option value="size-desc">ขนาดมาก→น้อย</option>
-                <option value="date">วันที่เก่า→ใหม่</option>
-                <option value="date-desc">วันที่ใหม่→เก่า</option>
-            </select>
-        </div>
-        <div class="files-search-wrap">
-            <input type="search" class="form-control form-control-sm" id="filesSearch" placeholder="ค้นหาไฟล์...">
-        </div>
-        <button class="btn btn-ghost btn-sm" id="btnCreateFolder" title="สร้างโฟลเดอร์">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
-            <span class="btn-label">โฟลเดอร์</span>
-        </button>
+<?php
+// =====================================================
+// views/files/index.php — the file manager
+//
+// Folders and files in one list (or grid): upload, rename, move, share, delete,
+// and select several at once. $parentId is the open folder. assets/js/files.js
+// draws it from /api/files.
+// =====================================================
+?>
+<div class="page-head">
+    <div>
+        <h1>ไฟล์</h1>
+        <p class="sub" id="filesTally" aria-live="polite">กำลังโหลดไฟล์…</p>
+    </div>
+    <div class="page-head-actions">
+        <button class="btn btn-ghost" type="button" id="btnCreateFolder"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>โฟลเดอร์ใหม่</button>
+        <button class="btn btn-primary" type="button" data-click="#fileInput"><svg class="icon" aria-hidden="true"><use href="#i-transfer"/></svg>อัปโหลด</button>
     </div>
 </div>
 
-<!-- Storage overview widget -->
-<div class="storage-overview-card" id="storageOverview">
-    <div class="storage-overview-stats">
-        <div class="storage-title-wrap">
-            <span class="storage-title">ความจุพื้นที่ใช้งานในโฟลเดอร์นี้</span>
-            <span class="storage-usage-text" id="storageUsageText">กำลังคำนวณ...</span>
-        </div>
-        <div class="storage-progress-track">
-            <div class="storage-progress-bar" id="storageProgressBar"></div>
-        </div>
-        <div class="storage-info-row">
-            <div class="storage-info-item">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                <span id="folderCountText">0 โฟลเดอร์</span>
-            </div>
-            <div class="storage-info-item">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                <span id="fileCountText">0 ไฟล์</span>
-            </div>
-        </div>
-    </div>
-    <div class="storage-quick-stats" id="storageQuickStats">
-        <!-- Dynamically filled badges -->
+<nav class="breadcrumb" id="breadcrumb" aria-label="ตำแหน่งโฟลเดอร์"></nav>
+
+<div class="files-tools">
+    <label class="sr-only" for="filesSearch">ค้นหาไฟล์</label>
+    <input type="search" class="form-control files-search" id="filesSearch" placeholder="ค้นหาในโฟลเดอร์นี้" autocomplete="off">
+    <label class="sr-only" for="sortSelect">เรียงลำดับ</label>
+    <select class="form-control files-sort" id="sortSelect">
+        <option value="type-name">โฟลเดอร์ก่อน</option>
+        <option value="name">ชื่อ ก→ฮ</option>
+        <option value="name-desc">ชื่อ ฮ→ก</option>
+        <option value="size">ขนาดน้อย→มาก</option>
+        <option value="size-desc">ขนาดมาก→น้อย</option>
+        <option value="date">เก่า→ใหม่</option>
+        <option value="date-desc">ใหม่→เก่า</option>
+    </select>
+    <div class="seg-pair" role="group" aria-label="มุมมอง">
+        <button type="button" id="btnListView" aria-pressed="false">รายการ</button>
+        <button type="button" id="btnGridView" aria-pressed="false">ไอคอน</button>
     </div>
 </div>
 
-<!-- Breadcrumb -->
-<div class="breadcrumb" id="breadcrumb">
-    <span class="breadcrumb-item" data-navigate="root">หน้าหลัก</span>
+<div class="files-filters" id="categoryFilters" role="group" aria-label="กรองตามประเภท">
+    <button type="button" class="tag active" aria-pressed="true" data-category="all">ทั้งหมด</button>
+    <button type="button" class="tag" aria-pressed="false" data-category="folder">โฟลเดอร์</button>
+    <button type="button" class="tag" aria-pressed="false" data-category="image">รูปภาพ</button>
+    <button type="button" class="tag" aria-pressed="false" data-category="document">เอกสาร</button>
+    <button type="button" class="tag" aria-pressed="false" data-category="media">สื่อมีเดีย</button>
+    <button type="button" class="tag" aria-pressed="false" data-category="archive">ไฟล์บีบอัด</button>
 </div>
 
-<!-- Category filter chips -->
-<div class="category-filters" id="categoryFilters">
-    <button class="filter-chip active" data-category="all">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-        ทั้งหมด
-    </button>
-    <button class="filter-chip" data-category="folder">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-        โฟลเดอร์
-    </button>
-    <button class="filter-chip" data-category="image">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        รูปภาพ
-    </button>
-    <button class="filter-chip" data-category="document">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
-        เอกสาร
-    </button>
-    <button class="filter-chip" data-category="media">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-        สื่อมีเดีย
-    </button>
-    <button class="filter-chip" data-category="archive">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-        ไฟล์บีบอัด
-    </button>
+<div id="uploadQueue" class="upload-queue" aria-live="polite" hidden></div>
+<input type="file" id="fileInput" hidden multiple aria-label="เลือกไฟล์ที่จะอัปโหลด" data-act="uploadFiles" data-args='["$files"]' data-on="change">
+
+<div class="files-grid" id="filesGrid" aria-busy="true">
+    <div class="skel-row"><span class="skel skel-w-60"></span></div>
+    <div class="skel-row"><span class="skel skel-w-45"></span></div>
+    <div class="skel-row"><span class="skel skel-w-52"></span></div>
 </div>
 
-<!-- Upload zone -->
-<div class="upload-zone" id="uploadZone"
-     ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)"
-     data-click="#fileInput">
-    <div class="upload-zone-inner">
-        <svg class="text-muted mb-2" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        <div class="upload-zone-text">ลากไฟล์มาวางที่นี่ หรือ <span class="upload-zone-click">คลิกเพื่อเลือก</span></div>
-        <div class="upload-zone-hint">รองรับทุกประเภทไฟล์ · สูงสุด 20 MB</div>
-    </div>
-    <div class="upload-progress" id="uploadProgress">
-        <div class="upload-progress-bar" id="uploadBar"></div>
-    </div>
-</div>
-<input type="file" id="fileInput" style="display:none" multiple data-act="uploadFiles" data-args="[&quot;$files&quot;]" data-on="change">
-
-<!-- Upload queue -->
-<div id="uploadQueue" class="upload-queue" style="display:none"></div>
-
-<!-- Files grid/list -->
-<div class="files-grid" id="filesGrid">
-    <div class="files-loading">
-        <div class="spinner"></div>
-    </div>
+<!-- Selected items -->
+<div class="batch-toolbar" id="batchToolbar" role="region" aria-label="รายการที่เลือก" hidden>
+    <span class="batch-count"><span id="batchCountBadge">0</span> รายการที่เลือก</span>
+    <button class="btn btn-sm" type="button" id="btnBatchMove">ย้าย</button>
+    <button class="btn btn-sm btn-danger" type="button" id="btnBatchDelete">ลบ</button>
+    <button class="btn btn-sm btn-ghost" type="button" id="btnBatchClear">ยกเลิก</button>
 </div>
 
-<!-- Bottom batch action panel -->
-<div class="batch-toolbar" id="batchToolbar">
-    <div class="batch-count-wrap">
-        <span class="batch-count-badge" id="batchCountBadge">0</span>
-        <span>เลือก<span class="hidden-mobile">อยู่</span></span>
-    </div>
-    <div class="batch-actions-wrap">
-        <button class="batch-btn" id="btnBatchMove" title="ย้ายรายการที่เลือก">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg>
-            <span>ย้าย<span class="hidden-mobile">รายการ</span></span>
-        </button>
-        <button class="batch-btn danger-btn" id="btnBatchDelete" title="ลบรายการที่เลือก">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-            <span>ลบ<span class="hidden-mobile">รายการ</span></span>
-        </button>
-        <button class="batch-btn" id="btnBatchClear">
-            ยกเลิก
-        </button>
-    </div>
+<!-- Right-click / "more" menu -->
+<div class="ctx-menu" id="ctxMenu" role="menu" hidden>
+    <button type="button" class="ctx-item" role="menuitem" id="ctxOpen"><span>ดาวน์โหลด</span></button>
+    <button type="button" class="ctx-item" role="menuitem" id="ctxPreview">ดูตัวอย่าง</button>
+    <button type="button" class="ctx-item" role="menuitem" id="ctxRename">เปลี่ยนชื่อ</button>
+    <button type="button" class="ctx-item" role="menuitem" id="ctxMove">ย้ายไปยัง…</button>
+    <button type="button" class="ctx-item" role="menuitem" id="ctxShare">แชร์ลิงก์</button>
+    <button type="button" class="ctx-item danger" role="menuitem" id="ctxDelete">ลบ</button>
 </div>
 
-<!-- Context menu -->
-<div class="ctx-menu" id="ctxMenu" style="display:none">
-    <div class="ctx-item" id="ctxOpen">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-        <span>เปิด / ดาวน์โหลด</span>
-    </div>
-    <div class="ctx-item" id="ctxPreview">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        <span>ดูตัวอย่าง</span>
-    </div>
-    <div class="ctx-item" id="ctxRename">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        <span>เปลี่ยนชื่อ</span>
-    </div>
-    <div class="ctx-item" id="ctxMove">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg>
-        <span>ย้ายไปยัง...</span>
-    </div>
-    <div class="ctx-item" id="ctxShare">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-        <span>แชร์ลิงก์</span>
-    </div>
-    <div class="ctx-divider"></div>
-    <div class="ctx-item danger" id="ctxDelete">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-        <span>ลบ</span>
-    </div>
-</div>
-
-<!-- Image Preview Modal -->
-<div class="preview-overlay" id="previewOverlay" style="display:none" data-act="closePreview">
-    <div class="preview-box" data-stop>
-        <button class="preview-close" data-act="closePreview" aria-label="ปิด">&times;</button>
-        <img id="previewImg" src="" alt="" class="preview-img">
-        <div class="preview-caption" id="previewCaption"></div>
-    </div>
-</div>
-
-<!-- Move Dialog -->
-<div class="modal-overlay" id="moveOverlay" style="display:none">
-    <div class="modal-box">
+<!-- Image preview -->
+<div class="modal-backdrop" id="previewModal" aria-hidden="true">
+    <div class="modal modal-wide" role="dialog" aria-labelledby="previewCaption">
         <div class="modal-header">
-            <span class="modal-title">ย้ายไปยังโฟลเดอร์</span>
-            <button class="modal-close" data-act="closeMoveDialog" aria-label="ปิด">&times;</button>
+            <h2 class="modal-title" id="previewCaption">ตัวอย่างรูปภาพ</h2>
+            <button class="modal-close" type="button" aria-label="ปิด" data-close-modal>&times;</button>
+        </div>
+        <div class="modal-body"><img id="previewImg" class="preview-img" src="" alt=""></div>
+    </div>
+</div>
+
+<!-- New folder / rename -->
+<div class="modal-backdrop" id="nameModal" aria-hidden="true">
+    <div class="modal modal-narrow" role="dialog" aria-labelledby="nameModalTitle">
+        <div class="modal-header">
+            <h2 class="modal-title" id="nameModalTitle">โฟลเดอร์ใหม่</h2>
+            <button class="modal-close" type="button" aria-label="ปิด" data-close-modal>&times;</button>
+        </div>
+        <form id="nameForm" novalidate>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="nameInput" id="nameLabel">ชื่อโฟลเดอร์</label>
+                    <input type="text" class="form-control" id="nameInput" maxlength="255" autocomplete="off">
+                </div>
+                <p class="form-error" id="nameError" role="alert" hidden></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" type="button" data-close-modal>ยกเลิก</button>
+                <button class="btn btn-primary" type="submit" id="nameSubmit">สร้างโฟลเดอร์</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Move -->
+<div class="modal-backdrop" id="moveOverlay" aria-hidden="true">
+    <div class="modal modal-narrow" role="dialog" aria-labelledby="moveTitle">
+        <div class="modal-header">
+            <h2 class="modal-title" id="moveTitle">ย้ายไปยังโฟลเดอร์</h2>
+            <button class="modal-close" type="button" aria-label="ปิด" data-close-modal>&times;</button>
         </div>
         <div class="modal-body">
-            <div class="move-folder-list" id="moveFolderList"></div>
+            <div class="move-folder-list" id="moveFolderList" role="group" aria-label="โฟลเดอร์ปลายทาง"></div>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-ghost" data-act="closeMoveDialog">ยกเลิก</button>
-            <button class="btn btn-primary" id="btnConfirmMove">ย้ายที่นี่</button>
+            <button class="btn" type="button" data-close-modal>ยกเลิก</button>
+            <button class="btn btn-primary" type="button" id="btnConfirmMove">ย้ายมาที่นี่</button>
         </div>
     </div>
 </div>
 
-<!-- Share Quick Dialog (create share from file context) -->
-<div class="modal-overlay" id="shareQuickOverlay" style="display:none">
-    <div class="modal-box" style="max-width:480px">
+<!-- Share link -->
+<div class="modal-backdrop" id="shareQuickOverlay" aria-hidden="true">
+    <div class="modal modal-narrow" role="dialog" aria-labelledby="shareTitle">
         <div class="modal-header">
-            <span class="modal-title">สร้างลิงก์แชร์</span>
-            <button class="modal-close" data-act="closeShareQuick" aria-label="ปิด">&times;</button>
+            <h2 class="modal-title" id="shareTitle">สร้างลิงก์แชร์</h2>
+            <button class="modal-close" type="button" aria-label="ปิด" data-close-modal>&times;</button>
         </div>
         <div class="modal-body">
             <div class="form-group">
-                <label class="form-label">ชื่อลิงก์ (สำหรับจำ)</label>
-                <input type="text" class="form-control" id="sqLabel" placeholder="เช่น ส่งให้ทีม">
+                <label class="form-label" for="sqLabel">ชื่อลิงก์ (ไว้จำ)</label>
+                <input type="text" class="form-control" id="sqLabel" placeholder="เช่น ส่งให้ทีม" autocomplete="off">
             </div>
             <div class="form-group">
-                <label class="form-label">สิทธิ์</label>
+                <label class="form-label" for="sqPermission">สิทธิ์</label>
                 <select class="form-control" id="sqPermission">
                     <option value="view">ดูอย่างเดียว</option>
                     <option value="download">ดาวน์โหลดได้</option>
                 </select>
             </div>
             <div class="form-group">
-                <label class="form-label">วันหมดอายุ (ไม่กรอก = ไม่มีกำหนด)</label>
+                <label class="form-label" for="sqExpires">หมดอายุเมื่อ (เว้นว่าง = ไม่มีกำหนด)</label>
                 <input type="datetime-local" class="form-control" id="sqExpires">
             </div>
+            <p class="form-error" id="shareError" role="alert" hidden></p>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-ghost" data-act="closeShareQuick">ยกเลิก</button>
-            <button class="btn btn-primary" id="btnCreateShare">สร้างลิงก์</button>
+            <button class="btn" type="button" data-close-modal>ยกเลิก</button>
+            <button class="btn btn-primary" type="button" id="btnCreateShare">สร้างลิงก์</button>
         </div>
     </div>
 </div>
 
-<!-- Share Result -->
-<div class="share-result-bar" id="shareResultBar" style="display:none">
-    <div class="share-result-inner">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-        <input type="text" class="share-result-input" id="shareResultUrl" readonly>
-        <button class="btn btn-primary btn-sm" id="btnCopyShareUrl">คัดลอก</button>
-        <button class="btn btn-ghost btn-sm" data-act="hideElement" data-args="[&quot;shareResultBar&quot;]">&#10005;</button>
-    </div>
+<!-- The link just made -->
+<div class="share-result" id="shareResultBar" role="status" hidden>
+    <label class="sr-only" for="shareResultUrl">ลิงก์แชร์</label>
+    <input type="text" class="form-control" id="shareResultUrl" readonly>
+    <button class="btn btn-primary btn-sm" type="button" id="btnCopyShareUrl">คัดลอก</button>
+    <button class="icon-btn sm" type="button" id="btnHideShare" aria-label="ปิดแถบลิงก์"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
 </div>
 
-<!-- Fullpage drag drop overlay -->
-<div class="full-drop-overlay" id="fullDropOverlay">
-    <div class="full-drop-container">
-        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        <div class="full-drop-title">วางไฟล์เพื่ออัปโหลดทันที</div>
-        <div class="full-drop-subtitle">รองรับการอัปโหลดหลายไฟล์พร้อมกัน</div>
-    </div>
+<!-- Dropping a file anywhere on the page -->
+<div class="full-drop-overlay" id="fullDropOverlay" aria-hidden="true">
+    <p class="full-drop-title">วางไฟล์เพื่ออัปโหลดลงโฟลเดอร์นี้</p>
 </div>
 
 <script nonce="<?= h(Security::nonce()) ?>">
 window.INITIAL_PARENT_ID = <?= jsonForScript($parentId) ?>;
+window.FILES_MAX_BYTES = <?= (int)MAX_UPLOAD_BYTES ?>;
 </script>

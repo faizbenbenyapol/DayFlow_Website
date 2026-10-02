@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light" data-day="fri" data-state="full">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>วันนี้ — DayFlow (mockup v2)</title>
+<!-- Mockup only: production self-hosts these faces (docs/REDESIGN.md §1.4). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ---------- tokens (docs/REDESIGN.md §1) ---------- */
+:root {
+    --paper: #FBFAF7; --paper-sunk: #F3F1EB;
+    --rule: #E4E1D8; --rule-strong: #8A867B;
+    --ink: #1B2330; --pencil: #5E6673;
+    --stamp-red: #C62828; --ledger-green: #2D7B4D; --highlighter: #FFF1A8;
+    --ink-fixed: #1B2330;
+    --font: "IBM Plex Sans Thai", "IBM Plex Sans", system-ui, sans-serif;
+    --font-num: "IBM Plex Serif", Georgia, serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+    --r-control: 6px; --r-sheet: 10px;
+    --lift-1: 0 2px 8px rgb(27 35 48 / .10);
+    --dur: 160ms; --ease: cubic-bezier(.2, 0, 0, 1);
+}
+[data-theme="dark"] {
+    --paper: #15181D; --paper-sunk: #1C2026;
+    --rule: #2A2F37; --rule-strong: #6B7280;
+    --ink: #E9E6DF; --pencil: #9AA0AA;
+    --stamp-red: #EF6B6B; --ledger-green: #5FBF86; --highlighter: #4A4320;
+    --lift-1: 0 2px 10px rgb(0 0 0 / .45);
+}
+[data-day="sun"] { --day: #C62828; --on-day: #FFFFFF; }
+[data-day="mon"] { --day: #F2C200; --on-day: var(--ink-fixed); }
+[data-day="tue"] { --day: #E06C9F; --on-day: var(--ink-fixed); }
+[data-day="wed"] { --day: #277A42; --on-day: #FFFFFF; }
+[data-day="thu"] { --day: #E8822A; --on-day: var(--ink-fixed); }
+[data-day="fri"] { --day: #2F6FC4; --on-day: #FFFFFF; }
+[data-day="sat"] { --day: #7A4FBF; --on-day: #FFFFFF; }
+[data-daycolor="off"] { --day: var(--ink); --on-day: var(--paper); }
+
+/* ---------- base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--paper); color-scheme: light; }
+[data-theme="dark"] { color-scheme: dark; }
+body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 400 16px/1.7 var(--font); letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { margin: 0; line-height: 1.3; font-weight: 600; }
+a { color: inherit; }
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.muted { color: var(--pencil); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ---------- mockup control strip (not part of the design) ---------- */
+.mock-bar {
+    display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center;
+    padding: 6px 16px; font: 13px/1.5 var(--font);
+    background: repeating-linear-gradient(-45deg, var(--paper-sunk) 0 8px, var(--paper) 8px 16px);
+    border-bottom: 1px dashed var(--rule-strong); color: var(--pencil);
+}
+.mock-bar label { display: inline-flex; gap: 6px; align-items: center; }
+.mock-bar select { font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--rule-strong); border-radius: 4px; padding: 1px 4px; }
+[data-chrome="off"] .mock-bar { display: none; }
+
+/* ---------- shell ---------- */
+.app { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 100vh; }
+.rail {
+    background: var(--paper-sunk); border-right: 1px solid var(--rule);
+    padding: 20px 0 16px; display: flex; flex-direction: column;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+}
+.wordmark { font-weight: 600; font-size: 18px; padding: 0 20px 16px; display: flex; align-items: baseline; gap: 8px; }
+.wordmark small { font: 500 12px var(--font-mono); color: var(--pencil); }
+.nav-group { padding: 10px 0 6px; }
+.nav-group + .nav-group { border-top: 1px solid var(--rule); }
+.nav-label { font-size: 13px; color: var(--pencil); padding: 0 20px 2px; }
+.nav-item {
+    display: block; padding: 3px 20px 3px 17px; font-size: 15px; text-decoration: none;
+    border-left: 3px solid transparent;
+}
+.nav-item:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+.nav-item[aria-current="page"] { border-left-color: var(--day); font-weight: 600; }
+.rail-foot { margin-top: auto; border-top: 1px solid var(--rule); padding-top: 10px; }
+.rail-user { padding: 6px 20px 0; font-size: 13px; color: var(--pencil); }
+
+.main { padding: 28px 40px 48px; max-width: 1240px; }
+
+/* ---------- page head ---------- */
+.today-head { display: flex; align-items: stretch; gap: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--ink); }
+.date-block {
+    background: var(--day); color: var(--on-day); width: 104px; flex: none;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 10px 0 8px;
+}
+.date-block .d { font: 500 64px/1 var(--font-num); }
+.date-block .m { font-size: 14px; font-weight: 500; margin-top: 4px; }
+.head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+.head-text h1 { font-size: 31px; }
+.head-text .sub { color: var(--pencil); font-size: 15px; }
+.head-text .tally { margin-top: 6px; font-size: 15px; }
+.head-text .tally b { font-weight: 600; }
+.head-text .tally .late { color: var(--stamp-red); }
+.head-actions { display: flex; align-items: center; gap: 12px; align-self: flex-start; }
+
+.btn {
+    display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px;
+    border-radius: var(--r-control); border: 1px solid var(--rule-strong); background: transparent;
+    font-size: 15px; font-weight: 500; cursor: pointer; text-decoration: none; white-space: nowrap;
+    transition: background var(--dur) var(--ease);
+}
+.btn:hover { background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.btn-primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.btn-primary:hover { background: color-mix(in srgb, var(--ink) 86%, var(--paper)); }
+.btn-search { color: var(--pencil); min-width: 260px; justify-content: space-between; font-weight: 400; background: var(--paper); }
+.kbd { font: 500 12px var(--font-mono); border: 1px solid var(--rule); border-radius: 4px; padding: 0 5px; }
+.icon { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- columns + sections ---------- */
+.cols { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 0 48px; }
+.col-side { border-left: 1px solid var(--rule); padding-left: 32px; }
+.sec { padding-top: 24px; }
+.sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--rule-strong); }
+.sec-head h2 { font-size: 18px; }
+.sec-head h2 .count { color: var(--pencil); font-weight: 400; margin-left: 6px; }
+.sec-head a { font-size: 14px; color: var(--pencil); text-decoration: none; }
+.sec-head a:hover { color: var(--ink); text-decoration: underline; }
+.subhead { font-size: 13px; color: var(--pencil); padding: 10px 0 0; }
+.subhead.late { color: var(--stamp-red); font-weight: 500; }
+
+.ruled { list-style: none; margin: 0; padding: 0; }
+.row { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 6px 0; border-bottom: 1px solid var(--rule); }
+.row:last-child { border-bottom: 0; }
+.row .grow { flex: 1; min-width: 0; }
+.row .title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .meta { display: block; font-size: 13px; color: var(--pencil); line-height: 1.5; }
+.row .side { font-size: 14px; color: var(--pencil); text-align: right; white-space: nowrap; }
+.row .side.late { color: var(--stamp-red); font-weight: 500; }
+
+/* checkbox: a square drawn on paper */
+.tick { appearance: none; -webkit-appearance: none; margin: 0; width: 20px; height: 20px; flex: none; border: 1.5px solid var(--rule-strong); border-radius: 3px; background: var(--paper); cursor: pointer; display: grid; place-content: center; }
+.tick::after { content: ""; width: 11px; height: 6px; border: solid var(--paper); border-width: 0 0 2px 2px; transform: translateY(-1px) rotate(-45deg); opacity: 0; }
+.tick:checked { background: var(--ink); border-color: var(--ink); }
+.tick:checked::after { opacity: 1; }
+/* a finished task is crossed out; a finished habit is not — it was done, not dropped */
+.todo .row:has(.tick:checked) .title { text-decoration: line-through; color: var(--pencil); }
+.habits .row:has(.tick:checked) .side { color: var(--ledger-green); }
+
+.add-row { display: flex; align-items: center; gap: 12px; min-height: 44px; border-bottom: 1px solid var(--rule); }
+.add-row .plus { width: 20px; text-align: center; color: var(--pencil); }
+.add-row input { flex: 1; border: 0; background: transparent; padding: 8px 0; outline: none; }
+.add-row input::placeholder { color: var(--pencil); }
+.add-row:focus-within { border-bottom-color: var(--ink); }
+
+/* schedule */
+.time { font: 500 14px var(--font-mono); width: 48px; flex: none; }
+.row.past { color: var(--pencil); }
+.now-line { display: flex; align-items: center; gap: 8px; font: 500 12px var(--font-mono); color: var(--stamp-red); height: 0; position: relative; }
+.now-line::before { content: ""; width: 8px; height: 8px; background: var(--stamp-red); border-radius: 50%; margin-left: -4px; }
+.now-line::after { content: ""; flex: 1; border-top: 1px solid var(--stamp-red); }
+
+/* ledger */
+.ledger { width: 100%; border-collapse: collapse; font-size: 15px; }
+.ledger td { padding: 7px 0; border-bottom: 1px solid var(--rule); }
+.ledger td.num { width: 1%; padding-left: 16px; }
+.ledger .in { color: var(--ledger-green); }
+.ledger .out { color: var(--stamp-red); }
+.ledger tr.total td { border-top: 3px double var(--ink); border-bottom: 0; padding-top: 10px; font-weight: 600; }
+.ledger tr.total .num { font: 500 31px/1.1 var(--font-num); }
+.budget { margin-top: 10px; font-size: 13px; color: var(--pencil); }
+.budget-bar { height: 6px; background: var(--rule); margin: 4px 0 2px; }
+.budget-bar span { display: block; height: 100%; background: var(--ink); }
+
+/* habits: an attendance sheet */
+.habits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; }
+.habits .row { border-bottom: 1px solid var(--rule); }
+.habits .row:last-child { border-bottom: 1px solid var(--rule); }
+
+/* body strip */
+.facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--rule); }
+.fact { padding: 10px 0; }
+.fact + .fact { border-left: 1px solid var(--rule); padding-left: 16px; }
+.fact .k { font-size: 13px; color: var(--pencil); }
+.fact .v { font: 500 25px/1.25 var(--font-num); }
+.fact .v small { font: 400 14px var(--font); color: var(--pencil); margin-left: 4px; }
+.fact .note { font-size: 13px; color: var(--pencil); }
+
+/* empty + loading states */
+.empty { padding: 16px 0 12px; border-bottom: 1px solid var(--rule); }
+.empty p { margin: 0 0 10px; }
+.empty .muted { font-size: 14px; margin-top: -6px; }
+.skel { display: block; height: 12px; background: var(--rule); border-radius: 2px; }
+.skel-row { display: flex; gap: 12px; align-items: center; min-height: 44px; border-bottom: 1px solid var(--rule); }
+.skel-row .skel.box { width: 20px; height: 20px; }
+[data-state="full"] [data-show]:not([data-show~="full"]),
+[data-state="empty"] [data-show]:not([data-show~="empty"]),
+[data-state="loading"] [data-show]:not([data-show~="loading"]) { display: none; }
+
+/* ---------- mobile tab bar ---------- */
+.tabbar { display: none; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 1023px) {
+    .app { grid-template-columns: minmax(0, 1fr); }
+    .rail { display: none; }
+    .main { padding: 16px 16px calc(88px + env(safe-area-inset-bottom)); }
+    .cols { grid-template-columns: minmax(0, 1fr); }
+    .col-side { border-left: 0; padding-left: 0; }
+    .tabbar {
+        display: grid; grid-template-columns: repeat(5, 1fr);
+        position: fixed; inset: auto 0 0 0; z-index: 10;
+        background: var(--paper); border-top: 1px solid var(--rule-strong);
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+    .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 60px; font-size: 12px; text-decoration: none; color: var(--pencil); border-top: 3px solid transparent; margin-top: -1px; }
+    .tab[aria-current="page"] { color: var(--ink); font-weight: 600; border-top-color: var(--day); }
+    .tab .icon { width: 22px; height: 22px; }
+    .tab-add { color: var(--ink); }
+    .tab-add .sq { width: 44px; height: 44px; display: grid; place-content: center; background: var(--ink); color: var(--paper); border-radius: var(--r-control); }
+    .tab-add .sq .icon { width: 24px; height: 24px; }
+}
+@media (max-width: 767px) {
+    .today-head { gap: 14px; padding-bottom: 14px; }
+    .date-block { width: 72px; padding: 6px 0; }
+    .date-block .d { font-size: 44px; }
+    .date-block .m { font-size: 13px; margin-top: 2px; }
+    .head-text h1 { font-size: 25px; }
+    .head-text .sub { font-size: 14px; }
+    .head-text .tally { font-size: 14px; margin-top: 2px; }
+    .head-actions .btn-search, .head-actions .btn-primary { display: none; }
+    .head-actions .btn-icon { display: inline-flex; }
+    .sec { padding-top: 20px; }
+    .habits { grid-template-columns: minmax(0, 1fr); }
+    .ledger tr.total .num { font-size: 25px; }
+}
+.btn-icon { display: none; width: 44px; height: 44px; padding: 0; justify-content: center; border-color: var(--rule); }
+</style>
+</head>
+<body>
+
+<!-- Mockup controls. Hide with ?chrome=off for clean screenshots. -->
+<div class="mock-bar" role="region" aria-label="ตัวควบคุม mockup">
+    <strong>mockup หน้าวันนี้</strong>
+    <label>ธีม
+        <select id="mTheme"><option value="light">สว่าง</option><option value="dark">มืด</option></select>
+    </label>
+    <label>วัน
+        <select id="mDay">
+            <option value="mon">จันทร์</option><option value="tue">อังคาร</option><option value="wed">พุธ</option>
+            <option value="thu">พฤหัสบดี</option><option value="fri">ศุกร์</option><option value="sat">เสาร์</option><option value="sun">อาทิตย์</option>
+        </select>
+    </label>
+    <label>สีประจำวัน
+        <select id="mDayColor"><option value="on">เปิด</option><option value="off">ปิด</option></select>
+    </label>
+    <label>สถานะ
+        <select id="mState"><option value="full">มีข้อมูล</option><option value="empty">ว่าง (ผู้ใช้ใหม่)</option><option value="loading">กำลังโหลด</option></select>
+    </label>
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-today" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="17" rx="1"/><path d="M4 9h16M9 2v4M15 2v4"/><path d="M10 14h4"/></symbol>
+    <symbol id="i-tasks" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="1"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+    <symbol id="i-money" viewBox="0 0 24 24"><path d="M5 5h14v15H5z"/><path d="M5 10h14M5 15h14M14 5v15"/></symbol>
+    <symbol id="i-all" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></symbol>
+</svg>
+
+<div class="app">
+    <!-- Rail: text-only on desktop; icons appear only where space is tight (tab bar, tablet). -->
+    <nav class="rail" aria-label="เมนูหลัก">
+        <div class="wordmark">DayFlow <small>v2</small></div>
+        <div class="nav-group">
+            <div class="nav-label">วันนี้</div>
+            <a class="nav-item" href="#" aria-current="page">วันนี้</a>
+            <a class="nav-item" href="#">สรุปผล</a>
+        </div>
+        <div class="nav-group">
+            <div class="nav-label">แผนและงาน</div>
+            <a class="nav-item" href="#">งาน</a>
+            <a class="nav-item" href="#">โปรเจค</a>
+            <a class="nav-item" href="#">แพลนเนอร์</a>
+            <a class="nav-item" href="#">นิสัย</a>
+            <a class="nav-item" href="#">โฟกัส</a>
+            <a class="nav-item" href="#">ทักษะ</a>
+        </div>
+        <div class="nav-group">
+            <div class="nav-label">บันทึก</div>
+            <a class="nav-item" href="#">โน้ต</a>
+            <a class="nav-item" href="#">จดด่วน</a>
+            <a class="nav-item" href="#">ลิงก์</a>
+        </div>
+        <div class="nav-group">
+            <div class="nav-label">เงิน</div>
+            <a class="nav-item" href="#">รายรับรายจ่าย</a>
+            <a class="nav-item" href="#">รายจ่ายประจำ</a>
+            <a class="nav-item" href="#">หุ้น</a>
+        </div>
+        <div class="nav-group">
+            <div class="nav-label">ร่างกาย</div>
+            <a class="nav-item" href="#">ออกกำลังกาย</a>
+            <a class="nav-item" href="#">อาหาร</a>
+        </div>
+        <div class="nav-group">
+            <div class="nav-label">เครื่องมือ</div>
+            <a class="nav-item" href="#">ไฟล์</a>
+            <a class="nav-item" href="#">แปลงไฟล์</a>
+            <a class="nav-item" href="#">ส่งไฟล์</a>
+            <a class="nav-item" href="#">ผู้ช่วย AI</a>
+            <a class="nav-item" href="#">เครื่องคิดเลข</a>
+        </div>
+        <div class="rail-foot">
+            <a class="nav-item" href="#">ตั้งค่า</a>
+            <div class="rail-user">บัญชีทดลอง (demo)</div>
+        </div>
+    </nav>
+
+    <main class="main">
+        <header class="today-head">
+            <div class="date-block" aria-hidden="true">
+                <span class="d" id="dNum">2</span>
+                <span class="m" id="dMon">ต.ค.</span>
+            </div>
+            <div class="head-text">
+                <h1 id="dName">วันศุกร์</h1>
+                <div class="sub" id="dFull">2 ตุลาคม 2569 · สัปดาห์ที่ 40</div>
+                <div class="tally">
+                    <span data-show="full">ต้องทำ <b>5</b> · <span class="late">เกินกำหนด <b>2</b></span> · นัด <b>3</b> · ตัดเงินใน 7 วัน <b>3</b></span>
+                    <span data-show="empty" class="muted">ยังไม่มีอะไรในวันนี้</span>
+                    <span data-show="loading"><span class="skel" style="width:260px;display:inline-block"></span></span>
+                </div>
+            </div>
+            <div class="head-actions">
+                <button class="btn btn-search" type="button">
+                    <span style="display:inline-flex;gap:8px;align-items:center"><svg class="icon"><use href="#i-search"/></svg>ค้นหาหรือสั่งงาน</span>
+                    <span class="kbd">Ctrl K</span>
+                </button>
+                <button class="btn btn-icon" type="button" aria-label="ค้นหา"><svg class="icon"><use href="#i-search"/></svg></button>
+                <button class="btn btn-primary" type="button"><svg class="icon"><use href="#i-plus"/></svg>จดด่วน</button>
+            </div>
+        </header>
+
+        <div class="cols">
+            <!-- ===== left: what to do ===== -->
+            <div class="col-main">
+                <section class="sec" aria-labelledby="hTodo">
+                    <div class="sec-head">
+                        <h2 id="hTodo">ต้องทำ<span class="count" data-show="full">5</span></h2>
+                        <a href="#">งานทั้งหมด</a>
+                    </div>
+
+                    <div data-show="full">
+                        <div class="subhead late">เกินกำหนด · 2</div>
+                        <ul class="ruled todo">
+                            <li class="row"><input class="tick" type="checkbox" aria-label="เสร็จแล้ว: ส่งรายงานสรุปโปรเจกต์ Q3">
+                                <span class="grow"><span class="title">ส่งรายงานสรุปโปรเจกต์ Q3 ให้หัวหน้าทีม</span><span class="meta">โปรเจค · เว็บไซต์บริษัท</span></span>
+                                <span class="side late">เกิน 3 วัน</span></li>
+                            <li class="row"><input class="tick" type="checkbox" aria-label="เสร็จแล้ว: ตอบอีเมลลูกค้า">
+                                <span class="grow"><span class="title">ตอบอีเมลลูกค้าเรื่องใบเสนอราคา</span><span class="meta">ไม่สำคัญ + เร่งด่วน</span></span>
+                                <span class="side late">เกิน 1 วัน</span></li>
+                        </ul>
+                        <div class="subhead">วันนี้ · 3</div>
+                        <ul class="ruled todo">
+                            <li class="row"><input class="tick" type="checkbox" aria-label="เสร็จแล้ว: เตรียมสไลด์นำเสนอ">
+                                <span class="grow"><span class="title">เตรียมสไลด์นำเสนอลูกค้า</span><span class="meta">สำคัญ + เร่งด่วน</span></span>
+                                <span class="side">ก่อน 14:00</span></li>
+                            <li class="row"><input class="tick" type="checkbox" aria-label="เสร็จแล้ว: จ่ายบัตรเครดิต">
+                                <span class="grow"><span class="title">จ่ายบัตรเครดิต</span><span class="meta">ยอด 12,480.00 บาท</span></span>
+                                <span class="side">วันนี้</span></li>
+                            <li class="row"><input class="tick" type="checkbox" aria-label="เสร็จแล้ว: อ่าน Clean Code บทที่ 4">
+                                <span class="grow"><span class="title">อ่าน Clean Code บทที่ 4</span><span class="meta">สำคัญ + ไม่เร่งด่วน</span></span>
+                                <span class="side">วันนี้</span></li>
+                            <li class="row"><input class="tick" type="checkbox" checked aria-label="เสร็จแล้ว: จองโต๊ะร้านอาหาร">
+                                <span class="grow"><span class="title">จองโต๊ะร้านอาหารวันเสาร์</span><span class="meta">เสร็จ 08:12</span></span>
+                                <span class="side"></span></li>
+                        </ul>
+                    </div>
+
+                    <div data-show="empty">
+                        <div class="empty">
+                            <p>วันนี้ยังว่าง</p>
+                            <p class="muted">พิมพ์งานแรกในช่องด้านล่างแล้วกด Enter งานที่มีกำหนดวันนี้จะขึ้นที่นี่เอง</p>
+                        </div>
+                    </div>
+
+                    <div data-show="loading" aria-busy="true">
+                        <div class="skel-row"><span class="skel box"></span><span class="skel" style="width:62%"></span></div>
+                        <div class="skel-row"><span class="skel box"></span><span class="skel" style="width:48%"></span></div>
+                        <div class="skel-row"><span class="skel box"></span><span class="skel" style="width:55%"></span></div>
+                    </div>
+
+                    <label class="add-row">
+                        <span class="plus" aria-hidden="true">+</span>
+                        <span class="sr-only">เพิ่มงานวันนี้</span>
+                        <input type="text" placeholder="เพิ่มงานวันนี้ เช่น โทรหาช่างแอร์ 15:00">
+                    </label>
+                </section>
+
+                <section class="sec" aria-labelledby="hCal">
+                    <div class="sec-head">
+                        <h2 id="hCal">กำหนดการ<span class="count" data-show="full">3</span></h2>
+                        <a href="#">เปิดแพลนเนอร์</a>
+                    </div>
+                    <ul class="ruled" data-show="full">
+                        <li class="row past"><span class="time">09:00</span><span class="grow"><span class="title">ประชุมทีมประจำสัปดาห์</span><span class="meta">1 ชม. · Google Meet</span></span></li>
+                        <li class="now-line" aria-label="ตอนนี้ 10:15">10:15</li>
+                        <li class="row"><span class="time">14:30</span><span class="grow"><span class="title">นำเสนองานลูกค้า ABC</span><span class="meta">1 ชม. 30 นาที · ห้องประชุม 3</span></span></li>
+                        <li class="row"><span class="time">19:00</span><span class="grow"><span class="title">วิ่ง 5 กม. สวนลุมพินี</span><span class="meta">ทำซ้ำทุกวันจันทร์ พุธ ศุกร์</span></span></li>
+                    </ul>
+                    <div data-show="empty"><div class="empty"><p class="muted" style="margin:0">ไม่มีนัดวันนี้ · <a href="#">เพิ่มนัด</a></p></div></div>
+                    <div data-show="loading">
+                        <div class="skel-row"><span class="skel" style="width:40px"></span><span class="skel" style="width:50%"></span></div>
+                        <div class="skel-row"><span class="skel" style="width:40px"></span><span class="skel" style="width:38%"></span></div>
+                    </div>
+                </section>
+
+                <section class="sec" aria-labelledby="hHabit">
+                    <div class="sec-head">
+                        <h2 id="hHabit">นิสัยวันนี้<span class="count" data-show="full">2 จาก 4</span></h2>
+                        <a href="#">ดูทั้งสัปดาห์</a>
+                    </div>
+                    <ul class="ruled habits" data-show="full">
+                        <li class="row"><input class="tick" type="checkbox" checked aria-label="ดื่มน้ำ 8 แก้ว"><span class="grow"><span class="title">ดื่มน้ำ 8 แก้ว</span></span><span class="side">ติดกัน 12 วัน</span></li>
+                        <li class="row"><input class="tick" type="checkbox" aria-label="เดิน 8,000 ก้าว"><span class="grow"><span class="title">เดิน 8,000 ก้าว</span></span><span class="side">ติดกัน 3 วัน</span></li>
+                        <li class="row"><input class="tick" type="checkbox" checked aria-label="อ่านหนังสือ 30 นาที"><span class="grow"><span class="title">อ่านหนังสือ 30 นาที</span></span><span class="side">ติดกัน 5 วัน</span></li>
+                        <li class="row"><input class="tick" type="checkbox" aria-label="นั่งสมาธิ 10 นาที"><span class="grow"><span class="title">นั่งสมาธิ 10 นาที</span></span><span class="side">—</span></li>
+                    </ul>
+                    <div data-show="empty"><div class="empty"><p class="muted" style="margin:0">ยังไม่ได้ตั้งนิสัย · <a href="#">เพิ่มนิสัยแรก</a></p></div></div>
+                    <div data-show="loading"><div class="skel-row"><span class="skel box"></span><span class="skel" style="width:30%"></span></div></div>
+                </section>
+            </div>
+
+            <!-- ===== right: money and body ===== -->
+            <aside class="col-side">
+                <section class="sec" aria-labelledby="hMoney">
+                    <div class="sec-head">
+                        <h2 id="hMoney">เงินเดือนตุลาคม</h2>
+                        <a href="#">เปิดสมุดบัญชี</a>
+                    </div>
+                    <div data-show="full">
+                        <table class="ledger">
+                            <tr><td>ยอดยกมาจากกันยายน</td><td class="num">8,214.25</td></tr>
+                            <tr><td>รายรับ</td><td class="num in">+45,000.00</td></tr>
+                            <tr><td>รายจ่าย <span class="muted">· 2 วัน</span></td><td class="num out">−3,286.50</td></tr>
+                            <tr class="total"><td>คงเหลือ</td><td class="num">49,927.75</td></tr>
+                        </table>
+                        <div class="budget">
+                            งบรายจ่ายเดือนนี้ 25,000.00 · ใช้ไป 13%
+                            <div class="budget-bar" role="img" aria-label="ใช้งบไป 13 เปอร์เซ็นต์"><span style="width:13%"></span></div>
+                            เหลือใช้ได้วันละ 746.94 ถึงสิ้นเดือน
+                        </div>
+                    </div>
+                    <div data-show="empty">
+                        <div class="empty">
+                            <p>ยังไม่มีรายการเดือนตุลาคม</p>
+                            <button class="btn" type="button">บันทึกรายรับหรือรายจ่ายแรก</button>
+                        </div>
+                    </div>
+                    <div data-show="loading">
+                        <div class="skel-row"><span class="skel" style="width:45%"></span><span class="skel" style="width:22%;margin-left:auto"></span></div>
+                        <div class="skel-row"><span class="skel" style="width:25%"></span><span class="skel" style="width:26%;margin-left:auto"></span></div>
+                        <div class="skel-row"><span class="skel" style="width:30%"></span><span class="skel" style="width:20%;margin-left:auto"></span></div>
+                    </div>
+                </section>
+
+                <section class="sec" aria-labelledby="hRecur">
+                    <div class="sec-head">
+                        <h2 id="hRecur">ตัดเงินใน 7 วัน</h2>
+                        <a href="#">รายจ่ายประจำ</a>
+                    </div>
+                    <div data-show="full">
+                        <table class="ledger">
+                            <tr><td>Spotify Family<br><span class="muted" style="font-size:13px">อา. 4 ต.ค. · อีก 2 วัน</span></td><td class="num">139.00</td></tr>
+                            <tr><td>Netflix Premium<br><span class="muted" style="font-size:13px">พ. 7 ต.ค. · อีก 5 วัน</span></td><td class="num">419.00</td></tr>
+                            <tr><td>อินเทอร์เน็ตบ้าน 1 Gbps<br><span class="muted" style="font-size:13px">ศ. 9 ต.ค. · อีก 7 วัน</span></td><td class="num">641.93</td></tr>
+                            <tr class="total"><td style="font-weight:500">รวม</td><td class="num" style="font:600 16px var(--font)">1,199.93</td></tr>
+                        </table>
+                    </div>
+                    <div data-show="empty"><div class="empty"><p class="muted" style="margin:0">ไม่มีรายการที่จะตัดเงินในสัปดาห์นี้</p></div></div>
+                    <div data-show="loading"><div class="skel-row"><span class="skel" style="width:50%"></span></div><div class="skel-row"><span class="skel" style="width:40%"></span></div></div>
+                </section>
+
+                <section class="sec" aria-labelledby="hBody">
+                    <div class="sec-head">
+                        <h2 id="hBody">ร่างกายและโฟกัส</h2>
+                    </div>
+                    <div class="facts" data-show="full">
+                        <div class="fact">
+                            <div class="k">โฟกัสวันนี้</div>
+                            <div class="v">0:50<small>ชม.</small></div>
+                            <div class="note">เป้า 3 ชม. · 2 รอบ</div>
+                        </div>
+                        <div class="fact">
+                            <div class="k">ออกกำลังกายล่าสุด</div>
+                            <div class="v">45<small>นาที</small></div>
+                            <div class="note">เมื่อวาน · เวทช่วงบน</div>
+                        </div>
+                    </div>
+                    <div data-show="empty"><div class="empty"><p class="muted" style="margin:0">เริ่มจับเวลาโฟกัสหรือบันทึกการออกกำลังกาย แล้วตัวเลขจะขึ้นที่นี่</p></div></div>
+                    <div data-show="loading"><div class="skel-row"><span class="skel" style="width:35%"></span><span class="skel" style="width:35%;margin-left:auto"></span></div></div>
+                </section>
+            </aside>
+        </div>
+    </main>
+</div>
+
+<nav class="tabbar" aria-label="เมนูลัด">
+    <a class="tab" href="#" aria-current="page"><svg class="icon"><use href="#i-today"/></svg>วันนี้</a>
+    <a class="tab" href="#"><svg class="icon"><use href="#i-tasks"/></svg>งาน</a>
+    <a class="tab tab-add" href="#" aria-label="จดด่วน"><span class="sq"><svg class="icon"><use href="#i-plus"/></svg></span></a>
+    <a class="tab" href="#"><svg class="icon"><use href="#i-money"/></svg>เงิน</a>
+    <a class="tab" href="#"><svg class="icon"><use href="#i-all"/></svg>ทั้งหมด</a>
+</nav>
+
+<script>
+// Mockup controls only. Settings also read from the URL: ?theme=dark&day=mon&state=empty&daycolor=off&chrome=off
+(function () {
+    var root = document.documentElement;
+    var q = new URLSearchParams(location.search);
+    var week = {
+        mon: ['28', 'ก.ย.', 'วันจันทร์', '28 กันยายน 2569'],
+        tue: ['29', 'ก.ย.', 'วันอังคาร', '29 กันยายน 2569'],
+        wed: ['30', 'ก.ย.', 'วันพุธ', '30 กันยายน 2569'],
+        thu: ['1', 'ต.ค.', 'วันพฤหัสบดี', '1 ตุลาคม 2569'],
+        fri: ['2', 'ต.ค.', 'วันศุกร์', '2 ตุลาคม 2569'],
+        sat: ['3', 'ต.ค.', 'วันเสาร์', '3 ตุลาคม 2569'],
+        sun: ['4', 'ต.ค.', 'วันอาทิตย์', '4 ตุลาคม 2569']
+    };
+    function set(key, val) {
+        if (key === 'day') {
+            var w = week[val] || week.fri;
+            root.dataset.day = val;
+            document.getElementById('dNum').textContent = w[0];
+            document.getElementById('dMon').textContent = w[1];
+            document.getElementById('dName').textContent = w[2];
+            document.getElementById('dFull').textContent = w[3] + ' · สัปดาห์ที่ 40';
+        } else {
+            root.dataset[key] = val;
+        }
+    }
+    var map = { theme: 'mTheme', day: 'mDay', state: 'mState', daycolor: 'mDayColor' };
+    Object.keys(map).forEach(function (key) {
+        var el = document.getElementById(map[key]);
+        var initial = q.get(key) || (key === 'daycolor' ? 'on' : root.dataset[key]);
+        el.value = initial;
+        set(key, initial);
+        el.addEventListener('change', function () { set(key, el.value); });
+    });
+    if (q.get('chrome') === 'off') root.dataset.chrome = 'off';
+})();
+</script>
+</body>
+</html>

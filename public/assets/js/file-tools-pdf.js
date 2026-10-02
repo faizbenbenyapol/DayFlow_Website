@@ -365,7 +365,7 @@
                 const padded = String(i).padStart(String(total).length, '0');
                 zip.file(`page-${padded}.png`, ab);
 
-                fill.style.width = Math.round((i / total) * 100) + '%';
+                fill.style.setProperty('--v', Math.round((i / total) * 100) + '%');
                 label.textContent = `หน้า ${i} / ${total}`;
             }
 

@@ -35,6 +35,20 @@ jobs:
       - name: Analyse
         run: docker run --rm -v "$PWD":/app -w /app ghcr.io/phpstan/phpstan:2.2.16 analyse --no-progress
 
+  contrast:
+    name: Colour contrast
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Fails when a pair in tokens.css stops being readable (docs/REDESIGN.md §1).
+      - name: Check the palette
+        run: node scripts/check-contrast.mjs
+
+      # Redesigned stylesheets may not write colours of their own.
+      - name: Check for stray colours
+        run: node scripts/check-css.mjs
+
   unit:
     name: Unit tests
     runs-on: ubuntu-latest

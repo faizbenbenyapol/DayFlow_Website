@@ -7,7 +7,7 @@
 ===================================================== */
 
 // Bump on deploy to retire the previous cache generation.
-const CACHE = 'dayflow-static-v4';
+const CACHE = 'dayflow-static-v5';
 
 // Path prefix the app is served from ("" at a domain root, "/DayFlow" under a
 // subfolder). Derived from the worker's own URL so no build step is needed.
@@ -15,12 +15,17 @@ const BASE = new URL('.', self.location).pathname.replace(/\/$/, '');
 
 const SHELL = [
     `${BASE}/assets/css/fonts.css`,
-    `${BASE}/assets/css/app.css`,
+    `${BASE}/assets/css/tokens.css`,
+    `${BASE}/assets/css/base.css`,
     `${BASE}/assets/css/components.css`,
+    `${BASE}/assets/css/shell.css`,
+    `${BASE}/assets/css/modules/outside.css`,
+    `${BASE}/assets/js/standalone.js`,
     `${BASE}/assets/js/html.js`,
     `${BASE}/assets/js/actions.js`,
     `${BASE}/assets/js/app.js`,
-    `${BASE}/assets/fonts/inter-latin-400.woff2`,
+    `${BASE}/assets/js/shell.js`,
+    `${BASE}/assets/fonts/plexsans-latin-var.woff2`,
     `${BASE}/assets/fonts/plexthai-thai-400.woff2`,
     `${BASE}/offline.html`,
 ];
@@ -90,77 +95,14 @@ async function networkWithOfflineFallback(request) {
         return await fetch(request);
     } catch (err) {
         const cache = await caches.open(CACHE);
-        return (await cache.match(`${BASE}/offline.html`))
-            || new Response('ออฟไลน์', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+        const notice = await cache.match(`${BASE}/offline.html`);
+        if (!notice) {
+            return new Response('ออฟไลน์', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+        }
+        // One file answers for every address (/notes/12, /files/…), and its
+        // stylesheets are relative links; a fixed base keeps them pointing at
+        // the app's assets rather than at wherever the visitor was.
+        const html = (await notice.text()).replace('<head>', `<head><base href="${BASE}/">`);
+        return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
     }
 }
-
-/* =====================================================
-   Push notifications
-   Pushes carry no payload on purpose: the push service never sees the
-   content. On wake-up the worker asks the app what to show, using the
-   viewer's own session cookie.
-===================================================== */
-
-self.addEventListener('push', event => {
-    event.waitUntil((async () => {
-        let items = [];
-
-        try {
-            const response = await fetch(`${BASE}/api/push/pending`, {
-                credentials: 'include',
-                headers: { 'Accept': 'application/json' },
-            });
-            if (response.ok) {
-                items = (await response.json()).items || [];
-            }
-        } catch (err) {
-            // Offline, or the session has expired: fall through to the
-            // generic notice below rather than showing nothing at all.
-        }
-
-        if (items.length === 0) {
-            await self.registration.showNotification('DayFlow', {
-                body: 'เปิดแอปเพื่อดูรายการที่ต้องทำ',
-                icon: `${BASE}/assets/icons/icon-192.png`,
-                badge: `${BASE}/assets/icons/icon-192.png`,
-                tag: 'dayflow-generic',
-                data: { url: `${BASE}/` },
-            });
-            return;
-        }
-
-        // A tag per item means a repeat push replaces the old notification
-        // rather than stacking another copy of it.
-        await Promise.all(items.slice(0, 3).map(item =>
-            self.registration.showNotification(item.title, {
-                body: item.body || '',
-                icon: `${BASE}/assets/icons/icon-192.png`,
-                badge: `${BASE}/assets/icons/icon-192.png`,
-                tag: item.tag || 'dayflow',
-                data: { url: item.url || `${BASE}/` },
-            })
-        ));
-    })());
-});
-
-self.addEventListener('notificationclick', event => {
-    event.notification.close();
-    const target = event.notification.data && event.notification.data.url;
-
-    event.waitUntil((async () => {
-        const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-
-        // Reuse an open DayFlow tab when there is one.
-        for (const client of clients) {
-            if (client.url.startsWith(self.location.origin) && 'focus' in client) {
-                if (target && 'navigate' in client) await client.navigate(target);
-                return client.focus();
-            }
-        }
-
-        if (self.clients.openWindow) {
-            return self.clients.openWindow(target || `${BASE}/`);
-        }
-    })());
-});

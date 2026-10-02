@@ -7,28 +7,62 @@
     const $$ = (s, c) => Array.from((c || document).querySelectorAll(s));
 
     // ---------- Tabs ----------
+    // Other settings-*.js files load their own pane the first time it is shown:
+    //   onSettingsTab('shares', loadShares)
+    // The callback also runs at once if that pane is already open.
+    const tabCallbacks = {};
+    const tabRan = new WeakSet();
+    let activeTab = null;
+
+    window.onSettingsTab = function (name, callback) {
+        (tabCallbacks[name] = tabCallbacks[name] || []).push(callback);
+        if (activeTab === name) { tabRan.add(callback); callback(); }
+    };
+
+    function showTab(name) {
+        activeTab = name;
+        (tabCallbacks[name] || []).forEach(cb => {
+            if (!tabRan.has(cb)) { tabRan.add(cb); cb(); }
+        });
+    }
+
     function initTabs() {
         const tabs = $$('.settings-tab');
         const panes = $$('.settings-pane');
-        tabs.forEach(btn => btn.addEventListener('click', () => {
+
+        const select = (btn, focus) => {
             const name = btn.dataset.tab;
             tabs.forEach(t => {
-                const active = t === btn;
-                t.classList.toggle('active', active);
-                t.classList.toggle('btn-primary', active);
-                t.classList.toggle('btn-ghost', !active);
+                t.setAttribute('aria-selected', String(t === btn));
+                t.tabIndex = t === btn ? 0 : -1;
             });
-            panes.forEach(p => p.style.display = p.id === 'tab-' + name ? 'block' : 'none');
-            try { localStorage.setItem('settings_last_tab', name); } catch (_) {}
-        }));
-        // Remember last tab
+            panes.forEach(p => { p.hidden = p.id !== 'tab-' + name; });
+            try { localStorage.setItem('settings_last_tab', name); } catch (_) { /* not remembered */ }
+            if (focus) btn.focus();
+            // On a phone the topics scroll sideways; keep the open one in view.
+            btn.scrollIntoView({ block: 'nearest', inline: 'center' });
+            showTab(name);
+        };
+
+        tabs.forEach((btn, i) => {
+            btn.addEventListener('click', () => select(btn));
+            btn.addEventListener('keydown', e => {
+                const step = (e.key === 'ArrowDown' || e.key === 'ArrowRight') ? 1 : (e.key === 'ArrowUp' || e.key === 'ArrowLeft') ? -1 : 0;
+                if (!step) return;
+                e.preventDefault();
+                select(tabs[(i + step + tabs.length) % tabs.length], true);
+            });
+        });
+
+        // The topic last open, unless the address names one (#shares, #menus ...).
+        let start = tabs[0];
         try {
             const last = localStorage.getItem('settings_last_tab');
-            if (last) {
-                const btn = tabs.find(t => t.dataset.tab === last);
-                if (btn) btn.click();
-            }
-        } catch (_) {}
+            const fromHash = location.hash.replace('#', '');
+            start = tabs.find(t => t.dataset.tab === fromHash) || tabs.find(t => t.dataset.tab === last) || tabs[0];
+        } catch (_) { /* first topic */ }
+        // After the other scripts have registered what they want to load.
+        setTimeout(() => select(start), 0);
     }
 
     // ---------- Remembered devices ----------
@@ -64,18 +98,17 @@
         };
         const render = devices => {
             if (!devices.length) {
-                list.innerHTML = '<div class="empty-state"><div class="empty-state-title">ยังไม่มีอุปกรณ์ที่จำไว้</div><div class="empty-state-text">ครั้งถัดไปที่เข้าสู่ระบบ ให้เลือก “จดจำอุปกรณ์นี้”</div></div>';
+                list.innerHTML = '<div class="empty-state"><p class="empty-state-title">ยังไม่มีอุปกรณ์ที่จำไว้</p><p class="empty-state-text">ครั้งถัดไปที่เข้าสู่ระบบ ให้เลือก "จดจำอุปกรณ์นี้"</p></div>';
                 return;
             }
             list.innerHTML = devices.map(device => `
                 <div class="device-row ${device.is_current ? 'is-current' : ''}">
-                    <div class="device-icon" aria-hidden="true">⌁</div>
                     <div class="device-main">
                         <div class="device-title">${escHtml(deviceName(device.user_agent))} <span class="device-browser">${escHtml(browserName(device.user_agent))}</span>${device.is_current ? '<span class="device-current">อุปกรณ์นี้</span>' : ''}</div>
                         <div class="device-meta">IP ${escHtml(device.ip_address || 'ไม่ทราบ')} · ใช้งานล่าสุด ${escHtml(formatDate(device.last_used_at || device.created_at))}</div>
                         <div class="device-meta">หมดอายุ ${escHtml(formatDate(device.expires_at))}</div>
                     </div>
-                    <button class="btn btn-ghost btn-sm device-revoke" type="button" data-device-id="${Number(device.id)}">ยกเลิก</button>
+                    <button class="btn btn-sm device-revoke" type="button" data-device-id="${Number(device.id)}">ยกเลิก</button>
                 </div>
             `).join('');
             $$('.device-revoke', list).forEach(button => button.addEventListener('click', async () => {
@@ -94,19 +127,17 @@
             }));
         };
         const load = async () => {
-            list.innerHTML = '<div class="loading-state">กำลังโหลดรายการอุปกรณ์…</div>';
+            list.innerHTML = '<div class="skel-row"><span class="skel skel-w-60"></span></div>';
             try {
                 const data = await apiFetch(BASE_URL + '/api/settings/devices');
                 render(Array.isArray(data.devices) ? data.devices : []);
                 loaded = true;
             } catch (err) {
-                list.innerHTML = '<div class="empty-state"><div class="empty-state-title">โหลดรายการไม่สำเร็จ</div><button class="btn btn-ghost btn-sm" id="btnRetryDevices" type="button">ลองใหม่</button></div>';
+                list.innerHTML = '<div class="alert alert-danger" role="alert">โหลดรายการไม่สำเร็จ <button class="btn btn-sm" id="btnRetryDevices" type="button">ลองอีกครั้ง</button></div>';
                 $('#btnRetryDevices')?.addEventListener('click', load);
             }
         };
-        $$('.settings-tab').forEach(tab => tab.addEventListener('click', () => {
-            if (tab.dataset.tab === 'devices' && !loaded) load();
-        }));
+        onSettingsTab('devices', () => { if (!loaded) load(); });
         $('#btnRevokeOtherDevices')?.addEventListener('click', async () => {
             const ok = await confirmAction('อุปกรณ์อื่นทั้งหมดจะต้องเข้าสู่ระบบใหม่ โดยอุปกรณ์นี้จะยังใช้งานต่อได้', 'ออกจากอุปกรณ์อื่น', 'ยืนยัน');
             if (!ok) return;
@@ -145,6 +176,19 @@
         } catch (err) { toast('บันทึกธีมไม่สำเร็จ', 'danger'); }
     }
 
+    // ---------- Weekday colour ----------
+    async function setDayColor(box) {
+        const enabled = box.checked;
+        try {
+            await apiFetch(BASE_URL + '/api/settings/day-color', { method: 'POST', body: JSON.stringify({ enabled }) });
+            document.documentElement.dataset.daycolor = enabled ? 'on' : 'off';
+            toast(enabled ? 'เปิดสีประจำวันแล้ว' : 'ปิดสีประจำวันแล้ว');
+        } catch (err) {
+            box.checked = !enabled;
+            toast('บันทึกไม่สำเร็จ', 'danger');
+        }
+    }
+
     // ---------- Password ----------
     function scorePassword(pw) {
         if (!pw) return { score: 0, label: 'อย่างน้อย 8 ตัวอักษร' };
@@ -171,22 +215,19 @@
         const newPw = $('#pwNew'), fill = $('#pwStrengthFill'), txt = $('#pwStrengthText');
         newPw?.addEventListener('input', () => {
             const { score, label } = scorePassword(newPw.value);
-            const pct = (score / 5) * 100;
-            fill.style.width = pct + '%';
-            const colors = ['#c0392b', '#c0392b', '#c07a00', '#c07a00', '#27ae60', '#27ae60'];
-            fill.style.background = colors[score] || colors[0];
+            fill.style.setProperty('--v', (newPw.value ? Math.max(score, 1) / 5 * 100 : 0) + '%');
+            $('#pwStrength').dataset.level = !newPw.value ? '' : score <= 1 ? 'weak' : score <= 3 ? 'fair' : 'good';
             txt.textContent = newPw.value ? `ระดับ: ${label}` : 'อย่างน้อย 8 ตัวอักษร';
         });
 
         // Match hint
         const confirm = $('#pwConfirm'), hint = $('#pwMatchHint');
         const updateMatch = () => {
-            if (!confirm.value) { hint.textContent = ''; hint.style.color = ''; return; }
-            if (confirm.value === newPw.value) {
-                hint.textContent = '✓ รหัสผ่านตรงกัน'; hint.style.color = 'var(--color-success)';
-            } else {
-                hint.textContent = '✗ รหัสผ่านไม่ตรงกัน'; hint.style.color = 'var(--color-danger)';
-            }
+            hint.classList.remove('ok', 'bad');
+            if (!confirm.value) { hint.textContent = ''; return; }
+            const same = confirm.value === newPw.value;
+            hint.textContent = same ? 'รหัสผ่านตรงกัน' : 'รหัสผ่านไม่ตรงกัน';
+            hint.classList.add(same ? 'ok' : 'bad');
         };
         confirm?.addEventListener('input', updateMatch);
         newPw?.addEventListener('input', updateMatch);
@@ -196,10 +237,11 @@
             const current = $('#pwCurrent').value;
             const nw = newPw.value;
             const cf = confirm.value;
-            if (!current || !nw || !cf) { toast('กรุณากรอกข้อมูลให้ครบ', 'danger'); return; }
-            if (nw.length < 8) { toast('รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร', 'danger'); return; }
-            if (nw !== cf) { toast('รหัสผ่านใหม่ไม่ตรงกัน', 'danger'); return; }
-            if (nw === current) { toast('รหัสผ่านใหม่ต้องต่างจากรหัสผ่านปัจจุบัน', 'danger'); return; }
+            const problem = !current || !nw || !cf ? 'กรอกให้ครบทั้งสามช่อง'
+                : nw.length < 8 ? 'รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร'
+                : nw !== cf ? 'รหัสผ่านใหม่กับช่องยืนยันไม่ตรงกัน'
+                : nw === current ? 'รหัสผ่านใหม่ต้องต่างจากรหัสผ่านปัจจุบัน' : '';
+            if (problem) { toast(problem, 'danger'); return; }
 
             try {
                 await apiFetch(BASE_URL + '/api/settings/password', {
@@ -207,7 +249,7 @@
                     body: JSON.stringify({ current_password: current, new_password: nw, confirm_password: cf })
                 });
                 $('#pwCurrent').value = ''; newPw.value = ''; confirm.value = '';
-                fill.style.width = '0%'; txt.textContent = 'อย่างน้อย 8 ตัวอักษร';
+                fill.style.setProperty('--v', '0%'); $('#pwStrength').dataset.level = ''; txt.textContent = 'อย่างน้อย 8 ตัวอักษร';
                 hint.textContent = '';
                 if (window.Swal) Swal.fire({ icon: 'success', title: 'เปลี่ยนรหัสผ่านแล้ว', timer: 1500, showConfirmButton: false });
                 else toast('เปลี่ยนรหัสผ่านแล้ว');
@@ -291,7 +333,7 @@
                 btn.disabled = false;
             } else {
                 if (labelText) {
-                    labelText.textContent = 'คลิกเพื่อเลือกไฟล์ข้อมูลสำรอง (.json)';
+                    labelText.textContent = 'กดเพื่อเลือกไฟล์ข้อมูลสำรอง (.json)';
                 }
                 btn.disabled = true;
             }
@@ -392,6 +434,7 @@
         initTabs();
         $('#btnSaveProfile')?.addEventListener('click', saveProfile);
         $$('input[name="theme"]').forEach(r => r.addEventListener('change', () => setTheme(r.value)));
+        $('#dayColorSwitch')?.addEventListener('change', e => setDayColor(e.target));
         initPasswordForm();
         initTimezone();
         initLocalStorage();

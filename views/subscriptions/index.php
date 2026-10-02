@@ -1,72 +1,87 @@
-<div class="page-header flex items-center justify-between">
+<?php
+// =====================================================
+// views/subscriptions/index.php — what is charged, and when
+//
+// Sorted by how soon each is due, with what it costs a month and a year.
+// assets/js/subscriptions.js draws the list from /api/subscriptions.
+// =====================================================
+$cycles = ['monthly' => 'รายเดือน', 'yearly' => 'รายปี', 'weekly' => 'รายสัปดาห์', 'one_time' => 'ครั้งเดียว'];
+?>
+<div class="page-head">
     <div>
-        <h1 class="page-title">การแจ้งเตือน / นับถอยหลัง</h1>
-        <p class="page-subtitle">ค่าใช้จ่ายประจำและ Subscription ต่าง ๆ</p>
+        <h1>รายจ่ายประจำ</h1>
+        <p class="sub" id="subTally" aria-live="polite">กำลังโหลดรายการ…</p>
     </div>
-    <button class="btn btn-ghost btn-sm" data-act="openAddSub">+ เพิ่ม</button>
+    <div class="page-head-actions">
+        <button class="btn btn-primary" type="button" data-act="openAddSub"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>เพิ่มรายการ</button>
+    </div>
 </div>
 
-<div id="subGrid" class="grid-2">
-    <div class="card" style="grid-column:1/-1;text-align:center;padding:3rem">
-        <div class="spinner"></div>
-    </div>
+<div class="facts sub-facts" id="subFacts" hidden>
+    <div class="fact"><div class="k">ต่อเดือนประมาณ</div><div class="v" id="subPerMonth">—</div></div>
+    <div class="fact"><div class="k">ต่อปีประมาณ</div><div class="v" id="subPerYear">—</div></div>
+    <div class="fact"><div class="k">ตัดเงินใน 7 วัน</div><div class="v" id="subNextWeek">—</div></div>
+</div>
+
+<div id="subGrid" aria-busy="true">
+    <div class="skel-row"><span class="skel skel-w-60"></span></div>
+    <div class="skel-row"><span class="skel skel-w-45"></span></div>
+    <div class="skel-row"><span class="skel skel-w-52"></span></div>
 </div>
 
 <!-- Modal -->
-<div class="modal-backdrop" id="subModal">
-    <div class="modal">
+<div class="modal-backdrop" id="subModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-labelledby="subModalTitle">
         <div class="modal-header">
-            <span class="modal-title" id="subModalTitle">เพิ่มรายการ</span>
-            <button class="modal-close">&times;</button>
+            <h2 class="modal-title" id="subModalTitle">เพิ่มรายการ</h2>
+            <button class="modal-close" type="button" aria-label="ปิด">&times;</button>
         </div>
         <div class="modal-body">
             <input type="hidden" id="editSubId">
             <div class="form-group">
-                <label class="form-label">ชื่อรายการ</label>
-                <input type="text" class="form-control" id="subName"
-                       placeholder="เช่น ค่าไฟ, Netflix..." maxlength="150">
+                <label class="form-label" for="subName">ชื่อรายการ</label>
+                <input type="text" class="form-control" id="subName" placeholder="เช่น ค่าไฟ, Netflix" maxlength="150">
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">จำนวนเงิน (บาท)</label>
-                    <input type="number" class="form-control" id="subAmount" step="0.01" min="0">
+                    <label class="form-label" for="subAmount">จำนวนเงิน (บาท)</label>
+                    <input type="text" inputmode="decimal" class="form-control" id="subAmount" autocomplete="off">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">รอบชำระ</label>
+                    <label class="form-label" for="subCycle">รอบชำระ</label>
                     <select class="form-control" id="subCycle">
-                        <option value="monthly">รายเดือน</option>
-                        <option value="yearly">รายปี</option>
-                        <option value="weekly">รายสัปดาห์</option>
-                        <option value="one_time">ครั้งเดียว</option>
+                        <?php foreach ($cycles as $value => $label): ?>
+                        <option value="<?= $value ?>"><?= h($label) ?></option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">วันครบกำหนดถัดไป</label>
+                    <label class="form-label" for="subDue">ครบกำหนดครั้งถัดไป</label>
                     <input type="date" class="form-control" id="subDue">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">แจ้งเตือนก่อน (วัน)</label>
+                    <label class="form-label" for="subAlert">แจ้งเตือนก่อน (วัน)</label>
                     <input type="number" class="form-control" id="subAlert" value="3" min="0" max="30">
                 </div>
             </div>
             <div class="form-group">
-                <label class="form-label">หมายเหตุ</label>
+                <label class="form-label" for="subNotes">หมายเหตุ</label>
                 <textarea class="form-control" id="subNotes" rows="2"></textarea>
             </div>
             <div class="form-group">
                 <label class="flex items-center gap-3 cursor-pointer">
                     <input type="checkbox" id="subActive" checked>
-                    <span>ใช้งานอยู่</span>
+                    <span>ยังใช้งานอยู่ (ปิดไว้ถ้ายกเลิกแล้ว จะไม่นับในยอดรวม)</span>
                 </label>
             </div>
+            <p class="form-error" id="subError" role="alert" hidden></p>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-danger btn-sm" id="deleteSubBtn" style="margin-right:auto;display:none"
-                    data-act="deleteSub">ลบ</button>
-            <button class="btn btn-ghost" data-close-modal>ยกเลิก</button>
-            <button class="btn btn-primary" data-act="saveSub">บันทึก</button>
+            <button class="btn btn-danger mr-auto" type="button" id="deleteSubBtn" data-act="deleteSub" hidden>ลบรายการ</button>
+            <button class="btn" type="button" data-close-modal>ยกเลิก</button>
+            <button class="btn btn-primary" type="button" data-act="saveSub">บันทึกรายการ</button>
         </div>
     </div>
 </div>

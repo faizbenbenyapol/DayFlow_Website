@@ -148,7 +148,7 @@ test('repository files are not served', function (TestClient $_c): void {
 test('the site\'s own public files are still served', function (TestClient $_c): void {
     $anonymous = new TestClient(TEST_BASE_URL);
 
-    foreach (['/manifest.json', '/sw.js', '/robots.txt', '/offline.html', '/assets/css/app.css'] as $path) {
+    foreach (['/manifest.json', '/sw.js', '/robots.txt', '/offline.html', '/assets/css/components.css', '/assets/css/modules/outside.css', '/assets/js/standalone.js', '/assets/icons/icon-512.png'] as $path) {
         assertSame(200, $anonymous->get($path)['status'], $path . ' must stay reachable');
     }
 });

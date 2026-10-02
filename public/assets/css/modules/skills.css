@@ -1,260 +1,164 @@
-.skills-container {
-    max-width: 1000px;
-    margin: 0 auto;
-    padding-bottom: 2rem;
+/* =====================================================
+   skills.css — time spent on skills
+
+   The stopwatch is the largest thing on the page, in the mono face like the
+   focus timer. A skill's own colour (--skill, from the person's choice) marks
+   its name and its progress bar; it is never the only sign of which skill.
+===================================================== */
+
+.sk-timer {
+    padding: var(--space-5) 0 var(--space-2);
+    border-bottom: 1px solid var(--rule);
 }
 
-/* Header & Timer Section */
-.timer-widget {
-    background: var(--surface);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-    padding: 1.25rem 1.5rem;
-    margin-bottom: 2rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    position: sticky;
-    top: 1rem;
-    z-index: 10;
-    border: 1px solid var(--border);
+.sk-timer-face {
+    font: 500 clamp(3.25rem, 11vw, 5.5rem)/1.05 var(--font-mono);
+    letter-spacing: 0;
+    color: var(--pencil);
 }
 
-.timer-input-group {
-    flex-grow: 1;
-    display: flex;
-    gap: 0.75rem;
+.sk-timer-face.running {
+    color: var(--ink);
 }
 
-.timer-input-group select, 
-.timer-input-group input {
-    background: var(--background);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    padding: 0.75rem 1rem;
-    color: var(--text);
-    font-size: 1rem;
-}
-
-.timer-input-group select {
-    min-width: 200px;
-}
-
-.timer-input-group input {
-    flex-grow: 1;
-}
-
-.timer-display {
-    font-size: 2.5rem;
-    font-family: monospace;
-    font-weight: 600;
-    color: var(--text);
-    min-width: 170px;
-    text-align: center;
-    letter-spacing: 2px;
-}
-
-.btn-timer {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s;
-    background: var(--color-text);
-    color: var(--color-bg);
-    box-shadow: var(--shadow-sm);
-}
-
-.btn-timer:hover {
-    transform: scale(1.05);
-    box-shadow: var(--shadow-md);
-}
-
-.btn-timer.active {
-    background: var(--color-danger);
-    color: var(--color-bg);
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.4);
-    }
-    70% {
-        box-shadow: 0 0 0 10px rgba(192, 57, 43, 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(192, 57, 43, 0);
-    }
-}
-
-/* Stats Section */
-.stats-grid {
+.sk-timer-fields {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
-    margin-bottom: 2rem;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto;
+    align-items: end;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
 }
 
-.stat-card {
-    background: var(--surface);
-    border-radius: var(--radius-md);
-    padding: 1.25rem;
-    text-align: center;
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow-sm);
+.sk-timer-fields .form-group {
+    margin-bottom: 0;
 }
 
-.stat-label {
+.sk-timer-btn {
+    min-width: 9.5rem;
+}
+
+.sk-facts {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.sk-color {
+    height: 44px;
+    padding: 2px;
+}
+
+/* A log line: when, what, how long. */
+.sk-log {
+    align-items: flex-start;
+}
+
+.sk-log-when {
+    flex: none;
+    width: 7.5rem;
+    padding-top: 2px;
     font-size: 0.875rem;
-    color: var(--text-muted);
-    margin-bottom: 0.5rem;
 }
 
-.stat-value {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text);
+.sk-log-when small {
+    display: block;
+    font-size: 0.8125rem;
+    color: var(--pencil);
 }
 
-/* Main Content Grid */
-.skills-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 2rem;
+.sk-name::before,
+.sk-goal-name::before {
+    content: "";
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 8px;
+    background: var(--skill, var(--pencil));
 }
 
-@media (max-width: 900px) {
-    .skills-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .timer-widget {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .timer-input-group {
-        flex-direction: column;
-    }
-    
-    .timer-display-wrapper {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 1rem;
-    }
-    
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
+.sk-dur {
+    padding-top: 2px;
+    white-space: nowrap;
 }
 
-/* Sub-sections */
-.section-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
+.sk-log .icon-btn {
+    align-self: center;
+}
+
+.sk-more {
+    padding-top: var(--space-3);
+    font-size: 0.8125rem;
+    color: var(--pencil);
+}
+
+/* Goals */
+.sk-goal {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
+}
+
+.sk-goal-head {
     display: flex;
-    justify-content: space-between;
     align-items: center;
 }
 
-.card {
-    background: var(--surface);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border);
-    overflow: hidden;
-}
-
-/* Logs Table */
-.logs-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.logs-table th, 
-.logs-table td {
-    padding: 1rem;
-    border-bottom: 1px solid var(--border);
-    text-align: left;
-}
-
-.logs-table th {
-    background: var(--background);
-    color: var(--text-muted);
+.sk-goal-name {
+    flex: 1;
+    min-width: 0;
     font-weight: 500;
-    font-size: 0.875rem;
+    overflow-wrap: anywhere;
 }
 
-.logs-table tr:last-child td {
-    border-bottom: none;
+.sk-goal-head .icon-btn {
+    margin-block: -8px;
 }
 
-.log-skill-badge {
-    display: inline-block;
-    padding: 0.25rem 0.5rem;
-    border-radius: var(--radius-sm);
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: white;
+.sk-bar {
+    margin-top: 6px;
 }
 
-/* Skill List */
-.skill-item {
-    padding: 1.25rem;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+.sk-bar .progress-bar {
+    width: var(--v, 0%);
+    min-width: 2px;
+    background: var(--skill, var(--ink));
 }
 
-.skill-item:last-child {
-    border-bottom: none;
+.sk-goal-meta {
+    margin-top: 6px;
+    font-size: 0.8125rem;
+    color: var(--pencil);
 }
 
-.skill-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
+@media (max-width: 767px) {
+    .sk-timer-fields {
+        grid-template-columns: minmax(0, 1fr);
+    }
 
-.skill-name {
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
+    .sk-timer-btn {
+        width: 100%;
+    }
 
-.color-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    display: inline-block;
-}
+    .sk-facts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 
-.progress-container {
-    width: 100%;
-    height: 8px;
-    background: var(--border);
-    border-radius: 4px;
-    overflow: hidden;
-}
+    .sk-facts .fact:nth-child(odd) {
+        padding-left: 0;
+        border-left: 0;
+    }
 
-.progress-bar {
-    height: 100%;
-    background: var(--color-text);
-    transition: width 0.3s;
-}
+    .sk-facts .fact:nth-child(n + 3) {
+        border-top: 1px solid var(--rule);
+    }
 
-.skill-meta {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    display: flex;
-    justify-content: space-between;
+    .sk-log {
+        flex-wrap: wrap;
+    }
+
+    .sk-log-when {
+        flex: 1 1 100%;
+        width: auto;
+    }
+
+    .sk-log .grow {
+        flex: 1 1 0;
+    }
 }
