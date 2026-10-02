@@ -6,7 +6,10 @@
 class User
 {
     /** Every value user_settings.theme accepts. */
-    public const THEMES = ['light', 'dark', 'soft', 'lavender', 'ocean', 'peach', 'auto'];
+    public const THEMES = ['light', 'dark', 'auto'];
+
+    /** Palettes v1 offered and v2 removed. Old backups still name them. */
+    public const LEGACY_THEMES = ['soft', 'lavender', 'ocean', 'peach'];
 
     public static function findById(int $id): ?array
     {
@@ -128,6 +131,15 @@ class User
             'INSERT INTO user_settings (user_id, theme) VALUES (?, ?)
              ON DUPLICATE KEY UPDATE theme = VALUES(theme)',
             [$userId, $theme]
+        );
+    }
+
+    public static function updateDayColor(int $userId, bool $on): void
+    {
+        DB::run(
+            'INSERT INTO user_settings (user_id, day_color) VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE day_color = VALUES(day_color)',
+            [$userId, $on ? 1 : 0]
         );
     }
 

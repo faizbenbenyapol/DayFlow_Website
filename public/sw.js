@@ -7,7 +7,7 @@
 ===================================================== */
 
 // Bump on deploy to retire the previous cache generation.
-const CACHE = 'dayflow-static-v4';
+const CACHE = 'dayflow-static-v5';
 
 // Path prefix the app is served from ("" at a domain root, "/DayFlow" under a
 // subfolder). Derived from the worker's own URL so no build step is needed.
@@ -15,12 +15,14 @@ const BASE = new URL('.', self.location).pathname.replace(/\/$/, '');
 
 const SHELL = [
     `${BASE}/assets/css/fonts.css`,
+    `${BASE}/assets/css/tokens.css`,
+    `${BASE}/assets/css/base.css`,
     `${BASE}/assets/css/app.css`,
     `${BASE}/assets/css/components.css`,
     `${BASE}/assets/js/html.js`,
     `${BASE}/assets/js/actions.js`,
     `${BASE}/assets/js/app.js`,
-    `${BASE}/assets/fonts/inter-latin-400.woff2`,
+    `${BASE}/assets/fonts/plexsans-latin-var.woff2`,
     `${BASE}/assets/fonts/plexthai-thai-400.woff2`,
     `${BASE}/offline.html`,
 ];

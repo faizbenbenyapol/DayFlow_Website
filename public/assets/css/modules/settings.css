@@ -146,134 +146,6 @@
     width: 75%;
 }
 
-/* Soft Theme Card Preview Mock */
-.theme-soft-preview {
-    background: #f4efe6;
-    border: 1px solid #e9e0cd;
-}
-.theme-soft-preview .preview-header {
-    height: 10px;
-    background: #e9e0cd;
-    border-radius: 3px;
-    width: 45%;
-}
-.theme-soft-preview .preview-body {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    flex: 1;
-}
-.theme-soft-preview .preview-line-1 {
-    height: 18px;
-    background: #f4efe6;
-    box-shadow: inset 2px 2px 4px rgba(189, 179, 161, 0.45), inset -2px -2px 4px rgba(255, 255, 255, 0.85);
-    border-radius: 4px;
-    width: 100%;
-}
-.theme-soft-preview .preview-line-2 {
-    height: 18px;
-    background: #f4efe6;
-    box-shadow: inset 2px 2px 4px rgba(189, 179, 161, 0.45), inset -2px -2px 4px rgba(255, 255, 255, 0.85);
-    border-radius: 4px;
-    width: 75%;
-}
-
-/* Lavender Theme Card Preview Mock */
-.theme-lavender-preview {
-    background: var(--palette-violet-100);
-    border: 1px solid #ddd6fe;
-}
-.theme-lavender-preview .preview-header {
-    height: 10px;
-    background: #ddd6fe;
-    border-radius: 3px;
-    width: 45%;
-}
-.theme-lavender-preview .preview-body {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    flex: 1;
-}
-.theme-lavender-preview .preview-line-1 {
-    height: 18px;
-    background: var(--palette-violet-100);
-    box-shadow: inset 2px 2px 4px rgba(196, 181, 253, 0.45), inset -2px -2px 4px rgba(255, 255, 255, 0.85);
-    border-radius: 4px;
-    width: 100%;
-}
-.theme-lavender-preview .preview-line-2 {
-    height: 18px;
-    background: var(--palette-violet-100);
-    box-shadow: inset 2px 2px 4px rgba(196, 181, 253, 0.45), inset -2px -2px 4px rgba(255, 255, 255, 0.85);
-    border-radius: 4px;
-    width: 75%;
-}
-
-/* Ocean Theme Card Preview Mock */
-.theme-ocean-preview {
-    background: var(--palette-sky-100);
-    border: 1px solid #bae6fd;
-}
-.theme-ocean-preview .preview-header {
-    height: 10px;
-    background: #bae6fd;
-    border-radius: 3px;
-    width: 45%;
-}
-.theme-ocean-preview .preview-body {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    flex: 1;
-}
-.theme-ocean-preview .preview-line-1 {
-    height: 18px;
-    background: var(--palette-sky-100);
-    box-shadow: inset 2px 2px 4px rgba(186, 230, 253, 0.45), inset -2px -2px 4px rgba(255, 255, 255, 0.85);
-    border-radius: 4px;
-    width: 100%;
-}
-.theme-ocean-preview .preview-line-2 {
-    height: 18px;
-    background: var(--palette-sky-100);
-    box-shadow: inset 2px 2px 4px rgba(186, 230, 253, 0.45), inset -2px -2px 4px rgba(255, 255, 255, 0.85);
-    border-radius: 4px;
-    width: 75%;
-}
-
-/* Peach Theme Card Preview Mock */
-.theme-peach-preview {
-    background: var(--palette-rose-100);
-    border: 1px solid #fecdd3;
-}
-.theme-peach-preview .preview-header {
-    height: 10px;
-    background: #fecdd3;
-    border-radius: 3px;
-    width: 45%;
-}
-.theme-peach-preview .preview-body {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    flex: 1;
-}
-.theme-peach-preview .preview-line-1 {
-    height: 18px;
-    background: var(--palette-rose-100);
-    box-shadow: inset 2px 2px 4px rgba(244, 196, 202, 0.5), inset -2px -2px 4px rgba(255, 255, 255, 0.85);
-    border-radius: 4px;
-    width: 100%;
-}
-.theme-peach-preview .preview-line-2 {
-    height: 18px;
-    background: var(--palette-rose-100);
-    box-shadow: inset 2px 2px 4px rgba(244, 196, 202, 0.5), inset -2px -2px 4px rgba(255, 255, 255, 0.85);
-    border-radius: 4px;
-    width: 75%;
-}
-
 /* Theme Label Styles */
 .theme-card-label {
     display: inline-flex;
@@ -845,3 +717,41 @@
 .settings-check { cursor: pointer; font-weight: 500; padding: 4px 0; }
 
 .theme-card-option { min-width: 140px; }
+
+/* --- Weekday colour --- */
+.day-color-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.day-color-preview {
+    width: 56px;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 6px 0 4px;
+    background: var(--day);
+    color: var(--on-day);
+}
+
+.day-color-num {
+    font: 500 28px/1 var(--font-num);
+}
+
+.day-color-mon {
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.day-color-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.day-color-title {
+    display: block;
+    font-weight: 600;
+    cursor: pointer;
+}

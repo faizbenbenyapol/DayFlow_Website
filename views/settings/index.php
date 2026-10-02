@@ -25,7 +25,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
 <div class="flex gap-3 mb-8 settings-tabs" id="settingsTabs">
     <button class="btn btn-primary btn-sm settings-tab active" data-tab="profile">โปรไฟล์</button>
     <button class="btn btn-ghost btn-sm settings-tab" data-tab="password">รหัสผ่าน</button>
-    <button class="btn btn-ghost btn-sm settings-tab" data-tab="appearance">ธีม &amp; เขตเวลา</button>
+    <button class="btn btn-ghost btn-sm settings-tab" data-tab="appearance">หน้าตา &amp; เขตเวลา</button>
     <button class="btn btn-ghost btn-sm settings-tab" data-tab="menus">จัดการเมนู</button>
     <button class="btn btn-ghost btn-sm settings-tab" data-tab="dashboard-config">ปรับแต่งแดชบอร์ด</button>
     <button class="btn btn-ghost btn-sm settings-tab" data-tab="account">ข้อมูลบัญชี</button>
@@ -245,69 +245,25 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
                         มืด (Dark Mode)
                     </span>
                 </label>
-                <label class="theme-card-option">
-                    <input type="radio" name="theme" value="soft"
-                           <?= ($settings['theme'] ?? 'light') === 'soft' ? 'checked' : '' ?>
-                           class="sr-only">
-                    <div class="theme-card-preview theme-soft-preview">
-                        <div class="preview-header"></div>
-                        <div class="preview-body">
-                            <div class="preview-line-1"></div>
-                            <div class="preview-line-2"></div>
-                        </div>
-                    </div>
-                    <span class="theme-card-label">
-                        <span class="theme-card-dot"></span>
-                        พาสเทลครีม (Pastel Soft)
-                    </span>
-                </label>
-                <label class="theme-card-option">
-                    <input type="radio" name="theme" value="lavender"
-                           <?= ($settings['theme'] ?? 'light') === 'lavender' ? 'checked' : '' ?>
-                           class="sr-only">
-                    <div class="theme-card-preview theme-lavender-preview">
-                        <div class="preview-header"></div>
-                        <div class="preview-body">
-                            <div class="preview-line-1"></div>
-                            <div class="preview-line-2"></div>
-                        </div>
-                    </div>
-                    <span class="theme-card-label">
-                        <span class="theme-card-dot"></span>
-                        พาสเทลม่วง (Lavender)
-                    </span>
-                </label>
-                <label class="theme-card-option">
-                    <input type="radio" name="theme" value="ocean"
-                           <?= ($settings['theme'] ?? 'light') === 'ocean' ? 'checked' : '' ?>
-                           class="sr-only">
-                    <div class="theme-card-preview theme-ocean-preview">
-                        <div class="preview-header"></div>
-                        <div class="preview-body">
-                            <div class="preview-line-1"></div>
-                            <div class="preview-line-2"></div>
-                        </div>
-                    </div>
-                    <span class="theme-card-label">
-                        <span class="theme-card-dot"></span>
-                        พาสเทลฟ้าน้ำทะเล (Mint)
-                    </span>
-                </label>
-                <label class="theme-card-option">
-                    <input type="radio" name="theme" value="peach"
-                           <?= ($settings['theme'] ?? 'light') === 'peach' ? 'checked' : '' ?>
-                           class="sr-only">
-                    <div class="theme-card-preview theme-peach-preview">
-                        <div class="preview-header"></div>
-                        <div class="preview-body">
-                            <div class="preview-line-1"></div>
-                            <div class="preview-line-2"></div>
-                        </div>
-                    </div>
-                    <span class="theme-card-label">
-                        <span class="theme-card-dot"></span>
-                        พาสเทลชมพูพีช (Rose)
-                    </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-6 settings-card">
+        <div class="card-header"><span class="card-title">สีประจำวัน</span></div>
+        <div class="card-body">
+            <div class="day-color-row">
+                <div class="day-color-preview" aria-hidden="true">
+                    <span class="day-color-num"><?= (int)date('j') ?></span>
+                    <span class="day-color-mon"><?= h([1 => 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'][(int)date('n')]) ?></span>
+                </div>
+                <div class="day-color-text">
+                    <label class="day-color-title" for="dayColorSwitch">ใช้สีตามวันในสัปดาห์</label>
+                    <p class="form-hint">แถบวันที่ในหน้าวันนี้และขีดข้างเมนูที่เปิดอยู่จะเปลี่ยนสีตามวัน เช่น วันศุกร์เป็นสีฟ้า วันอาทิตย์เป็นสีแดง ปิดแล้วจะใช้สีหมึกตลอด</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="dayColorSwitch" <?= ($settings['day_color'] ?? 1) ? 'checked' : '' ?>>
+                    <span class="slider"></span>
                 </label>
             </div>
         </div>
@@ -440,15 +396,7 @@ window.dashboardLayout = <?= jsonForScript($layout) ?>;
                 <dd><?= h($currentTz) ?></dd>
 
                 <dt>ธีม</dt>
-                <dd><?php
-                    $themeVal = $settings['theme'] ?? 'light';
-                    if ($themeVal === 'dark') echo 'Dark Mode';
-                    elseif ($themeVal === 'soft') echo 'Pastel Soft';
-                    elseif ($themeVal === 'lavender') echo 'Pastel Lavender';
-                    elseif ($themeVal === 'ocean') echo 'Pastel Mint/Ocean';
-                    elseif ($themeVal === 'peach') echo 'Pastel Rose/Peach';
-                    else echo 'Light Mode';
-                ?></dd>
+                <dd><?= h(['dark' => 'มืด', 'auto' => 'ตามระบบ'][$settings['theme'] ?? 'light'] ?? 'สว่าง') ?></dd>
 
                 <dt>สมัครเมื่อ</dt>
                 <dd>

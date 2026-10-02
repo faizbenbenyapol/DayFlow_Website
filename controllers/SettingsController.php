@@ -103,6 +103,19 @@ class SettingsController
         Response::json(['ok' => true, 'theme' => $theme]);
     }
 
+    public function apiDayColor(): void
+    {
+        $userId = Auth::userId();
+        $on     = Request::input('enabled', null);
+
+        if (!is_bool($on) && !in_array($on, [0, 1, '0', '1'], true)) {
+            Response::json(['error' => 'ค่าไม่ถูกต้อง'], 422);
+        }
+
+        User::updateDayColor($userId, (bool)(int)$on);
+        Response::json(['ok' => true, 'day_color' => (bool)(int)$on]);
+    }
+
     public function apiTimezone(): void
     {
         $userId = Auth::userId();

@@ -21,7 +21,7 @@
             --bg: #111827; --surface: #1f2937; --border: #374151;
             --text: #f9fafb; --muted: #9ca3af;
         }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; }
+        body { font-family: 'IBM Plex Sans Thai', 'IBM Plex Sans', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; }
 
         .share-header {
             background: var(--surface);

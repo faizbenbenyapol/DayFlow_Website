@@ -47,9 +47,18 @@ function isActive(string $path): string
 // "auto" is a preference, not a palette. The server picks light as the safe
 // default and the script below swaps in the real answer before the first paint.
 $themeAttr = $theme === 'auto' ? 'light' : $theme;
+
+// The weekday decides the colour of the date block and of the marker beside
+// the open menu entry (docs/REDESIGN.md §1.3). date('D') is English whatever
+// the page language, and matches the keys in tokens.css.
+$dayKey = strtolower(date('D'));
+$dayColor = Auth::appearance()['day_color'] ? 'on' : 'off';
+
+// The browser chrome follows the paper. "auto" lets the system decide which.
+$chromeColors = ['light' => '#FBFAF7', 'dark' => '#15181D'];
 ?>
 <!DOCTYPE html>
-<html lang="th" data-theme="<?= h($themeAttr) ?>" data-theme-pref="<?= h($theme) ?>">
+<html lang="th" data-theme="<?= h($themeAttr) ?>" data-theme-pref="<?= h($theme) ?>" data-day="<?= h($dayKey) ?>" data-daycolor="<?= h($dayColor) ?>">
 
 <head>
     <meta charset="UTF-8">
@@ -66,7 +75,12 @@ $themeAttr = $theme === 'auto' ? 'light' : $theme;
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
     <meta name="csrf-token" content="<?= h(Csrf::token()) ?>">
-    <meta name="theme-color" content="#111827">
+    <?php if ($theme === 'auto'): ?>
+    <meta name="theme-color" content="<?= $chromeColors['light'] ?>" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="<?= $chromeColors['dark'] ?>" media="(prefers-color-scheme: dark)">
+    <?php else: ?>
+    <meta name="theme-color" content="<?= $chromeColors[$themeAttr] ?? $chromeColors['light'] ?>">
+    <?php endif; ?>
     <meta name="robots" content="noindex, nofollow, noarchive">
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="<?= h(APP_URL . '/manifest.json') ?>">
@@ -78,11 +92,13 @@ $themeAttr = $theme === 'auto' ? 'light' : $theme;
     // stylesheet to block the first paint. The two faces below cover almost
     // all body text, so they are fetched in parallel with the CSS rather than
     // after it.
-    foreach (['plexthai-thai-400', 'inter-latin-400'] as $criticalFont): ?>
+    foreach (['plexthai-thai-400', 'plexsans-latin-var'] as $criticalFont): ?>
     <link rel="preload" as="font" type="font/woff2" crossorigin
         href="<?= APP_URL ?>/assets/fonts/<?= $criticalFont ?>.woff2">
     <?php endforeach; ?>
     <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/fonts.css?v=<?= @filemtime(PUBLIC_ROOT . '/assets/css/fonts.css') ?>">
+    <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/tokens.css?v=<?= @filemtime(PUBLIC_ROOT . '/assets/css/tokens.css') ?>">
+    <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/base.css?v=<?= @filemtime(PUBLIC_ROOT . '/assets/css/base.css') ?>">
     <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/app.css?v=<?= @filemtime(PUBLIC_ROOT . '/assets/css/app.css') ?>">
     <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/components.css?v=<?= @filemtime(PUBLIC_ROOT . '/assets/css/components.css') ?>">
     <?php if (isset($pageStyle)): ?>

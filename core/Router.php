@@ -195,6 +195,7 @@ class Router
         $this->add('POST', '/api/settings/profile',  'SettingsController', 'apiProfile',  true);
         $this->add('POST', '/api/settings/password', 'SettingsController', 'apiPassword', true);
         $this->add('POST', '/api/settings/theme',    'SettingsController', 'apiTheme',    true);
+        $this->add('POST', '/api/settings/day-color', 'SettingsController', 'apiDayColor', true);
         $this->add('POST', '/api/settings/timezone', 'SettingsController', 'apiTimezone', true);
         $this->add('POST', '/api/settings/menus',    'SettingsController', 'apiMenus',    true);
         $this->add('POST', '/api/settings/telegram', 'SettingsController', 'apiTelegram', true);

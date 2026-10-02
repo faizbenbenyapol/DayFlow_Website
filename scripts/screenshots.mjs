@@ -30,7 +30,8 @@ const VIEWPORTS = {
     mobile: { width: 390, height: 844, mobile: true },
 };
 
-// name, path. Names become file names, so they are the page's menu key.
+// name, path[, selector to click once the page has loaded]. Names become file
+// names, so a page is its menu key and a state of it is key-state.
 const PAGES = [
     ['today', '/'], ['review', '/review'],
     ['tasks', '/tasks'], ['projects', '/projects'], ['planner', '/planner'],
@@ -40,6 +41,7 @@ const PAGES = [
     ['exercise', '/exercise'], ['food-notes', '/food-notes'],
     ['files', '/files'], ['file-tools', '/file-tools'], ['transfer', '/transfer'],
     ['ai', '/ai'], ['calculator', '/calculator'], ['settings', '/settings'],
+    ['settings-appearance', '/settings', '[data-tab="appearance"]'],
 ];
 
 // Live values that change every second and would make two shots differ.
@@ -281,12 +283,17 @@ async function main() {
 
         // The sign-in page is only worth photographing while signed out.
         const wants = name => !ONLY || ONLY.includes(name);
-        const shoot = async (name, path, viewportName, theme) => {
+        const shoot = async (name, path, viewportName, theme, click) => {
             const vp = VIEWPORTS[viewportName];
             await tab.viewport(vp);
             await tab.goto(BASE + path);
             await tab.freeze();
             await tab.settle();
+            if (click) {
+                const found = await tab.eval(`(() => { const el = document.querySelector(${JSON.stringify(click)}); if (el) el.click(); return !!el; })()`);
+                if (!found) throw new Error(`ไม่พบปุ่ม ${click}`);
+                await sleep(400);
+            }
             const landed = await tab.eval('location.pathname');
             if (name !== 'login' && landed.endsWith('/login')) throw new Error('ถูกส่งกลับไปหน้าเข้าสู่ระบบ');
             await tab.theme(theme);
@@ -302,10 +309,10 @@ async function main() {
 
         await signIn(tab, accountPassword());
 
-        for (const [name, path] of PAGES.filter(([n]) => wants(n))) {
+        for (const [name, path, click] of PAGES.filter(([n]) => wants(n))) {
             for (const v of VIEWPORT_NAMES) for (const t of THEMES) {
                 try {
-                    await shoot(name, path, v, t);
+                    await shoot(name, path, v, t, click);
                     process.stdout.write('.');
                 } catch (e) {
                     failures.push(`${name} ${v} ${t}: ${e.message}`);

@@ -92,7 +92,7 @@ class Response
             --color-primary: #1d1d1f;
             --color-primary-rgb: 29, 29, 31;
             --radius-lg: 16px;
-            --font: 'Inter', 'IBM Plex Sans Thai', -apple-system, sans-serif;
+            --font: 'IBM Plex Sans Thai', 'IBM Plex Sans', system-ui, sans-serif;
             --transition: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
         [data-theme="dark"] {

@@ -65,7 +65,7 @@ final class AccountData
     private const UUID_IDS = ['skills', 'skill_logs'];
 
     /** user_settings columns a backup may carry. Telegram credentials are not among them. */
-    private const SETTINGS = ['theme', 'language', 'timezone', 'telegram_notify_events', 'hidden_menus', 'menu_order'];
+    private const SETTINGS = ['theme', 'day_color', 'language', 'timezone', 'telegram_notify_events', 'hidden_menus', 'menu_order'];
 
     private const JSON_SETTINGS = ['telegram_notify_events', 'hidden_menus', 'menu_order'];
 
@@ -252,7 +252,12 @@ final class AccountData
                 if ($value !== null && !is_array($value)) continue;
                 $values[$key] = $value === null ? null : json_encode($value, JSON_UNESCAPED_UNICODE);
             } elseif ($key === 'theme') {
+                // A backup from before v2 may name one of the four palettes that
+                // no longer exist; the closest thing that does is light.
+                if (in_array($value, User::LEGACY_THEMES, true)) $value = 'light';
                 if (in_array($value, User::THEMES, true)) $values[$key] = $value;
+            } elseif ($key === 'day_color') {
+                if (in_array($value, [0, 1, '0', '1', true, false], true)) $values[$key] = (int)$value;
             } elseif ($key === 'timezone') {
                 if (is_string($value) && in_array($value, DateTimeZone::listIdentifiers(), true)) $values[$key] = $value;
             } elseif ($key === 'language') {

@@ -1,0 +1,179 @@
+/* =====================================================
+   tokens.css — every colour, size and timing the interface uses
+
+   Direction: a tear-off calendar and an accounts ledger. Paper, ink, rules
+   instead of shadows, one colour that changes with the weekday.
+   The reasoning and the contrast of every pair is in docs/REDESIGN.md §1,
+   and scripts/check-contrast.mjs fails when a pair stops passing.
+
+   Nothing outside this file may write a hex colour for the interface.
+   Module-specific colours a user picks (a category, a habit) arrive as a
+   custom property on the element, never as a literal in a stylesheet.
+===================================================== */
+
+:root {
+    /* Paper and ink */
+    --paper:        #FBFAF7;
+    --paper-sunk:   #F3F1EB;   /* fields, hovered rows, the side rail */
+    --rule:         #E4E1D8;   /* ruled lines: decoration, not a boundary */
+    --rule-strong:  #8A867B;   /* anything the eye must find: field edges, checkboxes */
+    --ink:          #1B2330;
+    --pencil:       #5E6673;   /* secondary text */
+
+    /* Meaning. Used only when the colour says something. */
+    --stamp-red:    #C62828;   /* overdue, expense, delete */
+    --ledger-green: #2D7B4D;   /* income, done, profit */
+    --caution:      #8A5A00;   /* due today, nearly out of budget */
+    --highlighter:  #FFF1A8;   /* a search hit, a row that just changed */
+
+    /* Fixed ink for text that sits on a day colour whatever the theme */
+    --ink-fixed:    #1B2330;
+
+    /* Type */
+    --font:         "IBM Plex Sans Thai", "IBM Plex Sans", system-ui, sans-serif;
+    --font-num:     "IBM Plex Serif", Georgia, serif;   /* big figures only */
+    --font-mono:    "IBM Plex Mono", ui-monospace, monospace;
+    --font-size-base: 16px;
+    --line-height:  1.7;
+
+    /* Shape: three levels, and nothing else */
+    --r-control:    6px;       /* buttons, fields */
+    --r-sheet:      10px;      /* dialogs, popovers, bottom sheets */
+
+    /* Only things that really float get a shadow */
+    --lift-1:       0 2px 8px rgb(27 35 48 / .12), 0 0 0 1px var(--rule);
+    --lift-2:       0 12px 32px rgb(27 35 48 / .22), 0 0 0 1px var(--rule);
+
+    /* One motion for the whole app */
+    --dur:          160ms;
+    --ease:         cubic-bezier(.2, 0, 0, 1);
+
+    /* Layout */
+    --rail-width:   220px;
+    --tabbar-height: 60px;
+    --space-1: .25rem;  --space-2: .5rem;   --space-3: .75rem;
+    --space-4: 1rem;    --space-5: 1.25rem; --space-6: 1.5rem;
+    --space-8: 2rem;    --space-10: 2.5rem; --space-12: 3rem;
+
+    /* The colour of today. Set by data-day on <html>; see below. */
+    --day:          var(--ink);
+    --on-day:       var(--paper);
+}
+
+/* Paper turns black and the ink turns white. */
+[data-theme="dark"] {
+    --paper:        #15181D;
+    --paper-sunk:   #1C2026;
+    --rule:         #2A2F37;
+    --rule-strong:  #6B7280;
+    --ink:          #E9E6DF;
+    --pencil:       #9AA0AA;
+    --stamp-red:    #EF6B6B;
+    --ledger-green: #5FBF86;
+    --caution:      #E0A63A;
+    --highlighter:  #4A4320;
+    --lift-1:       0 2px 10px rgb(0 0 0 / .5), 0 0 0 1px var(--rule);
+    --lift-2:       0 14px 36px rgb(0 0 0 / .6), 0 0 0 1px var(--rule);
+}
+
+/* One colour per weekday, used for exactly two things: the date block and the
+   marker beside the open menu entry. --on-day is the text that sits on it, and
+   was chosen for contrast against that exact colour, in both themes. */
+[data-day="sun"] { --day: #C62828; --on-day: #FFFFFF; }
+[data-day="mon"] { --day: #F2C200; --on-day: var(--ink-fixed); }
+[data-day="tue"] { --day: #E06C9F; --on-day: var(--ink-fixed); }
+[data-day="wed"] { --day: #277A42; --on-day: #FFFFFF; }
+[data-day="thu"] { --day: #E8822A; --on-day: var(--ink-fixed); }
+[data-day="fri"] { --day: #2F6FC4; --on-day: #FFFFFF; }
+[data-day="sat"] { --day: #7A4FBF; --on-day: #FFFFFF; }
+
+/* The user turned the weekday colour off: today looks like any other page. */
+[data-daycolor="off"] { --day: var(--ink); --on-day: var(--paper); }
+
+/* ---------------------------------------------------------------------------
+   Names the pre-redesign stylesheets still use.
+
+   They point at the tokens above so that a page nobody has rewritten yet picks
+   up the new colours instead of looking half converted. Delete this whole
+   block once no stylesheet reads a --color-* , --shadow* or --radius* name
+   (docs/REDESIGN.md, phase 6).
+--------------------------------------------------------------------------- */
+:root {
+    --color-bg:         var(--paper);
+    --color-surface:    var(--paper);
+    --color-surface-2:  var(--paper-sunk);
+    --color-border:     var(--rule);
+    --color-border-2:   color-mix(in srgb, var(--ink) 20%, transparent);
+    --color-text:       var(--ink);
+    --color-muted:      var(--pencil);
+    --color-muted-2:    var(--pencil);
+    --color-accent:     var(--ink);
+    --color-accent-inv: var(--paper);
+    --color-danger:     var(--stamp-red);
+    --color-danger-bg:  color-mix(in srgb, var(--stamp-red) 12%, var(--paper));
+    --color-success:    var(--ledger-green);
+    --color-success-bg: color-mix(in srgb, var(--ledger-green) 12%, var(--paper));
+    --color-warning:    var(--caution);
+    --color-warning-bg: color-mix(in srgb, var(--caution) 14%, var(--paper));
+
+    --color-primary:     var(--color-accent);
+    --color-surface-alt: var(--color-surface-2);
+    --accent:      var(--color-accent);
+    --border:      var(--color-border);
+    --text:        var(--color-text);
+    --text-muted:  var(--color-muted);
+    --surface:     var(--color-surface);
+    --surface-2:   var(--color-surface-2);
+    --success:     var(--color-success);
+    --danger:      var(--color-danger);
+
+    /* Old raised/recessed shadows become hairline rings, so a card that used
+       to be told apart from the page by its shadow is still told apart. */
+    --shadow-sm:          0 0 0 1px var(--rule);
+    --shadow:             0 0 0 1px var(--rule);
+    --shadow-lg:          var(--lift-2);
+    --shadow-nm-recessed: inset 0 0 0 1px var(--rule-strong);
+    --shadow-nm-btn-hover: 0 0 0 1px var(--rule-strong);
+
+    --radius:     var(--r-control);
+    --radius-md:  var(--r-control);
+    --radius-sm:  4px;
+    --radius-lg:  var(--r-sheet);
+    --radius-full: 999px;
+
+    --transition:    var(--dur) var(--ease);
+    --sidebar-width: var(--rail-width);
+    --header-height: 56px;
+}
+
+/* The fixed accent colours the modules use for badges and charts. Same in every
+   theme. Each module drops its use of these as it is redesigned (phase 5). */
+:root {
+    --palette-blue-100: #dbeafe;
+    --palette-blue-500: #3b82f6;
+    --palette-blue-700: #1d4ed8;
+    --palette-sky-100: #e0f2fe;
+    --palette-cyan-500: #06b6d4;
+    --palette-cyan-600: #0891b2;
+    --palette-teal-500: #14b8a6;
+    --palette-emerald-400: #34d399;
+    --palette-emerald-500: #10b981;
+    --palette-emerald-600: #059669;
+    --palette-green-400: #4ade80;
+    --palette-green-500: #22c55e;
+    --palette-green-600: #16a34a;
+    --palette-amber-500: #f59e0b;
+    --palette-amber-600: #d97706;
+    --palette-orange-500: #f97316;
+    --palette-red-400: #f87171;
+    --palette-red-500: #ef4444;
+    --palette-red-600: #dc2626;
+    --palette-rose-100: #ffe4e6;
+    --palette-rose-500: #f43f5e;
+    --palette-indigo-500: #6366f1;
+    --palette-violet-100: #ede9fe;
+    --palette-violet-500: #8b5cf6;
+    --palette-purple-500: #a855f7;
+    --palette-gray-100: #f3f4f6;
+    --palette-gray-500: #6b7280;
+}

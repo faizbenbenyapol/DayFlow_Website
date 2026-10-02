@@ -145,6 +145,19 @@
         } catch (err) { toast('บันทึกธีมไม่สำเร็จ', 'danger'); }
     }
 
+    // ---------- Weekday colour ----------
+    async function setDayColor(box) {
+        const enabled = box.checked;
+        try {
+            await apiFetch(BASE_URL + '/api/settings/day-color', { method: 'POST', body: JSON.stringify({ enabled }) });
+            document.documentElement.dataset.daycolor = enabled ? 'on' : 'off';
+            toast(enabled ? 'เปิดสีประจำวันแล้ว' : 'ปิดสีประจำวันแล้ว');
+        } catch (err) {
+            box.checked = !enabled;
+            toast('บันทึกไม่สำเร็จ', 'danger');
+        }
+    }
+
     // ---------- Password ----------
     function scorePassword(pw) {
         if (!pw) return { score: 0, label: 'อย่างน้อย 8 ตัวอักษร' };
@@ -391,7 +404,8 @@
     document.addEventListener('DOMContentLoaded', () => {
         initTabs();
         $('#btnSaveProfile')?.addEventListener('click', saveProfile);
-        $$('input[name="theme"]').forEach(r => r.addEventListener('change', () => setTheme(r.value)));
+        $('input[name="theme"]').forEach(r => r.addEventListener('change', () => setTheme(r.value)));
+        $('#dayColorSwitch')?.addEventListener('change', e => setDayColor(e.target));
         initPasswordForm();
         initTimezone();
         initLocalStorage();

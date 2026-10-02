@@ -124,13 +124,32 @@ class Auth
         return self::$isShareMode || !empty($_SESSION['user_id']);
     }
 
+    /**
+     * The look the signed-in user chose: the theme, and whether today's
+     * weekday colour is on. Read once per request, with SELECT * so that a
+     * server whose migration has not run yet still renders (the column is
+     * simply absent and the default applies).
+     *
+     * @return array{theme: string, day_color: bool}
+     */
+    public static function appearance(): array
+    {
+        static $appearance = null;
+        if ($appearance !== null) return $appearance;
+
+        $appearance = ['theme' => 'light', 'day_color' => true];
+        if (self::check()) {
+            $row = DB::run('SELECT * FROM user_settings WHERE user_id = ?', [self::userId()])->fetch();
+            if ($row) {
+                $appearance['theme'] = $row['theme'] ?? 'light';
+                $appearance['day_color'] = (int)($row['day_color'] ?? 1) === 1;
+            }
+        }
+        return $appearance;
+    }
+
     public static function theme(): string
     {
-        if (!self::check()) return 'light';
-        $row = DB::run(
-            'SELECT theme FROM user_settings WHERE user_id = ?',
-            [self::userId()]
-        )->fetch();
-        return $row['theme'] ?? 'light';
+        return self::appearance()['theme'];
     }
 }

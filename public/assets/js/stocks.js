@@ -631,7 +631,7 @@ function stkChartOpts() {
             legend: {
                 position: 'top',
                 labels: {
-                    font: { family: "'Inter', 'IBM Plex Sans Thai', sans-serif", size: 12, weight: '500' },
+                    font: { family: "'IBM Plex Sans Thai', 'IBM Plex Sans', sans-serif", size: 12, weight: '500' },
                     color: textColor,
                     boxWidth: 10,
                     boxHeight: 10,
@@ -649,8 +649,8 @@ function stkChartOpts() {
                 cornerRadius: 8,
                 boxPadding: 6,
                 usePointStyle: true,
-                titleFont: { family: "'Inter', 'IBM Plex Sans Thai', sans-serif", size: 12, weight: '600' },
-                bodyFont: { family: "'Inter', 'IBM Plex Sans Thai', sans-serif", size: 12 },
+                titleFont: { family: "'IBM Plex Sans Thai', 'IBM Plex Sans', sans-serif", size: 12, weight: '600' },
+                bodyFont: { family: "'IBM Plex Sans Thai', 'IBM Plex Sans', sans-serif", size: 12 },
                 callbacks: {
                     label: (ctx) => ' ' + ctx.dataset.label + ': ' + formatMoney(ctx.parsed.y || ctx.parsed) + ' บาท'
                 }
@@ -659,14 +659,14 @@ function stkChartOpts() {
         scales: {
             x: {
                 ticks: { 
-                    font: { family: "'Inter', 'IBM Plex Sans Thai', sans-serif", size: 11 },
+                    font: { family: "'IBM Plex Sans Thai', 'IBM Plex Sans', sans-serif", size: 11 },
                     color: mutedColor
                 },
                 grid: { display: false }
             },
             y: {
                 ticks: {
-                    font: { family: "'Inter', 'IBM Plex Sans Thai', sans-serif", size: 11 },
+                    font: { family: "'IBM Plex Sans Thai', 'IBM Plex Sans', sans-serif", size: 11 },
                     color: mutedColor,
                     callback: v => formatMoney(v)
                 },
