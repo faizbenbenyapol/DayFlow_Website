@@ -39,6 +39,41 @@ class Habit
         return DB::run('UPDATE habits SET is_archived = 1 WHERE id = ? AND user_id = ?', [$id, $userId])->rowCount() > 0;
     }
 
+    /**
+     * Consecutive days each habit has been done, as habit id => days.
+     *
+     * A habit not yet done today still counts yesterday's run: the day is not
+     * over, so the streak is not broken until it ends without a tick.
+     */
+    public static function streaks(int $userId): array
+    {
+        $today = (string)DB::run('SELECT CURDATE()')->fetchColumn();
+        $rows = DB::run(
+            'SELECT habit_id, log_date FROM habit_logs
+             WHERE user_id = ? AND log_date >= DATE_SUB(CURDATE(), INTERVAL 400 DAY)',
+            [$userId]
+        )->fetchAll();
+
+        $days = [];
+        foreach ($rows as $row) {
+            $days[(int)$row['habit_id']][(string)$row['log_date']] = true;
+        }
+
+        $streaks = [];
+        foreach ($days as $habitId => $done) {
+            $cursor = new DateTimeImmutable($today);
+            if (!isset($done[$cursor->format('Y-m-d')])) $cursor = $cursor->modify('-1 day');
+
+            $count = 0;
+            while (isset($done[$cursor->format('Y-m-d')])) {
+                $count++;
+                $cursor = $cursor->modify('-1 day');
+            }
+            $streaks[$habitId] = $count;
+        }
+        return $streaks;
+    }
+
     public static function toggleToday(int $id, int $userId): bool
     {
         if (!self::get($id, $userId)) return false;

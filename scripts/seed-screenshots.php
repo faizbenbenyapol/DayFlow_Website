@@ -126,10 +126,10 @@ $data = [
     ),
 
     'focus_sessions' => [
-        ['title' => 'เขียนรายงาน Q3', 'duration_min' => 25, 'type' => 'focus', 'completed_at' => at(0, '08:10')],
-        ['title' => 'เขียนรายงาน Q3', 'duration_min' => 25, 'type' => 'focus', 'completed_at' => at(0, '08:40')],
-        ['title' => 'เขียนรายงาน Q3', 'duration_min' => 5, 'type' => 'break', 'completed_at' => at(0, '08:45')],
-        ['title' => 'อ่านบทความ', 'duration_min' => 25, 'type' => 'focus', 'completed_at' => at(-1, '21:00')],
+        ['title' => 'เขียนรายงาน Q3', 'duration_min' => 25, 'type' => 'work', 'completed_at' => at(0, '08:10')],
+        ['title' => 'เขียนรายงาน Q3', 'duration_min' => 25, 'type' => 'work', 'completed_at' => at(0, '08:40')],
+        ['title' => 'เขียนรายงาน Q3', 'duration_min' => 5, 'type' => 'short_break', 'completed_at' => at(0, '08:45')],
+        ['title' => 'อ่านบทความ', 'duration_min' => 25, 'type' => 'work', 'completed_at' => at(-1, '21:00')],
     ],
 
     'exercise_categories' => [

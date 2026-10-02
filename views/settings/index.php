@@ -323,33 +323,39 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
 <!-- DASHBOARD CONFIGURATION -->
 <div id="tab-dashboard-config" class="settings-pane" style="display:none">
     <div class="card settings-card">
-        <div class="card-header"><span class="card-title">ปรับแต่งหน้าแดชบอร์ด</span></div>
+        <div class="card-header"><span class="card-title">ปรับแต่งหน้าวันนี้</span></div>
         <div class="card-body">
-            <p class="form-hint mb-4">เลือกวิดเจ็ตที่คุณต้องการให้แสดงบนหน้าแดชบอร์ดส่วนตัว คุณสามารถจัดเรียงลำดับวิดเจ็ตได้โดยการลากย้ายบล็อกวิดเจ็ตบนหน้าแดชบอร์ดโดยตรง</p>
+            <p class="form-hint mb-4">เลือกส่วนที่จะแสดงในหน้าวันนี้ แล้วลากที่จับ ⋮⋮ เพื่อเรียงลำดับ ลำดับมีผลภายในพื้นที่เดียวกัน คือฝั่งซ้าย ฝั่งขวา และแถบด้านล่าง</p>
             
             <form id="customizeDashboardForm">
                 <div style="display:flex; flex-direction:column; gap:12px;" id="dashboardWidgetsList">
                     <?php
                     $widgetLabels = [
-                        'tasks' => 'งานใกล้ครบกำหนด (Tasks)',
-                        'calendar' => 'กำหนดการวันนี้ (Planner)',
-                        'finance' => 'การเงินเดือนนี้ (Finance)',
-                        'workout' => 'ออกกำลังกายล่าสุด (Workout)',
-                        'subscriptions' => 'การแจ้งเตือนที่ใกล้ถึง (Subscriptions)',
-                        'projects' => 'โปรเจคล่าสุด (Projects)',
-                        'notes' => 'โน้ตล่าสุด (Notes)',
-                        'stocks' => 'หุ้นและพอร์ตโฟลิโอ (Stocks)',
-                        'transfer' => 'ย้ายไฟล์ล่าสุด (File Transfer)',
+                        'tasks'         => 'ต้องทำ',
+                        'calendar'      => 'กำหนดการ',
+                        'habits'        => 'นิสัยวันนี้',
+                        'finance'       => 'เงินเดือนนี้',
+                        'subscriptions' => 'ตัดเงินใน 7 วัน',
+                        'workout'       => 'ร่างกายและโฟกัส',
+                        'projects'      => 'โปรเจคล่าสุด',
+                        'notes'         => 'โน้ตล่าสุด',
+                        'stocks'        => 'หุ้น',
+                        'transfer'      => 'ส่งไฟล์ล่าสุด',
                     ];
-                    
+                    $widgetArea = [];
+                    foreach (DashboardLayout::AREAS as $areaKey => $keys) {
+                        foreach ($keys as $k) $widgetArea[$k] = ['main' => 'ฝั่งซ้าย', 'side' => 'ฝั่งขวา', 'more' => 'แถบด้านล่าง'][$areaKey];
+                    }
+
                     foreach ($layout as $widget):
                         $key = $widget['widget_key'];
                         $label = $widgetLabels[$key] ?? $key;
                         $checked = $widget['is_visible'] ? 'checked' : '';
                     ?>
-                        <label class="flex items-center gap-3 settings-check">
+                        <label class="flex items-center gap-3 settings-check" data-widget-key="<?= h($key) ?>">
+                            <span class="drag-handle" aria-hidden="true">⋮⋮</span>
                             <input type="checkbox" name="widget_<?= h($key) ?>" id="chk_<?= h($key) ?>" value="1" <?= $checked ?>>
-                            <span><?= h($label) ?></span>
+                            <span><?= h($label) ?> <span class="text-muted text-sm">· <?= h($widgetArea[$key] ?? '') ?></span></span>
                         </label>
                     <?php endforeach; ?>
                 </div>
@@ -364,6 +370,7 @@ $currentTz = $settings['timezone'] ?? 'Asia/Bangkok';
 
 <script nonce="<?= h(Security::nonce()) ?>">
 window.dashboardLayout = <?= jsonForScript($layout) ?>;
+window.dashboardDefaults = <?= jsonForScript(DashboardLayout::defaults()) ?>;
 </script>
 
 <!-- ACCOUNT INFO -->

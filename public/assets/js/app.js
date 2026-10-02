@@ -481,13 +481,3 @@ function hideElement(id) {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
 }
-
-// A dashboard widget is clickable as a whole, except where something inside
-// it already handles the click.
-document.addEventListener('click', function (event) {
-    const widget = event.target.closest('[data-widget-nav]');
-    if (!widget) return;
-    if (event.target.closest('a, .drag-handle, .btn-copy-code, .widget-note-item')) return;
-
-    window.location.href = widget.dataset.widgetNav;
-});

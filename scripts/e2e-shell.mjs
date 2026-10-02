@@ -139,6 +139,72 @@ async function main() {
             check(Number(entry.amount) === 123.45 && entry.type === 'expense', 'with the amount and type typed');
         }
 
+        // ---------- the Today page ----------
+        console.log('Today');
+        await tab.goto(BASE + '/');
+        await tab.settle();
+
+        check(await tab.eval(`document.querySelectorAll('[data-section]').length`) >= 6, 'the sections are on the page');
+        check(await tab.eval(`document.querySelector('.date-block .d').textContent.trim()`) === String(new Date().getDate()), 'the date block shows today\'s date');
+        check(await tab.eval(`document.querySelector('[aria-busy="true"]') === null`), 'every skeleton has been replaced');
+        check(!(await tab.eval(`document.getElementById('todayTally').textContent`)).includes('undefined'), 'the summary line has no gaps');
+        check(await tab.eval(`!!document.getElementById('todayError')`) === false, 'there is no error banner');
+        check(await tab.eval(`document.querySelectorAll('.task-tick').length`) >= 1, 'tasks are listed');
+
+        // A task: tick it, check the server, put it back.
+        const firstTask = await tab.eval(`document.querySelector('.task-tick').closest('[data-task]').dataset.task`);
+        await tab.eval(`document.querySelector('.task-tick').click()`);
+        await sleep(700);
+        check(await tab.eval(`document.querySelector('[data-task="${firstTask}"]').classList.contains('done')`), 'a ticked task is struck through');
+        let tasks = await api(tab, '/api/tasks');
+        check(Object.values(tasks.body.quadrants).flat().find(t => String(t.id) === firstTask)?.status === 'done', 'and is done on the server');
+        await api(tab, `/api/tasks/${firstTask}`, { method: 'PUT', body: JSON.stringify({ status: 'open' }) });
+
+        // A habit: the same.
+        await tab.goto(BASE + '/');
+        await tab.settle();
+        const habitId = await tab.eval(`document.querySelector('.habit-tick:not(:checked)')?.closest('[data-habit]').dataset.habit`);
+        check(!!habitId, 'a habit is waiting to be ticked');
+        await tab.eval(`document.querySelector('[data-habit="${habitId}"] .habit-tick').click()`);
+        await sleep(1200);
+        check(await tab.eval(`document.querySelector('[data-habit="${habitId}"] .habit-tick').checked`), 'a ticked habit stays ticked after the refresh');
+        await api(tab, `/api/habits/${habitId}/toggle`, { method: 'POST', body: '{}' });
+
+        // A task typed into the line under the list.
+        await tab.goto(BASE + '/');
+        await tab.settle();
+        await fill(tab, '#todayAddTask', `บนหน้าวันนี้ ${STAMP}`);
+        await tab.eval(`document.getElementById('todayAddTask').focus()`);
+        await key(tab, 'Enter');
+        await sleep(1200);
+        check(await tab.eval(`document.body.textContent.includes('บนหน้าวันนี้ ${STAMP}')`), 'a task typed under the list appears in it');
+        tasks = await api(tab, '/api/tasks');
+        const typed = Object.values(tasks.body.quadrants).flat().find(t => t.title === `บนหน้าวันนี้ ${STAMP}`);
+        check(!!typed, 'and reached the server, due today');
+        if (typed) made.tasks.push(typed.id);
+
+        // Settings: hide the notes section, see it go, bring it back.
+        await tab.goto(BASE + '/settings');
+        await tab.settle();
+        await click(tab, '[data-tab="dashboard-config"]');
+        check(await tab.eval(`document.querySelectorAll('#dashboardWidgetsList [data-widget-key]').length`) === 10, 'settings lists all ten sections');
+        await tab.eval(`document.getElementById('chk_notes').checked = false`);
+        await click(tab, '#btnSaveDashboardCustomization');
+        await sleep(1800);
+        await tab.goto(BASE + '/');
+        await tab.settle();
+        check(await tab.eval(`document.querySelector('[data-section="notes"]') === null`), 'a hidden section is gone from the page');
+
+        await tab.goto(BASE + '/settings');
+        await tab.settle();
+        await click(tab, '[data-tab="dashboard-config"]');
+        await tab.eval(`document.getElementById('chk_notes').checked = true`);
+        await click(tab, '#btnSaveDashboardCustomization');
+        await sleep(1800);
+        await tab.goto(BASE + '/');
+        await tab.settle();
+        check(await tab.eval(`document.querySelector('[data-section="notes"]') !== null`), 'and comes back when switched on');
+
         // ---------- phone ----------
         console.log('Phone');
         await tab.viewport({ width: 390, height: 844, mobile: true });

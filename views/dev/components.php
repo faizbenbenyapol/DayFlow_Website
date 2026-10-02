@@ -66,14 +66,14 @@
             </div>
         </div>
         <div>
-            <table class="ledger">
+            <table class="ledger ledger-lg">
                 <tr><td>ยอดยกมา</td><td class="num">8,214.25</td></tr>
                 <tr><td>รายรับ</td><td class="num in">+45,000.00</td></tr>
                 <tr><td>รายจ่าย</td><td class="num out">−3,286.50</td></tr>
                 <tr class="total"><td>คงเหลือ</td><td class="num">49,927.75</td></tr>
             </table>
             <p class="gal-note mt-3">ตัวเลขแปดหลัก:</p>
-            <table class="ledger">
+            <table class="ledger ledger-lg">
                 <tr class="total"><td>รวม</td><td class="num">12,345,678.90</td></tr>
             </table>
         </div>

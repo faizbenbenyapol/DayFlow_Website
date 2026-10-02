@@ -317,7 +317,19 @@
 }
 
 .ledger tr.total .num {
+    font-weight: 600;
+}
+
+/* The one figure a ledger exists to give, set large in the serif. */
+.ledger-lg tr.total .num {
     font: 500 1.9375rem/1.1 var(--font-num);
+}
+
+.ledger .meta {
+    display: block;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--pencil);
 }
 
 /* ---------------------------------------------------------------
@@ -929,6 +941,11 @@ body.modal-open {
     font-size: 0.9375rem;
 }
 
+.empty-state a:not(.btn) {
+    color: var(--ink);
+    text-decoration: underline;
+}
+
 /* A skeleton is the shape of what is coming: grey rules where rows will be. */
 .skel {
     display: block;
@@ -1150,6 +1167,91 @@ body.modal-open {
     .cmdk-backdrop { padding-top: 8vh; }
     .cmdk-item-sub { display: none; }
 }
+
+/* ---------------------------------------------------------------
+   Sections: a heading with a rule under it, then rows. The pattern the Today
+   page is made of, and most pages after it.
+--------------------------------------------------------------- */
+.sec {
+    padding-top: var(--space-6);
+}
+
+.sec-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--rule-strong);
+}
+
+.sec-head h2 {
+    font-size: 1.125rem;
+}
+
+.sec-head .count {
+    margin-left: 6px;
+    font-weight: 400;
+    color: var(--pencil);
+}
+
+.sec-head a {
+    font-size: 0.875rem;
+    color: var(--pencil);
+}
+
+.sec-head a:hover {
+    color: var(--ink);
+}
+
+.subhead {
+    padding-top: var(--space-3);
+    font-size: 0.8125rem;
+    color: var(--pencil);
+}
+
+.subhead.late {
+    font-weight: 500;
+    color: var(--stamp-red);
+}
+
+/* A line to type into, ruled like the rows above it. */
+.add-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 44px;
+    border-bottom: 1px solid var(--rule);
+}
+
+.add-row .plus {
+    width: 20px;
+    text-align: center;
+    color: var(--pencil);
+}
+
+.add-row input {
+    flex: 1;
+    min-height: 0;
+    padding: 8px 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+}
+
+.add-row input::placeholder {
+    color: var(--pencil);
+}
+
+.add-row:focus-within {
+    border-bottom-color: var(--ink);
+}
+
+/* Widths for skeleton bars, so a loading list is not all one length. */
+.skel-w-45 { width: 45%; }
+.skel-w-52 { width: 52%; }
+.skel-w-60 { width: 60%; }
+.skel-wide { width: 260px; max-width: 100%; }
 
 /* ---------------------------------------------------------------
    Scrollbars

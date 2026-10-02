@@ -4,12 +4,13 @@
 // =====================================================
 
 require_once ROOT . '/models/DashboardLayout.php';
+require_once ROOT . '/models/Habit.php';
 
 class DashboardController
 {
     /** Widgets the summary endpoint knows how to build. */
     private const MODULES = [
-        'tasks', 'calendar', 'finance', 'workout',
+        'tasks', 'calendar', 'habits', 'finance', 'workout', 'focus',
         'subscriptions', 'projects', 'notes', 'stocks', 'transfer',
     ];
 
@@ -83,9 +84,33 @@ class DashboardController
                 [$userId]
             )->fetchColumn(), $warnings, 0);
 
+            // What the Today page lists: everything overdue, and everything due today.
+            $overdueItems = $this->safeModule('tasks', fn() => DB::run(
+                'SELECT id, title, due_date, quadrant FROM tasks
+                 WHERE user_id = ? AND status = "open" AND due_date < CURDATE()
+                 ORDER BY due_date ASC, id ASC LIMIT 20',
+                [$userId]
+            )->fetchAll(), $warnings, []);
+
+            $todayItems = $this->safeModule('tasks', fn() => DB::run(
+                'SELECT id, title, due_date, quadrant FROM tasks
+                 WHERE user_id = ? AND status = "open" AND due_date = CURDATE()
+                 ORDER BY quadrant ASC, position ASC, id ASC LIMIT 20',
+                [$userId]
+            )->fetchAll(), $warnings, []);
+
+            $dueToday = (int)$this->safeModule('tasks', fn() => DB::run(
+                'SELECT COUNT(*) FROM tasks
+                 WHERE user_id = ? AND status = "open" AND due_date = CURDATE()',
+                [$userId]
+            )->fetchColumn(), $warnings, 0);
+
             $payload['tasks'] = [
-                'overdue' => $overdueCount,
-                'items'   => $tasks,
+                'overdue'       => $overdueCount,
+                'due_today'     => $dueToday,
+                'items'         => $tasks,
+                'overdue_items' => $overdueItems,
+                'today_items'   => $todayItems,
             ];
         }
 
@@ -105,6 +130,25 @@ class DashboardController
             )->fetchAll(), $warnings, []);
 
             $payload['calendar'] = ['today_events' => $calEvents];
+        }
+
+        // Habits: today's tick and the current streak of each
+        if (isset($need['habits'])) {
+            $habits = $this->safeModule('habits', function () use ($userId) {
+                $streaks = Habit::streaks($userId);
+                return array_map(fn(array $h): array => [
+                    'id'         => (int)$h['id'],
+                    'name'       => $h['name'],
+                    'done_today' => (bool)$h['completed_today'],
+                    'streak'     => $streaks[(int)$h['id']] ?? 0,
+                ], Habit::listForUser($userId));
+            }, $warnings, []);
+
+            $payload['habits'] = [
+                'items' => $habits,
+                'done'  => count(array_filter($habits, fn(array $h): bool => $h['done_today'])),
+                'total' => count($habits),
+            ];
         }
 
         // Finance: current month summary, as a half-open date range so the
@@ -145,6 +189,22 @@ class DashboardController
             )->fetch() ?: null, $warnings, null);
 
             $payload['workout'] = ['last_session' => $lastWorkout];
+        }
+
+        // Focus: minutes of work finished today
+        if (isset($need['focus'])) {
+            $focus = $this->safeModule('focus', fn() => DB::run(
+                'SELECT COALESCE(SUM(duration_min), 0) AS minutes, COUNT(*) AS sessions
+                 FROM focus_sessions
+                 WHERE user_id = ? AND type = "work"
+                   AND completed_at >= CURDATE() AND completed_at < CURDATE() + INTERVAL 1 DAY',
+                [$userId]
+            )->fetch(), $warnings, []);
+
+            $payload['focus'] = [
+                'today_minutes'  => (int)($focus['minutes'] ?? 0),
+                'today_sessions' => (int)($focus['sessions'] ?? 0),
+            ];
         }
 
         // Subscriptions: upcoming (within 7 days)

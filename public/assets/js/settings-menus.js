@@ -115,17 +115,8 @@
                 confirmAction('คุณต้องการรีเซ็ตลำดับการแสดงผลและเปิดวิดเจ็ตทั้งหมดเป็นค่าเริ่มต้นใช่หรือไม่?', 'รีเซ็ต', 'ยืนยันรีเซ็ต').then(async ok => {
                     if (!ok) return;
                     
-                    const defaults = [
-                        { widget_key: 'tasks',         position: 0, is_visible: 1 },
-                        { widget_key: 'calendar',      position: 1, is_visible: 1 },
-                        { widget_key: 'finance',       position: 2, is_visible: 1 },
-                        { widget_key: 'workout',       position: 3, is_visible: 1 },
-                        { widget_key: 'subscriptions', position: 4, is_visible: 1 },
-                        { widget_key: 'projects',      position: 5, is_visible: 1 },
-                        { widget_key: 'notes',         position: 6, is_visible: 1 },
-                        { widget_key: 'stocks',        position: 7, is_visible: 1 },
-                        { widget_key: 'transfer',      position: 8, is_visible: 1 }
-                    ];
+                    // The server owns the default layout; the page was handed it.
+                    const defaults = window.dashboardDefaults || [];
                     
                     try {
                         btnReset.disabled = true;
@@ -144,26 +135,35 @@
             });
         }
         
+        const widgetList = $('#dashboardWidgetsList');
+        if (widgetList && typeof Sortable !== 'undefined') {
+            Sortable.create(widgetList, {
+                animation: 120,
+                handle: '.drag-handle',
+                ghostClass: 'sortable-ghost',
+                delay: 120,
+                delayOnTouchOnly: true,
+            });
+        }
+
         const btnSave = $('#btnSaveDashboardCustomization');
         if (btnSave) {
             btnSave.addEventListener('click', async function() {
                 const widgets = [];
                 let maxPos = 0;
                 
-                const currentLayout = [...(window.dashboardLayout || [])];
-                currentLayout.sort((a, b) => a.position - b.position);
-                
-                currentLayout.forEach(function(w) {
-                    const chk = $('#chk_' + w.widget_key);
+                // The order on screen is the order to save, so a drag is honoured.
+                $$('#dashboardWidgetsList [data-widget-key]').forEach(function(rowEl) {
+                    const chk = $('input[type="checkbox"]', rowEl);
                     if (chk) {
                         widgets.push({
-                            widget_key: w.widget_key,
+                            widget_key: rowEl.dataset.widgetKey,
                             position: maxPos++,
                             is_visible: chk.checked ? 1 : 0
                         });
                     }
                 });
-                
+
                 try {
                     btnSave.disabled = true;
                     await apiFetch(BASE_URL + '/api/dashboard/layout', {
