@@ -51,6 +51,7 @@ if ('serviceWorker' in navigator) {
         'settings'   => ['settings-two-factor', 'settings-push', 'shares'],
         'projects'   => ['projects-board', 'projects-team', 'projects-share'],
         'stocks'     => ['stocks-analysis', 'stocks-capital', 'stocks-screenshots'],
+        'file-tools' => ['file-tools-pdf', 'file-tools-image', 'file-tools-data', 'file-tools-zip'],
     ];
     foreach (array_merge([$pageScript], $pageScriptParts[$pageScript] ?? []) as $script): ?>
 <script src="<?= APP_URL ?>/assets/js/<?= h($script) ?>.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/' . $script . '.js') ?>"></script>
