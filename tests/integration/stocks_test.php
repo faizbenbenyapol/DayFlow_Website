@@ -313,6 +313,15 @@ test('refreshing prices without a price provider asks for one', function (TestCl
     assertStringContains('API หุ้น', $response['body']);
 });
 
+test('the automatic refresh on page load is quiet when no provider is set', function (TestClient $_c): void {
+    $client = stocksClient('noprovider');
+    trade($client, 'MSFT', 'buy', 1, 100);
+
+    $response = $client->post('/api/stocks/refresh', ['auto' => true]);
+    assertSame(200, $response['status'], 'the page must not log an error for an unconfigured provider');
+    assertSame(false, $client->json($response)['configured']);
+});
+
 test('an analysis needs a valid ticker and an AI key', function (TestClient $_c): void {
     $client = stocksClient('analysis');
 

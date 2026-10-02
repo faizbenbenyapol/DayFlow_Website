@@ -117,6 +117,11 @@ class StocksController
 
         $keyInfo = StockApiKey::getFirstAvailable($userId);
         if (!$keyInfo) {
+            // The page asks on its own when it opens; having no key is normal
+            // then, so answer 200 instead of an error the console would log.
+            if (Request::rawInput('auto', false)) {
+                Response::json(['ok' => true, 'configured' => false, 'updated' => [], 'skipped' => [], 'errors' => []]);
+            }
             Response::json(['error' => 'กรุณาตั้งค่า API หุ้นก่อน (ตั้งค่า → API หุ้น)'], 422);
         }
 

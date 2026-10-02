@@ -687,7 +687,7 @@ async function refreshPrices(silent = false) {
     try {
         const res = await apiFetch(BASE_URL + '/api/stocks/refresh', {
             method: 'POST',
-            body: JSON.stringify({})
+            body: JSON.stringify({ auto: silent })
         });
         await loadStockPortfolio();
         const year = document.getElementById('stkChartYear')?.value;
