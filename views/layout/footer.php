@@ -51,6 +51,7 @@ if ('serviceWorker' in navigator) {
         'settings'   => ['settings-categories', 'settings-stock-keys', 'settings-menus', 'settings-telegram', 'settings-two-factor', 'settings-push', 'shares'],
         'projects'   => ['projects-board', 'projects-team', 'projects-share'],
         'stocks'     => ['stocks-analysis', 'stocks-capital', 'stocks-screenshots'],
+        'calculator' => ['calculator-finance', 'calculator-convert', 'calculator-math'],
         'file-tools' => ['file-tools-pdf', 'file-tools-image', 'file-tools-data', 'file-tools-zip'],
     ];
     foreach (array_merge([$pageScript], $pageScriptParts[$pageScript] ?? []) as $script): ?>
