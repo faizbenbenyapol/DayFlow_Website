@@ -38,7 +38,8 @@
 
 .auth-panel {
     width: 100%;
-    max-width: 26rem;
+    /* 400px is the widest button Google will draw, so the column matches it. */
+    max-width: 400px;
     margin: auto 0;
     padding: var(--space-8) 0;
 }
