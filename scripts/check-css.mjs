@@ -21,6 +21,7 @@ const CHECKED = [
     // Pages that are finished (docs/REDESIGN.md, phases 4 and 5).
     'modules/dashboard.css', 'modules/tasks.css', 'modules/planner.css',
     'modules/habits.css', 'modules/focus.css', 'modules/quick.css',
+    'modules/finance.css', 'modules/subscriptions.css', 'modules/stocks.css',
 ];
 
 // rgb(21 24 29 / .5): the dark scrim behind a dialog is the same in both themes.

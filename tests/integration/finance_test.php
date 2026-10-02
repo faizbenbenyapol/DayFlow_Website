@@ -102,6 +102,33 @@ test('the monthly summary adds income and expense separately', function (TestCli
     assertSame(850.25, (float)$summary['balance']);
 });
 
+test('the summary says where the month\'s expenses went, over the whole month', function (TestClient $_c): void {
+    $client = financeClient('bycat');
+    $food = $client->json($client->post('/api/finance/categories', ['name' => 'อาหาร ' . TEST_RUN_ID, 'type' => 'expense']));
+    $fare = $client->json($client->post('/api/finance/categories', ['name' => 'เดินทาง ' . TEST_RUN_ID, 'type' => 'expense']));
+    $foodId = (int)($food['id'] ?? $food['category']['id'] ?? 0);
+    $fareId = (int)($fare['id'] ?? $fare['category']['id'] ?? 0);
+    assertTrue($foodId > 0 && $fareId > 0, 'the categories were created');
+
+    addTxn($client, 'expense', 120, '2026-09-02', ['category_id' => $foodId]);
+    addTxn($client, 'expense', 80, '2026-09-03', ['category_id' => $foodId]);
+    addTxn($client, 'expense', 500, '2026-09-04', ['category_id' => $fareId]);
+    addTxn($client, 'expense', 30, '2026-09-05');                         // no category
+    addTxn($client, 'income', 9999, '2026-09-06', ['category_id' => $foodId]); // income is not an expense
+    addTxn($client, 'expense', 700, '2026-10-01', ['category_id' => $fareId]); // another month
+
+    $summary = $client->json($client->get('/api/finance/summary?month=2026-09'));
+    $rows = $summary['by_category'];
+
+    assertSame(3, count($rows), 'two categories and the uncategorised');
+    assertSame(500.0, (float)$rows[0]['amount'], 'biggest first');
+    assertSame(200.0, (float)$rows[1]['amount'], 'a category adds its rows together');
+    assertSame(30.0, (float)$rows[2]['amount']);
+    assertSame('ไม่ระบุหมวด', $rows[2]['name'], 'no category has a name of its own');
+    assertSame(730.0, (float)array_sum(array_column($rows, 'amount')), 'and the parts make the month\'s expense');
+    assertSame(730.0, (float)$summary['expense']);
+});
+
 test('the first and last day of a month both count, the neighbours do not', function (TestClient $_c): void {
     $client = financeClient('bounds');
     addTxn($client, 'expense', 1, '2026-02-01');

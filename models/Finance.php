@@ -123,7 +123,25 @@ class Finance
 
         $income  = (float)($row['income']  ?? 0);
         $expense = (float)($row['expense'] ?? 0);
-        return ['income' => $income, 'expense' => $expense, 'balance' => $income - $expense];
+
+        // Where the month's expenses went, biggest first. Worked out here, over
+        // the whole month, because a list read a page at a time cannot add it up.
+        $byCategory = DB::run(
+            'SELECT f.category_id, COALESCE(c.name, ?) AS name, SUM(f.amount) AS amount
+             FROM finances f
+             LEFT JOIN finance_categories c ON c.id = f.category_id AND c.user_id = f.user_id
+             WHERE f.user_id = ? AND f.type = "expense" AND f.txn_date >= ? AND f.txn_date < ?
+             GROUP BY f.category_id, name
+             ORDER BY amount DESC, name ASC',
+            ['ไม่ระบุหมวด', $userId, $monthStart, $monthEnd]
+        )->fetchAll();
+
+        return [
+            'income'      => $income,
+            'expense'     => $expense,
+            'balance'     => $income - $expense,
+            'by_category' => array_map(fn(array $r): array => ['name' => $r['name'], 'amount' => (float)$r['amount']], $byCategory),
+        ];
     }
 
     public static function getYearlyChart(int $userId, int $year): array

@@ -471,45 +471,6 @@ dialog.sheet[open] {
     color: var(--ink);
 }
 
-/* Two-choice switch between income and expense. */
-.seg-pair {
-    display: inline-flex;
-    gap: 0;
-    padding: 0;
-    border: 1px solid var(--rule-strong);
-    border-radius: var(--r-control);
-    overflow: hidden;
-}
-
-.seg-pair label {
-    display: block;
-}
-
-.seg-pair input {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-}
-
-.seg-pair span {
-    display: block;
-    min-height: 40px;
-    padding: 8px 16px;
-    color: var(--pencil);
-    cursor: pointer;
-}
-
-.seg-pair input:checked + span {
-    background: var(--ink);
-    color: var(--paper);
-    font-weight: 500;
-}
-
-.seg-pair input:focus-visible + span {
-    outline: 2px solid var(--ink);
-    outline-offset: -4px;
-}
-
 #quickForm .form-row {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -50,6 +50,12 @@ const PAGES = [
     ['focus-running', '/focus', '#btnStartStop'],
     ['tasks-add', '/tasks', '[data-act="openAddTask"]'],
     ['tasks-edit', '/tasks', '.task-title'],
+    ['stocks-add', '/stocks', '[data-act="openAddStock"]'],
+    ['stocks-metric', '/stocks', '.metric-help'],
+    ['stocks-capital', '/stocks', '[data-stk-tab="capital"]'],
+    ['stocks-shots', '/stocks', '[data-stk-tab="screenshots"]'],
+    ['stocks-chart', '/stocks', '[data-stk-tab="chart"]'],
+    ['stocks-analysis', '/stocks', '[data-stk-tab="analysis"]'],
     // States that need something opened first. The fourth item limits a state to some viewports.
     ['sheet-menu', '/', '.tabbar [data-act="openMenuSheet"]', ['mobile']],
     ['sheet-quick', '/', '.tabbar [data-act="openQuickAdd"]', ['mobile']],
@@ -210,6 +216,11 @@ export class Tab {
         return res.result.value;
     }
 
+    /** Ask the page for calm: CSS animations and chart animations both stop. */
+    async reduceMotion() {
+        await this.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+    }
+
     async viewport({ width, height, mobile }) {
         await this.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile });
     }
@@ -307,6 +318,7 @@ async function main() {
 
     try {
         const tab = new Tab(cdp, await openPage(cdp));
+        await tab.reduceMotion();
 
         // The sign-in page is only worth photographing while signed out.
         const wants = name => !ONLY || ONLY.includes(name);

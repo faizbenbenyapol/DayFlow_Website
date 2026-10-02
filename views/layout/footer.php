@@ -49,6 +49,7 @@ if ('serviceWorker' in navigator) {
     // Pages whose script comes in several files, loaded in this order after
     // the main one. They are classic scripts, so they share the page's globals.
     $pageScriptParts = [
+        'finance'    => ['finance-report'],
         'settings'   => ['settings-categories', 'settings-stock-keys', 'settings-menus', 'settings-telegram', 'settings-two-factor', 'settings-push', 'shares'],
         'projects'   => ['projects-board', 'projects-team', 'projects-share'],
         'stocks'     => ['stocks-analysis', 'stocks-capital', 'stocks-screenshots'],

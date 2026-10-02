@@ -20,6 +20,7 @@ require_once ROOT . '/config/config.php';
 require_once ROOT . '/config/database.php';
 require_once ROOT . '/models/User.php';
 require_once ROOT . '/models/AccountData.php';
+require_once ROOT . '/models/StockPriceCache.php';
 
 if (APP_ENV === 'production') {
     fwrite(STDERR, "ไม่รันบน production: บัญชีนี้มีรหัสผ่านที่เปิดเผยอยู่ในไฟล์นี้\n");
@@ -219,6 +220,20 @@ try {
 } catch (Throwable $e) {
     fwrite(STDERR, $e->getMessage() . ($e->getPrevious() ? ' — ' . $e->getPrevious()->getMessage() : '') . "\n");
     exit(1);
+}
+
+// Quotes for the stocks above. The price cache is shared by every account, and a
+// ratio left out here stays blank on the page, as it does with a real provider.
+DB::run('DELETE FROM stock_price_cache');
+foreach ([
+    ['AAPL',  191.20, 189.80, 'USD', 31.25, 28.40, 1.42, 26.50, 6.45],
+    ['NVDA',  502.30, 508.10, 'USD', 68.50, 32.40, 1.15, 44.80, 2.10],
+    ['PTT',    33.50,  34.00, 'THB', 11.40, 10.20, 0.95,  8.50, 3.20],
+    ['AOT',    63.00,  62.50, 'THB', 23.00, 19.55, 1.60, 29.00, 4.60],
+    ['MSFT',  410.60, 408.90, 'USD', 35.40, 31.20, 1.85, 32.10, 11.60],
+    ['CPALL',  58.25,  58.25, 'THB', null,  null,  null, null,  null],
+] as [$ticker, $price, $prev, $currency, $pe, $forwardPe, $peg, $pFcf, $eps]) {
+    StockPriceCache::upsert($ticker, $price, $prev, $currency, $pe, $forwardPe, $peg, $pFcf, $eps);
 }
 
 echo 'ใส่ข้อมูลให้บัญชี ' . SHOTS_USERNAME . ' แล้ว: ' . array_sum($counts) . ' แถวใน ' . count($counts) . " ตาราง\n";

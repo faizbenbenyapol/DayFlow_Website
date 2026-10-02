@@ -132,6 +132,109 @@
     padding: 0;
 }
 
+/* A switch between two or three choices, joined in one box: radios inside
+   labels (a form value) or plain buttons carrying aria-pressed (a filter). */
+.seg-pair {
+    display: inline-flex;
+    overflow: hidden;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--r-control);
+}
+
+.seg-pair label {
+    display: block;
+}
+
+.seg-pair input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.seg-pair span,
+.seg-pair button {
+    display: block;
+    min-height: 40px;
+    padding: 8px 16px;
+    border: 0;
+    background: transparent;
+    color: var(--pencil);
+    font: inherit;
+    font-size: 0.9375rem;
+    cursor: pointer;
+}
+
+.seg-pair button + button,
+.seg-pair label + label {
+    border-left: 1px solid var(--rule-strong);
+}
+
+.seg-pair input:checked + span,
+.seg-pair button[aria-pressed="true"] {
+    background: var(--ink);
+    color: var(--paper);
+    font-weight: 500;
+}
+
+.seg-pair input:focus-visible + span {
+    outline: 2px solid var(--ink);
+    outline-offset: -4px;
+}
+
+@media (pointer: coarse) {
+    .seg-pair span,
+    .seg-pair button {
+        min-height: 44px;
+    }
+}
+
+.modal-narrow {
+    max-width: 440px;
+}
+
+.modal-wide {
+    max-width: 960px;
+}
+
+/* Tabs: a row of words on a rule. The open one is underlined in ink. */
+.tabs {
+    display: flex;
+    gap: var(--space-5);
+    overflow-x: auto;
+    border-bottom: 1px solid var(--rule);
+    -webkit-overflow-scrolling: touch;
+}
+
+.tab {
+    flex: none;
+    min-height: 44px;
+    padding: 8px 2px;
+    margin-bottom: -1px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--pencil);
+    font: inherit;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.tab:hover {
+    color: var(--ink);
+}
+
+.tab[aria-selected="true"] {
+    border-bottom-color: var(--ink);
+    color: var(--ink);
+    font-weight: 500;
+}
+
+.tab:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: -2px;
+}
+
 /* A button that is only a picture. It must carry an aria-label. */
 .icon-btn {
     display: inline-grid;
@@ -848,7 +951,9 @@ body.modal-open {
 /* ---------------------------------------------------------------
    Tables: a heading line, then ruled rows. Numbers go in a .num cell.
 --------------------------------------------------------------- */
+/* Positioned, so a screen-reader-only label in a cell is clipped with the table. */
 .table-wrap {
+    position: relative;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
 }
@@ -1328,6 +1433,29 @@ body.modal-open {
 .fact .note {
     font-size: 0.8125rem;
     color: var(--pencil);
+}
+
+/* A wide column and a narrow one, ruled apart. Below a laptop they stack. */
+.cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+    gap: 0 48px;
+}
+
+.col-side {
+    padding-left: 32px;
+    border-left: 1px solid var(--rule);
+}
+
+@media (max-width: 1023px) {
+    .cols {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .col-side {
+        padding-left: 0;
+        border-left: 0;
+    }
 }
 
 /* Widths for skeleton bars, so a loading list is not all one length. */

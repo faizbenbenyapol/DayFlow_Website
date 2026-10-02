@@ -338,3 +338,28 @@ test('testing a price key checks the provider and needs a key', function (TestCl
     assertSame(422, $client->post('/api/stocks/keys/test', ['provider' => 'nope', 'api_key' => 'x'])['status'], 'unknown provider');
     assertSame(422, $client->post('/api/stocks/keys/test', ['provider' => 'finnhub'])['status'], 'no key saved or sent');
 });
+
+// A provider that sends a price and no ratios must leave the ratios blank. The
+// cache used to fill them in from a hash of the ticker, which put made-up P/E
+// and EPS figures on the page next to real prices.
+test('a quote without ratios is stored without them', function (TestClient $_c): void {
+    require_once ROOT . '/config/database.php';
+    require_once ROOT . '/models/StockPriceCache.php';
+
+    $ticker = 'ZZ' . strtoupper(substr(TEST_RUN_ID, 0, 6));
+    try {
+        StockPriceCache::upsert($ticker, 10.5, 10.0, 'USD');
+        $row = StockPriceCache::get($ticker);
+        assertTrue($row !== null, 'the quote is cached');
+        foreach (['pe_ratio', 'forward_pe', 'peg_ratio', 'p_fcf_ratio', 'eps'] as $column) {
+            assertSame(null, $row[$column], $column . ' stays unknown');
+        }
+
+        StockPriceCache::upsert($ticker, 10.5, 10.0, 'USD', 12.345, null, null, null, 1.2);
+        $row = StockPriceCache::get($ticker);
+        assertSame('12.35', (string)$row['pe_ratio'], 'a ratio the provider gave is kept, rounded');
+        assertSame(null, $row['peg_ratio'], 'and one it did not give is still blank');
+    } finally {
+        DB::run('DELETE FROM stock_price_cache WHERE ticker = ?', [$ticker]);
+    }
+});

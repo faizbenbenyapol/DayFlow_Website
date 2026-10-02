@@ -52,7 +52,7 @@ const api = (tab, path, options = {}) => tab.eval(`(async () => {
 
 async function main() {
     const { cdp, stop } = await launch();
-    const made = { tasks: [], items: [], finance: [], todos: [], events: [] };
+    const made = { tasks: [], items: [], finance: [], todos: [], events: [], subs: [], stocks: [] };
     let tab;
 
     try {
@@ -336,6 +336,94 @@ async function main() {
         check(await tab.eval(`document.querySelector('[data-quick-toggle="${quick.id}"]').checked`), 'a ticked line stays ticked after the list redraws');
         check(await tab.eval(`document.getElementById('quickList').textContent.includes('เสร็จแล้ว')`), 'under a "done" heading');
 
+        // ---------- the money pages ----------
+        console.log('Finance');
+        await tab.viewport({ width: 1366, height: 900, mobile: false });
+        await tab.goto(BASE + '/finance');
+        await tab.settle();
+        const monthBefore = await tab.eval(`document.getElementById('monthLabel').textContent`);
+        await click(tab, '#monthPrev');
+        await sleep(500);
+        check(await tab.eval(`document.getElementById('monthLabel').textContent`) !== monthBefore, 'the month arrow moves the month');
+        check(await tab.eval(`!document.getElementById('monthNow').hidden`), 'and offers a way back to this month');
+        await click(tab, '#monthNow');
+        await sleep(500);
+        check(await tab.eval(`document.getElementById('monthLabel').textContent`) === monthBefore, '"กลับมาเดือนนี้" returns');
+
+        await click(tab, 'input[name="qaType"][value="income"]');
+        await fill(tab, '#qaAmount', '123.45');
+        await fill(tab, '#qaDesc', `รับทดสอบ ${STAMP}`);
+        await click(tab, '#qaSubmit');
+        await sleep(900);
+        check(await tab.eval(`document.getElementById('transactionList').textContent.includes(${JSON.stringify(`รับทดสอบ ${STAMP}`)})`), 'an entry added on the line appears in the list');
+        const monthList = await api(tab, '/api/finance?month=' + new Date().toISOString().slice(0, 7));
+        const money = (monthList.body.transactions || []).find(t => (t.description || '').includes(STAMP));
+        check(!!money && money.type === 'income', 'it reached the server as income');
+        if (money) made.finance.push(money.id);
+
+        await click(tab, '#typeFilter [data-type="expense"]');
+        await sleep(500);
+        check(await tab.eval(`document.querySelector('#typeFilter [data-type="expense"]').getAttribute('aria-pressed')`) === 'true', 'the expense filter is pressed');
+        check(await tab.eval(`!document.getElementById('transactionList').textContent.includes(${JSON.stringify(`รับทดสอบ ${STAMP}`)})`), 'and the income entry is filtered out');
+
+        console.log('Subscriptions');
+        await tab.goto(BASE + '/subscriptions');
+        await tab.settle();
+        check(await tab.eval(`document.querySelectorAll('.sub-band').length`) >= 1, 'the charges are grouped in bands');
+        await click(tab, '[data-act="openAddSub"]');
+        await sleep(300);
+        check(await tab.eval(`document.getElementById('subModal').classList.contains('active')`), 'the add button opens the form');
+        await click(tab, '[data-act="saveSub"]');
+        await sleep(200);
+        check(await tab.eval(`!document.getElementById('subError').hidden`), 'saving it empty shows an error in the form');
+        await fill(tab, '#subName', `รายการ ${STAMP}`);
+        await fill(tab, '#subAmount', '99');
+        await click(tab, '[data-act="saveSub"]');
+        await sleep(900);
+        check(await tab.eval(`document.getElementById('subGrid').textContent.includes(${JSON.stringify(STAMP)})`), 'a saved charge is listed');
+        const subs = await api(tab, '/api/subscriptions');
+        const sub = (subs.body.subscriptions || []).find(s => (s.name || '').includes(STAMP));
+        check(!!sub, 'it reached the server');
+        if (sub) made.subs.push(sub.id);
+
+        console.log('Stocks');
+        await tab.goto(BASE + '/stocks');
+        await tab.settle();
+        check(await tab.eval(`document.querySelectorAll('#stkUnifiedList tr').length`) >= 1, 'the holdings are listed');
+        check(await tab.eval(`document.getElementById('stkTable').dataset.view`) === 'portfolio', 'the portfolio view shows its extra columns');
+        await click(tab, '[data-main-tab="all"]');
+        await sleep(200);
+        check(await tab.eval(`document.getElementById('stkTable').dataset.view`) === 'list', 'another group hides them');
+        check(await tab.eval(`document.querySelector('[data-main-tab="all"]').getAttribute('aria-selected')`) === 'true', 'and marks its tab selected');
+        await click(tab, '[data-stk-tab="capital"]');
+        await sleep(200);
+        check(await tab.eval(`document.querySelector('[data-stk-panel="capital"]').hidden`) === false, 'a sub-tab opens its panel');
+        check(await tab.eval(`document.querySelector('[data-stk-panel="transactions"]').hidden`) === true, 'and closes the other');
+        await click(tab, '[data-stk-tab="chart"]');
+        await sleep(600);
+        check(await tab.eval(`document.getElementById('stkValueChart').getBoundingClientRect().height`) > 100, 'the chart has a size once its tab is open');
+        await click(tab, '.metric-help');
+        await sleep(300);
+        check(await tab.eval(`document.getElementById('metricModal').classList.contains('active')`), 'a ratio heading opens its explanation');
+        await tab.eval(`closeModal('metricModal')`);
+
+        await click(tab, '[data-act="openAddStock"]');
+        await sleep(300);
+        await click(tab, '[data-act="saveStock"]');
+        await sleep(200);
+        check(await tab.eval(`!document.getElementById('stkError').hidden`), 'an empty trade shows an error in the form');
+        await fill(tab, '#stkTicker', 'E2ETEST');
+        await fill(tab, '#stkQty', '2');
+        await fill(tab, '#stkPrice', '10');
+        await click(tab, '[data-act="saveStock"]');
+        await sleep(900);
+        const trades = await api(tab, '/api/stocks?ticker=E2ETEST');
+        const trade = (trades.body.transactions || [])[0];
+        check(!!trade, 'a saved trade reached the server');
+        if (trade) made.stocks.push(trade.id);
+        await tab.eval(`document.querySelector('[data-stk-tab="transactions"]').click()`);
+        check(await tab.eval(`document.getElementById('stkTxnList').textContent.includes('E2ETEST')`), 'and appears in the trades');
+
         // ---------- phone ----------
         console.log('Phone');
         await tab.viewport({ width: 390, height: 844, mobile: true });
@@ -365,6 +453,8 @@ async function main() {
             for (const id of made.items) await api(tab, `/api/quick-items/${id}`, { method: 'DELETE' }).catch(() => {});
             for (const id of made.finance) await api(tab, `/api/finance/${id}`, { method: 'DELETE' }).catch(() => {});
             for (const id of made.todos) await api(tab, `/api/planner/todos/${id}`, { method: 'DELETE' }).catch(() => {});
+            for (const id of made.subs) await api(tab, `/api/subscriptions/${id}`, { method: 'DELETE' }).catch(() => {});
+            for (const id of made.stocks) await api(tab, `/api/stocks/${id}`, { method: 'DELETE' }).catch(() => {});
             for (const id of made.events) await api(tab, `/api/planner/events/${id}`, { method: 'DELETE' }).catch(() => {});
         }
         stop();

@@ -257,8 +257,10 @@ function formatDateTime(dateStr) {
     return d.getDate() + ' ' + months[d.getMonth()] + ' ' + (d.getFullYear() + 543) + ' ' + time + ' น.';
 }
 
+/** Today as YYYY-MM-DD in the visitor's own time zone (toISOString would give UTC's date). */
 function todayISO() {
-    return new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
 
 function daysUntil(dateStr) {
@@ -286,6 +288,41 @@ function debounce(fn, delay) {
         clearTimeout(timer);
         timer = setTimeout(() => fn.apply(this, args), delay);
     };
+}
+
+/* =====================================================
+   Chart colours
+   A chart draws on a canvas, which cannot read CSS, so its colours are looked up
+   from the same tokens as the page and redrawn when the theme changes. Nothing
+   that draws a chart should write a colour of its own.
+===================================================== */
+function chartTheme() {
+    const css = getComputedStyle(document.documentElement);
+    const token = name => css.getPropertyValue(name).trim();
+    return {
+        ink: token('--ink'),
+        pencil: token('--pencil'),
+        rule: token('--rule'),
+        paper: token('--paper'),
+        income: token('--ledger-green'),
+        expense: token('--stamp-red'),
+        font: token('--font'),
+    };
+}
+
+/** Chart.js animation is canvas drawing, which the CSS reduced-motion rule cannot reach. */
+function chartAnimation() {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? false : { duration: 400 };
+}
+
+/** A six-digit hex colour with some transparency (alpha 0 to 1). */
+function withAlpha(hex, alpha) {
+    return /^#[0-9a-fA-F]{6}$/.test(hex) ? hex + Math.round(alpha * 255).toString(16).padStart(2, '0') : hex;
+}
+
+/** Calls back when the theme changes: the settings page, or the system switching under "auto". */
+function onThemeChange(callback) {
+    new MutationObserver(callback).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 }
 
 /* =====================================================

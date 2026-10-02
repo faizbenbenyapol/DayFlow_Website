@@ -8,10 +8,6 @@ function screenshotUrl(s) {
     return BASE_URL + '/api/stocks/screenshots/' + encodeURIComponent(s.id) + '/image';
 }
 
-/* ============================================================
-   SCREENSHOTS
-   ============================================================ */
-
 async function loadScreenshots() {
     try {
         const data = await apiFetch(BASE_URL + '/api/stocks/screenshots');
@@ -23,81 +19,46 @@ async function loadScreenshots() {
 }
 
 function renderScreenshotsGrid() {
+    renderSidebarScreenshot();
+
     const grid = document.getElementById('stkScreenshotsGrid');
-    if (!grid) {
-        renderSidebarScreenshot();
-        return;
-    }
+    if (!grid) return;
 
     if (!stockScreenshots.length) {
-        grid.innerHTML = '<div class="text-center text-muted" style="grid-column: 1/-1; padding:3rem 1rem;">ไม่มีรูปภาพพอร์ตแนบไว้</div>';
-        renderSidebarScreenshot();
+        grid.innerHTML = '<p class="stk-empty"><strong>ยังไม่มีรูปภาพพอร์ต</strong>อัปโหลดภาพหน้าจอจากแอปโบรกเกอร์ไว้เทียบย้อนหลัง</p>';
         return;
     }
 
     grid.innerHTML = stockScreenshots.map(s => {
-        const dateStr = formatDateTime(s.created_at);
-        const imgSrc = screenshotUrl(s);
-        return `
-            <div class="stk-screenshot-card">
-                <div class="stk-screenshot-img-wrap" data-act="viewLightbox" data-args="[${s.id}]">
-                    <img class="stk-screenshot-img" src="${imgSrc}" alt="${escHtml(s.name)}">
-                    <div class="stk-screenshot-overlay">
-                        <button class="stk-screenshot-btn btn-del mode-readonly-hide" data-act="deleteScreenshot" data-args="[${s.id}]" data-stop title="ลบรูปภาพ">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                        </button>
-                    </div>
-                </div>
-                <div class="stk-screenshot-info">
-                    <div class="stk-screenshot-name" title="${escHtml(s.name)}">${escHtml(s.name)}</div>
-                    <div class="stk-screenshot-desc">${escHtml(s.description || 'ไม่มีคำอธิบาย')}</div>
-                    <div class="stk-screenshot-date">อัปโหลดเมื่อ ${escHtml(dateStr)}</div>
-                </div>
-            </div>`;
+        const name = escHtml(s.name);
+        return '<figure class="stk-shot">'
+            + '<button type="button" class="stk-shot-img" data-act="viewLightbox" data-args="[' + s.id + ']" aria-label="ดูรูปเต็ม: ' + name + '">'
+            + '<img src="' + screenshotUrl(s) + '" alt="" loading="lazy"></button>'
+            + '<figcaption>'
+            + '<span class="grow"><span class="title" title="' + name + '">' + name + '</span>'
+            + (s.description ? '<span class="meta">' + escHtml(s.description) + '</span>' : '')
+            + '<span class="meta">อัปโหลด ' + escHtml(formatDateTime(s.created_at)) + '</span></span>'
+            + '<button type="button" class="icon-btn sm mode-readonly-hide" data-act="deleteScreenshot" data-args="[' + s.id + ']" aria-label="ลบรูป: ' + name + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>'
+            + '</figcaption></figure>';
     }).join('');
-
-    renderSidebarScreenshot();
 }
 
+/** The newest screenshot, on the shared page. */
 function renderSidebarScreenshot() {
     const container = document.getElementById('sideScreenshotContainer');
     if (!container) return;
 
     if (!stockScreenshots.length) {
-        container.innerHTML = '<div class="text-center text-muted py-6">ไม่มีรูปภาพพอร์ตแนบไว้</div>';
+        container.innerHTML = '<p class="stk-empty">ยังไม่มีรูปภาพพอร์ต</p>';
         return;
     }
 
     const s = stockScreenshots[0];
-    const imgSrc = screenshotUrl(s);
-    const dateStr = formatDateTime(s.created_at);
-
-    if (IS_READ_ONLY) {
-        container.innerHTML = `
-            <div class="stk-share-img-wrap">
-                <img class="stk-share-img" src="${imgSrc}" alt="${escHtml(s.name)}">
-            </div>
-            <div class="mt-4" style="text-align: left;">
-                <div class="stk-screenshot-name" style="font-size:0.9rem;" title="${escHtml(s.name)}">${escHtml(s.name)}</div>
-                <div class="stk-screenshot-desc" style="font-size:0.8rem; height:auto; margin-bottom:4px; white-space: pre-wrap;">${escHtml(s.description || 'ไม่มีคำอธิบาย')}</div>
-                <div class="text-xs text-muted">อัปโหลดเมื่อ ${escHtml(dateStr)}</div>
-            </div>
-        `;
-    } else {
-        container.innerHTML = `
-            <div class="stk-sidebar-thumb-wrap" data-act="viewLightbox" data-args="[${s.id}]">
-                <img class="stk-sidebar-thumb" src="${imgSrc}" alt="${escHtml(s.name)}">
-                <div class="stk-sidebar-thumb-overlay">
-                    <span>คลิกเพื่อดูรูปภาพขนาดเต็ม</span>
-                </div>
-            </div>
-            <div class="mt-4">
-                <div class="stk-screenshot-name text-sm" title="${escHtml(s.name)}">${escHtml(s.name)}</div>
-                <div class="stk-screenshot-desc" style="font-size:0.75rem; height:auto; margin-bottom:4px;">${escHtml(s.description || 'ไม่มีคำอธิบาย')}</div>
-                <div class="text-xs text-muted">อัปโหลดเมื่อ ${escHtml(dateStr)}</div>
-            </div>
-        `;
-    }
+    const name = escHtml(s.name);
+    container.innerHTML = '<img class="stk-latest-img" src="' + screenshotUrl(s) + '" alt="' + name + '">'
+        + '<p class="stk-shot-cap"><strong>' + name + '</strong>'
+        + (s.description ? escHtml(s.description) : '')
+        + '<span>อัปโหลด ' + escHtml(formatDateTime(s.created_at)) + '</span></p>';
 }
 
 async function uploadScreenshot(input) {
@@ -109,20 +70,17 @@ async function uploadScreenshot(input) {
         const { value: text } = await Swal.fire({
             title: 'คำอธิบายรูปภาพ',
             input: 'text',
-            inputLabel: 'กรอกคำอธิบายสำหรับภาพนี้ (ไม่ระบุก็ได้)',
-            inputPlaceholder: 'เช่น พอร์ตประจำเดือนมิถุนายน, Dime พอร์ตแรก...',
+            inputLabel: 'ใส่คำอธิบายสั้นๆ ไว้ค้นทีหลัง (ไม่ใส่ก็ได้)',
+            inputPlaceholder: 'เช่น พอร์ตสิ้นเดือนมิถุนายน',
             showCancelButton: true,
             confirmButtonText: 'อัปโหลด',
             cancelButtonText: 'ยกเลิก',
-            confirmButtonColor: '#8b5cf6',
         });
         if (text === undefined) {
             input.value = '';
             return;
         }
         description = text || '';
-    } else {
-        description = prompt('กรอกคำอธิบายสำหรับรูปภาพนี้:') || '';
     }
 
     const formData = new FormData();
@@ -130,41 +88,35 @@ async function uploadScreenshot(input) {
     formData.append('description', description);
 
     try {
-        const res = await apiFetch(BASE_URL + '/api/stocks/screenshots', {
-            method: 'POST',
-            body: formData
-        });
-        toast('อัปโหลดสำเร็จ');
+        await apiFetch(BASE_URL + '/api/stocks/screenshots', { method: 'POST', body: formData });
+        toast('อัปโหลดรูปแล้ว');
         await loadScreenshots();
     } catch (err) {
-        toast(err.message || 'เกิดข้อผิดพลาดในการอัปโหลด', 'danger');
+        toast(err.message || 'อัปโหลดไม่สำเร็จ ตรวจชนิดและขนาดไฟล์แล้วลองอีกครั้ง', 'danger');
     } finally {
         input.value = '';
     }
 }
 
 async function deleteScreenshot(id) {
-    if (!await confirmAction('ต้องการลบรูปภาพนี้?', 'ลบ')) return;
+    if (!await confirmAction('ลบรูปนี้แล้วกู้คืนไม่ได้', 'ลบรูป', 'ลบรูปภาพนี้?')) return;
     try {
         await apiFetch(BASE_URL + '/api/stocks/screenshots/' + id, { method: 'DELETE' });
         await loadScreenshots();
-        toast('ลบรูปภาพสำเร็จ');
+        toast('ลบรูปแล้ว');
     } catch (err) {
-        toast(err.message || 'ลบรูปภาพไม่สำเร็จ', 'danger');
+        toast(err.message || 'ลบรูปไม่สำเร็จ ลองอีกครั้ง', 'danger');
     }
 }
 
 function viewLightbox(id) {
     const s = stockScreenshots.find(x => x.id === id);
     if (!s) return;
-    const title = document.getElementById('lightboxTitle');
+    document.getElementById('lightboxTitle').textContent = s.name;
     const img = document.getElementById('lightboxImage');
-    const desc = document.getElementById('lightboxDesc');
-    
-    if (title) title.textContent = s.name;
-    if (img) img.src = screenshotUrl(s);
-    if (desc) desc.textContent = s.description || 'ไม่มีคำอธิบาย';
-    
+    img.src = screenshotUrl(s);
+    img.alt = s.name;
+    document.getElementById('lightboxDesc').textContent = s.description || '';
     openModal('screenshotLightboxModal');
 }
 
@@ -172,31 +124,28 @@ function initDropzone() {
     const dropzone = document.getElementById('stkDropzone');
     if (!dropzone) return;
 
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropzone.addEventListener(eventName, (e) => {
+    ['dragenter', 'dragover'].forEach(type => {
+        dropzone.addEventListener(type, e => {
             e.preventDefault();
             dropzone.classList.add('active');
-        }, false);
+        });
     });
 
-    ['dragleave', 'drop'].forEach(eventName => {
-        dropzone.addEventListener(eventName, (e) => {
+    ['dragleave', 'drop'].forEach(type => {
+        dropzone.addEventListener(type, e => {
             e.preventDefault();
             dropzone.classList.remove('active');
-        }, false);
+        });
     });
 
-    dropzone.addEventListener('drop', (e) => {
-        const dt = e.dataTransfer;
-        const files = dt.files;
+    dropzone.addEventListener('drop', e => {
+        const files = e.dataTransfer.files;
         const fileInput = document.getElementById('stkFileSelect');
         if (files.length && fileInput) {
-            // Programmatically assign files to input
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(files[0]);
-            fileInput.files = dataTransfer.files;
+            const transfer = new DataTransfer();
+            transfer.items.add(files[0]);
+            fileInput.files = transfer.files;
             uploadScreenshot(fileInput);
         }
-    }, false);
+    });
 }
-
