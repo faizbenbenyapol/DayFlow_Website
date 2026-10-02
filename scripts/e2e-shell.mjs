@@ -52,11 +52,14 @@ const api = (tab, path, options = {}) => tab.eval(`(async () => {
 
 async function main() {
     const { cdp, stop } = await launch();
-    const made = { tasks: [], items: [], finance: [], todos: [], events: [], subs: [], stocks: [], bookmarks: [], foods: [], workouts: [], skills: [], notes: [], files: [], appShares: [] };
+    const made = { tasks: [], items: [], finance: [], todos: [], events: [], subs: [], stocks: [], bookmarks: [], foods: [], workouts: [], skills: [], notes: [], files: [], appShares: [], projects: [] };
     let tab;
 
     try {
         tab = new Tab(cdp, await openPage(cdp));
+        // The test server runs on UTC; a browser on another clock disagrees with it
+        // about what "today" is for part of every day, which fails the Today checks.
+        await tab.send('Emulation.setTimezoneOverride', { timezoneId: process.env.E2E_TZ || 'UTC' });
         await signIn(tab, accountPassword());
 
         // ---------- desktop: rail and palette ----------
@@ -756,6 +759,74 @@ async function main() {
         check(!!appShare, 'it reached the server');
         if (appShare) made.appShares.push(appShare.id);
 
+        console.log('Projects');
+        await tab.goto(BASE + '/projects');
+        await tab.settle();
+        await sleep(600);
+        check(await tab.eval(`document.querySelectorAll('#projectsGrid .proj-row').length`) >= 1, 'the projects are listed');
+        check(await tab.eval(`document.querySelector('.proj-row[aria-pressed="true"]') !== null`), 'the open one is marked');
+        check(await tab.eval(`document.querySelectorAll('.kanban-column').length`) === 4, 'the board has four columns');
+        check(await tab.eval(`document.querySelector('#aiSummaryCardWrap').textContent.includes('ไม่ได้ใช้ AI')`), 'the summary says it is not AI');
+        await fill(tab, '#projectSearch', 'ไม่มีทางเจอ' + STAMP);
+        await sleep(300);
+        check(await tab.eval(`document.querySelectorAll('#projectsGrid .proj-row').length`) === 0, 'a search that matches nothing empties the list');
+        check(await tab.eval(`document.getElementById('projectsGrid').textContent.includes('ล้างตัวกรอง')`), 'and offers to clear the filter');
+        await fill(tab, '#projectSearch', '');
+        await sleep(300);
+
+        await click(tab, '[data-act="openCreateProjectModal"]');
+        await sleep(300);
+        await click(tab, '#createProjectForm [type="submit"]');
+        await sleep(200);
+        check(await tab.eval(`!document.getElementById('newProjError').hidden`), 'a project without a name shows an error in the form');
+        await fill(tab, '#newProjName', `โปรเจค ${STAMP}`);
+        await click(tab, '#createProjectForm [type="submit"]');
+        await sleep(1500);
+        check(await tab.eval(`document.getElementById('activeProjectTitle').textContent.includes(${JSON.stringify(STAMP)})`), 'a new project opens its board');
+        const projectList = await api(tab, '/api/projects');
+        const newProject = (projectList.body.projects || []).find(p => p.name.includes(STAMP));
+        check(!!newProject, 'it reached the server');
+        if (newProject) made.projects.push(newProject.id);
+
+        await click(tab, '[data-act="toggleQuickAddForm"][data-args=\'["To Do"]\']');
+        await sleep(200);
+        check(await tab.eval(`document.activeElement.id`) === 'quickadd-todo-input', 'adding a task puts the cursor in its field');
+        await fill(tab, '#quickadd-todo-input', `งาน ${STAMP}`);
+        await key(tab, 'Enter');
+        await sleep(1500);
+        check(await tab.eval(`document.getElementById('todo-list').textContent.includes(${JSON.stringify(STAMP)})`), 'the task lands in the column');
+        check(await tab.eval(`document.getElementById('todo-count').textContent`) === '1', 'and the column counts it');
+
+        await click(tab, '#todo-list [data-act="openEditTask"]');
+        await sleep(300);
+        await fill(tab, '#editTaskStatus', 'In Progress');
+        await fill(tab, '#editTaskPriority', 'Critical');
+        await click(tab, '[data-act="addChecklistItem"]');
+        await fill(tab, '#newChecklistItemInput', 'ขั้นแรก');
+        await click(tab, '[data-act="addChecklistItem"]');
+        await sleep(900);
+        check(await tab.eval(`document.querySelectorAll('#modalChecklistList .checklist-item').length`) === 1, 'a checklist item can be added in the dialog');
+        await click(tab, '#editTaskForm [type="submit"]');
+        await sleep(1500);
+        check(await tab.eval(`document.getElementById('inprogress-list').textContent.includes(${JSON.stringify(STAMP)})`), 'changing the column in the dialog moves the card');
+        check(await tab.eval(`document.querySelector('#inprogress-list .kanban-card').dataset.priority`) === 'critical', 'and its priority shows');
+        check(await tab.eval(`document.querySelector('#inprogress-list .kcard-check').textContent.includes('0/1')`), 'with its checklist count');
+
+        await click(tab, '#btnInviteMember');
+        await sleep(600);
+        check(await tab.eval(`document.getElementById('inviteMemberModal').classList.contains('active')`), 'the team dialog opens');
+        check(await tab.eval(`document.querySelectorAll('#projectMembersList .member-item').length`) >= 1, 'it lists the members');
+        await click(tab, '#inviteMemberForm [type="submit"]');
+        await sleep(200);
+        check(await tab.eval(`!document.getElementById('inviteError').hidden`), 'inviting nobody shows an error in the form');
+        await tab.eval(`closeModal('inviteMemberModal')`);
+
+        await fill(tab, '#chatMessageInput', `สวัสดีทีม ${STAMP}`);
+        await tab.eval(`document.getElementById('chatMessageInput').focus()`);
+        await key(tab, 'Enter');
+        await sleep(1200);
+        check(await tab.eval(`document.getElementById('chatMessagesList').textContent.includes(${JSON.stringify(STAMP)})`), 'a chat message appears after sending');
+
         // ---------- phone ----------
         console.log('Phone');
         await tab.viewport({ width: 390, height: 844, mobile: true });
@@ -794,6 +865,7 @@ async function main() {
             for (const id of made.notes) await api(tab, `/api/notes/${id}`, { method: 'DELETE' }).catch(() => {});
             for (const id of made.files) await api(tab, `/api/files/${id}`, { method: 'DELETE' }).catch(() => {});
             for (const id of made.appShares) await api(tab, `/api/app-shares/${id}`, { method: 'DELETE' }).catch(() => {});
+            for (const id of made.projects) await api(tab, `/api/projects/${id}`, { method: 'DELETE' }).catch(() => {});
             for (const id of made.events) await api(tab, `/api/planner/events/${id}`, { method: 'DELETE' }).catch(() => {});
         }
         stop();

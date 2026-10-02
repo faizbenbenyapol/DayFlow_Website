@@ -1,239 +1,142 @@
 /* =====================================================
-   projects-team.js — members and the project chat
+   projects-team.js — the team and the project chat
    Loaded after projects.js on the projects page; shares its state.
 ===================================================== */
 
-// =====================================================
-// --- ระบบแชทสนทนาและการทำงานร่วมกัน (Collaboration & Chat) ---
-// =====================================================
+/** "วันนี้ 14:05 น." or "2 ต.ค. 14:05 น." — short, for a chat line or an activity. */
+function chatTime(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr.replace(/-/g, '/'));
+    const time = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    if (d.toDateString() === new Date().toDateString()) return 'วันนี้ ' + time + ' น.';
+    const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    return d.getDate() + ' ' + months[d.getMonth()] + ' ' + time + ' น.';
+}
 
-// ดึงประวัติและข้อความแชทใหม่ของโครงการ
+/* ── Chat ── */
 async function fetchChatMessages() {
     if (!activeProjectId) return;
+    const status = document.getElementById('chatStatusText');
     try {
-        const chatStatus = document.getElementById('chatStatusText');
-        if (chatStatus) chatStatus.textContent = 'เรียลไทม์';
-        
         const data = await apiFetch(BASE_URL + '/api/projects/' + activeProjectId + '/chat');
+        status.textContent = 'ต่อกันอยู่';
         const list = document.getElementById('chatMessagesList');
-        if (!list) return;
-        
-        const currentUserId = typeof CURRENT_USER_ID !== 'undefined' ? parseInt(CURRENT_USER_ID) : 0;
-        
-        // ตรวจสอบว่าแชทถูกเลื่อนไปบนสุดเพื่อเปิดระบบ Auto Scroll หรือไม่
-        const isScrolledToBottom = list.scrollHeight - list.clientHeight <= list.scrollTop + 60;
-        
-        list.innerHTML = (data.messages || []).map(msg => {
-            let isOwn = false;
-            if (currentUserId > 0) {
-                isOwn = currentUserId === parseInt(msg.user_id);
-            } else if (CURRENT_GUEST_NAME) {
-                isOwn = !msg.user_id && msg.guest_name === CURRENT_GUEST_NAME;
-            }
-            const senderName = escHtml(msg.display_name || msg.username);
-            const dateText = formatDateTime(msg.created_at);
-            const msgContent = escHtml(msg.message);
-            
-            return `
-                <div class="chat-msg-item ${isOwn ? 'chat-msg-own' : 'chat-msg-other'}">
-                    <div class="chat-msg-meta">
-                        <span class="chat-msg-sender">${senderName}</span>
-                        <span class="chat-msg-time">${dateText}</span>
-                    </div>
-                    <div class="chat-msg-bubble">
-                        ${msgContent}
-                    </div>
-                </div>
-            `;
-        }).join('');
-        
-        if (list.innerHTML === '') {
-            list.innerHTML = `
-                <div style="text-align: center; color: var(--color-muted); padding: 2rem 0; font-size: 0.8rem;">
-                    <i>ไม่มีข้อความแชทในโครงการนี้ เริ่มคุยกันได้เลย!</i>
-                </div>
-            `;
-        }
-        
-        // เลื่อนลงล่างสุดถ้าเคยเลื่อนไว้หรือเป็นการดึงครั้งแรก
-        if (isScrolledToBottom || list.dataset.firstLoad === undefined) {
+
+        // Stay at the bottom only if the reader was already there.
+        const atBottom = list.scrollHeight - list.clientHeight <= list.scrollTop + 60;
+
+        const messages = data.messages || [];
+        list.innerHTML = messages.length
+            ? messages.map(msg => {
+                const own = CURRENT_USER_ID > 0
+                    ? CURRENT_USER_ID === parseInt(msg.user_id, 10)
+                    : (!!CURRENT_GUEST_NAME && !msg.user_id && msg.guest_name === CURRENT_GUEST_NAME);
+                return '<div class="chat-msg-item ' + (own ? 'chat-msg-own' : 'chat-msg-other') + '">'
+                    + '<div class="chat-msg-meta"><span class="chat-msg-sender">' + escHtml(msg.display_name || msg.username) + '</span>'
+                    + '<span class="chat-msg-time">' + escHtml(chatTime(msg.created_at)) + '</span></div>'
+                    + '<div class="chat-msg-bubble">' + escHtml(msg.message) + '</div></div>';
+            }).join('')
+            : '<p class="proj-note">ยังไม่มีข้อความ เริ่มคุยกับทีมได้เลย</p>';
+
+        if (atBottom || list.dataset.firstLoad === undefined) {
             list.scrollTop = list.scrollHeight;
             list.dataset.firstLoad = 'done';
         }
-    } catch (err) {
-        const chatStatus = document.getElementById('chatStatusText');
-        if (chatStatus) chatStatus.textContent = 'ข้อผิดพลาดการเชื่อมต่อ';
+    } catch {
+        status.textContent = 'ต่อไม่ได้ กำลังลองใหม่';
     }
 }
 
-// ส่งข้อความแชทใหม่ (Optimistic approach)
 async function sendChatMessage() {
     if (!activeProjectId) return;
     const input = document.getElementById('chatMessageInput');
-    if (!input) return;
-    
-    const msg = input.value.trim();
-    if (msg === '') return;
-    
-    // เคลียร์ค่าทันทีก่อนยิง API เพื่อความฉับไว
+    const message = input.value.trim();
+    if (!message) return;
+
     input.value = '';
-    
     try {
-        await apiFetch(BASE_URL + '/api/projects/' + activeProjectId + '/chat', {
-            method: 'POST',
-            body: JSON.stringify({ message: msg })
-        });
-        
-        // โหลดแชทใหม่ทันที
+        await apiFetch(BASE_URL + '/api/projects/' + activeProjectId + '/chat', { method: 'POST', body: JSON.stringify({ message }) });
         await fetchChatMessages();
-    } catch(err) {
-        toast('ไม่สามารถส่งข้อความได้', 'danger');
-        // คืนข้อความหากส่งล้มเหลว
-        input.value = msg;
+    } catch {
+        input.value = message;            // not sent: give the text back
+        toast('ส่งข้อความไม่สำเร็จ ลองอีกครั้ง', 'danger');
     }
 }
 
-// ผูกการกดปุ่ม Enter สำหรับแชท
-function handleChatKeyDown(event) {
-    if (event.key === 'Enter') {
-        event.preventDefault();
-        sendChatMessage();
-    }
-}
-
-// เปิดโมดอลเชิญผู้ร่วมทีมและจัดการสิทธิ์
+/* ── Members ── */
 function openInviteMemberModal() {
-    if (!activeProjectId) return;
-    loadProjectMembers(true);
+    if (activeProjectId) loadProjectMembers(true);
 }
 
-// โหลดข้อมูลสมาชิกจากเซิร์ฟเวอร์
 async function loadProjectMembers(shouldOpenModal = true) {
     if (!activeProjectId) return;
     try {
         const data = await apiFetch(BASE_URL + '/api/projects/' + activeProjectId + '/members');
-        const list = document.getElementById('projectMembersList');
-        if (!list) return;
-        
-        // อัปเดตตัวเลขจำนวนผู้เข้าร่วมในแถบหัวโครงการ
-        const countBadge = document.getElementById('memberCountBadge');
-        if (countBadge) {
-            countBadge.textContent = data.members.length;
-        }
-        
-        // ถ้าต้องการเปิดแสดงหน้าต่าง Modal ขึ้นมา
-        if (shouldOpenModal) {
-            const isOwner = activeProjectData && activeProjectData.project.is_owner;
-            const currentUserId = typeof CURRENT_USER_ID !== 'undefined' ? parseInt(CURRENT_USER_ID) : 0;
-            
-            // แสดงหรือซ่อนฟอร์มเชิญตามบทบาทสิทธิ์ (เฉพาะ Owner เท่านั้นที่จะเชิญได้)
-            const inviteForm = document.getElementById('inviteMemberForm');
-            if (inviteForm) inviteForm.style.display = isOwner ? 'block' : 'none';
-            
-            // โหลดข้อมูลสวิตช์แชร์สาธารณะ (ถ้าเป็นเจ้าของโครงการ)
-            const publicShareSection = document.getElementById('publicShareSection');
-            if (publicShareSection) {
-                if (isOwner) {
-                    publicShareSection.style.display = 'block';
-                    loadProjectShareSettings();
-                } else {
-                    publicShareSection.style.display = 'none';
-                }
-            }
-            
-            list.innerHTML = data.members.map(m => {
-                const isMe = currentUserId === parseInt(m.id);
-                const showDelete = isOwner && !isMe && m.role !== 'Owner';
-                
-                let roleCls = 'role-editor';
-                if (m.role === 'Owner') roleCls = 'role-owner';
-                else if (m.role === 'Viewer') roleCls = 'role-viewer';
-                
-                const init = escHtml(String(m.display_name || m.username || "").substring(0, 1).toUpperCase());
-                
-                return `
-                    <div class="member-item">
-                        <div class="member-info">
-                            <div class="member-avatar">${init}</div>
-                            <div class="member-details">
-                                <span class="member-name">${escHtml(m.display_name || m.username)} ${isMe ? ' (คุณ)' : ''}</span>
-                                <span class="member-email">${escHtml(m.email)}</span>
-                            </div>
-                        </div>
-                        <div class="member-actions">
-                            <span class="member-role-badge ${roleCls}">${escHtml(m.role)}</span>
-                            ${showDelete ? `
-                                <button type="button" class="btn-remove-member" data-act="removeMember" data-args="[${m.id}]" title="ลบสมาชิกออกจากกลุ่ม">&#215;</button>
-                            ` : ''}
-                            ${!isOwner && isMe && m.role !== 'Owner' ? `
-                                <button type="button" class="btn btn-danger btn-xs" data-act="removeMember" data-args="[${m.id}]" style="padding:2px 8px; font-size:0.7rem; border-radius:var(--radius-md);">ออกจากโครงการ</button>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            
-            openModal('inviteMemberModal');
-        }
-    } catch(err) {
-        toast('ไม่สามารถเรียกดูรายชื่อสมาชิกได้', 'danger');
+        projectMembers = data.members || [];
+        document.getElementById('memberCountBadge').textContent = projectMembers.length;
+        if (!shouldOpenModal) return;
+
+        const isOwner = !!(activeProjectData && activeProjectData.project.is_owner);
+        document.getElementById('inviteMemberForm').hidden = !isOwner;
+        formErrorLine('inviteError', '');
+
+        const shareSection = document.getElementById('publicShareSection');
+        shareSection.hidden = !isOwner;
+        if (isOwner) loadProjectShareSettings();
+
+        const ROLE = { Owner: 'เจ้าของ', Editor: 'แก้ไขได้', Viewer: 'ดูอย่างเดียว' };
+        document.getElementById('projectMembersList').innerHTML = projectMembers.map(m => {
+            const isMe = CURRENT_USER_ID === parseInt(m.id, 10);
+            const name = escHtml(m.display_name || m.username);
+            const canRemove = isOwner && !isMe && m.role !== 'Owner';
+            const canLeave = !isOwner && isMe && m.role !== 'Owner';
+            return '<li class="ruled-row member-item"><span class="grow"><span class="title">' + name + (isMe ? ' (คุณ)' : '') + '</span>'
+                + '<span class="meta">' + escHtml(m.email) + '</span></span>'
+                + '<span class="badge badge-gray">' + escHtml(ROLE[m.role] || m.role) + '</span>'
+                + (canRemove ? '<button type="button" class="icon-btn sm" data-act="removeMember" data-args="[' + m.id + ']" aria-label="นำ ' + name + ' ออกจากทีม"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>' : '')
+                + (canLeave ? '<button type="button" class="btn btn-sm btn-danger" data-act="removeMember" data-args="[' + m.id + ']">ออกจากโปรเจค</button>' : '')
+                + '</li>';
+        }).join('');
+
+        openModal('inviteMemberModal');
+    } catch {
+        toast('โหลดรายชื่อสมาชิกไม่สำเร็จ', 'danger');
     }
 }
 
-// ยื่นคำร้องขอเชิญผู้ร่วมงานใหม่
 async function submitInviteMember(event) {
     event.preventDefault();
     if (!activeProjectId) return;
-    
     const input = document.getElementById('inviteSearchInput');
-    const roleSelect = document.getElementById('inviteRoleSelect');
-    if (!input || !roleSelect) return;
-    
     const target = input.value.trim();
-    const role = roleSelect.value;
-    
-    if (target === '') return;
-    
+    if (!target) { formErrorLine('inviteError', 'ใส่ชื่อผู้ใช้หรืออีเมลของคนที่จะเชิญ'); input.focus(); return; }
+
     try {
         await apiFetch(BASE_URL + '/api/projects/' + activeProjectId + '/members', {
             method: 'POST',
-            body: JSON.stringify({
-                email_or_username: target,
-                role: role
-            })
+            body: JSON.stringify({ email_or_username: target, role: document.getElementById('inviteRoleSelect').value })
         });
-        
-        toast('เชิญผู้ร่วมทีมเรียบร้อยแล้ว');
+        toast('เชิญเข้าทีมแล้ว');
         input.value = '';
-        
-        // โหลดข้อมูลสมาชิกใหม่เพื่ออัปเดต UI
         await loadProjectMembers(true);
         await selectProject(activeProjectId);
-    } catch(err) {
-        toast(err.message || 'เชิญสมาชิกไม่สำเร็จ', 'danger');
+    } catch (err) {
+        formErrorLine('inviteError', err.message || 'เชิญไม่สำเร็จ ลองอีกครั้ง');
     }
 }
 
-// นำสมาชิกออกหรือออกจากโครงการร่วมงาน
 async function removeMember(userId) {
     if (!activeProjectId) return;
-    
-    const currentUserId = typeof CURRENT_USER_ID !== 'undefined' ? parseInt(CURRENT_USER_ID) : 0;
-    const isMe = currentUserId === userId;
-    const confirmMsg = isMe 
-        ? 'คุณต้องการออกจากกลุ่มโครงการร่วมกันนี้ใช่หรือไม่?' 
-        : 'คุณต้องการนำสมาชิกคนนี้ออกจากกลุ่มโครงการหรือไม่?';
-    const confirmBtn = isMe ? 'ออกจากโครงการ' : 'ลบสมาชิก';
-    
-    if (!await confirmAction(confirmMsg, confirmBtn)) return;
-    
+    const isMe = CURRENT_USER_ID === userId;
+    if (!await confirmAction(
+        isMe ? 'คุณจะไม่เห็นโปรเจคนี้อีก จนกว่าเจ้าของจะเชิญกลับ' : 'คนนี้จะไม่เห็นโปรเจคนี้อีก',
+        isMe ? 'ออกจากโปรเจค' : 'นำออกจากทีม',
+        isMe ? 'ออกจากโปรเจคนี้?' : 'นำสมาชิกออกจากทีม?'
+    )) return;
+
     try {
-        await apiFetch(BASE_URL + '/api/projects/' + activeProjectId + '/members/' + userId, {
-            method: 'DELETE'
-        });
-        
-        toast(isMe ? 'คุณได้ออกจากโครงการแล้ว' : 'นำสมาชิกออกเสร็จสิ้น');
-        
+        await apiFetch(BASE_URL + '/api/projects/' + activeProjectId + '/members/' + userId, { method: 'DELETE' });
+        toast(isMe ? 'ออกจากโปรเจคแล้ว' : 'นำออกจากทีมแล้ว');
         if (isMe) {
             closeModal('inviteMemberModal');
             await loadProjects();
@@ -241,24 +144,7 @@ async function removeMember(userId) {
             await loadProjectMembers(true);
             await selectProject(activeProjectId);
         }
-    } catch(err) {
-        toast(err.message || 'ดำเนินการไม่สำเร็จ', 'danger');
+    } catch (err) {
+        toast(err.message || 'ทำไม่สำเร็จ ลองอีกครั้ง', 'danger');
     }
 }
-
-// ฟังก์ชันแปลงเวลาแชทสดให้กระชับ
-function formatDateTime(dateStr) {
-    if (!dateStr) return '';
-    const d = new Date(dateStr.replace(/-/g, '/'));
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    
-    const today = new Date();
-    if (d.toDateString() === today.toDateString()) {
-        return `วันนี้ ${hours}:${minutes} น.`;
-    }
-    
-    const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-    return `${d.getDate()} ${months[d.getMonth()]} ${hours}:${minutes} น.`;
-}
-

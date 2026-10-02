@@ -221,6 +221,32 @@ try {
     // The file manager's rows. Files and folders are not part of a backup, so they
     // are put in directly; the files have no bytes behind them, which is enough to
     // photograph the list.
+    // Projects are shared with other accounts, so a backup leaves them out; these
+    // belong to the photograph account alone.
+    DB::run('DELETE FROM projects WHERE user_id = ?', [$shotsId]);
+    $project = function (string $name, string $description, string $status, string $priority, ?string $due) use ($shotsId): int {
+        DB::run('INSERT INTO projects (user_id, name, description, status, priority, due_date) VALUES (?, ?, ?, ?, ?, ?)',
+            [$shotsId, $name, $description, $status, $priority, $due]);
+        return (int)DB::conn()->lastInsertId();
+    };
+    $addTask = function (int $project, string $title, string $status, string $priority, ?string $due, ?string $category, ?string $assignee, int $position, ?string $checklist = null) use ($shotsId): void {
+        DB::run('INSERT INTO project_tasks (project_id, user_id, title, status, priority, due_date, category, assignee, position, checklist) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [$project, $shotsId, $title, $status, $priority, $due, $category, $assignee, $position, $checklist]);
+    };
+    $site = $project('เว็บไซต์ร้านกาแฟสาขาใหม่', 'ออกแบบและเปิดหน้าเว็บสำหรับสาขาที่สอง พร้อมระบบสั่งล่วงหน้า', 'In Progress', 'High', day(21));
+    $addTask($site, 'ร่างหน้าแรกและเมนูอาหาร', 'Done', 'High', day(-4), 'ดีไซน์', 'บัญชีถ่ายภาพ', 0);
+    $addTask($site, 'เขียนเนื้อหาหน้า "เกี่ยวกับเรา"', 'Done', 'Medium', day(-2), 'เนื้อหา', null, 1);
+    $addTask($site, 'ทำระบบสั่งล่วงหน้า', 'In Progress', 'Critical', day(5), 'โค้ด', 'บัญชีถ่ายภาพ', 0,
+        '[{"text":"ตารางออเดอร์","done":true},{"text":"หน้าชำระเงิน","done":false},{"text":"อีเมลยืนยัน","done":false}]');
+    $addTask($site, 'ถ่ายรูปเมนูใหม่ 12 รายการ', 'In Progress', 'Medium', day(-1), 'เนื้อหา', null, 1);
+    $addTask($site, 'ตรวจความเร็วบนมือถือ', 'Review', 'Medium', day(9), 'โค้ด', null, 0);
+    $addTask($site, 'ตั้งโดเมนและอีเมลร้าน', 'To Do', 'Low', day(14), 'ระบบ', null, 0);
+    $addTask($site, 'วางแผนโปรโมชันวันเปิดสาขา', 'To Do', 'High', day(18), 'การตลาด', null, 1);
+    $project('ย้ายระบบบัญชีไปโปรแกรมใหม่', 'ย้ายข้อมูลปีล่าสุดและอบรมทีมการเงิน', 'Planning', 'Medium', day(60));
+    $project('คู่มือพนักงานใหม่', 'รวบรวมขั้นตอนการทำงานหน้าร้านเป็นคู่มือฉบับเดียว', 'Review', 'Low', day(-3));
+    DB::run('INSERT INTO project_activities (project_id, user_id, action, created_at) VALUES (?, ?, ?, ?), (?, ?, ?, ?)',
+        [$site, $shotsId, 'ย้าย "ทำระบบสั่งล่วงหน้า" ไปที่ กำลังทำ', at(-1, '10:20'), $site, $shotsId, 'เพิ่มงาน "ตั้งโดเมนและอีเมลร้าน"', at(-2, '16:05')]);
+
     DB::run('DELETE FROM files WHERE user_id = ?', [$shotsId]);
     $folder = function (string $name, ?int $parent = null) use ($shotsId): int {
         DB::run("INSERT INTO files (user_id, parent_id, name, type) VALUES (?, ?, ?, 'folder')", [$shotsId, $parent, $name]);

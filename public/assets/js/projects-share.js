@@ -3,11 +3,7 @@
    Loaded after projects.js on the projects page; shares its state.
 ===================================================== */
 
-// =====================================================
-// --- ระบบลิงก์แชร์โครงการสาธารณะและ Guest ---
-// =====================================================
-
-async function loadProjectShareSettings() {
+function loadProjectShareSettings() {
     if (!activeProjectData || !activeProjectData.project) return;
     const p = activeProjectData.project;
     const toggle = document.getElementById('shareLinkToggle');
@@ -15,16 +11,14 @@ async function loadProjectShareSettings() {
     const roleSelect = document.getElementById('shareLinkRole');
     const urlInput = document.getElementById('shareLinkUrl');
 
-    if (!toggle || !details || !roleSelect || !urlInput) return;
-
     if (p.share_token) {
         toggle.checked = true;
-        details.style.display = 'block';
+        details.hidden = false;
         roleSelect.value = p.share_role || 'Viewer';
-        urlInput.value = `${BASE_URL}/project/shared/${p.share_token}`;
+        urlInput.value = BASE_URL + '/project/shared/' + p.share_token;
     } else {
         toggle.checked = false;
-        details.style.display = 'none';
+        details.hidden = true;
         roleSelect.value = 'Viewer';
         urlInput.value = '';
     }
@@ -33,101 +27,73 @@ async function loadProjectShareSettings() {
 async function togglePublicShare() {
     if (!activeProjectId) return;
     const toggle = document.getElementById('shareLinkToggle');
-    const roleSelect = document.getElementById('shareLinkRole');
-    
-    if (!toggle || !roleSelect) return;
-    
     try {
         if (toggle.checked) {
-            const role = roleSelect.value;
-            const res = await apiFetch(`${BASE_URL}/api/projects/${activeProjectId}/share`, {
+            const res = await apiFetch(BASE_URL + '/api/projects/' + activeProjectId + '/share', {
                 method: 'POST',
-                body: JSON.stringify({ share_role: role })
+                body: JSON.stringify({ share_role: document.getElementById('shareLinkRole').value })
             });
-            
-            // อัปเดตข้อมูลในสคริปต์
             activeProjectData.project.share_token = res.share_token;
             activeProjectData.project.share_role = res.share_role;
-            toast('เปิดใช้งานลิงก์สาธารณะสำเร็จ');
+            toast('เปิดลิงก์แล้ว ใครมีลิงก์ก็เข้าได้');
         } else {
-            await apiFetch(`${BASE_URL}/api/projects/${activeProjectId}/share`, {
-                method: 'DELETE'
-            });
+            await apiFetch(BASE_URL + '/api/projects/' + activeProjectId + '/share', { method: 'DELETE' });
             activeProjectData.project.share_token = null;
             activeProjectData.project.share_role = 'Viewer';
-            toast('ปิดใช้งานลิงก์สาธารณะแล้ว');
+            toast('ปิดลิงก์แล้ว');
         }
-        await loadProjectShareSettings();
+        loadProjectShareSettings();
     } catch (err) {
-        toggle.checked = !toggle.checked; // คืนค่ากลับ
-        toast(err.message || 'ดำเนินการไม่สำเร็จ', 'danger');
+        toggle.checked = !toggle.checked;     // not saved: put the switch back
+        toast(err.message || 'ทำไม่สำเร็จ ลองอีกครั้ง', 'danger');
     }
 }
 
 async function updateShareRole() {
     if (!activeProjectId) return;
-    const roleSelect = document.getElementById('shareLinkRole');
-    if (!roleSelect) return;
-    const role = roleSelect.value;
-    
     try {
-        const res = await apiFetch(`${BASE_URL}/api/projects/${activeProjectId}/share`, {
+        const res = await apiFetch(BASE_URL + '/api/projects/' + activeProjectId + '/share', {
             method: 'POST',
-            body: JSON.stringify({ share_role: role })
+            body: JSON.stringify({ share_role: document.getElementById('shareLinkRole').value })
         });
         activeProjectData.project.share_token = res.share_token;
         activeProjectData.project.share_role = res.share_role;
-        toast('อัปเดตสิทธิ์ของลิงก์แชร์สำเร็จ');
-        await loadProjectShareSettings();
+        toast('เปลี่ยนสิทธิ์ของลิงก์แล้ว');
+        loadProjectShareSettings();
     } catch (err) {
-        toast(err.message || 'อัปเดตสิทธิ์ไม่สำเร็จ', 'danger');
+        toast(err.message || 'เปลี่ยนสิทธิ์ไม่สำเร็จ', 'danger');
     }
 }
 
-function copyShareUrl() {
+async function copyShareUrl() {
     const urlInput = document.getElementById('shareLinkUrl');
-    if (!urlInput || !urlInput.value) return;
-    
-    urlInput.select();
-    urlInput.setSelectionRange(0, 99999); // สำหรับมือถือ
-    
-    navigator.clipboard.writeText(urlInput.value)
-        .then(() => {
-            toast('คัดลอกลิงก์แชร์ไปยังคลิปบอร์ดแล้ว');
-        })
-        .catch(() => {
-            toast('คัดลอกลิงก์ไม่สำเร็จ กรุณาคัดลอกด้วยตนเอง', 'danger');
-        });
-}
-
-async function changeGuestName() {
-    const { value: newName } = await Swal.fire({
-        title: 'แก้ไขชื่อของคุณ',
-        input: 'text',
-        inputLabel: 'ชื่อเล่นหรือชื่อเรียกสำหรับการแสดงผลร่วมทีม',
-        inputValue: CURRENT_GUEST_NAME ? CURRENT_GUEST_NAME.replace(' (ผู้เยี่ยมชม)', '') : '',
-        showCancelButton: true,
-        confirmButtonText: 'บันทึก',
-        cancelButtonText: 'ยกเลิก',
-        confirmButtonColor: '#06b6d4',
-        cancelButtonColor: '#6b7280',
-        inputValidator: (value) => {
-            if (!value.trim()) {
-                return 'กรุณากรอกชื่อของคุณ!';
-            }
-        }
-    });
-
-    if (newName) {
-        try {
-            await apiFetch(`${BASE_URL}/api/projects/guest-name`, {
-                method: 'POST',
-                body: JSON.stringify({ name: newName })
-            });
-            window.location.reload(); // รีโหลดเพื่อให้เซสชันและแชทสดอัปเดตชื่อผู้เยี่ยมชม
-        } catch (err) {
-            toast(err.message || 'เปลี่ยนชื่อไม่สำเร็จ', 'danger');
-        }
+    if (!urlInput.value) return;
+    try {
+        await navigator.clipboard.writeText(urlInput.value);
+        toast('คัดลอกลิงก์แล้ว');
+    } catch {
+        urlInput.select();
+        toast('คัดลอกอัตโนมัติไม่ได้ เลือกข้อความไว้แล้ว กด Ctrl+C', 'danger');
     }
 }
 
+/* ── A guest's display name ── */
+function changeGuestName() {
+    document.getElementById('guestNameInput').value = CURRENT_GUEST_NAME ? CURRENT_GUEST_NAME.replace(' (ผู้เยี่ยมชม)', '') : '';
+    formErrorLine('guestNameError', '');
+    openModal('guestNameModal');
+    document.getElementById('guestNameInput').focus();
+}
+
+async function saveGuestName(event) {
+    event.preventDefault();
+    const name = document.getElementById('guestNameInput').value.trim();
+    if (!name) { formErrorLine('guestNameError', 'ใส่ชื่อของคุณ'); return; }
+
+    try {
+        await apiFetch(BASE_URL + '/api/projects/guest-name', { method: 'POST', body: JSON.stringify({ name }) });
+        window.location.reload();             // the session and the chat take the new name
+    } catch (err) {
+        formErrorLine('guestNameError', err.message || 'เปลี่ยนชื่อไม่สำเร็จ ลองอีกครั้ง');
+    }
+}

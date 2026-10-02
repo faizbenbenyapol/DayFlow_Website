@@ -1,579 +1,420 @@
 <?php
 // =====================================================
-// views/projects/index.php — Projects Planner Page
+// views/projects/index.php — projects
+//
+// The projects as ruled rows with their progress; the open one as a four-column
+// board (to do, doing, review, done) with the people, the figures, a calendar,
+// what happened lately and a chat beneath. Guests of a shared project get the
+// same page with the buttons their role allows. assets/js/projects*.js draw it
+// from /api/projects/*.
 // =====================================================
 ?>
-
 <script nonce="<?= h(Security::nonce()) ?>">
     const CURRENT_USER_ID = <?= (int)Auth::userId() ?>;
     const ACTIVE_PROJECT_ID_OVERRIDE = <?= (int)($projectIdOverride ?? 0) ?>;
     const CURRENT_GUEST_NAME = <?= jsonForScript($_SESSION['guest_name'] ?? null) ?>;
 </script>
 
-<div class="projects-layout">
-    
-    <!-- ฝั่งซ้าย: โครงการ และ บอร์ดคัมบังหลัก -->
-    <div class="projects-main-content">
-        
-        <!-- ส่วนหัว: หัวข้อหน้า และ ปุ่มเครื่องมือด้านบน -->
-        <div class="flex justify-between items-center mb-2 flex-wrap gap-3">
-            <div>
-                <h1 class="page-title">วางแผนโปรเจค (Project Planner)</h1>
-                <p class="page-subtitle">จัดการ จัดลำดับความสำคัญ และติดตามงานของคุณด้วย Kanban Board อัจฉริยะ</p>
-            </div>
-            <div>
-                <button class="btn btn-primary" data-act="openCreateProjectModal">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
-                    สร้างโปรเจคใหม่
-                </button>
-            </div>
-        </div>
-
-        <!-- แถบตัวกรองการแสดงผลโปรเจค (Filter, Search & Sort) -->
-        <div class="projects-filter-bar">
-            <div class="filter-left">
-                <div class="search-input-wrap">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/></svg>
-                    <input type="text" id="projectSearch" class="form-control projects-search" placeholder="ค้นหาโปรเจค..." data-act="filterProjects" data-on="input">
-                </div>
-                <select id="projectStatusFilter" class="form-control filter-select" data-act="filterProjects" data-on="change">
-                    <option value="">ทุกสถานะ</option>
-                    <option value="Planning">Planning</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Review">Review</option>
-                    <option value="Completed">Completed</option>
-                </select>
-                <select id="projectPriorityFilter" class="form-control filter-select" data-act="filterProjects" data-on="change">
-                    <option value="">ทุกความสำคัญ</option>
-                    <option value="Critical">Critical</option>
-                    <option value="High">High</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Low">Low</option>
-                </select>
-            </div>
-            <div class="filter-right">
-                <select id="projectSort" class="form-control filter-select" style="width: 195px;" data-act="filterProjects" data-on="change">
-                    <option value="priority">จัดตามลำดับความสำคัญ</option>
-                    <option value="due_date">จัดตามวันส่ง (Due Date)</option>
-                    <option value="name">จัดตามชื่อ ก-ฮ</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- แถบแจ้งเตือนเดดไลน์เร่งด่วนอัจฉริยะ (Smart Deadline Warning Banner) -->
-        <div id="smartWarningBanner" class="smart-warning-banner" style="display: none;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12" y1="17" y2="17"/></svg>
-            <span id="smartWarningText">โปรเจคค้างส่งเลยกำหนดปลายปี กรุณาอัปเดตข้อมูล</span>
-        </div>
-
-        <!-- 2. ตารางโปรเจค (Project Cards Grid) -->
-        <div id="projectsGrid" class="projects-grid">
-            <!-- ดึงโปรเจคมาแสดงผลทาง JS -->
-        </div>
-
-        <!-- หน้ากรณีไม่มีข้อมูลโปรเจค (Empty State) -->
-        <div id="projectsEmptyState" class="card" style="display: none; text-align: center; padding: 4rem 2rem;">
-            <div style="margin-bottom: var(--space-4); color: var(--color-muted-2);">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/><path d="M6 14h10"/></svg>
-            </div>
-            <h3 class="empty-state-title">ไม่พบโปรเจคในขณะนี้</h3>
-            <p class="empty-state-text text-muted mb-6">คุณยังไม่มีโครงการที่บันทึกไว้ในหน้าวางแผน มาสร้างโปรเจคแรกของคุณตอนนี้เลย!</p>
-            <button class="btn btn-primary" data-act="openCreateProjectModal">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
-                สร้างโปรเจคแรกของคุณ
-            </button>
-        </div>
-
-        <!-- ส่วนบอร์ดคัมบังของโปรเจคที่เลือก (Kanban Board Section) -->
-        <div id="kanbanBoardSection" style="display: none; margin-top: var(--space-4);">
-            <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
-                <div class="kanban-section-title">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>
-                    <span>บอร์ดคัมบังโครงการ: </span>
-                    <strong id="activeProjectTitle" class="text-sm font-semibold" style="color:var(--color-primary);">ชื่อโปรเจคที่เปิดใช้งาน</strong>
-                </div>
-                <div class="flex gap-2 flex-wrap">
-                    <button class="btn btn-ghost btn-sm" id="btnInviteMember" data-act="openInviteMemberModal" style="display: none;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                        ผู้เข้าร่วม (<span id="memberCountBadge">1</span>)
-                    </button>
-                    <button class="btn btn-ghost btn-sm" id="btnEditProject" data-act="openEditProjectModal">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                        แก้ไขโปรเจค
-                    </button>
-                    <button class="btn btn-danger btn-sm" id="btnDeleteProject" data-act="deleteActiveProject">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-                        ลบโปรเจค
-                    </button>
-                </div>
-            </div>
-
-            <!-- บอร์ดคัมบัง 4 คอลัมน์หลัก -->
-            <div class="kanban-board">
-                
-                <!-- 1. คอลัมน์: To Do -->
-                <div class="kanban-column" id="col-todo-wrap">
-                    <div class="kanban-column-header">
-                        <div class="kanban-column-title-wrap">
-                            <span class="kanban-column-dot dot-todo"></span>
-                            <span class="kanban-column-title">To Do</span>
-                        </div>
-                        <span class="kanban-column-count" id="todo-count">0</span>
-                    </div>
-                    <div class="kanban-cards-list" id="todo-list" data-status="To Do">
-                        <!-- การ์ดงานคัมบังดึงทาง JS -->
-                    </div>
-                    <button class="kanban-quick-add-btn" data-act="toggleQuickAddForm" data-args="[&quot;To Do&quot;]">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
-                        เพิ่มงานด่วน
-                    </button>
-                    <div class="kanban-quick-add-form" id="quickadd-todo-form">
-                        <input type="text" class="form-control text-sm mb-2" id="quickadd-todo-input" placeholder="พิมพ์ชื่องานแล้วกด Enter..." data-act="handleQuickAddKey" data-args="[&quot;$event&quot;, &quot;To Do&quot;]" data-on="keydown">
-                        <div class="flex justify-end gap-2">
-                            <button class="btn btn-ghost btn-sm" data-act="toggleQuickAddForm" data-args="[&quot;To Do&quot;, false]">ยกเลิก</button>
-                            <button class="btn btn-primary btn-sm" data-act="submitQuickAdd" data-args="[&quot;To Do&quot;]">เพิ่ม</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 2. คอลัมน์: In Progress -->
-                <div class="kanban-column" id="col-inprogress-wrap">
-                    <div class="kanban-column-header">
-                        <div class="kanban-column-title-wrap">
-                            <span class="kanban-column-dot dot-in-progress"></span>
-                            <span class="kanban-column-title">In Progress</span>
-                        </div>
-                        <span class="kanban-column-count" id="inprogress-count">0</span>
-                    </div>
-                    <div class="kanban-cards-list" id="inprogress-list" data-status="In Progress">
-                        <!-- การ์ดงานคัมบังดึงทาง JS -->
-                    </div>
-                    <button class="kanban-quick-add-btn" data-act="toggleQuickAddForm" data-args="[&quot;In Progress&quot;]">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
-                        เพิ่มงานด่วน
-                    </button>
-                    <div class="kanban-quick-add-form" id="quickadd-inprogress-form">
-                        <input type="text" class="form-control text-sm mb-2" id="quickadd-inprogress-input" placeholder="พิมพ์ชื่องานแล้วกด Enter..." data-act="handleQuickAddKey" data-args="[&quot;$event&quot;, &quot;In Progress&quot;]" data-on="keydown">
-                        <div class="flex justify-end gap-2">
-                            <button class="btn btn-ghost btn-sm" data-act="toggleQuickAddForm" data-args="[&quot;In Progress&quot;, false]">ยกเลิก</button>
-                            <button class="btn btn-primary btn-sm" data-act="submitQuickAdd" data-args="[&quot;In Progress&quot;]">เพิ่ม</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 3. คอลัมน์: Review -->
-                <div class="kanban-column" id="col-review-wrap">
-                    <div class="kanban-column-header">
-                        <div class="kanban-column-title-wrap">
-                            <span class="kanban-column-dot dot-review"></span>
-                            <span class="kanban-column-title">Review</span>
-                        </div>
-                        <span class="kanban-column-count" id="review-count">0</span>
-                    </div>
-                    <div class="kanban-cards-list" id="review-list" data-status="Review">
-                        <!-- การ์ดงานคัมบังดึงทาง JS -->
-                    </div>
-                    <button class="kanban-quick-add-btn" data-act="toggleQuickAddForm" data-args="[&quot;Review&quot;]">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
-                        เพิ่มงานด่วน
-                    </button>
-                    <div class="kanban-quick-add-form" id="quickadd-review-form">
-                        <input type="text" class="form-control text-sm mb-2" id="quickadd-review-input" placeholder="พิมพ์ชื่องานแล้วกด Enter..." data-act="handleQuickAddKey" data-args="[&quot;$event&quot;, &quot;Review&quot;]" data-on="keydown">
-                        <div class="flex justify-end gap-2">
-                            <button class="btn btn-ghost btn-sm" data-act="toggleQuickAddForm" data-args="[&quot;Review&quot;, false]">ยกเลิก</button>
-                            <button class="btn btn-primary btn-sm" data-act="submitQuickAdd" data-args="[&quot;Review&quot;]">เพิ่ม</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 4. คอลัมน์: Done -->
-                <div class="kanban-column" id="col-done-wrap">
-                    <div class="kanban-column-header">
-                        <div class="kanban-column-title-wrap">
-                            <span class="kanban-column-dot dot-done"></span>
-                            <span class="kanban-column-title">Done</span>
-                        </div>
-                        <span class="kanban-column-count" id="done-count">0</span>
-                    </div>
-                    <div class="kanban-cards-list" id="done-list" data-status="Done">
-                        <!-- การ์ดงานคัมบังดึงทาง JS -->
-                    </div>
-                    <button class="kanban-quick-add-btn" data-act="toggleQuickAddForm" data-args="[&quot;Done&quot;]">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
-                        เพิ่มงานด่วน
-                    </button>
-                    <div class="kanban-quick-add-form" id="quickadd-done-form">
-                        <input type="text" class="form-control text-sm mb-2" id="quickadd-done-input" placeholder="พิมพ์ชื่องานแล้วกด Enter..." data-act="handleQuickAddKey" data-args="[&quot;$event&quot;, &quot;Done&quot;]" data-on="keydown">
-                        <div class="flex justify-end gap-2">
-                            <button class="btn btn-ghost btn-sm" data-act="toggleQuickAddForm" data-args="[&quot;Done&quot;, false]">ยกเลิก</button>
-                            <button class="btn btn-primary btn-sm" data-act="submitQuickAdd" data-args="[&quot;Done&quot;]">เพิ่ม</button>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-
+<div class="page-head">
+    <div>
+        <h1>โปรเจค</h1>
+        <p class="sub" id="projectsTally" aria-live="polite">กำลังโหลดโปรเจค…</p>
     </div>
-
-    <!-- ฝั่งขวา: วิดเจ็ตสรุปแดชบอร์ดด้านข้าง (Sidebar Widgets) -->
-    <div class="projects-sidebar-widgets">
-        
-        <!-- วิดเจ็ต 1: รายงาน AI Summary วิเคราะห์โครงการ -->
-        <div id="aiSummaryCardWrap" class="ai-summary-card" style="display: none;">
-            <div class="ai-summary-header">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="ai-summary-sparkle"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-                <h2 class="ai-summary-title">AI PROJECT INSIGHTS</h2>
-            </div>
-            <p class="ai-summary-text" id="aiInsightText">กำลังวิเคราะห์ความก้าวหน้าโครงการของคุณ...</p>
-            <div id="aiWarningBox" class="ai-summary-warning" style="display: none;">
-                คำเตือน: โปรเจคเลยกำหนดส่งไปแล้ว
-            </div>
-        </div>
-
-        <!-- วิดเจ็ต 2: แผงควบคุมข้อมูลสถิติความก้าวหน้าโครงการ (Analytics Module) -->
-        <div id="analyticsWidgetCard" class="analytics-card" style="display: none;">
-            <h2 class="analytics-title">วิเคราะห์ความก้าวหน้า</h2>
-            <div class="analytics-stats-grid">
-                <div class="stat-item">
-                    <div class="stat-val" id="statCompletedTasks">0</div>
-                    <div class="stat-lbl">เสร็จสิ้น (Done)</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-val" id="statRemainingTasks">0</div>
-                    <div class="stat-lbl">ค้างคา (Active)</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-val" id="statProductivity">0%</div>
-                    <div class="stat-lbl">อัตรางานสำเร็จ</div>
-                </div>
-            </div>
-            <div class="analytics-chart-container">
-                <canvas id="projectDoughnutChart" role="img" aria-label="กราฟความก้าวหน้าโครงการ"></canvas>
-            </div>
-        </div>
-
-        <!-- วิดเจ็ต 3: ปฏิทินย่อแสดงวันส่งงานโครงการ (Mini Calendar) -->
-        <div id="miniCalendarWidgetCard" class="mini-cal-card">
-            <div class="mini-cal-header">
-                <h2 class="mini-cal-title" id="calendarMonthTitle">พฤษภาคม 2569</h2>
-                <div class="mini-cal-nav">
-                    <button class="mini-cal-arrow" data-act="navCalendar" data-args="[-1]">&larr;</button>
-                    <button class="mini-cal-arrow" data-act="navCalendar" data-args="[1]">&rarr;</button>
-                </div>
-            </div>
-            <div class="mini-cal-grid" id="miniCalendarGrid">
-                <!-- ดึงปฏิทินแสดงผลทาง JS -->
-            </div>
-        </div>
-
-        <!-- วิดเจ็ต 4: บันทึกประวัติกิจกรรมล่าสุด (Activity Feed Widget) -->
-        <div id="activityWidgetCard" class="activity-card" style="display: none;">
-            <h2 class="analytics-title">ประวัติกิจกรรมโปรเจค</h2>
-            <div class="activity-feed-list" id="projectActivityList">
-                <!-- ไทม์ไลน์กิจกรรมจะดึงผ่าน JS -->
-            </div>
-        </div>
-
-        <!-- วิดเจ็ต 5: ระบบแชทสดในแต่ละโครงการ (Project Live Chat Widget) -->
-        <div id="chatWidgetCard" class="chat-card card" style="display: none;">
-            <div class="chat-card-header">
-                <div class="flex items-center gap-2">
-                    <span class="chat-status-dot"></span>
-                    <h2 class="analytics-title" style="margin-bottom: 0;">แชทในโครงการ</h2>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span id="guestRenameContainer" style="display: none;">
-                        <button class="btn btn-ghost btn-xs text-muted flex items-center gap-1" data-act="changeGuestName" title="แก้ไขชื่อเล่นของคุณ" style="font-size: 0.72rem; padding: 2px 6px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface); cursor: pointer;">
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:2px;"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                            <span id="lblGuestName">คุณ: ...</span>
-                        </button>
-                    </span>
-                    <span class="chat-status-text" id="chatStatusText">กำลังเชื่อมต่อ...</span>
-                </div>
-            </div>
-            <div class="chat-messages-container" id="chatMessagesList">
-                <!-- รายการแชทจะดึงผ่าน JS -->
-            </div>
-            <div class="chat-input-wrap">
-                <input type="text" id="chatMessageInput" class="form-control chat-input" placeholder="พิมพ์ข้อความคุยกับทีม..." data-act="handleChatKeyDown" data-args="[&quot;$event&quot;]" data-on="keydown">
-                <button type="button" class="btn btn-primary btn-chat-send" data-act="sendChatMessage" title="ส่งข้อความ">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                </button>
-            </div>
-        </div>
-
+    <div class="page-head-actions">
+        <button class="btn btn-primary" type="button" data-act="openCreateProjectModal"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>สร้างโปรเจค</button>
     </div>
-
 </div>
 
-<!-- =====================================================
-     หน้าต่างโต้ตอบการจัดการ (Modals Area)
-     ===================================================== -->
+<div class="proj-filters">
+    <label class="sr-only" for="projectSearch">ค้นหาโปรเจค</label>
+    <input type="search" id="projectSearch" class="form-control proj-search" placeholder="ค้นหาโปรเจค" autocomplete="off" data-act="filterProjects" data-on="input">
+    <label class="sr-only" for="projectStatusFilter">สถานะ</label>
+    <select id="projectStatusFilter" class="form-control" data-act="filterProjects" data-on="change">
+        <option value="">ทุกสถานะ</option>
+        <option value="Planning">วางแผน</option>
+        <option value="In Progress">กำลังทำ</option>
+        <option value="Review">รอตรวจ</option>
+        <option value="Completed">เสร็จแล้ว</option>
+    </select>
+    <label class="sr-only" for="projectPriorityFilter">ความสำคัญ</label>
+    <select id="projectPriorityFilter" class="form-control" data-act="filterProjects" data-on="change">
+        <option value="">ทุกความสำคัญ</option>
+        <option value="Critical">วิกฤต</option>
+        <option value="High">สูง</option>
+        <option value="Medium">ปานกลาง</option>
+        <option value="Low">ต่ำ</option>
+    </select>
+    <label class="sr-only" for="projectSort">เรียงตาม</label>
+    <select id="projectSort" class="form-control" data-act="filterProjects" data-on="change">
+        <option value="priority">เรียงตามความสำคัญ</option>
+        <option value="due_date">เรียงตามวันส่ง</option>
+        <option value="name">เรียงตามชื่อ</option>
+    </select>
+</div>
 
-<!-- 1. MODAL: สร้างโปรเจคใหม่ -->
-<div class="modal-backdrop" id="createProjectModal">
-    <div class="modal">
-        <div class="modal-header">
-            <h3 class="modal-title">สร้างโปรเจคใหม่</h3>
-            <button class="modal-close" data-act="closeModal" data-args="[&quot;createProjectModal&quot;]">&times;</button>
+<div id="smartWarningBanner" class="alert alert-warning" role="alert" hidden>
+    <span id="smartWarningText"></span>
+</div>
+
+<div id="projectsGrid" class="proj-list" aria-busy="true">
+    <div class="skel-row"><span class="skel skel-w-60"></span></div>
+    <div class="skel-row"><span class="skel skel-w-45"></span></div>
+    <div class="skel-row"><span class="skel skel-w-52"></span></div>
+</div>
+
+<div id="projectsEmptyState" class="empty-state" hidden>
+    <p class="empty-state-title">ยังไม่มีโปรเจค</p>
+    <p class="empty-state-text">โปรเจคคือกลุ่มงานที่ทำร่วมกันหลายขั้น แต่ละโปรเจคมีบอร์ด 4 คอลัมน์ ทีม และแชทของตัวเอง เริ่มจากสร้างโปรเจคแรก</p>
+    <button class="btn btn-primary" type="button" data-act="openCreateProjectModal">สร้างโปรเจคแรก</button>
+</div>
+
+<!-- The open project -->
+<section id="kanbanBoardSection" class="sec" aria-labelledby="activeProjectTitle" hidden>
+    <div class="sec-head">
+        <h2><span class="proj-board-label">บอร์ด</span> <span id="activeProjectTitle"></span></h2>
+        <div class="proj-board-actions">
+            <button class="btn btn-sm" type="button" id="btnInviteMember" data-act="openInviteMemberModal" hidden>ทีม (<span id="memberCountBadge">1</span>)</button>
+            <button class="btn btn-sm" type="button" id="btnEditProject" data-act="openEditProjectModal" hidden>แก้ไข</button>
+            <button class="btn btn-sm btn-danger" type="button" id="btnDeleteProject" data-act="deleteActiveProject" hidden>ลบโปรเจค</button>
         </div>
-        <form id="createProjectForm" data-act="submitCreateProject" data-args="[&quot;$event&quot;]" data-on="submit">
+    </div>
+
+    <div class="kanban-board">
+        <?php foreach ([
+            ['todo', 'To Do', 'ต้องทำ'],
+            ['inprogress', 'In Progress', 'กำลังทำ'],
+            ['review', 'Review', 'รอตรวจ'],
+            ['done', 'Done', 'เสร็จแล้ว'],
+        ] as [$slug, $status, $label]): ?>
+        <div class="kanban-column" id="col-<?= $slug ?>-wrap">
+            <div class="kanban-column-header">
+                <h3 class="kanban-column-title"><?= h($label) ?></h3>
+                <span class="kanban-column-count" id="<?= $slug ?>-count">0</span>
+            </div>
+            <div class="kanban-cards-list" id="<?= $slug ?>-list" data-status="<?= h($status) ?>"></div>
+            <div class="kanban-quick-add">
+                <button class="btn btn-link btn-sm kanban-quick-add-btn" type="button" data-act="toggleQuickAddForm" data-args='["<?= h($status) ?>"]'>เพิ่มงานใน "<?= h($label) ?>"</button>
+                <div class="kanban-quick-add-form" id="quickadd-<?= $slug ?>-form" hidden>
+                    <label class="sr-only" for="quickadd-<?= $slug ?>-input">ชื่องาน</label>
+                    <input type="text" class="form-control" id="quickadd-<?= $slug ?>-input" placeholder="ชื่องาน แล้วกด Enter" autocomplete="off"
+                           data-act="handleQuickAddKey" data-args='["$event", "<?= h($status) ?>"]' data-on="keydown">
+                    <div class="kanban-quick-add-actions">
+                        <button class="btn btn-sm" type="button" data-act="toggleQuickAddForm" data-args='["<?= h($status) ?>", false]'>ยกเลิก</button>
+                        <button class="btn btn-sm btn-primary" type="button" data-act="submitQuickAdd" data-args='["<?= h($status) ?>"]'>เพิ่ม</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    </div>
+</section>
+
+<div class="proj-widgets">
+    <section id="aiSummaryCardWrap" class="sec" aria-labelledby="insightTitle" hidden>
+        <div class="sec-head"><h2 id="insightTitle">สรุปสถานะโปรเจค</h2></div>
+        <p class="proj-insight" id="aiInsightText"></p>
+        <p class="alert alert-warning" id="aiWarningBox" role="status" hidden></p>
+        <p class="proj-note">คำนวณจากจำนวนงาน ความสำคัญ และวันส่งของโปรเจคนี้ ไม่ได้ใช้ AI</p>
+    </section>
+
+    <section id="analyticsWidgetCard" class="sec" aria-labelledby="progressTitle" hidden>
+        <div class="sec-head"><h2 id="progressTitle">ความคืบหน้า</h2></div>
+        <div class="facts proj-facts">
+            <div class="fact"><div class="k">เสร็จแล้ว</div><div class="v" id="statCompletedTasks">0</div></div>
+            <div class="fact"><div class="k">ยังค้างอยู่</div><div class="v" id="statRemainingTasks">0</div></div>
+            <div class="fact"><div class="k">สำเร็จ</div><div class="v" id="statProductivity">0%</div></div>
+        </div>
+        <div class="proj-status-bar" id="projectStatusBar" role="img" aria-label="สัดส่วนงานแต่ละสถานะ"></div>
+        <ul class="proj-legend" id="projectStatusLegend"></ul>
+    </section>
+
+    <section id="miniCalendarWidgetCard" class="sec" aria-labelledby="calendarMonthTitle">
+        <div class="sec-head">
+            <h2 id="calendarMonthTitle">เดือนนี้</h2>
+            <div class="mini-cal-nav">
+                <button class="icon-btn sm" type="button" data-act="navCalendar" data-args="[-1]" aria-label="เดือนก่อน">&lsaquo;</button>
+                <button class="icon-btn sm" type="button" data-act="navCalendar" data-args="[1]" aria-label="เดือนถัดไป">&rsaquo;</button>
+            </div>
+        </div>
+        <div class="mini-cal-grid" id="miniCalendarGrid"></div>
+        <p class="proj-note">วันที่ขีดเส้นใต้มีกำหนดส่งโปรเจคหรืองาน</p>
+    </section>
+
+    <section id="activityWidgetCard" class="sec" aria-labelledby="activityTitle" hidden>
+        <div class="sec-head"><h2 id="activityTitle">กิจกรรมล่าสุด</h2></div>
+        <ul class="activity-feed-list" id="projectActivityList"></ul>
+    </section>
+
+    <section id="chatWidgetCard" class="sec" aria-labelledby="chatTitle" hidden>
+        <div class="sec-head">
+            <h2 id="chatTitle">แชทในโปรเจค</h2>
+            <span class="chat-status-text" id="chatStatusText" role="status">กำลังเชื่อมต่อ</span>
+        </div>
+        <p id="guestRenameContainer" class="proj-note" hidden>
+            <span id="lblGuestName">คุณ: …</span>
+            <button class="btn btn-link btn-sm" type="button" data-act="changeGuestName">เปลี่ยนชื่อที่แสดง</button>
+        </p>
+        <div class="chat-messages-container" id="chatMessagesList" aria-live="polite"></div>
+        <form class="chat-input-wrap" id="chatForm" data-act="sendChatMessage" novalidate>
+            <label class="sr-only" for="chatMessageInput">ข้อความ</label>
+            <input type="text" id="chatMessageInput" class="form-control" placeholder="พิมพ์ข้อความถึงทีม" autocomplete="off" maxlength="1000">
+            <button type="submit" class="btn btn-primary">ส่ง</button>
+        </form>
+    </section>
+</div>
+
+<!-- New project -->
+<div class="modal-backdrop" id="createProjectModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-labelledby="createProjectTitle">
+        <div class="modal-header">
+            <h2 class="modal-title" id="createProjectTitle">สร้างโปรเจค</h2>
+            <button class="modal-close" type="button" aria-label="ปิด" data-close-modal>&times;</button>
+        </div>
+        <form id="createProjectForm" data-act="submitCreateProject" data-args='["$event"]' data-on="submit" novalidate>
             <div class="modal-body">
                 <div class="form-group">
-                    <label class="form-label" for="newProjName">ชื่อโปรเจค <span style="color:var(--color-danger)">*</span></label>
-                    <input type="text" id="newProjName" class="form-control" name="name" required placeholder="เช่น ออกแบบหน้าเว็บสเปซสตาร์ทอัพ">
+                    <label class="form-label" for="newProjName">ชื่อโปรเจค</label>
+                    <input type="text" id="newProjName" class="form-control" name="name" maxlength="255" autocomplete="off" placeholder="เช่น ออกแบบเว็บไซต์ร้านกาแฟ">
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="newProjDesc">คำอธิบายย่อ</label>
-                    <textarea id="newProjDesc" class="form-control" name="description" rows="3" placeholder="ระบุขอบเขตงานคร่าวๆ ของโครงการย่อยนี้..."></textarea>
+                    <label class="form-label" for="newProjDesc">คำอธิบายสั้นๆ</label>
+                    <textarea id="newProjDesc" class="form-control" name="description" rows="3" placeholder="ขอบเขตงานคร่าวๆ"></textarea>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label" for="newProjPriority">ความสำคัญ</label>
                         <select id="newProjPriority" class="form-control" name="priority">
-                            <option value="Low">Low (ต่ำ)</option>
-                            <option value="Medium" selected>Medium (ปานกลาง)</option>
-                            <option value="High">High (สูง)</option>
-                            <option value="Critical">Critical (วิกฤต)</option>
+                            <option value="Low">ต่ำ</option>
+                            <option value="Medium" selected>ปานกลาง</option>
+                            <option value="High">สูง</option>
+                            <option value="Critical">วิกฤต</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label" for="newProjStatus">สถานะหลัก</label>
+                        <label class="form-label" for="newProjStatus">สถานะ</label>
                         <select id="newProjStatus" class="form-control" name="status">
-                            <option value="Planning" selected>Planning</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="Review">Review</option>
-                            <option value="Completed">Completed</option>
+                            <option value="Planning" selected>วางแผน</option>
+                            <option value="In Progress">กำลังทำ</option>
+                            <option value="Review">รอตรวจ</option>
+                            <option value="Completed">เสร็จแล้ว</option>
                         </select>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="newProjDue">วันสิ้นสุดการส่งโปรเจค (Due Date)</label>
+                    <label class="form-label" for="newProjDue">กำหนดส่ง</label>
                     <input type="date" id="newProjDue" class="form-control" name="due_date">
                 </div>
+                <p class="form-error" id="newProjError" role="alert" hidden></p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-ghost" data-act="closeModal" data-args="[&quot;createProjectModal&quot;]">ยกเลิก</button>
-                <button type="submit" class="btn btn-primary">บันทึกโครงการ</button>
+                <button type="button" class="btn" data-close-modal>ยกเลิก</button>
+                <button type="submit" class="btn btn-primary">สร้างโปรเจค</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- 2. MODAL: แก้ไขข้อมูลโปรเจคหลัก -->
-<div class="modal-backdrop" id="editProjectModal">
-    <div class="modal">
+<!-- Edit project -->
+<div class="modal-backdrop" id="editProjectModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-labelledby="editProjectTitle">
         <div class="modal-header">
-            <h3 class="modal-title">แก้ไขรายละเอียดโปรเจค</h3>
-            <button class="modal-close" data-act="closeModal" data-args="[&quot;editProjectModal&quot;]">&times;</button>
+            <h2 class="modal-title" id="editProjectTitle">แก้ไขโปรเจค</h2>
+            <button class="modal-close" type="button" aria-label="ปิด" data-close-modal>&times;</button>
         </div>
-        <form id="editProjectForm" data-act="submitEditProject" data-args="[&quot;$event&quot;]" data-on="submit">
+        <form id="editProjectForm" data-act="submitEditProject" data-args='["$event"]' data-on="submit" novalidate>
             <input type="hidden" id="editProjId">
             <div class="modal-body">
                 <div class="form-group">
-                    <label class="form-label" for="editProjName">ชื่อโปรเจค <span style="color:var(--color-danger)">*</span></label>
-                    <input type="text" id="editProjName" class="form-control" required>
+                    <label class="form-label" for="editProjName">ชื่อโปรเจค</label>
+                    <input type="text" id="editProjName" class="form-control" maxlength="255" autocomplete="off">
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="editProjDesc">คำอธิบายย่อ</label>
+                    <label class="form-label" for="editProjDesc">คำอธิบายสั้นๆ</label>
                     <textarea id="editProjDesc" class="form-control" rows="3"></textarea>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label" for="editProjPriority">ความสำคัญ</label>
                         <select id="editProjPriority" class="form-control">
-                            <option value="Low">Low (ต่ำ)</option>
-                            <option value="Medium">Medium (ปานกลาง)</option>
-                            <option value="High">High (สูง)</option>
-                            <option value="Critical">Critical (วิกฤต)</option>
+                            <option value="Low">ต่ำ</option>
+                            <option value="Medium">ปานกลาง</option>
+                            <option value="High">สูง</option>
+                            <option value="Critical">วิกฤต</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label" for="editProjStatus">สถานะหลัก</label>
+                        <label class="form-label" for="editProjStatus">สถานะ</label>
                         <select id="editProjStatus" class="form-control">
-                            <option value="Planning">Planning</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="Review">Review</option>
-                            <option value="Completed">Completed</option>
+                            <option value="Planning">วางแผน</option>
+                            <option value="In Progress">กำลังทำ</option>
+                            <option value="Review">รอตรวจ</option>
+                            <option value="Completed">เสร็จแล้ว</option>
                         </select>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="editProjDue">วันสิ้นสุดการส่งโปรเจค (Due Date)</label>
+                    <label class="form-label" for="editProjDue">กำหนดส่ง</label>
                     <input type="date" id="editProjDue" class="form-control">
                 </div>
+                <p class="form-error" id="editProjError" role="alert" hidden></p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-ghost" data-act="closeModal" data-args="[&quot;editProjectModal&quot;]">ยกเลิก</button>
-                <button type="submit" class="btn btn-primary">บันทึกการแก้ไข</button>
+                <button type="button" class="btn" data-close-modal>ยกเลิก</button>
+                <button type="submit" class="btn btn-primary">บันทึกโปรเจค</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- 3. MODAL: แก้ไขข้อมูลรายละเอียดงานย่อยบนบอร์ด (Task Info Dialog) & ระบบเช็คลิสต์ -->
-<div class="modal-backdrop" id="editTaskModal">
-    <div class="modal" style="max-width: 600px;">
+<!-- A task, with its checklist -->
+<div class="modal-backdrop" id="editTaskModal" aria-hidden="true">
+    <div class="modal modal-task" role="dialog" aria-labelledby="editTaskTitleHeading">
         <div class="modal-header">
-            <h3 class="modal-title">แก้ไขรายละเอียดงานย่อยบนบอร์ด</h3>
-            <button class="modal-close" data-act="closeModal" data-args="[&quot;editTaskModal&quot;]">&times;</button>
+            <h2 class="modal-title" id="editTaskTitleHeading">แก้ไขงาน</h2>
+            <button class="modal-close" type="button" aria-label="ปิด" data-close-modal>&times;</button>
         </div>
-        <form id="editTaskForm" data-act="submitEditTask" data-args="[&quot;$event&quot;]" data-on="submit">
+        <form id="editTaskForm" data-act="submitEditTask" data-args='["$event"]' data-on="submit" novalidate>
             <input type="hidden" id="editTaskId">
-            <div class="modal-body" style="padding-bottom: 0;">
-                
+            <div class="modal-body">
                 <div class="form-group">
-                    <label class="form-label" for="editTaskTitle">หัวข้องานย่อย <span style="color:var(--color-danger)">*</span></label>
-                    <input type="text" id="editTaskTitle" class="form-control" required placeholder="ระบุหัวข้องานย่อย...">
+                    <label class="form-label" for="editTaskTitle">ชื่องาน</label>
+                    <input type="text" id="editTaskTitle" class="form-control" maxlength="255" autocomplete="off">
                 </div>
-
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label" for="editTaskStatus">สถานะในบอร์ด</label>
+                        <label class="form-label" for="editTaskStatus">อยู่ในคอลัมน์</label>
                         <select id="editTaskStatus" class="form-control">
-                            <option value="To Do">To Do</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="Review">Review</option>
-                            <option value="Done">Done</option>
+                            <option value="To Do">ต้องทำ</option>
+                            <option value="In Progress">กำลังทำ</option>
+                            <option value="Review">รอตรวจ</option>
+                            <option value="Done">เสร็จแล้ว</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="editTaskPriority">ความสำคัญ</label>
                         <select id="editTaskPriority" class="form-control">
-                            <option value="Low">Low (ต่ำ)</option>
-                            <option value="Medium">Medium (ปานกลาง)</option>
-                            <option value="High">High (สูง)</option>
-                            <option value="Critical">Critical (วิกฤต)</option>
+                            <option value="Low">ต่ำ</option>
+                            <option value="Medium">ปานกลาง</option>
+                            <option value="High">สูง</option>
+                            <option value="Critical">วิกฤต</option>
                         </select>
                     </div>
                 </div>
-
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label" for="editTaskCategory">หมวดหมู่ / แท็ก</label>
-                        <input type="text" id="editTaskCategory" class="form-control" placeholder="เช่น Design, Code, Copywrite">
+                        <label class="form-label" for="editTaskCategory">หมวดหรือแท็ก</label>
+                        <input type="text" id="editTaskCategory" class="form-control" maxlength="100" placeholder="เช่น ดีไซน์, โค้ด, เนื้อหา" autocomplete="off">
                     </div>
                     <div class="form-group">
-                        <label class="form-label" for="editTaskAssignee">ผู้รับผิดชอบงาน (Assignee)</label>
-                        <select id="editTaskAssignee" class="form-control">
-                            <option value="">เลือกผู้รับผิดชอบ...</option>
-                            <option value="Alex">Alex (ดีไซเนอร์)</option>
-                            <option value="Jordan">Jordan (ฟรอนต์เอนด์)</option>
-                            <option value="Taylor">Taylor (แบ็กเอนด์)</option>
-                            <option value="Me">ตัวเอง (Me)</option>
-                        </select>
+                        <label class="form-label" for="editTaskAssignee">ผู้รับผิดชอบ</label>
+                        <select id="editTaskAssignee" class="form-control"><option value="">ยังไม่ระบุ</option></select>
                     </div>
                 </div>
-
                 <div class="form-group">
-                    <label class="form-label" for="editTaskDue">วันครบกำหนดส่งงานย่อย (Due Date)</label>
+                    <label class="form-label" for="editTaskDue">กำหนดส่ง</label>
                     <input type="date" id="editTaskDue" class="form-control">
                 </div>
 
-                <!-- ระบบเครื่องมือเช็คลิสต์ย่อยภายในบอร์ด (Modal Sub-Checklist Manager) -->
                 <div class="modal-checklist-container">
                     <div class="checklist-header">
-                        <span>เช็คลิสต์ย่อยในชิ้นงาน</span>
-                        <span id="checklistPercentageLabel">0% เสร็จสิ้น</span>
+                        <span id="checklistHeading">เช็กลิสต์ย่อย</span>
+                        <span id="checklistPercentageLabel">0% เสร็จ</span>
                     </div>
-                    <div class="checklist-progress-bar-wrap">
-                        <div class="checklist-progress-fill" id="checklistProgressFill"></div>
-                    </div>
-                    <div class="checklist-list" id="modalChecklistList">
-                        <!-- รายงานช่องเช็คลิสต์ดึงผ่าน JS -->
-                    </div>
-                    <div class="flex gap-2 items-center">
-                        <input type="text" class="form-control text-sm" id="newChecklistItemInput" placeholder="เพิ่มเช็คลิสต์ย่อยใหม่ในงานนี้..." style="height: 34px;">
-                        <button type="button" class="btn btn-ghost btn-sm" data-act="addChecklistItem" style="height: 34px;">เพิ่มชิ้นย่อย</button>
+                    <div class="progress" aria-hidden="true"><div class="progress-bar" id="checklistProgressFill"></div></div>
+                    <div class="checklist-list" id="modalChecklistList" role="group" aria-labelledby="checklistHeading"></div>
+                    <div class="checklist-add">
+                        <label class="sr-only" for="newChecklistItemInput">รายการเช็กลิสต์ใหม่</label>
+                        <input type="text" class="form-control" id="newChecklistItemInput" placeholder="เพิ่มรายการย่อยในงานนี้" autocomplete="off">
+                        <button type="button" class="btn btn-sm" data-act="addChecklistItem">เพิ่ม</button>
                     </div>
                 </div>
-
+                <p class="form-error" id="taskError" role="alert" hidden></p>
             </div>
-            <div class="modal-footer mt-4">
-                <button type="button" class="btn btn-ghost" data-act="closeModal" data-args="[&quot;editTaskModal&quot;]">ยกเลิก</button>
-                <button type="submit" class="btn btn-primary">บันทึกข้อมูลงาน</button>
+            <div class="modal-footer">
+                <button type="button" class="btn" data-close-modal>ยกเลิก</button>
+                <button type="submit" class="btn btn-primary">บันทึกงาน</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- 4. MODAL: จัดการสมาชิกโครงการ & เชิญผู้ร่วมทีม -->
-<div class="modal-backdrop" id="inviteMemberModal">
-    <div class="modal" style="max-width: 550px;">
+<!-- The team and the public link -->
+<div class="modal-backdrop" id="inviteMemberModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-labelledby="teamTitle">
         <div class="modal-header">
-            <h3 class="modal-title">สมาชิกและผู้รับผิดชอบโครงการ</h3>
-            <button class="modal-close" data-act="closeModal" data-args="[&quot;inviteMemberModal&quot;]">&times;</button>
+            <h2 class="modal-title" id="teamTitle">ทีมของโปรเจค</h2>
+            <button class="modal-close" type="button" aria-label="ปิด" data-close-modal>&times;</button>
         </div>
-        <div class="modal-body" style="padding-bottom: var(--space-4);">
-            
-            <!-- รายชื่อสมาชิกปัจจุบัน -->
-            <div class="mb-4">
-                <label class="form-label mb-2 font-semibold">ผู้ร่วมทีมปัจจุบัน</label>
-                <div class="members-list-wrapper" id="projectMembersList">
-                    <!-- โหลดสมาชิกจาก JS -->
-                </div>
-            </div>
+        <div class="modal-body">
+            <h3 class="subhead">สมาชิก</h3>
+            <ul class="members-list-wrapper ruled-list" id="projectMembersList"></ul>
 
-            <!-- ฟอร์มเชิญสมาชิกใหม่ (แสดงเฉพาะสำหรับ Owner) -->
-            <form id="inviteMemberForm" data-act="submitInviteMember" data-args="[&quot;$event&quot;]" data-on="submit" style="display: none;">
-                <hr style="border: 0; border-top: 1px solid var(--color-border); margin: var(--space-4) 0;">
-                <label class="form-label mb-2 font-semibold">เชิญผู้ร่วมทีมคนใหม่</label>
-                <div class="form-group mb-3">
-                    <label class="form-label" for="inviteSearchInput" style="font-size: 0.8rem;">ชื่อผู้ใช้งาน หรือ อีเมลผู้รับเชิญ</label>
-                    <input type="text" id="inviteSearchInput" class="form-control" placeholder="ระบุ username หรือ email ของผู้ใช้ในระบบ..." required autocomplete="off">
+            <form id="inviteMemberForm" data-act="submitInviteMember" data-args='["$event"]' data-on="submit" novalidate hidden>
+                <h3 class="subhead">เชิญคนเข้าทีม</h3>
+                <div class="form-group">
+                    <label class="form-label" for="inviteSearchInput">ชื่อผู้ใช้หรืออีเมล</label>
+                    <input type="text" id="inviteSearchInput" class="form-control" placeholder="ผู้ที่มีบัญชีในระบบนี้" autocomplete="off">
                 </div>
-                <div class="form-group mb-3">
-                    <label class="form-label" for="inviteRoleSelect" style="font-size: 0.8rem;">บทบาทสิทธิ์ (Role)</label>
+                <div class="form-group">
+                    <label class="form-label" for="inviteRoleSelect">สิทธิ์</label>
                     <select id="inviteRoleSelect" class="form-control">
-                        <option value="Editor" selected>Editor (เพิ่ม/แก้ไขงานย่อยได้)</option>
-                        <option value="Viewer">Viewer (เข้าชมและแชทได้อย่างเดียว)</option>
+                        <option value="Editor" selected>แก้ไขได้ (เพิ่มและแก้งาน)</option>
+                        <option value="Viewer">ดูได้อย่างเดียว (ดูบอร์ดและแชท)</option>
                     </select>
                 </div>
-                <div class="flex justify-end mt-2">
-                    <button type="submit" class="btn btn-primary btn-sm">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
-                        ส่งคำเชิญเข้าร่วม
-                    </button>
-                </div>
+                <p class="form-error" id="inviteError" role="alert" hidden></p>
+                <button type="submit" class="btn btn-primary">เชิญเข้าทีม</button>
             </form>
 
-            <!-- ลิงก์แชร์โครงการสาธารณะ (Public Share Link) -->
-            <div id="publicShareSection" style="display: none;">
-                <hr style="border: 0; border-top: 1px solid var(--color-border); margin: var(--space-4) 0;">
-                <label class="form-label mb-2" style="font-weight: 600; display: flex; align-items: center; gap: 6px;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #06b6d4;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                    ลิงก์แชร์โครงการสาธารณะ (Public Share Link)
-                </label>
-                <div style="background: var(--color-surface-2); border: 1px solid var(--color-border); padding: var(--space-4); border-radius: var(--radius-md); margin-bottom: var(--space-2);">
-                    <div class="flex justify-between items-center mb-3">
-                        <span class="text-xs font-semibold text-muted" style="font-size: 0.8rem;">เปิดให้บุคคลภายนอกเข้าใช้งานผ่านลิงก์โดยไม่จำเป็นต้องมีบัญชี</span>
-                        <label class="switch">
-                            <input type="checkbox" id="shareLinkToggle" data-act="togglePublicShare" data-on="change">
-                            <span class="slider"></span>
-                        </label>
+            <div id="publicShareSection" hidden>
+                <h3 class="subhead">ลิงก์สำหรับคนนอกทีม</h3>
+                <div class="proj-share-row">
+                    <label class="proj-share-label" for="shareLinkToggle">เปิดให้เข้าผ่านลิงก์โดยไม่ต้องมีบัญชี</label>
+                    <label class="switch">
+                        <input type="checkbox" id="shareLinkToggle" data-act="togglePublicShare" data-on="change">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div id="shareLinkDetails" hidden>
+                    <div class="form-group">
+                        <label class="form-label" for="shareLinkRole">สิทธิ์ของคนที่เข้าผ่านลิงก์</label>
+                        <select id="shareLinkRole" class="form-control" data-act="updateShareRole" data-on="change">
+                            <option value="Viewer">ดูอย่างเดียว (ดูบอร์ดและแชท)</option>
+                            <option value="Editor">แก้ไขได้ (จัดการงานและแชท)</option>
+                        </select>
                     </div>
-                    <div id="shareLinkDetails" style="display: none;">
-                        <div class="form-group mb-3">
-                            <label class="form-label" for="shareLinkRole" style="font-size: 0.8rem; font-weight: 500;">กำหนดสิทธิ์เข้าถึงผ่านลิงก์</label>
-                            <select id="shareLinkRole" class="form-control" data-act="updateShareRole" data-on="change">
-                                <option value="Viewer">Viewer (อ่านบอร์ด และร่วมแชทได้อย่างเดียว)</option>
-                                <option value="Editor">Editor (จัดการงานย่อย บันทึกความคืบหน้า และแชทได้)</option>
-                            </select>
-                        </div>
-                        <div class="form-group mb-0">
-                            <label class="form-label" style="font-size: 0.8rem; font-weight: 500;">ที่อยู่อีเมล/ลิงก์สาธารณะ</label>
-                            <div class="flex gap-2">
-                                <input type="text" id="shareLinkUrl" class="form-control" readonly style="background: var(--color-surface); font-family: monospace; font-size: 0.8rem; cursor: text;">
-                                <button type="button" class="btn btn-primary btn-sm" data-act="copyShareUrl" style="white-space: nowrap; height: 38px;">
-                                    คัดลอกลิงก์
-                                </button>
-                            </div>
+                    <div class="form-group">
+                        <label class="form-label" for="shareLinkUrl">ลิงก์</label>
+                        <div class="proj-share-url">
+                            <input type="text" id="shareLinkUrl" class="form-control" readonly>
+                            <button type="button" class="btn btn-sm" data-act="copyShareUrl">คัดลอก</button>
                         </div>
                     </div>
                 </div>
             </div>
-
         </div>
+    </div>
+</div>
+
+<!-- A guest's display name -->
+<div class="modal-backdrop" id="guestNameModal" aria-hidden="true">
+    <div class="modal modal-narrow" role="dialog" aria-labelledby="guestNameTitle">
+        <div class="modal-header">
+            <h2 class="modal-title" id="guestNameTitle">ชื่อที่แสดงในแชท</h2>
+            <button class="modal-close" type="button" aria-label="ปิด" data-close-modal>&times;</button>
+        </div>
+        <form id="guestNameForm" data-act="saveGuestName" data-args='["$event"]' data-on="submit" novalidate>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="guestNameInput">ชื่อของคุณ</label>
+                    <input type="text" id="guestNameInput" class="form-control" maxlength="50" autocomplete="off">
+                </div>
+                <p class="form-error" id="guestNameError" role="alert" hidden></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" data-close-modal>ยกเลิก</button>
+                <button type="submit" class="btn btn-primary">บันทึกชื่อ</button>
+            </div>
+        </form>
     </div>
 </div>
