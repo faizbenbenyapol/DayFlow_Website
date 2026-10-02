@@ -92,13 +92,17 @@
     color: var(--stamp-red);
 }
 
+/* A link that does something: it can stand alone, without .btn. */
 .btn-link {
     min-height: 0;
     padding: var(--space-1) var(--space-2);
     border: 0;
+    background: none;
     color: var(--pencil);
+    font: inherit;
     font-size: 0.875rem;
     text-decoration: underline;
+    cursor: pointer;
 }
 
 .btn-link:hover {
@@ -128,6 +132,38 @@
     padding: 0;
 }
 
+/* A button that is only a picture. It must carry an aria-label. */
+.icon-btn {
+    display: inline-grid;
+    place-content: center;
+    width: 44px;
+    height: 44px;
+    flex: none;
+    border: 0;
+    border-radius: var(--r-control);
+    background: none;
+    color: var(--ink);
+    cursor: pointer;
+}
+
+.icon-btn:hover {
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.icon-btn.sm {
+    width: 36px;
+    height: 36px;
+    color: var(--pencil);
+}
+
+.icon-btn.sm:hover {
+    color: var(--ink);
+}
+
+.icon-btn.danger:hover {
+    color: var(--stamp-red);
+}
+
 /* A finger needs 44px; a mouse does not. */
 @media (pointer: coarse) {
     .btn,
@@ -153,6 +189,16 @@
     margin-bottom: var(--space-6);
     padding-bottom: var(--space-4);
     border-bottom: 1px solid var(--ink);
+}
+
+/* The title keeps its room; the actions drop to their own line when it is short. */
+.page-head {
+    flex-wrap: wrap;
+}
+
+.page-head > :first-child:not(.date-block) {
+    flex: 1 1 14rem;
+    min-width: 0;
 }
 
 .page-head h1,
@@ -1247,6 +1293,43 @@ body.modal-open {
     border-bottom-color: var(--ink);
 }
 
+/* Key figures: a small label, a large number, a note. A row of them reads like
+   the totals line of a ledger. */
+.facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-bottom: 1px solid var(--rule);
+}
+
+.fact {
+    padding: 10px 0;
+}
+
+.fact + .fact {
+    padding-left: var(--space-4);
+    border-left: 1px solid var(--rule);
+}
+
+.fact .k {
+    font-size: 0.8125rem;
+    color: var(--pencil);
+}
+
+.fact .v {
+    font: 500 1.5625rem/1.25 var(--font-num);
+}
+
+.fact .v small {
+    margin-left: 4px;
+    font: 400 0.875rem var(--font);
+    color: var(--pencil);
+}
+
+.fact .note {
+    font-size: 0.8125rem;
+    color: var(--pencil);
+}
+
 /* Widths for skeleton bars, so a loading list is not all one length. */
 .skel-w-45 { width: 45%; }
 .skel-w-52 { width: 52%; }
@@ -1306,6 +1389,7 @@ body.modal-open {
     .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
+.mr-auto { margin-right: auto; }
 .mt-2 { margin-top: var(--space-2); }
 .mt-3 { margin-top: var(--space-3); }
 .mt-4 { margin-top: var(--space-4); }

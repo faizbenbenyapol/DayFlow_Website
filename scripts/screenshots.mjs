@@ -45,6 +45,11 @@ const PAGES = [
     ['ai', '/ai'], ['calculator', '/calculator'], ['settings', '/settings'],
     ['settings-appearance', '/settings', '[data-tab="appearance"]'],
     ['dev-components', '/dev/components'],
+    ['planner-event', '/planner', '[data-act="openAddEvent"]'],
+    ['habits-edit', '/habits', '[data-edit-habit]'],
+    ['focus-running', '/focus', '#btnStartStop'],
+    ['tasks-add', '/tasks', '[data-act="openAddTask"]'],
+    ['tasks-edit', '/tasks', '.task-title'],
     // States that need something opened first. The fourth item limits a state to some viewports.
     ['sheet-menu', '/', '.tabbar [data-act="openMenuSheet"]', ['mobile']],
     ['sheet-quick', '/', '.tabbar [data-act="openQuickAdd"]', ['mobile']],

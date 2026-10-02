@@ -16,7 +16,12 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const CSS = join(ROOT, 'public', 'assets', 'css');
 
-const CHECKED = ['base.css', 'components.css', 'shell.css'];
+const CHECKED = [
+    'base.css', 'components.css', 'shell.css',
+    // Pages that are finished (docs/REDESIGN.md, phases 4 and 5).
+    'modules/dashboard.css', 'modules/tasks.css', 'modules/planner.css',
+    'modules/habits.css', 'modules/focus.css', 'modules/quick.css',
+];
 
 // rgb(21 24 29 / .5): the dark scrim behind a dialog is the same in both themes.
 const SCRIM = /rgb\(21 24 29 \/ [0-9.]+\)/g;

@@ -88,7 +88,8 @@
 [data-day="sat"] { --day: #7A4FBF; --on-day: #FFFFFF; }
 
 /* The user turned the weekday colour off: today looks like any other page. */
-[data-daycolor="off"] { --day: var(--ink); --on-day: var(--paper); }
+[data-daycolor="off"],
+[data-daycolor="off"] [data-day] { --day: var(--ink); --on-day: var(--paper); }
 
 /* ---------------------------------------------------------------------------
    Names the pre-redesign stylesheets still use.

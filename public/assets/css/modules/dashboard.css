@@ -151,41 +151,6 @@
     color: var(--pencil);
 }
 
-.facts {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    border-bottom: 1px solid var(--rule);
-}
-
-.fact {
-    padding: 10px 0;
-}
-
-.fact + .fact {
-    padding-left: var(--space-4);
-    border-left: 1px solid var(--rule);
-}
-
-.fact .k {
-    font-size: 0.8125rem;
-    color: var(--pencil);
-}
-
-.fact .v {
-    font: 500 1.5625rem/1.25 var(--font-num);
-}
-
-.fact .v small {
-    margin-left: 4px;
-    font: 400 0.875rem var(--font);
-    color: var(--pencil);
-}
-
-.fact .note {
-    font-size: 0.8125rem;
-    color: var(--pencil);
-}
-
 /* Stocks: the change gets an arrow as well as a colour. */
 .chg-up   { color: var(--ledger-green); }
 .chg-down { color: var(--stamp-red); }

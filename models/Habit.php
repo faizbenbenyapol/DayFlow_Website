@@ -74,15 +74,47 @@ class Habit
         return $streaks;
     }
 
-    public static function toggleToday(int $id, int $userId): bool
+    /** The database's own idea of today, which is what CURDATE() means everywhere else here. */
+    public static function today(): string
+    {
+        return (string)DB::run('SELECT CURDATE()')->fetchColumn();
+    }
+
+    /**
+     * Which days each habit was done between two dates, inclusive.
+     *
+     * @return array<int, list<string>> habit id => 'Y-m-d' dates, oldest first
+     */
+    public static function logsBetween(int $userId, string $from, string $to): array
+    {
+        $rows = DB::run(
+            'SELECT habit_id, log_date FROM habit_logs
+             WHERE user_id = ? AND log_date BETWEEN ? AND ? ORDER BY log_date ASC',
+            [$userId, $from, $to]
+        )->fetchAll();
+
+        $logs = [];
+        foreach ($rows as $row) {
+            $logs[(int)$row['habit_id']][] = (string)$row['log_date'];
+        }
+        return $logs;
+    }
+
+    /** Ticks the habit for a day, or takes the tick away. Returns whether it is now ticked. */
+    public static function toggleOn(int $id, int $userId, string $date): bool
     {
         if (!self::get($id, $userId)) return false;
-        $exists = DB::run('SELECT id FROM habit_logs WHERE habit_id = ? AND user_id = ? AND log_date = CURDATE()', [$id, $userId])->fetchColumn();
+        $exists = DB::run('SELECT id FROM habit_logs WHERE habit_id = ? AND user_id = ? AND log_date = ?', [$id, $userId, $date])->fetchColumn();
         if ($exists) {
             DB::run('DELETE FROM habit_logs WHERE id = ? AND user_id = ?', [(int)$exists, $userId]);
             return false;
         }
-        DB::run('INSERT INTO habit_logs (habit_id, user_id, log_date) VALUES (?, ?, CURDATE())', [$id, $userId]);
+        DB::run('INSERT INTO habit_logs (habit_id, user_id, log_date) VALUES (?, ?, ?)', [$id, $userId, $date]);
         return true;
+    }
+
+    public static function toggleToday(int $id, int $userId): bool
+    {
+        return self::toggleOn($id, $userId, self::today());
     }
 }

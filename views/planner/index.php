@@ -1,129 +1,144 @@
-<div class="page-header flex items-center justify-between">
-    <h1 class="page-title">แพลนเนอร์</h1>
-    <div class="flex items-center gap-2">
-        <a class="btn btn-ghost btn-sm" href="<?= APP_URL ?>/api/planner/events/export.ics"
-           title="ดาวน์โหลดปฏิทินเป็นไฟล์ .ics เพื่อนำเข้า Google Calendar หรือ Apple Calendar">
-            ส่งออก .ics
-        </a>
-        <button class="btn btn-ghost btn-sm" type="button" data-click="#icsFile"
-                title="นำเข้ากิจกรรมจากไฟล์ .ics">
-            นำเข้า .ics
-        </button>
-        <input type="file" id="icsFile" accept=".ics,text/calendar" style="display:none"
+<?php
+// =====================================================
+// views/planner/index.php — the month, and the page of the day you picked
+//
+// The colours below are values stored with each event, not interface colours:
+// a person picks one when they save an event, and the page only passes it on as
+// --ev. assets/js/planner.js draws the grid and the day sheet.
+// =====================================================
+
+$eventColors = [
+    '#3b82f6' => 'น้ำเงิน', '#10b981' => 'เขียว', '#f97316' => 'ส้ม',
+    '#f43f5e' => 'ชมพูแดง', '#8b5cf6' => 'ม่วง', '#64748b' => 'เทา',
+];
+$repeatOptions = ['none' => 'ไม่ทำซ้ำ', 'daily' => 'ทุกวัน', 'weekly' => 'ทุกสัปดาห์', 'monthly' => 'ทุกเดือน', 'yearly' => 'ทุกปี'];
+?>
+<div class="page-head">
+    <div>
+        <h1>แพลนเนอร์</h1>
+        <p class="sub" id="plannerTally" aria-live="polite">กำลังโหลดปฏิทิน…</p>
+    </div>
+    <div class="page-head-actions">
+        <a class="btn btn-ghost" href="<?= APP_URL ?>/api/planner/events/export.ics"
+           title="ดาวน์โหลดปฏิทินเป็นไฟล์ .ics เพื่อนำเข้า Google Calendar หรือ Apple Calendar">ส่งออก .ics</a>
+        <button class="btn btn-ghost" type="button" data-click="#icsFile" title="นำเข้ากิจกรรมจากไฟล์ .ics">นำเข้า .ics</button>
+        <input type="file" id="icsFile" class="sr-only" accept=".ics,text/calendar" tabindex="-1" aria-label="เลือกไฟล์ .ics"
                data-act="importIcs" data-args="[&quot;$el&quot;]" data-on="change">
-        <button class="btn btn-primary btn-sm" data-act="openAddEvent">+ เพิ่มกิจกรรม</button>
+        <button class="btn btn-primary" type="button" data-act="openAddEvent"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>เพิ่มกิจกรรม</button>
     </div>
 </div>
 
 <div class="planner-layout">
-    <!-- Calendar Card Grid -->
-    <div class="card" style="padding: var(--space-5);">
-        <div class="calendar-nav">
-            <button class="btn btn-ghost btn-sm" data-act="prevMonth">&larr;</button>
-            <span class="calendar-month-label" id="calMonthLabel"></span>
-            <button class="btn btn-ghost btn-sm" data-act="nextMonth">&rarr;</button>
+    <section class="month" aria-labelledby="calMonthLabel">
+        <div class="month-nav">
+            <button class="icon-btn" type="button" data-act="prevMonth" aria-label="เดือนก่อน">&lsaquo;</button>
+            <h2 class="month-label" id="calMonthLabel"></h2>
+            <button class="icon-btn" type="button" data-act="nextMonth" aria-label="เดือนถัดไป">&rsaquo;</button>
         </div>
-        <div id="calendarGrid"></div>
-    </div>
+        <div id="monthError" role="alert" hidden></div>
+        <div id="calendarGrid" class="calendar-grid"></div>
+    </section>
 
-    <!-- Day Details & Todo list panel -->
-    <div class="day-panel">
-        <div class="day-panel-date" id="dayPanelDate">กำลังโหลด...</div>
-
-        <div class="day-panel-section">
-            <div class="day-panel-section-title">กิจกรรมประจำวัน</div>
-            <div id="dayEvents" class="flex-col" style="display: flex; flex-direction: column; gap: 8px;"></div>
+    <!-- The page of the day: it turns over when another day is picked. -->
+    <aside class="day-sheet" id="daySheet" aria-label="รายละเอียดของวันที่เลือก">
+        <div class="day-sheet-head">
+            <div class="date-block" aria-hidden="true"><span class="d" id="dayNum"></span><span class="m" id="dayMon"></span></div>
+            <div>
+                <h2 id="dayPanelDate">กำลังโหลด…</h2>
+                <p class="sub" id="dayPanelSub"></p>
+            </div>
         </div>
 
-        <div class="day-panel-section" style="border-top: 1px solid var(--color-border); padding-top: var(--space-5);">
-            <div class="day-panel-section-title">รายการสิ่งที่ต้องทำ</div>
-            <form class="day-todo-add" data-act="addTodo">
-                <input type="text" id="todoInput" placeholder="เพิ่มรายการสิ่งที่ต้องทำ..." maxlength="255">
-                <button class="btn btn-primary btn-sm" type="submit">เพิ่ม</button>
+        <section class="sec" aria-labelledby="dayEventsTitle">
+            <div class="sec-head"><h2 id="dayEventsTitle">กิจกรรม</h2></div>
+            <div id="dayEvents"></div>
+        </section>
+
+        <section class="sec" aria-labelledby="dayTodosTitle">
+            <div class="sec-head"><h2 id="dayTodosTitle">สิ่งที่ต้องทำ</h2></div>
+            <div id="dayTodos"></div>
+            <form class="add-row" data-act="addTodo">
+                <span class="plus" aria-hidden="true">+</span>
+                <label class="sr-only" for="todoInput">เพิ่มสิ่งที่ต้องทำในวันนี้</label>
+                <input type="text" id="todoInput" placeholder="เพิ่มสิ่งที่ต้องทำ แล้วกด Enter" maxlength="255" autocomplete="off">
             </form>
-            <div id="dayTodos" class="flex-col" style="display: flex; flex-direction: column; gap: 6px;"></div>
-        </div>
-    </div>
+        </section>
+    </aside>
 </div>
 
 <!-- Event Create/Edit Modal -->
-<div class="modal-backdrop" id="eventModal">
-    <div class="modal">
+<div class="modal-backdrop" id="eventModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-labelledby="eventModalTitle">
         <div class="modal-header">
-            <span class="modal-title" id="eventModalTitle">บันทึกกิจกรรม</span>
-            <button class="modal-close" type="button">&times;</button>
+            <h2 class="modal-title" id="eventModalTitle">เพิ่มกิจกรรม</h2>
+            <button class="modal-close" type="button" aria-label="ปิด">&times;</button>
         </div>
         <div class="modal-body">
             <input type="hidden" id="editEventId">
             <div class="form-group">
-                <label class="form-label">ชื่อกิจกรรม</label>
-                <input type="text" class="form-control" id="eventTitle" placeholder="เช่น ประชุมงาน, ออกกำลังกาย..." maxlength="255">
+                <label class="form-label" for="eventTitle">ชื่อกิจกรรม</label>
+                <input type="text" class="form-control" id="eventTitle" placeholder="เช่น ประชุมทีม, วิ่ง 5 กม." maxlength="255">
             </div>
             <div class="form-group">
-                <label class="form-label">รายละเอียด</label>
-                <textarea class="form-control" id="eventDesc" placeholder="ระบุรายละเอียดเพิ่มเติม..." rows="2"></textarea>
+                <label class="form-label" for="eventDesc">รายละเอียด</label>
+                <textarea class="form-control" id="eventDesc" rows="2"></textarea>
             </div>
-            
-            <!-- Curated Color Presets Selector -->
+
             <div class="form-group">
-                <label class="form-label">สีประจำกิจกรรม</label>
-                <div class="event-color-selector">
+                <span class="form-label" id="eventColorLabel">สีของกิจกรรม</span>
+                <div class="event-color-selector" role="radiogroup" aria-labelledby="eventColorLabel">
                     <input type="hidden" id="eventColor" value="#3b82f6">
-                    <span class="color-dot active" data-color="#3b82f6" style="background: #3b82f6;"></span>
-                    <span class="color-dot" data-color="#10b981" style="background: #10b981;"></span>
-                    <span class="color-dot" data-color="#f97316" style="background: #f97316;"></span>
-                    <span class="color-dot" data-color="#f43f5e" style="background: #f43f5e;"></span>
-                    <span class="color-dot" data-color="#8b5cf6" style="background: #8b5cf6;"></span>
-                    <span class="color-dot" data-color="#64748b" style="background: #64748b;"></span>
+                    <?php foreach ($eventColors as $hex => $name): ?>
+                    <button type="button" class="color-dot<?= $hex === '#3b82f6' ? ' active' : '' ?>" role="radio"
+                            aria-checked="<?= $hex === '#3b82f6' ? 'true' : 'false' ?>" aria-label="<?= h($name) ?>"
+                            data-color="<?= h($hex) ?>" style="--ev: <?= h($hex) ?>"></button>
+                    <?php endforeach; ?>
                 </div>
             </div>
 
-            <div class="form-group mt-4">
-                <label class="flex items-center gap-3" style="cursor:pointer; font-size: 0.9rem; font-weight: 500;">
-                    <input type="checkbox" id="eventAllDay" data-act="toggleAllDay" data-args="[&quot;$checked&quot;]" data-on="change" style="width: 16px; height: 16px;">
-                    <span>กิจกรรมทั้งวัน (All Day Event)</span>
+            <div class="form-group">
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" id="eventAllDay" data-act="toggleAllDay" data-args="[&quot;$checked&quot;]" data-on="change">
+                    <span>กิจกรรมทั้งวัน</span>
                 </label>
             </div>
             <div class="form-row" id="dateTimeFields">
                 <div class="form-group">
-                    <label class="form-label">เวลาเริ่มต้น</label>
+                    <label class="form-label" for="eventStart">เริ่ม</label>
                     <input type="datetime-local" class="form-control" id="eventStart">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">เวลาสิ้นสุด</label>
+                    <label class="form-label" for="eventEnd">สิ้นสุด</label>
                     <input type="datetime-local" class="form-control" id="eventEnd">
                 </div>
             </div>
-            <div class="form-row" id="dateOnlyFields" style="display:none">
+            <div class="form-row" id="dateOnlyFields" hidden>
                 <div class="form-group">
-                    <label class="form-label">วันที่</label>
+                    <label class="form-label" for="eventDate">วันที่</label>
                     <input type="date" class="form-control" id="eventDate">
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">ทำซ้ำ</label>
+                    <label class="form-label" for="eventRepeat">ทำซ้ำ</label>
                     <select class="form-control" id="eventRepeat">
-                        <option value="none">ไม่ทำซ้ำ</option>
-                        <option value="daily">ทุกวัน</option>
-                        <option value="weekly">ทุกสัปดาห์</option>
-                        <option value="monthly">ทุกเดือน</option>
-                        <option value="yearly">ทุกปี</option>
+                        <?php foreach ($repeatOptions as $value => $text): ?>
+                        <option value="<?= $value ?>"><?= h($text) ?></option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">ทำซ้ำถึงวันที่ <span class="text-muted text-xs">(ไม่ใส่ = ไม่สิ้นสุด)</span></label>
+                    <label class="form-label" for="eventRepeatUntil">ทำซ้ำถึงวันที่</label>
                     <input type="date" class="form-control" id="eventRepeatUntil">
+                    <p class="form-hint">ไม่ใส่ = ไม่สิ้นสุด</p>
                 </div>
             </div>
-            <p class="text-xs text-muted" id="eventRepeatHint" style="margin-top:-6px;display:none">
-                แก้ไขหรือลบจะมีผลกับทุกครั้งในชุดนี้
-            </p>
+            <p class="form-hint" id="eventRepeatHint" hidden>แก้ไขหรือลบจะมีผลกับทุกครั้งในชุดนี้</p>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-danger btn-sm" id="deleteEventBtn" style="margin-right:auto;display:none" data-act="deleteEvent">ลบกิจกรรม</button>
-            <button class="btn btn-ghost" data-close-modal>ยกเลิก</button>
-            <button class="btn btn-primary" data-act="saveEvent">บันทึก</button>
+            <button class="btn btn-danger mr-auto" type="button" id="deleteEventBtn" data-act="deleteEvent" hidden>ลบกิจกรรม</button>
+            <button class="btn" type="button" data-close-modal>ยกเลิก</button>
+            <button class="btn btn-primary" type="button" data-act="saveEvent">บันทึกกิจกรรม</button>
         </div>
     </div>
 </div>

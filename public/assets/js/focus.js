@@ -1,343 +1,279 @@
 /* =====================================================
-   focus.js — Premium Pomodoro Focus Controller
-   ===================================================== */
+   focus.js — the Pomodoro timer
+
+   The countdown is worked out from the moment it is due to end, not by
+   subtracting one second per tick. A tab in the background, or a phone with its
+   screen off, runs timers slowly or not at all; the clock on the wall does not.
+   A running timer survives a reload: its end time is kept in localStorage.
+===================================================== */
 
 document.addEventListener('DOMContentLoaded', function () {
     const gridLayout = document.querySelector('.focus-layout-grid');
     const timerDisplay = document.getElementById('timerDisplay');
     const timerPhaseLabel = document.getElementById('timerPhaseLabel');
     const timerProgress = document.getElementById('timerProgress');
-    
+
     const btnStartStop = document.getElementById('btnStartStop');
     const btnResetTimer = document.getElementById('btnResetTimer');
     const btnSkipTimer = document.getElementById('btnSkipTimer');
-    const playIcon = document.getElementById('playIcon');
-    const pauseIcon = document.getElementById('pauseIcon');
 
     const inputWorkDuration = document.getElementById('inputWorkDuration');
     const inputShortBreak = document.getElementById('inputShortBreak');
     const inputLongBreak = document.getElementById('inputLongBreak');
-    
+
     const selectFocusTask = document.getElementById('selectFocusTask');
     const inputFocusTitle = document.getElementById('inputFocusTitle');
-    const logsTableBody = document.getElementById('focusLogsTableBody');
+    const logsEl = document.getElementById('focusLogs');
 
-    // Stats Elements
-    const statTodayTime = document.getElementById('statTodayTime');
-    const statTodaySessions = document.getElementById('statTodaySessions');
-    const statTotalSessions = document.getElementById('statTotalSessions');
+    const STORE = 'dayflow.focus';
+    const PAGE_TITLE = document.title;
+    const PHASE_LABEL = { work: 'กำลังโฟกัสงาน', short_break: 'พักสั้น', long_break: 'พักยาว' };
+    const TYPE_LABEL = { work: 'โฟกัสงาน', short_break: 'พักสั้น', long_break: 'พักยาว' };
 
     // State
-    let timerInterval = null;
-    let secondsRemaining = 25 * 60;
+    let ticker = null;
+    let endsAt = null;              // epoch ms the running timer is due, null when stopped
+    let secondsRemaining = 25 * 60; // what the face shows when stopped
     let totalDurationSeconds = 25 * 60;
-    let currentMode = 'work'; // 'work', 'short_break', 'long_break'
-    let isRunning = false;
+    let currentMode = 'work';       // 'work', 'short_break', 'long_break'
 
-    // Load initial list and stats
+    const isRunning = () => endsAt !== null;
+
     fetchLogs();
 
-    // Mode Buttons Click
     document.querySelectorAll('.focus-mode-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
-            const newMode = this.dataset.mode;
-            switchMode(newMode);
-        });
+        btn.addEventListener('click', () => switchMode(btn.dataset.mode));
     });
-
-    // Start/Stop Timer
-    btnStartStop.addEventListener('click', toggleTimer);
-
-    // Reset Timer
-    btnResetTimer.addEventListener('click', resetTimer);
-
-    // Skip Timer
+    btnStartStop.addEventListener('click', () => (isRunning() ? pauseTimer() : startTimer()));
+    btnResetTimer.addEventListener('click', () => switchMode(currentMode));
     btnSkipTimer.addEventListener('click', skipTimer);
 
-    // Dynamic input changes to reset timer duration if not running
+    // A new length takes effect at once, unless a timer is in the middle of running.
     [inputWorkDuration, inputShortBreak, inputLongBreak].forEach(input => {
-        input.addEventListener('change', function () {
-            if (!isRunning) {
-                switchMode(currentMode, false);
-            }
-        });
+        input.addEventListener('change', () => { if (!isRunning()) switchMode(currentMode, false); });
     });
 
-    // Helper functions
+    // Back from another tab: the interval may have been starved, so look at the clock.
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && isRunning()) tick(); });
+
     function getModeDuration(mode) {
-        if (mode === 'work') return parseInt(inputWorkDuration.value) * 60;
-        if (mode === 'short_break') return parseInt(inputShortBreak.value) * 60;
-        if (mode === 'long_break') return parseInt(inputLongBreak.value) * 60;
-        return 25 * 60;
+        const minutes = parseInt({ work: inputWorkDuration, short_break: inputShortBreak, long_break: inputLongBreak }[mode].value, 10);
+        return (Number.isFinite(minutes) && minutes > 0 ? minutes : 25) * 60;
     }
 
     function switchMode(mode, stopCurrent = true) {
-        if (stopCurrent) {
-            pauseTimer();
-        }
+        if (stopCurrent) pauseTimer(false);
 
         currentMode = mode;
-        
-        // Update Grid wrapper attribute
-        if (gridLayout) {
-            gridLayout.setAttribute('data-mode', mode);
-        }
+        gridLayout?.setAttribute('data-mode', mode);
 
-        // Highlight Active Mode tab button
         document.querySelectorAll('.focus-mode-btn').forEach(btn => {
-            if (btn.dataset.mode === mode) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
+            const on = btn.dataset.mode === mode;
+            btn.classList.toggle('active', on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
         });
 
-        // Set durations
-        const durationSeconds = getModeDuration(mode);
-        secondsRemaining = durationSeconds;
-        totalDurationSeconds = durationSeconds;
-
-        // Update Labels & Display
-        if (mode === 'work') {
-            timerPhaseLabel.textContent = 'กำลังโฟกัสงาน';
-        } else if (mode === 'short_break') {
-            timerPhaseLabel.textContent = 'พักระยะสั้น';
-        } else {
-            timerPhaseLabel.textContent = 'พักระยะยาว';
-        }
-
+        totalDurationSeconds = secondsRemaining = getModeDuration(mode);
+        btnStartStop.textContent = 'เริ่มจับเวลา';
+        timerPhaseLabel.textContent = PHASE_LABEL[mode];
         updateDisplay();
     }
 
-    function updateDisplay() {
-        const mins = Math.floor(secondsRemaining / 60);
-        const secs = secondsRemaining % 60;
-        timerDisplay.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-
-        // Progress SVG Ring offset (circumference = 597)
-        const circumference = 597;
-        const progress = secondsRemaining / totalDurationSeconds;
-        const offset = circumference - (progress * circumference);
-        timerProgress.style.strokeDashoffset = offset;
+    function clock(seconds) {
+        return String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0');
     }
 
-    function toggleTimer() {
-        if (isRunning) {
-            pauseTimer();
-        } else {
-            startTimer();
-        }
+    function updateDisplay() {
+        timerDisplay.textContent = clock(secondsRemaining);
+        timerProgress.style.width = Math.round((1 - secondsRemaining / totalDurationSeconds) * 100) + '%';
+        // The countdown also shows in the browser tab, so it can be read from another one.
+        document.title = isRunning() ? clock(secondsRemaining) + ' · ' + PHASE_LABEL[currentMode] : PAGE_TITLE;
+    }
+
+    function tick() {
+        secondsRemaining = Math.max(0, Math.round((endsAt - Date.now()) / 1000));
+        updateDisplay();
+        if (secondsRemaining === 0) handleTimerFinished();
     }
 
     function startTimer() {
-        isRunning = true;
-        playIcon.style.display = 'none';
-        pauseIcon.style.display = 'block';
-
-        timerInterval = setInterval(() => {
-            if (secondsRemaining > 0) {
-                secondsRemaining--;
-                updateDisplay();
-            } else {
-                handleTimerFinished();
-            }
-        }, 1000);
+        endsAt = Date.now() + secondsRemaining * 1000;
+        remember();
+        btnStartStop.textContent = 'หยุดชั่วคราว';
+        clearInterval(ticker);
+        ticker = setInterval(tick, 250);
+        tick();
     }
 
-    function pauseTimer() {
-        isRunning = false;
-        playIcon.style.display = 'block';
-        pauseIcon.style.display = 'none';
-        clearInterval(timerInterval);
-        timerInterval = null;
+    function pauseTimer(keepRemaining = true) {
+        if (isRunning() && keepRemaining) {
+            secondsRemaining = Math.max(0, Math.round((endsAt - Date.now()) / 1000));
+        }
+        endsAt = null;
+        clearInterval(ticker);
+        ticker = null;
+        forget();
+        btnStartStop.textContent = secondsRemaining < totalDurationSeconds && secondsRemaining > 0 ? 'จับเวลาต่อ' : 'เริ่มจับเวลา';
+        updateDisplay();
     }
 
-    function resetTimer() {
-        switchMode(currentMode);
+    /* ---------- survive a reload ---------- */
+    function remember() {
+        try { localStorage.setItem(STORE, JSON.stringify({ mode: currentMode, endsAt, total: totalDurationSeconds })); } catch { /* private mode: it still runs */ }
+    }
+
+    function forget() {
+        try { localStorage.removeItem(STORE); } catch { /* nothing to forget */ }
+    }
+
+    function resume() {
+        try {
+            const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
+            if (!saved || !PHASE_LABEL[saved.mode] || saved.endsAt <= Date.now()) { forget(); return; }
+            switchMode(saved.mode, false);
+            totalDurationSeconds = saved.total;
+            secondsRemaining = Math.round((saved.endsAt - Date.now()) / 1000);
+            startTimer();
+            endsAt = saved.endsAt; // keep the original end, not "now + what is left"
+            remember();
+            tick();
+        } catch { forget(); }
     }
 
     function skipTimer() {
-        confirmAction('ต้องการข้ามช่วงเวลานี้หรือไม่?', 'ข้าม', 'ข้ามขั้นตอน').then(confirmed => {
-            if (confirmed) {
-                handleTimerFinished(true); // skip session logging or log early
-            }
+        confirmAction('ข้ามช่วงนี้ไปช่วงถัดไป รอบนี้จะไม่ถูกบันทึก', 'ข้ามช่วงนี้', 'ข้ามช่วงนี้?').then(confirmed => {
+            if (confirmed) handleTimerFinished(true);
         });
     }
 
     async function handleTimerFinished(skipped = false) {
-        pauseTimer();
-        playFocusChime();
+        pauseTimer(false);
+        if (!skipped) playFocusChime();
 
         if (currentMode === 'work' && !skipped) {
-            // Log completed work session to database
             const taskId = selectFocusTask.value;
-            const title = inputFocusTitle.value.trim();
-            const minutesCompleted = Math.floor(totalDurationSeconds / 60);
-
             try {
                 await apiFetch(BASE_URL + '/api/focus', {
                     method: 'POST',
                     body: JSON.stringify({
                         type: currentMode,
-                        duration_min: minutesCompleted,
-                        task_id: taskId ? parseInt(taskId) : null,
-                        title: title
+                        duration_min: Math.floor(totalDurationSeconds / 60),
+                        task_id: taskId ? parseInt(taskId, 10) : null,
+                        title: inputFocusTitle.value.trim()
                     })
                 });
-
-                // Clear input title
                 inputFocusTitle.value = '';
-                showToast('โฟกัสสำเร็จ! บันทึกช่วงเวลาเรียบร้อยแล้ว', 'success');
-
-                // Reload logs/stats
+                toast('จบรอบโฟกัส บันทึกแล้ว');
                 fetchLogs();
             } catch (err) {
                 console.error(err);
-                showToast('ไม่สามารถบันทึกเซสชันโฟกัสได้', 'danger');
+                toast('จบรอบแล้ว แต่บันทึกไม่สำเร็จ ลองรีเฟรชหน้าแล้วจดเวลาด้วยตัวเอง', 'danger');
             }
-        } else {
-            showToast('หมดเวลาพักผ่อนแล้ว! ได้เวลาโฟกัสต่อ', 'success');
+        } else if (!skipped) {
+            toast('หมดเวลาพัก ถึงเวลาโฟกัส');
         }
 
-        // Auto shift to next phase mode
-        if (currentMode === 'work') {
-            switchMode('short_break', false);
-        } else {
-            switchMode('work', false);
-        }
+        // On to the next phase, stopped: starting it is the person's choice.
+        switchMode(currentMode === 'work' ? 'short_break' : 'work', false);
     }
 
-    // Web Audio API Synthesized Bell sound
+    // Web Audio API synthesized bell
     function playFocusChime() {
         try {
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
             if (!AudioContextClass) return;
             const ctx = new AudioContextClass();
-            
-            // Tone 1: C5 (523.25 Hz)
-            const osc1 = ctx.createOscillator();
-            const gain1 = ctx.createGain();
-            osc1.type = 'sine';
-            osc1.frequency.setValueAtTime(523.25, ctx.currentTime);
-            gain1.gain.setValueAtTime(0.15, ctx.currentTime);
-            gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
-            osc1.connect(gain1);
-            gain1.connect(ctx.destination);
-            osc1.start();
-            osc1.stop(ctx.currentTime + 0.6);
 
-            // Tone 2: E5 (659.25 Hz) at 0.15 seconds
-            const osc2 = ctx.createOscillator();
-            const gain2 = ctx.createGain();
-            osc2.type = 'sine';
-            osc2.frequency.setValueAtTime(659.25, ctx.currentTime + 0.15);
-            gain2.gain.setValueAtTime(0.15, ctx.currentTime + 0.15);
-            gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.75);
-            osc2.connect(gain2);
-            gain2.connect(ctx.destination);
-            osc2.start(ctx.currentTime + 0.15);
-            osc2.stop(ctx.currentTime + 0.75);
+            [[523.25, 0], [659.25, 0.15]].forEach(([frequency, delay]) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(frequency, ctx.currentTime + delay);
+                gain.gain.setValueAtTime(0.15, ctx.currentTime + delay);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.6);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(ctx.currentTime + delay);
+                osc.stop(ctx.currentTime + delay + 0.6);
+            });
         } catch (e) {
             console.error('Web Audio chime sound failed:', e);
         }
     }
 
-    // Fetch and render Focus Logs
+    /* ---------- today's figures and the history ---------- */
     async function fetchLogs() {
         try {
             const res = await apiFetch(BASE_URL + '/api/focus');
+            logsEl.removeAttribute('aria-busy');
             renderStats(res.stats);
-            renderLogsTable(res.sessions);
+            renderLogs(res.sessions);
         } catch (err) {
             console.error(err);
-            if (logsTableBody) {
-                logsTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">เกิดข้อผิดพลาดในการโหลดประวัติ</td></tr>';
-            }
+            logsEl.removeAttribute('aria-busy');
+            logsEl.innerHTML = '<div class="alert alert-danger" role="alert">โหลดประวัติไม่สำเร็จ ตรวจการเชื่อมต่อแล้วลองใหม่ '
+                + '<button type="button" class="btn btn-sm" id="focusRetry">ลองอีกครั้ง</button></div>';
+            document.getElementById('focusRetry').addEventListener('click', fetchLogs);
+            document.getElementById('focusTally').textContent = 'โหลดสถิติไม่ได้';
         }
+    }
+
+    function hoursMinutes(minutes) {
+        return Math.floor(minutes / 60) + ':' + String(minutes % 60).padStart(2, '0');
     }
 
     function renderStats(stats) {
         if (!stats) return;
-        statTodayTime.textContent = `${stats.today_work_minutes} นาที`;
-        statTodaySessions.textContent = `${stats.today_work_sessions} รอบ`;
-        statTotalSessions.textContent = `${stats.total_sessions_count} รอบ`;
+        const minutes = Number(stats.today_work_minutes) || 0;
+        document.getElementById('statTodayTime').innerHTML = hoursMinutes(minutes) + '<small>ชม.</small>';
+        document.getElementById('statTodaySessions').innerHTML = (stats.today_work_sessions || 0) + '<small>รอบ</small>';
+        document.getElementById('statTotalSessions').innerHTML = (stats.total_sessions_count || 0) + '<small>รอบ</small>';
+        document.getElementById('focusTally').textContent = stats.today_work_sessions > 0
+            ? 'วันนี้โฟกัสแล้ว ' + hoursMinutes(minutes) + ' ชม. · ' + stats.today_work_sessions + ' รอบ'
+            : 'วันนี้ยังไม่ได้จับเวลา';
     }
 
-    function renderLogsTable(sessions) {
-        if (!logsTableBody) return;
-
+    function renderLogs(sessions) {
         if (!sessions || sessions.length === 0) {
-            logsTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted" style="padding: var(--space-5);">ยังไม่มีประวัติการโฟกัสในระบบ</td></tr>';
+            logsEl.innerHTML = '<div class="empty-state"><p class="empty-state-title">ยังไม่มีประวัติ</p>'
+                + '<p class="empty-state-text">จับเวลารอบแรกให้ครบ แล้วรอบนั้นจะขึ้นที่นี่</p></div>';
             return;
         }
 
-        let html = '';
-        sessions.forEach(s => {
-            const dateStr = formatDate(s.completed_at) + ' ' + s.completed_at.substring(11, 16);
-            const titleText = s.task_title ? `${escHtml(s.title)} (งาน: ${escHtml(s.task_title)})` : escHtml(s.title);
-            
-            let typeBadge = '';
-            if (s.type === 'work') {
-                typeBadge = '<span class="badge-focus-type work">โฟกัสงาน</span>';
-            } else if (s.type === 'short_break') {
-                typeBadge = '<span class="badge-focus-type short_break">พักระยะสั้น</span>';
-            } else {
-                typeBadge = '<span class="badge-focus-type long_break">พักระยะยาว</span>';
-            }
+        logsEl.innerHTML = sessions.map(s => {
+            const when = parseStamp(s.completed_at);
+            const text = s.title ? escHtml(s.title) : (TYPE_LABEL[s.type] || escHtml(s.type));
+            const task = s.task_title ? ' · งาน: ' + escHtml(s.task_title) : '';
+            return '<div class="focus-log' + (s.type === 'work' ? '' : ' is-break') + '">'
+                + '<div class="grow"><span class="title">' + text + '</span>'
+                + '<span class="meta">' + when + ' · ' + (TYPE_LABEL[s.type] || escHtml(s.type)) + task + '</span></div>'
+                + '<span class="side">' + s.duration_min + ' นาที</span>'
+                + '<button type="button" class="icon-btn sm danger btn-delete-log" data-id="' + s.id + '" aria-label="ลบประวัติ: ' + text + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>'
+                + '</div>';
+        }).join('');
 
-            html += `<tr>
-                <td>${dateStr}</td>
-                <td class="font-medium">${titleText}</td>
-                <td>${typeBadge}</td>
-                <td class="font-semibold">${s.duration_min} นาที</td>
-                <td class="text-right">
-                    <button class="btn btn-ghost btn-sm btn-delete-log text-danger" data-id="${s.id}" style="padding: 4px;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-                    </button>
-                </td>
-            </tr>`;
-        });
-
-        logsTableBody.innerHTML = html;
-
-        // Bind delete buttons
-        logsTableBody.querySelectorAll('.btn-delete-log').forEach(btn => {
-            btn.addEventListener('click', function () {
-                const id = this.dataset.id;
-                confirmAction('คุณแน่ใจว่าต้องการลบประวัติรายการนี้ใช่หรือไม่?', 'ลบข้อมูล', 'ลบประวัติ').then(async confirmed => {
-                    if (confirmed) {
-                        try {
-                            await apiFetch(BASE_URL + `/api/focus/${id}`, { method: 'DELETE' });
-                            showToast('ลบรายการบันทึกเรียบร้อยแล้ว', 'success');
-                            fetchLogs();
-                        } catch (err) {
-                            console.error(err);
-                            showToast('ลบรายการไม่สำเร็จ', 'danger');
-                        }
-                    }
-                });
+        logsEl.querySelectorAll('.btn-delete-log').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (!await confirmAction('ลบประวัติรอบนี้แล้วกู้คืนไม่ได้', 'ลบประวัติ', 'ลบประวัติรอบนี้?')) return;
+                try {
+                    await apiFetch(BASE_URL + '/api/focus/' + btn.dataset.id, { method: 'DELETE' });
+                    toast('ลบประวัติแล้ว');
+                    fetchLogs();
+                } catch (err) {
+                    console.error(err);
+                    toast('ลบไม่สำเร็จ ลองอีกครั้ง', 'danger');
+                }
             });
         });
     }
 
-    // Helper formatting tools
-    function formatDate(dateStr) {
-        const d = new Date(dateStr);
-        if (isNaN(d)) return dateStr;
-        return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+    /** "2 ต.ค. 14:30" from a MySQL datetime. */
+    function parseStamp(stamp) {
+        const d = new Date(String(stamp).replace(' ', 'T'));
+        if (isNaN(d)) return escHtml(String(stamp));
+        return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) + ' ' + String(stamp).substring(11, 16);
     }
 
-    function showToast(msg, type = 'success') {
-        const container = document.getElementById('toastContainer');
-        if (!container) return;
-        
-        const toast = document.createElement('div');
-        toast.className = `toast toast-${type} animate-fade-in`;
-        toast.textContent = msg;
-        container.appendChild(toast);
-        
-        setTimeout(() => {
-            toast.remove();
-        }, 3000);
-    }
+    switchMode('work', false);
+    resume();
 });

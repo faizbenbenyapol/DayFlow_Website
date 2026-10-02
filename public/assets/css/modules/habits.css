@@ -1,17 +1,170 @@
-.habits-header { display:flex; align-items:center; justify-content:space-between; gap:var(--space-4); }
-.habits-summary { min-height:24px; margin-bottom:var(--space-4); color:var(--color-muted); font-size:.9rem; }
-.habits-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:var(--space-4); }
-.habit-card { background:var(--color-surface); border:1px solid var(--color-border); border-top:3px solid var(--habit-color); border-radius:var(--radius-lg); padding:var(--space-5); box-shadow:var(--shadow-sm); transition:transform .2s ease, box-shadow .2s ease; }
-.habit-card:hover { transform:translateY(-2px); box-shadow:var(--shadow); }
-.habit-card.is-complete { background:color-mix(in srgb,var(--habit-color) 8%,var(--color-surface)); }
-.habit-card-top { display:flex; justify-content:space-between; align-items:center; }
-.habit-dot { width:12px; height:12px; border-radius:50%; background:var(--habit-color); box-shadow:0 0 0 5px color-mix(in srgb,var(--habit-color) 14%,transparent); }
-.habit-card h2 { margin:var(--space-4) 0 var(--space-1); font-size:1.05rem; color:var(--color-text); }
-.habit-card p { min-height:44px; font-size:.82rem; }
-.habit-edit { border:0; background:transparent; color:var(--color-muted); cursor:pointer; padding:4px 6px; border-radius:var(--radius-sm); }
-.habit-edit:hover { color:var(--color-text); background:var(--color-surface-2); }
-.habit-check { width:100%; min-height:42px; border:1px solid var(--color-border-2); border-radius:var(--radius-md); background:var(--color-surface-2); color:var(--color-text); cursor:pointer; font-weight:600; }
-.habit-check.checked { background:var(--color-success-bg); color:var(--color-success); border-color:color-mix(in srgb,var(--color-success) 35%,transparent); }
-.habit-form-row { display:grid; grid-template-columns:1fr 100px; gap:var(--space-4); margin-top:var(--space-4); }
-.habit-color-input { padding:4px; height:42px; }
-@media (max-width: 600px) { .habits-header { align-items:stretch; flex-direction:column; } .habits-header .btn { width:100%; } }
+/* =====================================================
+   habits.css — the attendance sheet
+
+   One row per habit, one column per day of the week. Today's column is marked
+   with the weekday colour; days that have not come yet cannot be ticked. A
+   habit's own colour (chosen by the person) arrives as --habit.
+===================================================== */
+
+.week-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+.week-label {
+    min-width: 12rem;
+    font-size: 1.125rem;
+    text-align: center;
+}
+
+.week-nav .icon-btn {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.habit-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.habit-table th,
+.habit-table td {
+    border-bottom: 1px solid var(--rule);
+}
+
+.habit-table thead th {
+    padding: 6px 0;
+    border-bottom: 1px solid var(--ink);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--pencil);
+    text-align: center;
+}
+
+.habit-table thead th:first-child {
+    width: 28%;
+    text-align: left;
+}
+
+.habit-table thead th b {
+    display: block;
+    font: 500 1rem var(--font-num);
+    color: var(--ink);
+}
+
+.habit-table thead th:nth-child(2) {
+    color: var(--stamp-red);
+}
+
+/* Today: the weekday's colour under the day, so the eye finds the column. */
+.habit-table .is-today {
+    background: color-mix(in srgb, var(--day) 8%, transparent);
+    box-shadow: inset 0 3px 0 var(--day);
+}
+
+.habit-table thead .is-today {
+    box-shadow: inset 0 3px 0 var(--day);
+}
+
+.habit-table tbody .is-today {
+    box-shadow: none;
+}
+
+.habit-table tbody th {
+    padding: 8px 12px 8px 14px;
+    border-left: 4px solid var(--habit, var(--pencil));
+    font-weight: 400;
+    text-align: left;
+}
+
+.habit-name {
+    display: block;
+    max-width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    font: inherit;
+    font-weight: 500;
+    text-align: left;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+}
+
+.habit-name:hover {
+    text-decoration: underline;
+}
+
+.habit-meta {
+    display: block;
+    font-size: 0.8125rem;
+    color: var(--pencil);
+}
+
+.habit-meta .met {
+    color: var(--ledger-green);
+    font-weight: 500;
+}
+
+.habit-cell {
+    padding: 0;
+    text-align: center;
+}
+
+/* The whole cell is the target, not just the box inside it. */
+.habit-cell label {
+    display: grid;
+    place-content: center;
+    min-height: 56px;
+    cursor: pointer;
+}
+
+.habit-cell.future label {
+    cursor: not-allowed;
+}
+
+.habit-cell.future input {
+    opacity: 0.35;
+}
+
+.habit-form-row {
+    display: grid;
+    grid-template-columns: 1fr 120px;
+    gap: var(--space-4);
+}
+
+.habit-color-input {
+    padding: 4px;
+}
+
+@media (max-width: 767px) {
+    .habit-table thead th:first-child {
+        width: 36%;
+    }
+
+    .habit-table tbody th {
+        padding-left: 10px;
+    }
+
+    .habit-cell label {
+        min-height: 52px;
+    }
+
+    .week-label {
+        min-width: 0;
+        flex: 1;
+        font-size: 1rem;
+    }
+
+    .week-nav #weekToday {
+        order: 5;
+        width: 100%;
+    }
+
+    .week-nav {
+        flex-wrap: wrap;
+    }
+}

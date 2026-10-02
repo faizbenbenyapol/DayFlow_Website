@@ -130,3 +130,51 @@ test('focus minutes and the new sections are in the summary and the layout', fun
     $settings = str_replace(' ', '', $client->get('/settings')['body']);
     assertStringContains('"widget_key":"habits"', $settings, 'the layout offers the habits section');
 });
+
+// =====================================================
+// Habits: a week at a time
+// =====================================================
+
+test('a habit can be ticked for an earlier day, not a coming one', function (TestClient $_c): void {
+    $client = todayClient('habitweek');
+    $created = $client->json($client->post('/api/habits', ['name' => 'อ่านหนังสือ ' . TEST_RUN_ID, 'color' => '#10b981', 'target_days' => 5]));
+    $id = (int)$created['id'];
+
+    $day = fn(int $offset): string => date('Y-m-d', strtotime($offset . ' day'));
+
+    foreach ([-1, -2, -3] as $offset) {
+        $response = $client->post('/api/habits/' . $id . '/toggle', ['date' => $day($offset)]);
+        assertSame(200, $response['status'], 'a past day should be tickable');
+        assertTrue($client->json($response)['completed'], 'ticked');
+    }
+
+    // Three days in a row ending yesterday is a streak of three: today is not over.
+    $list = $client->json($client->get('/api/habits?from=' . $day(-6) . '&to=' . $day(0)));
+    $habit = array_values(array_filter($list['habits'], fn($h) => (int)$h['id'] === $id))[0];
+    assertSame(3, $habit['streak'], 'the run up to yesterday counts');
+    assertSame([$day(-3), $day(-2), $day(-1)], $list['logs'][$id] ?? $list['logs'][(string)$id] ?? [], 'the window lists the ticked days');
+
+    // Ticking the same day again takes it away.
+    $off = $client->json($client->post('/api/habits/' . $id . '/toggle', ['date' => $day(-2)]));
+    assertFalse($off['completed'], 'a second tick unticks');
+
+    assertSame(422, $client->post('/api/habits/' . $id . '/toggle', ['date' => $day(1)])['status'], 'tomorrow cannot be ticked');
+    assertSame(422, $client->post('/api/habits/' . $id . '/toggle', ['date' => '2026-02-30'])['status'], 'not a real date');
+    assertSame(422, $client->post('/api/habits/' . $id . '/toggle', ['date' => $day(-400)])['status'], 'more than a year back');
+
+    // Without a date it is still today, as it always was.
+    $today = $client->json($client->post('/api/habits/' . $id . '/toggle', []));
+    assertTrue($today['completed'] && $today['completed_today']);
+});
+
+test('the week window is checked, and another account\'s habit is not reachable', function (TestClient $_c): void {
+    $client = todayClient('habitwin');
+    assertSame(422, $client->get('/api/habits?from=2026-01-01&to=2026-06-30')['status'], 'a window over 42 days');
+    assertSame(422, $client->get('/api/habits?from=nope&to=2026-06-30')['status'], 'a bad date');
+    assertSame(422, $client->get('/api/habits?from=2026-06-30&to=2026-06-01')['status'], 'end before start');
+    assertSame(200, $client->get('/api/habits')['status'], 'no window is still fine');
+
+    $mine = $client->json($client->post('/api/habits', ['name' => 'ของฉัน ' . TEST_RUN_ID, 'color' => '#10b981', 'target_days' => 3]));
+    $other = todayClient('habitother');
+    assertSame(404, $other->post('/api/habits/' . $mine['id'] . '/toggle', ['date' => date('Y-m-d', strtotime('-1 day'))])['status'], 'not theirs to tick');
+});

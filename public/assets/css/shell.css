@@ -405,22 +405,6 @@ dialog.sheet[open] {
     padding-top: 8px;
 }
 
-.icon-btn {
-    display: inline-grid;
-    place-content: center;
-    width: 44px;
-    height: 44px;
-    border: 0;
-    border-radius: var(--r-control);
-    background: none;
-    color: var(--ink);
-    cursor: pointer;
-}
-
-.icon-btn:hover {
-    background: color-mix(in srgb, var(--ink) 6%, transparent);
-}
-
 /* "All menus": the same entries as the rail, as a plain list. */
 .sheet-group {
     padding-top: 12px;

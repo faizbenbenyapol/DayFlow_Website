@@ -34,7 +34,9 @@ const click = (tab, selector) => tab.eval(`(() => { const el = document.querySel
 
 async function key(tab, text, modifiers = 0) {
     for (const type of ['keyDown', 'keyUp']) {
-        await tab.send('Input.dispatchKeyEvent', { type, key: text, code: 'Key' + text.toUpperCase(), modifiers, windowsVirtualKeyCode: text.toUpperCase().charCodeAt(0) });
+        // Enter needs its character, or a form never sees the keypress that submits it.
+        const typed = text === 'Enter' && type === 'keyDown' ? { text: String.fromCharCode(13), unmodifiedText: String.fromCharCode(13) } : {};
+        await tab.send('Input.dispatchKeyEvent', { type, key: text, code: text === 'Enter' ? 'Enter' : 'Key' + text.toUpperCase(), modifiers, windowsVirtualKeyCode: text === 'Enter' ? 13 : text.toUpperCase().charCodeAt(0), ...typed });
     }
 }
 
@@ -50,7 +52,7 @@ const api = (tab, path, options = {}) => tab.eval(`(async () => {
 
 async function main() {
     const { cdp, stop } = await launch();
-    const made = { tasks: [], items: [], finance: [] };
+    const made = { tasks: [], items: [], finance: [], todos: [], events: [] };
     let tab;
 
     try {
@@ -205,6 +207,135 @@ async function main() {
         await tab.settle();
         check(await tab.eval(`document.querySelector('[data-section="notes"]') !== null`), 'and comes back when switched on');
 
+        // ---------- phase 5A: the everyday pages ----------
+        console.log('Tasks');
+        await tab.goto(BASE + '/tasks');
+        await tab.settle();
+        check(await tab.eval(`document.querySelectorAll('.quadrant').length`) === 4, 'four boxes');
+        check(await tab.eval(`document.querySelectorAll('.task-item').length`) >= 1, 'tasks are listed');
+        check(!(await tab.eval(`document.getElementById('tasksTally').textContent`)).includes('กำลัง'), 'the summary line is filled');
+
+        await fill(tab, '.quick-add[data-quadrant="2"]', `ช่อง ${STAMP}`);
+        await tab.eval(`document.querySelector('.quick-add[data-quadrant="2"]').focus()`);
+        await key(tab, 'Enter');
+        await sleep(1200);
+        check(await tab.eval(`document.getElementById('q2-list').textContent.includes('ช่อง ${STAMP}')`), 'a task typed under a box lands in that box');
+        const boxed = Object.values((await api(tab, '/api/tasks')).body.quadrants).flat().find(t => t.title === `ช่อง ${STAMP}`);
+        check(boxed?.quadrant === 2, 'and is saved with that box\'s priority');
+        if (boxed) made.tasks.push(boxed.id);
+
+        await tab.eval(`[...document.querySelectorAll('.task-title')].find(b => b.textContent === 'ช่อง ${STAMP}').click()`);
+        await sleep(400);
+        check(await tab.eval(`document.getElementById('editTaskModal').classList.contains('active')`), 'clicking a title opens the edit dialog');
+        const editValue = await tab.eval(`document.getElementById('editTaskTitle').value`);
+        check(editValue === `ช่อง ${STAMP}`, 'filled with that task', JSON.stringify(editValue));
+        check(await tab.eval(`!!document.querySelector('label[for="editTaskTitle"]')`), 'its fields have labels');
+        await tab.eval(`document.querySelector('#editTaskModal [data-close-modal]').click()`);
+
+        console.log('Planner');
+        await tab.goto(BASE + '/planner');
+        await tab.settle();
+        check(await tab.eval(`document.querySelectorAll('.calendar-cell').length`) >= 35, 'the month grid is drawn');
+        check(await tab.eval(`document.querySelectorAll('.calendar-cell.today').length`) <= 1, 'at most one cell is today');
+        check(await tab.eval(`document.querySelector('.calendar-cell').tagName`) === 'BUTTON', 'each day is a button');
+        await tab.eval(`document.querySelectorAll('.calendar-cell:not(.other-month)')[14].click()`);
+        await sleep(300);
+        check(await tab.eval(`document.getElementById('dayNum').textContent`) === '15', 'picking a day turns the sheet to it');
+
+        await fill(tab, '#todoInput', `ทำ ${STAMP}`);
+        await tab.eval(`document.getElementById('todoInput').focus()`);
+        await key(tab, 'Enter');
+        await sleep(1000);
+        check(await tab.eval(`document.getElementById('dayTodos').textContent.includes('${STAMP}')`), 'a to-do typed on the sheet is listed');
+        const stamp15 = await tab.eval(`document.querySelectorAll('.calendar-cell:not(.other-month)')[14].getAttribute('aria-label')`);
+        const todoDate = new Date(); todoDate.setDate(15);
+        const iso15 = todoDate.getFullYear() + '-' + String(todoDate.getMonth() + 1).padStart(2, '0') + '-15';
+        const todo = ((await api(tab, `/api/planner/todos?date=${iso15}`)).body.todos || []).find(t => t.title === `ทำ ${STAMP}`);
+        check(!!todo, 'and saved on that day', stamp15);
+        if (todo) made.todos.push(todo.id);
+
+        await click(tab, '[data-act="openAddEvent"]');
+        await sleep(300);
+        check(await tab.eval(`document.getElementById('eventModal').classList.contains('active')`), '"เพิ่มกิจกรรม" opens the dialog');
+        await click(tab, '.color-dot[aria-label="เขียว"]');
+        check(await tab.eval(`document.getElementById('eventColor').value`) === '#10b981', 'a colour can be picked');
+        check(await tab.eval(`document.querySelector('.color-dot[aria-label="เขียว"]').getAttribute('aria-checked')`) === 'true', 'and says it is chosen');
+        await click(tab, '#eventAllDay');
+        check(await tab.eval(`document.getElementById('dateOnlyFields').hidden === false && document.getElementById('dateTimeFields').hidden === true`), '"all day" swaps the time fields for a date');
+        await fill(tab, '#eventTitle', `นัด ${STAMP}`);
+        await click(tab, '[data-act="saveEvent"]');
+        await sleep(1200);
+        check(await tab.eval(`document.getElementById('dayEvents').textContent.includes('${STAMP}')`), 'a saved event shows on the sheet');
+        const ev = ((await api(tab, `/api/planner/events?year=${todoDate.getFullYear()}&month=${todoDate.getMonth() + 1}`)).body.events || []).find(e => e.title === `นัด ${STAMP}`);
+        check(!!ev && ev.color === '#10b981', 'with the colour that was picked');
+        if (ev) made.events.push(ev.id);
+
+        console.log('Habits');
+        await tab.goto(BASE + '/habits');
+        await tab.settle();
+        check(await tab.eval(`document.querySelectorAll('.habit-table tbody tr').length`) >= 1, 'habits are listed as rows');
+        check(await tab.eval(`document.querySelectorAll('.habit-table thead th').length`) === 8, 'with a column for each day');
+        check(await tab.eval(`document.querySelectorAll('.habit-cell.is-today').length`) >= 1, 'today\'s column is marked');
+        check(await tab.eval(`[...document.querySelectorAll('.habit-cell.future input')].every(i => i.disabled)`), 'days to come cannot be ticked');
+
+        const habitBox = await tab.eval(`(() => { const i = document.querySelector('.habit-cell.is-today input'); return { id: i.dataset.habit, was: i.checked }; })()`);
+        await tab.eval(`document.querySelector('.habit-cell.is-today input').click()`);
+        await sleep(1000);
+        const habitsNow = (await api(tab, '/api/habits')).body.habits.find(h => String(h.id) === habitBox.id);
+        check(Boolean(Number(habitsNow.completed_today)) === !habitBox.was, 'ticking today\'s box is saved');
+        await tab.eval(`document.querySelector('.habit-cell.is-today input').click()`);
+        await sleep(800);
+
+        const label = await tab.eval(`document.getElementById('weekLabel').textContent`);
+        await click(tab, '#weekPrev');
+        await sleep(700);
+        check(await tab.eval(`document.getElementById('weekLabel').textContent`) !== label, 'the previous week has its own dates');
+        check(await tab.eval(`document.getElementById('weekToday').hidden`) === false, 'and a way back');
+        await click(tab, '#weekToday');
+        await sleep(700);
+        check(await tab.eval(`document.getElementById('weekToday').hidden`) === true, 'back on this week the button goes away');
+
+        console.log('Focus');
+        await tab.goto(BASE + '/focus');
+        await tab.eval(`localStorage.removeItem('dayflow.focus')`);
+        await tab.goto(BASE + '/focus');
+        await tab.settle();
+        check(await tab.eval(`document.getElementById('timerDisplay').textContent`) === '25:00', 'the timer waits at 25:00');
+        await click(tab, '#btnStartStop');
+        await sleep(2400);
+        const running = await tab.eval(`document.getElementById('timerDisplay').textContent`);
+        check(running !== '25:00' && running.startsWith('24:'), 'it counts down');
+        check((await tab.eval(`document.title`)).includes(running.slice(0, 2)), 'the countdown is in the tab title');
+        check(await tab.eval(`document.getElementById('btnStartStop').textContent`) === 'หยุดชั่วคราว', 'the one button now says how to stop');
+
+        await tab.goto(BASE + '/focus');
+        await tab.settle();
+        check(await tab.eval(`document.getElementById('btnStartStop').textContent`) === 'หยุดชั่วคราว', 'a reload does not lose a running timer');
+        check(await tab.eval(`document.getElementById('timerDisplay').textContent`).then(t => t.startsWith('24:')), 'and it kept the time');
+        await click(tab, '#btnStartStop');
+        check(await tab.eval(`document.getElementById('btnStartStop').textContent`) === 'จับเวลาต่อ', 'stopping offers to carry on');
+        check(await tab.eval(`localStorage.getItem('dayflow.focus')`) === null, 'a stopped timer is not remembered');
+        await click(tab, '#btnResetTimer');
+        check(await tab.eval(`document.getElementById('timerDisplay').textContent`) === '25:00', 'start over returns to 25:00');
+
+        console.log('Quick notes');
+        await tab.goto(BASE + '/quick-notes');
+        await tab.settle();
+        await fill(tab, '#quickInput', 'abc');
+        check(await tab.eval(`document.getElementById('quickCount').textContent`) === '3 / 500', 'the counter follows the text');
+        await fill(tab, '#quickInput', `ไม่ลืม ${STAMP}`);
+        await tab.eval(`document.getElementById('quickInput').focus()`);
+        await key(tab, 'Enter');
+        await sleep(1000);
+        check(await tab.eval(`document.getElementById('quickList').textContent.includes('${STAMP}')`), 'a typed line joins the list');
+        const quick = ((await api(tab, '/api/quick-items')).body.items || []).find(i => (i.content || '').includes(STAMP));
+        check(!!quick, 'and is saved');
+        if (quick) made.items.push(quick.id);
+        await tab.eval(`document.querySelector('[data-quick-toggle="${quick.id}"]').click()`);
+        await sleep(900);
+        check(await tab.eval(`document.querySelector('[data-quick-toggle="${quick.id}"]').checked`), 'a ticked line stays ticked after the list redraws');
+        check(await tab.eval(`document.getElementById('quickList').textContent.includes('เสร็จแล้ว')`), 'under a "done" heading');
+
         // ---------- phone ----------
         console.log('Phone');
         await tab.viewport({ width: 390, height: 844, mobile: true });
@@ -233,6 +364,8 @@ async function main() {
             for (const id of made.tasks) await api(tab, `/api/tasks/${id}`, { method: 'DELETE' }).catch(() => {});
             for (const id of made.items) await api(tab, `/api/quick-items/${id}`, { method: 'DELETE' }).catch(() => {});
             for (const id of made.finance) await api(tab, `/api/finance/${id}`, { method: 'DELETE' }).catch(() => {});
+            for (const id of made.todos) await api(tab, `/api/planner/todos/${id}`, { method: 'DELETE' }).catch(() => {});
+            for (const id of made.events) await api(tab, `/api/planner/events/${id}`, { method: 'DELETE' }).catch(() => {});
         }
         stop();
     }
