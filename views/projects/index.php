@@ -20,9 +20,11 @@
         <h1>โปรเจค</h1>
         <p class="sub" id="projectsTally" aria-live="polite">กำลังโหลดโปรเจค…</p>
     </div>
+    <?php if (!$isGuest): /* a visitor on a public link has no account to create a project in */ ?>
     <div class="page-head-actions">
         <button class="btn btn-primary" type="button" data-act="openCreateProjectModal"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>สร้างโปรเจค</button>
     </div>
+    <?php endif; ?>
 </div>
 
 <div class="proj-filters">
@@ -65,7 +67,9 @@
 <div id="projectsEmptyState" class="empty-state" hidden>
     <p class="empty-state-title">ยังไม่มีโปรเจค</p>
     <p class="empty-state-text">โปรเจคคือกลุ่มงานที่ทำร่วมกันหลายขั้น แต่ละโปรเจคมีบอร์ด 4 คอลัมน์ ทีม และแชทของตัวเอง เริ่มจากสร้างโปรเจคแรก</p>
+    <?php if (!$isGuest): ?>
     <button class="btn btn-primary" type="button" data-act="openCreateProjectModal">สร้างโปรเจคแรก</button>
+    <?php endif; ?>
 </div>
 
 <!-- The open project -->

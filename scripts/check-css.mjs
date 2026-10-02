@@ -26,6 +26,8 @@ const CHECKED = [
     'modules/review.css', 'modules/bookmarks.css',
     'modules/calculator.css', 'modules/ai.css', 'modules/transfer.css', 'modules/files.css',
     'modules/file-tools.css', 'modules/settings.css', 'modules/shares.css', 'modules/projects.css',
+    // Outside the app (phase 5E): sign-in, a shared file, errors, the share-mode bar.
+    'modules/auth.css', 'modules/outside.css', 'share-mode.css',
 ];
 
 // rgb(21 24 29 / .5): the dark scrim behind a dialog is the same in both themes.

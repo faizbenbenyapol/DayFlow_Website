@@ -827,6 +827,152 @@ async function main() {
         await sleep(1200);
         check(await tab.eval(`document.getElementById('chatMessagesList').textContent.includes(${JSON.stringify(STAMP)})`), 'a chat message appears after sending');
 
+        // ---------- outside the app ----------
+        console.log('Outside the app');
+        await tab.viewport({ width: 1366, height: 900, mobile: false });
+
+        // Pages a signed-in person can see: an error, and the static offline notice.
+        await tab.goto(BASE + '/bookmarks');
+        await tab.goto(BASE + '/no-such-page-' + STAMP);
+        check(await tab.eval(`document.querySelector('h1').textContent`) === 'ไม่พบหน้าที่ต้องการ', 'a missing page says so in plain words');
+        check(await tab.eval(`document.querySelector('.stmt-actions .btn-primary').textContent.trim()`) === 'กลับหน้าวันนี้', 'and offers the way back to today');
+        check(await tab.eval(`getComputedStyle(document.querySelector('.stmt-title')).fontSize`) === '25px', 'in the app\'s own type, not a private stylesheet');
+        await click(tab, '.stmt-actions [data-back]');
+        await sleep(600);
+        check(await tab.eval(`location.pathname`) === '/bookmarks', 'the back button goes back');
+
+        await tab.goto(BASE + '/offline.html');
+        check(await tab.eval(`!!document.querySelector('[data-reload]')`), 'the offline notice has a retry button');
+        check(await tab.eval(`document.documentElement.dataset.day.length === 3`), 'and takes today\'s colour from the clock');
+        check(await tab.eval(`getComputedStyle(document.querySelector('.stmt-title')).fontSize`) === '25px', 'in the app\'s own type');
+
+        // Links made for the people who open them without an account.
+        await tab.goto(BASE + '/bookmarks');   // a page with a CSRF token to borrow
+        const sharedFolder = await api(tab, '/api/files/folder', { method: 'POST', body: JSON.stringify({ name: `แชร์ ${STAMP}` }) });
+        check(sharedFolder.status === 201, 'a folder can be made to share');
+        made.files.push(sharedFolder.body.id);
+        const innerFolder = await api(tab, '/api/files/folder', { method: 'POST', body: JSON.stringify({ name: `ข้างใน ${STAMP}`, parent_id: sharedFolder.body.id }) });
+        const downloadShare = await api(tab, '/api/shares', { method: 'POST', body: JSON.stringify({ file_id: sharedFolder.body.id, permission: 'download' }) });
+        const viewShare = await api(tab, '/api/shares', { method: 'POST', body: JSON.stringify({ file_id: sharedFolder.body.id, permission: 'view' }) });
+        const emptyFolder = await api(tab, '/api/files/folder', { method: 'POST', body: JSON.stringify({ name: `ว่าง ${STAMP}` }) });
+        made.files.push(emptyFolder.body.id);
+        const emptyShare = await api(tab, '/api/shares', { method: 'POST', body: JSON.stringify({ file_id: emptyFolder.body.id, permission: 'view' }) });
+        const menuShare = await api(tab, '/api/app-shares', { method: 'POST', body: JSON.stringify({ menus: ['tasks'], label: `ดู ${STAMP}` }) });
+        check([downloadShare, viewShare, emptyShare, menuShare].every(r => r.status === 201), 'file and menu links can be made');
+        const menuShareId = ((await api(tab, '/api/app-shares')).body.shares || []).find(s => s.token === menuShare.body.token)?.id;
+        if (menuShareId) made.appShares.push(menuShareId);
+
+        // A browser of its own: no cookies, so it is somebody with only the link.
+        const { browserContextId } = await cdp.send('Target.createBrowserContext');
+        const { targetId } = await cdp.send('Target.createTarget', { url: 'about:blank', browserContextId });
+        const { sessionId } = await cdp.send('Target.attachToTarget', { targetId, flatten: true });
+        await cdp.send('Page.enable', {}, sessionId);
+        await cdp.send('Runtime.enable', {}, sessionId);
+        const anon = new Tab(cdp, sessionId);
+        await anon.send('Emulation.setTimezoneOverride', { timezoneId: process.env.E2E_TZ || 'UTC' });
+        await anon.viewport({ width: 1366, height: 900, mobile: false });
+
+        try {
+            await anon.goto(BASE + '/share/' + downloadShare.body.token);
+            check(await anon.eval(`document.querySelector('h1').textContent`) === `แชร์ ${STAMP}`, 'a shared folder opens under its own name');
+            check(await anon.eval(`document.querySelector('.pub-bar').textContent.includes('ดูและดาวน์โหลดได้')`), 'a bar on top says what the link allows');
+            check(await anon.eval(`document.querySelectorAll('.pub-row').length`) === 1, 'it lists what is inside');
+            check(await anon.eval(`document.querySelector('.pub-row').textContent.includes('(โฟลเดอร์)')`), 'saying which are folders, in words a reader of the page can hear');
+            check(await anon.eval(`!document.getElementById('appRail') && !document.querySelector('script[src*="app.js"]')`), 'and carries nothing of the app');
+            check(await anon.eval(`document.documentElement.scrollWidth <= window.innerWidth`), 'nothing scrolls sideways');
+
+            await anon.goto(BASE + '/share/' + viewShare.body.token);
+            check(await anon.eval(`document.querySelector('.pub-bar').textContent.includes('ดูอย่างเดียว')`), 'a view-only link says so');
+            check(await anon.eval(`document.querySelectorAll('a[href*="/download/"]').length`) === 0, 'and offers no download');
+
+            await anon.goto(BASE + '/share/' + emptyShare.body.token);
+            check(await anon.eval(`document.querySelector('.empty-state-title').textContent`) === 'โฟลเดอร์นี้ยังว่างอยู่', 'an empty folder says so');
+
+            await anon.goto(BASE + '/share/' + 'f'.repeat(64));
+            check(await anon.eval(`document.querySelector('h1').textContent`) === 'ลิงก์นี้ใช้ไม่ได้แล้ว', 'a link that does not exist says it cannot be used');
+            check(await anon.eval(`!document.querySelector('[data-back]')`), 'without a back button to nowhere');
+
+            await anon.goto(BASE + '/shared/' + menuShare.body.token);
+            await anon.settle();
+            check(await anon.eval(`location.pathname`) === '/tasks', 'a menu link opens the page it shares');
+            check(await anon.eval(`document.querySelector('.share-topbar').textContent.includes('อ่านอย่างเดียว')`), 'under a bar that says it is read-only');
+            check(await anon.eval(`document.querySelector('.share-topbar-link[aria-current="page"]')?.textContent`) === 'งาน', 'and marks the page that is open');
+            check(await anon.eval(`!document.getElementById('appRail')`), 'with no rail');
+            check(await anon.eval(`Math.round(document.querySelector('.share-topbar').getBoundingClientRect().width) === window.innerWidth`), 'the bar runs across the whole top');
+            await anon.goto(BASE + '/exit-share');
+
+            // ---------- sign in ----------
+            const scheme = value => anon.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value }] });
+            await scheme('light');
+            await anon.goto(BASE + '/login');
+            check(await anon.eval(`document.documentElement.dataset.theme`) === 'light', 'sign-in follows the device (light)');
+            await scheme('dark');
+            await sleep(200);
+            check(await anon.eval(`document.documentElement.dataset.theme`) === 'dark', 'and turns dark when the device does, without a reload');
+            await scheme('light');
+            check(await anon.eval(`!!document.querySelector('.auth-day-number') && getComputedStyle(document.querySelector('.auth-day')).backgroundColor !== 'rgba(0, 0, 0, 0)'`), 'today\'s date block stands beside the form');
+            check(await anon.eval(`document.querySelectorAll('label[for]').length`) >= 2, 'every field has a label tied to it');
+            check(await anon.eval(`document.activeElement.id`) === 'loginIdentifier', 'the first field has focus');
+
+            await click(anon, '#loginBtn');
+            await sleep(200);
+            check(await anon.eval(`!document.getElementById('loginAlert').hidden && document.getElementById('loginAlert').textContent.includes('ให้ครบ')`), 'sending nothing says what is missing');
+
+            await fill(anon, '#loginIdentifier', 'nobody-' + STAMP);
+            await fill(anon, '#loginPassword', 'wrong-password');
+            await click(anon, '#loginBtn');
+            await sleep(1200);
+            check(await anon.eval(`!document.getElementById('loginAlert').hidden`), 'a wrong password shows an error');
+            check(await anon.eval(`document.getElementById('loginBtn').textContent === 'เข้าสู่ระบบ' && !document.getElementById('loginBtn').disabled`), 'and the button is itself again');
+
+            await click(anon, '[data-act="togglePw"]');
+            check(await anon.eval(`document.getElementById('loginPassword').type === 'text' && document.querySelector('.pw-toggle').getAttribute('aria-pressed') === 'true'`), 'the show button reveals the password');
+
+            await click(anon, '#tabRegister');
+            check(await anon.eval(`document.getElementById('paneRegister').hidden === false && document.getElementById('paneLogin').hidden`), 'the register tab swaps the form');
+            check(await anon.eval(`document.getElementById('tabRegister').getAttribute('aria-selected')`) === 'true', 'and is marked as selected');
+            await fill(anon, '#regPassword', 'abc');
+            check(await anon.eval(`document.getElementById('strengthMeter').dataset.level + document.getElementById('strengthText').textContent`) === '1อ่อน', 'a short password is called weak, in words');
+            await fill(anon, '#regPassword', 'Abcdef12345!xyz');
+            check(await anon.eval(`document.getElementById('strengthText').textContent`) === 'แข็งแรง', 'a long mixed one is called strong');
+            await fill(anon, '#regUsername', 'a b');
+            check(await anon.eval(`!document.getElementById('usernameHint').hidden`), 'a bad username is explained under its field');
+            await fill(anon, '#regUsername', 'abc_123');
+            check(await anon.eval(`document.getElementById('usernameHint').hidden`), 'and the explanation goes when it is right');
+            await fill(anon, '#regUsername', 'nobody' + STAMP.replace(/\W/g, ''));
+            await fill(anon, '#regEmail', 'nobody@example.test');
+            await fill(anon, '#regConfirm', 'something else');
+            await click(anon, '#registerBtn');
+            await sleep(200);
+            check(await anon.eval(`document.getElementById('registerAlert').textContent.includes('ไม่ตรงกัน')`), 'mismatched passwords are caught before anything is sent');
+
+            await anon.eval(`showTwoFactorStep()`);
+            check(await anon.eval(`document.getElementById('paneTwoFactor').hidden === false && document.getElementById('authTabs').hidden`), 'the two-factor step replaces the tabs');
+            check(await anon.eval(`document.activeElement.id`) === 'twoFactorCode', 'with the code field focused');
+            await click(anon, '#twoFactorBtn');
+            await sleep(200);
+            check(await anon.eval(`!document.getElementById('twoFactorAlert').hidden`), 'an empty code is refused with a message');
+            await click(anon, '[data-act="cancelTwoFactor"]');
+            check(await anon.eval(`document.getElementById('paneLogin').hidden === false && !document.getElementById('authTabs').hidden`), 'and the way back is there');
+
+            await anon.viewport({ width: 375, height: 800, mobile: true });
+            await anon.goto(BASE + '/login');
+            check(await anon.eval(`document.documentElement.scrollWidth <= window.innerWidth`), 'on a phone nothing scrolls sideways');
+            check(await anon.eval(`Math.min(...[...document.querySelectorAll('#paneLogin .btn, #paneLogin .form-control')].map(el => el.getBoundingClientRect().height))`) >= 40, 'fields and buttons are big enough to touch');
+            await anon.viewport({ width: 1366, height: 900, mobile: false });
+
+            // A real sign-in through the page, ending on today.
+            await anon.goto(BASE + '/login');
+            await fill(anon, '#loginIdentifier', 'shots');
+            await fill(anon, '#loginPassword', accountPassword());
+            await click(anon, '#loginBtn');
+            await sleep(2000);
+            check(await anon.eval(`location.pathname`) === '/', 'signing in through the page lands on today');
+            check(await anon.eval(`!!document.getElementById('appRail')`), 'inside the app');
+        } finally {
+            await cdp.send('Target.disposeBrowserContext', { browserContextId }).catch(() => {});
+        }
+
         // ---------- phone ----------
         console.log('Phone');
         await tab.viewport({ width: 390, height: 844, mobile: true });

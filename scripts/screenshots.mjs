@@ -76,6 +76,11 @@ const PAGES = [
     ['palette', '/', '.rail-search', ['desktop', 'tablet']],
 ];
 
+// Pages outside the app (phase 5E). The ones that need a link made first are
+// made through the API while signed in, photographed, and deleted again.
+const OUTSIDE = ['login', 'login-register', 'login-twofactor', 'offline', 'expired', 'not-found',
+    'share-file', 'share-folder', 'share-empty', 'share-view', 'app-share'];
+
 // Live values that change every second and would make two shots differ.
 const MASK = '#headerLiveClock, #headerLastUpdate, .clock, [data-live]';
 // A page taller than this is cut off: a 200-row list is not worth a 20 000 px image.
@@ -321,7 +326,7 @@ export async function signIn(tab, password) {
 }
 
 async function main() {
-    const unknown = (ONLY || []).filter(n => !PAGES.some(([name]) => name === n) && n !== 'login');
+    const unknown = (ONLY || []).filter(n => !PAGES.some(([name]) => name === n) && !OUTSIDE.includes(n));
     if (unknown.length) throw new Error(`ไม่รู้จักหน้า: ${unknown.join(', ')}`);
 
     mkdirSync(OUT, { recursive: true });
@@ -336,7 +341,7 @@ async function main() {
 
         // The sign-in page is only worth photographing while signed out.
         const wants = name => !ONLY || ONLY.includes(name);
-        const shoot = async (name, path, viewportName, theme, click) => {
+        const shoot = async (name, path, viewportName, theme, click, script) => {
             const vp = VIEWPORTS[viewportName];
             await tab.viewport(vp);
             tab.errors.length = 0;
@@ -348,8 +353,9 @@ async function main() {
                 if (!found) throw new Error(`ไม่พบปุ่ม ${click}`);
                 await sleep(400);
             }
+            if (script) { await tab.eval(script); await sleep(200); }
             const landed = await tab.eval('location.pathname');
-            if (name !== 'login' && landed.endsWith('/login')) throw new Error('ถูกส่งกลับไปหน้าเข้าสู่ระบบ');
+            if (!name.startsWith('login') && landed.endsWith('/login')) throw new Error('ถูกส่งกลับไปหน้าเข้าสู่ระบบ');
             await tab.theme(theme);
             await tab.capture(join(OUT, `${name}-${viewportName}-${theme}.png`), vp);
             count++;
@@ -359,6 +365,18 @@ async function main() {
         if (wants('login')) {
             for (const v of VIEWPORT_NAMES) for (const t of THEMES) {
                 await shoot('login', '/login', v, t).catch(e => failures.push(`login ${v} ${t}: ${e.message}`));
+            }
+        }
+
+        for (const [name, path, click] of [
+            ['login-register', '/login', '#tabRegister'],
+            ['login-twofactor', '/login', '#loginIdentifier'],
+            ['offline', '/offline.html'], ['expired', '/share/0000'],
+        ]) {
+            if (!wants(name)) continue;
+            for (const v of VIEWPORT_NAMES) for (const t of THEMES) {
+                await shoot(name, path, v, t, name === 'login-twofactor' ? null : click, name === 'login-twofactor' ? 'showTwoFactorStep()' : null)
+                    .catch(e => failures.push(`${name} ${v} ${t}: ${e.message}`));
             }
         }
 
@@ -374,6 +392,65 @@ async function main() {
                     process.stdout.write('x');
                 }
             }
+        }
+
+        // Links made for the photograph, deleted afterwards.
+        const api = (method, path, body) => tab.eval(`(async () => {
+            const csrf = document.querySelector('meta[name="csrf-token"]').content;
+            const res = await fetch(${JSON.stringify(BASE + path)}, {
+                method: ${JSON.stringify(method)}, credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+                body: ${JSON.stringify(body ? JSON.stringify(body) : null)},
+            });
+            return { status: res.status, body: await res.json().catch(() => null) };
+        })()`);
+        const everywhere = async (name, path) => {
+            for (const v of VIEWPORT_NAMES) for (const t of THEMES) {
+                await shoot(name, path, v, t).then(() => process.stdout.write('.'), e => failures.push(`${name} ${v} ${t}: ${e.message}`));
+            }
+        };
+
+        if (wants('not-found')) await everywhere('not-found', '/no-such-page');
+
+        const made = { shares: [], app: [] };
+        try {
+            if (['share-file', 'share-folder', 'share-empty', 'share-view'].some(wants)) {
+                await tab.goto(BASE + '/files');
+                const list = (await api('GET', '/api/files')).body?.files || [];
+                const inOneWeek = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 19).replace('T', ' ');
+                for (const [state, name, permission, expires] of [
+                    ['share-file', 'รายงาน Q3 ฉบับร่าง.pdf', 'download', inOneWeek],
+                    ['share-folder', 'เอกสารงาน', 'download', null],
+                    ['share-empty', 'รูปภาพ', 'view', null],
+                    ['share-view', 'ตารางงบประมาณ.xlsx', 'view', null],
+                ]) {
+                    if (!wants(state)) continue;
+                    await tab.goto(BASE + '/files');   // the share page has no CSRF token to borrow
+                    const file = list.find(f => f.name === name);
+                    if (!file) { failures.push(`${state}: ไม่พบ "${name}" ในบัญชี (รัน seed-screenshots.php ก่อน)`); continue; }
+                    const created = await api('POST', '/api/shares', { file_id: file.id, permission, label: '', expires_at: expires });
+                    if (created.status !== 201) { failures.push(`${state}: สร้างลิงก์ไม่ได้ (HTTP ${created.status})`); continue; }
+                    made.shares.push(created.body.token);
+                    await everywhere(state, '/share/' + created.body.token);
+                }
+            }
+
+            if (wants('app-share')) {
+                await tab.goto(BASE + '/');
+                const created = await api('POST', '/api/app-shares', { menus: ['tasks', 'finance'], label: 'ถ่ายภาพ' });
+                if (created.status !== 201) failures.push(`app-share: สร้างลิงก์ไม่ได้ (HTTP ${created.status})`);
+                else {
+                    made.app.push(created.body.token);
+                    await everywhere('app-share', `/shared/${created.body.token}`);
+                }
+                await tab.goto(BASE + '/exit-share');
+            }
+        } finally {
+            await tab.goto(BASE + '/bookmarks').catch(() => {});
+            const mine = (await api('GET', '/api/shares').catch(() => null))?.body?.shares || [];
+            for (const sh of mine.filter(x => made.shares.includes(x.token))) await api('DELETE', `/api/shares/${sh.id}`).catch(() => {});
+            const apps = (await api('GET', '/api/app-shares').catch(() => null))?.body?.shares || [];
+            for (const sh of apps.filter(x => made.app.includes(x.token))) await api('DELETE', `/api/app-shares/${sh.id}`).catch(() => {});
         }
     } finally {
         stop();

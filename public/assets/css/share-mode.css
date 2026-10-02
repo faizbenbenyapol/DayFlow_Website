@@ -1,91 +1,111 @@
 /* =====================================================
    share-mode.css — pages opened through a share link
    Loaded only then: an app share link (read-only, body.is-readonly) or a
-   public project link opened by a guest. These rules used to be a <style>
-   block and inline style="" attributes in views/layout/header.php.
+   public project link opened by a guest. A thin bar of ink sits on top and
+   says so; the page below it is the ordinary page, without its rail.
 ===================================================== */
 
-/* --- The top bar that replaces the sidebar --- */
+/* No rail, so the page is one column again (shell.css lays a body out as a row from 768px). */
+body.share-body {
+    flex-direction: column;
+}
+
+/* --- The bar that replaces the rail --- */
 .share-topbar {
-    background: var(--color-surface);
-    border-bottom: 1px solid var(--color-border);
-    padding: 0 24px;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: fixed;
+    position: sticky;
     top: 0;
-    left: 0;
-    right: 0;
     z-index: 100;
-    gap: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-4);
+    min-height: 44px;
+    padding: var(--space-1) clamp(1rem, 3vw, 2rem);
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 0.875rem;
+}
+
+.share-topbar a {
+    color: inherit;
 }
 
 .share-topbar-brand {
-    font-weight: 600;
-    font-size: 1.1rem;
-    color: var(--color-primary);
     display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 var(--space-3);
+    flex: 1 1 auto;
 }
 
-.share-topbar .share-topbar-badge {
-    font-size: 0.7rem;
-    font-weight: 500;
-    margin-left: 4px;
-    padding: 2px 6px;
+.share-topbar-name {
+    font-weight: 600;
 }
 
 .share-topbar-menu {
     display: flex;
-    gap: 16px;
+    gap: var(--space-4);
     overflow-x: auto;
-    flex: 1;
-    justify-content: center;
+    order: 3;
+    flex: 1 0 100%;
 }
 
-.share-topbar .share-topbar-link {
+.share-topbar-link {
+    min-height: 32px;
+    padding: 4px 0;
     white-space: nowrap;
-    text-decoration: none;
-    color: var(--color-text);
-    font-weight: 400;
-    border-bottom: none;
-    padding: 18px 8px;
+    border-bottom: 2px solid transparent;
 }
 
-.share-topbar .share-topbar-link.is-active {
-    color: var(--color-primary);
+.share-topbar-link[aria-current="page"] {
     font-weight: 600;
-    border-bottom: 2px solid var(--color-primary);
+    border-bottom-color: var(--paper);
 }
 
 .share-topbar-actions {
-    flex-shrink: 0;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-2);
+    flex: none;
 }
 
-.share-topbar .share-topbar-btn { font-size: 0.8rem; }
-.share-topbar .btn-ghost.share-topbar-btn { border-color: var(--color-border-2); }
+/* A button on ink is paper on ink: outline by default, filled for the main one. */
+.share-topbar .btn {
+    min-height: 32px;
+    border-color: var(--paper);
+    color: var(--paper);
+}
 
-/* A guest on a public project board: the cyan "visitor" accent. */
-.share-topbar-icon--guest { color: var(--palette-cyan-500); }
-.share-topbar-title { color: var(--color-text); font-size: 1rem; font-weight: 600; }
-.share-topbar .share-topbar-badge--guest { background: rgba(6, 182, 212, 0.12); color: var(--palette-cyan-500); font-weight: 600; }
-.share-topbar .btn-primary.share-topbar-signup { background: var(--palette-cyan-500); border: none; color: #ffffff; }
+.share-topbar .btn:hover {
+    background: color-mix(in srgb, var(--paper) 16%, transparent);
+    color: var(--paper);
+}
 
-/* --- Page body under the fixed top bar --- */
+.share-topbar .share-topbar-signup {
+    background: var(--paper);
+    color: var(--ink);
+}
+
+.share-topbar .share-topbar-signup:hover {
+    background: color-mix(in srgb, var(--paper) 86%, var(--ink));
+    color: var(--ink);
+}
+
+.share-topbar :focus-visible {
+    outline-color: var(--paper);
+}
+
+@media (min-width: 900px) {
+    .share-topbar-menu {
+        order: 0;
+        flex: 0 1 auto;
+    }
+}
+
 .app-main.share-main {
     flex: 1;
     width: 100%;
-    min-height: 100vh;
     display: block;
-    padding-top: 80px;
-    padding-bottom: 40px;
 }
 
 /* --- Read-only (app share link): hide everything that would change data --- */

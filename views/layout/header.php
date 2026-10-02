@@ -127,50 +127,39 @@ $chromeColors = ['light' => '#FBFAF7', 'dark' => '#15181D'];
     <script src="<?= APP_URL ?>/assets/js/html.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/html.js') ?>"></script>
 </head>
 
-<body<?= $isReadOnly ? ' class="is-readonly"' : '' ?>>
+<body<?= $isReadOnly ? ' class="share-body is-readonly"' : ($isGuest ? ' class="share-body"' : '') ?>>
 <?php if ($isReadOnly || $isGuest): ?>
+    <?php require ROOT . '/views/partials/icons.php'; /* the pages draw their icons from it */ ?>
     <?php if ($isReadOnly): ?>
-        <!-- Shared Mode Top Bar -->
+        <!-- Shared mode: a thin bar of ink says whose page this is and that it cannot be changed -->
         <header class="share-topbar">
             <div class="share-topbar-brand">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                <span class="badge badge-gray share-topbar-badge">โหมดแชร์</span>
+                <a class="share-topbar-name" href="<?= h($shareHomeUrl) ?>">DayFlow</a>
+                <span class="share-topbar-note">คุณกำลังดูของที่ถูกแชร์ · อ่านอย่างเดียว</span>
             </div>
-            <div class="share-topbar-menu">
-                <?php
-                foreach ($sharedMenus as $m):
-                ?>
-                    <a href="<?= h(APP_URL . '/' . $m . $shareQuery) ?>" class="share-topbar-link <?= isActive('/' . $m) ? 'is-active' : '' ?>"><?= h(AppMenus::label($m)) ?></a>
+            <nav class="share-topbar-menu" aria-label="หน้าที่แชร์">
+                <?php foreach ($sharedMenus as $m): ?>
+                    <a href="<?= h(APP_URL . '/' . $m . $shareQuery) ?>" class="share-topbar-link"<?= isActive('/' . $m) ? ' aria-current="page"' : '' ?>><?= h(AppMenus::label($m)) ?></a>
                 <?php endforeach; ?>
-            </div>
+            </nav>
             <div class="share-topbar-actions">
                 <?php if (!empty($_SESSION['user_id'])): ?>
-                    <a href="<?= APP_URL ?>/exit-share" class="btn btn-ghost btn-sm share-topbar-btn">
-                        กลับหน้าหลักของคุณ
-                    </a>
+                    <a href="<?= APP_URL ?>/exit-share" class="btn btn-sm">กลับหน้าของคุณ</a>
                 <?php else: ?>
-                    <a href="<?= APP_URL ?>/login" class="btn btn-primary btn-sm share-topbar-btn">
-                        เข้าสู่ระบบ
-                    </a>
+                    <a href="<?= APP_URL ?>/login" class="btn btn-sm">เข้าสู่ระบบ</a>
                 <?php endif; ?>
             </div>
         </header>
     <?php else: ?>
-        <!-- Guest Public Share Mode Top Bar -->
+        <!-- A visitor on a public project board -->
         <header class="share-topbar">
             <div class="share-topbar-brand">
-                <svg class="share-topbar-icon--guest" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                <span class="share-topbar-title">บอร์ดโครงการสาธารณะ</span>
-                <span class="badge share-topbar-badge share-topbar-badge--guest">ผู้เยี่ยมชม</span>
+                <a class="share-topbar-name" href="<?= APP_URL ?>/">DayFlow</a>
+                <span class="share-topbar-note">บอร์ดโครงการสาธารณะ · คุณเป็นผู้เยี่ยมชม อ่านอย่างเดียว</span>
             </div>
-            <div class="flex-1"></div>
             <div class="share-topbar-actions">
-                <a href="<?= APP_URL ?>/login" class="btn btn-ghost btn-sm share-topbar-btn">
-                    เข้าสู่ระบบ
-                </a>
-                <a href="<?= APP_URL ?>/register" class="btn btn-primary btn-sm share-topbar-btn share-topbar-signup">
-                    สมัครสมาชิก
-                </a>
+                <a href="<?= APP_URL ?>/login" class="btn btn-sm">เข้าสู่ระบบ</a>
+                <a href="<?= APP_URL ?>/register" class="btn btn-sm share-topbar-signup">สมัครสมาชิก</a>
             </div>
         </header>
     <?php endif; ?>

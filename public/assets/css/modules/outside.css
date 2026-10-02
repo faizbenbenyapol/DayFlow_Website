@@ -1,0 +1,192 @@
+/* =====================================================
+   outside.css — pages that are not inside the app
+
+   A page that only says something (an error, an expired link, offline) and the
+   page a shared file opens on. They are read by someone who may not have an
+   account, so they say what they are first and keep to one column, aligned left.
+===================================================== */
+
+/* ---------- A page that says something ---------- */
+.stmt {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    padding: var(--space-8) clamp(1.5rem, 6vw, 5rem);
+}
+
+.stmt-brand {
+    align-self: flex-start;
+    font-size: 1.5625rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.stmt-brand:hover {
+    text-decoration: none;
+}
+
+.stmt-body {
+    width: 100%;
+    max-width: 34rem;
+    margin: auto 0;
+    padding: var(--space-8) 0;
+}
+
+.stmt-note {
+    margin-bottom: var(--space-2);
+    font-size: 0.875rem;
+    color: var(--pencil);
+}
+
+/* A big serif figure, the way the date is set elsewhere. */
+.stmt-code {
+    margin-bottom: var(--space-2);
+    font: 500 5rem / 1 var(--font-num);
+    color: var(--pencil);
+}
+
+.stmt-title {
+    font-size: 1.5625rem;
+    font-weight: 600;
+}
+
+.stmt-text {
+    margin-top: var(--space-2);
+    color: var(--pencil);
+}
+
+.stmt-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-6);
+}
+
+.stmt-actions:empty {
+    display: none;
+}
+
+.stmt-menus {
+    margin-top: var(--space-10);
+}
+
+.stmt-menus-title {
+    margin-bottom: var(--space-2);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--pencil);
+}
+
+.stmt-menus .ruled-row {
+    color: var(--ink);
+}
+
+.stmt-menus .ruled-row:hover {
+    background: var(--paper-sunk);
+}
+
+/* The offline page is one static file and shows its icon beside the figure. */
+.stmt-icon {
+    width: 40px;
+    height: 40px;
+    margin-bottom: var(--space-4);
+    color: var(--pencil);
+}
+
+/* ---------- A shared file ---------- */
+.pub-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-1) var(--space-4);
+    padding: var(--space-2) clamp(1rem, 4vw, 2.5rem);
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 0.875rem;
+}
+
+.pub-bar-brand {
+    font-weight: 600;
+}
+
+.pub {
+    max-width: 52rem;
+    padding: var(--space-8) clamp(1rem, 4vw, 2.5rem) var(--space-12);
+}
+
+.pub-name {
+    overflow-wrap: anywhere;
+}
+
+.pub-expiry {
+    margin-top: var(--space-2);
+    font-size: 0.875rem;
+    color: var(--caution);
+}
+
+.pub-image {
+    max-height: 70dvh;
+    margin-bottom: var(--space-6);
+    border: 1px solid var(--rule);
+}
+
+.pub-row {
+    padding: var(--space-2) 0;
+}
+
+.pub-kind {
+    display: grid;
+    flex: none;
+    place-content: center;
+    width: 44px;
+}
+
+/* The app's .icon rule lives in shell.css, which this page does not load. */
+.pub-kind .icon {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.pub-ext {
+    min-width: 34px;
+    padding: 0 4px;
+    border: 1px solid var(--rule-strong);
+    font: 500 0.6875rem / 1.7 var(--font-mono);
+    text-align: center;
+    color: var(--pencil);
+}
+
+.pub-file {
+    overflow-wrap: anywhere;
+}
+
+.pub-size {
+    flex: none;
+    font-size: 0.875rem;
+    color: var(--pencil);
+}
+
+.pub-foot {
+    margin-top: var(--space-10);
+    font-size: 0.875rem;
+    color: var(--pencil);
+}
+
+@media (max-width: 540px) {
+    .stmt-code {
+        font-size: 4rem;
+    }
+
+    .pub-row {
+        flex-wrap: wrap;
+    }
+
+    .pub-size {
+        order: 3;
+    }
+}

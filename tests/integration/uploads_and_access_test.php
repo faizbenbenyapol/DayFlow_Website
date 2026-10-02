@@ -155,3 +155,29 @@ test('the error page uses the self-hosted fonts', function (TestClient $_c): voi
     assertFalse(str_contains($body, 'fonts.googleapis.com'), 'the CSP blocks Google Fonts');
     assertStringContains('/assets/css/fonts.css', $body);
 });
+
+test('a page that only says something is built from the shared stylesheets', function (TestClient $_c): void {
+    $body = (new TestClient(TEST_BASE_URL))->get('/this-page-does-not-exist')['body'];
+
+    assertStringContains('/assets/css/tokens.css', $body);
+    assertStringContains('/assets/css/modules/outside.css', $body);
+    assertStringContains('class="stmt-title"', $body);
+    assertFalse(str_contains($body, '<style'), 'a private style block means a private set of colours');
+});
+
+test('the pages outside the app carry no style block and no inline handler', function (TestClient $_c): void {
+    $guest = new TestClient(TEST_BASE_URL);
+
+    foreach (['/login', '/register', '/share/' . str_repeat('f', 64), '/offline.html'] as $path) {
+        $body = $guest->get($path)['body'];
+        assertFalse(str_contains($body, '<style'), "{$path} has a style block");
+        assertFalse((bool)preg_match('/\son(click|change|input|submit)=/i', $body), "{$path} has an inline handler");
+    }
+});
+
+test('a share link that cannot be opened says what to do next', function (TestClient $_c): void {
+    $response = (new TestClient(TEST_BASE_URL))->get('/share/' . str_repeat('f', 64));
+
+    assertSame(410, $response['status']);
+    assertStringContains('ขอลิงก์ใหม่', $response['body']);
+});
