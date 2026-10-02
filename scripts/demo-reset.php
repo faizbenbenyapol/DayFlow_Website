@@ -25,7 +25,7 @@ if (!$demo) {
 }
 
 try {
-    if (in_array('--snapshot', $argv, true)) {
+    if (in_array('--snapshot', $_SERVER['argv'] ?? [], true)) {
         $counts = DemoReset::snapshot((int)$demo['id']);
         echo "บันทึก snapshot แล้ว: " . array_sum($counts) . " แถวใน " . count($counts) . " ตาราง\n";
     } else {
