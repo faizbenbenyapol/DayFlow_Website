@@ -79,20 +79,12 @@ class Subscription
         $sub = self::getById($id, $userId);
         if (!$sub) return false;
 
-        $next = strtotime($sub['next_due_date']);
-        switch ($sub['billing_cycle']) {
-            case 'weekly':
-                $newDate = date('Y-m-d', strtotime('+1 week', $next));
-                break;
-            case 'yearly':
-                $newDate = date('Y-m-d', strtotime('+1 year', $next));
-                break;
-            case 'one_time':
-                return false; // one-time can't be renewed
-            default: // monthly
-                $newDate = date('Y-m-d', strtotime('+1 month', $next));
-                break;
-        }
+        // Recurrence keeps a bill due on the 31st inside the next month
+        // (28 Feb) where strtotime('+1 month') would spill into March.
+        $newDate = $sub['billing_cycle'] === 'one_time'
+            ? null // one-time can't be renewed
+            : Recurrence::next($sub['next_due_date'], $sub['billing_cycle']);
+        if ($newDate === null) return false;
 
         DB::run(
             'UPDATE subscriptions SET next_due_date = ? WHERE id = ? AND user_id = ?',

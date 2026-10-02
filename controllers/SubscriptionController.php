@@ -9,6 +9,9 @@ require_once ROOT . '/core/TelegramService.php';
 class SubscriptionController
 {
     private const BILLING_CYCLES = ['weekly', 'monthly', 'yearly', 'one_time'];
+    private const CYCLE_LABELS   = ['weekly' => 'รายสัปดาห์', 'monthly' => 'รายเดือน', 'yearly' => 'รายปี', 'one_time' => 'ครั้งเดียว'];
+    // The `name` column is VARCHAR(150); anything longer is a 500 from strict mode.
+    private const MAX_NAME       = 150;
 
     public function index(): void
     {
@@ -42,7 +45,7 @@ class SubscriptionController
             [
                 'รายการ' => htmlspecialchars($data['name']),
                 'เริ่มชำระ' => $startDate,
-                'รอบบิล' => $data['billing_cycle'] == 'monthly' ? 'รายเดือน' : 'รายปี'
+                'รอบบิล' => self::CYCLE_LABELS[$data['billing_cycle']]
             ]
         );
         TelegramService::sendNotification($userId, 'subscription', $msg);
@@ -101,7 +104,7 @@ class SubscriptionController
         $amount = (float)Request::input('amount', 0);
         $cycle = Request::input('billing_cycle', 'monthly');
         $alert = (int)Request::input('alert_days', 3);
-        if ($name === '' || mb_strlen($name) > 255 || !$dateObj || $dateObj->format('Y-m-d') !== $date) return ['error' => 'ข้อมูลการแจ้งเตือนไม่ถูกต้อง'];
+        if ($name === '' || mb_strlen($name) > self::MAX_NAME || !$dateObj || $dateObj->format('Y-m-d') !== $date) return ['error' => 'ข้อมูลการแจ้งเตือนไม่ถูกต้อง'];
         if ($amount < 0 || $amount > 999999999.99 || !is_finite($amount)) return ['error' => 'จำนวนเงินไม่ถูกต้อง'];
         if (!in_array($cycle, self::BILLING_CYCLES, true) || $alert < 0 || $alert > 365) return ['error' => 'รอบบิลหรือจำนวนวันแจ้งเตือนไม่ถูกต้อง'];
 

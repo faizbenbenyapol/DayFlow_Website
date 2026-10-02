@@ -32,7 +32,6 @@
   - `calculator.js` (1,115 บรรทัด) เป็น IIFE ก้อนเดียว ต้องปรับโครงสร้างก่อนแยก
   - `file-tools.js` (1,139) แยกได้ทีละเครื่องมือ มี IIFE ต่อเครื่องมืออยู่แล้ว
   - `settings.js` (1,136) แยกได้ทีละแท็บ ต้องย้าย helper ที่ใช้ร่วมกันออกมาก่อน
-- [ ] หน้า Stocks เรียก `/api/stocks/refresh` ทุกครั้งที่เปิด แม้ยังไม่ได้ตั้งค่า API หุ้น ทำให้มี error 422 ใน console
 
 ## 4. Backend
 
@@ -44,6 +43,6 @@
 
 ## เครื่องมือตรวจที่ใช้ในรอบนี้
 
-- `php tests/run.php http://localhost` รันใน container (319 เทสต์)
+- `php tests/run.php http://localhost` รันใน container (341 เทสต์) ถ้าชื่อ container ชนกับโปรเจกต์เก่า ใช้ `docker compose -p dayflowtest -f docker-compose.yml -f <override>` ที่เปลี่ยน `container_name` และพอร์ต
 - PHPStan: `docker run --rm -v "$PWD":/app -w /app ghcr.io/phpstan/phpstan:2.2.16 analyse`
 - งาน CSS/JS ตรวจด้วยการเทียบภาพหน้าจอก่อน/หลังทีละพิกเซลผ่าน headless Edge (สคริปต์อยู่นอก repo ถ้าจะใช้อีกให้ขอให้สร้างใหม่)
