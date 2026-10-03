@@ -154,9 +154,11 @@ require ROOT . '/views/partials/outside-head.php';
 
     <!-- Today, large. Decoration only: the page says nothing a screen reader needs from it. -->
     <aside class="auth-day" aria-hidden="true">
-        <span class="auth-day-name">วัน<?= h($thaiDays[(int)$now->format('w')]) ?></span>
-        <span class="auth-day-number"><?= (int)$now->format('j') ?></span>
-        <span class="auth-day-month"><?= h($thaiMonths[(int)$now->format('n')]) ?> <?= (int)$now->format('Y') + 543 ?></span>
+        <div class="auth-sheet">
+            <span class="auth-day-month"><?= h($thaiMonths[(int)$now->format('n')]) ?> <?= (int)$now->format('Y') + 543 ?></span>
+            <span class="auth-day-number"><?= (int)$now->format('j') ?></span>
+            <span class="auth-day-name">วัน<?= h($thaiDays[(int)$now->format('w')]) ?></span>
+        </div>
     </aside>
 
 </div>
