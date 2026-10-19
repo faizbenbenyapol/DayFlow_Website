@@ -63,7 +63,7 @@ const PAGES = [
     ['stocks-shots', '/stocks', '[data-stk-tab="screenshots"]'],
     ['stocks-chart', '/stocks', '[data-stk-tab="chart"]'],
     ['stocks-analysis', '/stocks', '[data-stk-tab="analysis"]'],
-    ['notes-editor', '/notes', '.note-row a.title'],
+    ['notes-editor', '/notes', '.note-card a.note-card-title'],
     ['notes-create', '/notes', '[data-act="openCreateNote"]'],
     ['bookmarks-add', '/bookmarks', '[data-act="openBookmark"]'],
     ['skills-add', '/skills', '[data-act="openSkillModal"]'],

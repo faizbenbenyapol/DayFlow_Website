@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Drives the app's frame in a real browser: the rail, the command palette, the
-// quick-add sheet and the phone tab bar. PHP tests cannot see any of this, and
+// Drives the app's frame in a real browser: the index tabs and sub-tabs, the
+// command palette, the quick-add sheet and the phone's bottom tabs. PHP tests cannot see any of this, and
 // it is where a broken data-act or a renamed id fails silently.
 //
 //   node scripts/e2e-shell.mjs [--base http://localhost:8089]
@@ -62,19 +62,19 @@ async function main() {
         await tab.send('Emulation.setTimezoneOverride', { timezoneId: process.env.E2E_TZ || 'UTC' });
         await signIn(tab, accountPassword());
 
-        // ---------- desktop: rail and palette ----------
+        // ---------- desktop: index tabs, sub-tabs and palette ----------
         console.log('Desktop');
         await tab.viewport({ width: 1366, height: 900, mobile: false });
         await tab.goto(BASE + '/tasks');
         await tab.settle();
 
-        check(await tab.eval(`getComputedStyle(document.getElementById('appRail')).display !== 'none'`), 'the rail is shown');
-        check(await tab.eval(`getComputedStyle(document.querySelector('.tabbar')).display === 'none'`), 'the tab bar is hidden');
-        check(await tab.eval(`document.querySelector('.nav-item[aria-current="page"]')?.dataset.menuKey`) === 'tasks', 'the open menu entry is marked');
-        check(await tab.eval(`document.querySelectorAll('.nav-item[aria-current="page"]').length`) === 1, 'only one entry is marked');
-        check(await tab.eval(`getComputedStyle(document.querySelector('.nav-item[aria-current="page"]')).borderLeftColor`)
-            === await tab.eval(`(() => { const probe = document.createElement('i'); probe.style.color = 'var(--day)'; document.body.appendChild(probe); const c = getComputedStyle(probe).color; probe.remove(); return c; })()`),
-            'the marker is the weekday colour');
+        check(await tab.eval(`document.querySelectorAll('#appFlags .flag').length`) === 5, 'five index tabs');
+        check(await tab.eval(`getComputedStyle(document.getElementById('appFlags')).position`) !== 'fixed', 'they sit along the top');
+        check(await tab.eval(`document.querySelector('#appFlags [aria-current="page"]')?.dataset.place`) === 'work', 'the open place is marked');
+        check(await tab.eval(`document.documentElement.dataset.place`) === 'work', 'the page takes the pastel of its place');
+        check(await tab.eval(`[...document.querySelectorAll('.subnav-link')].map(a => a.textContent.trim()).join(',')`) === 'งาน,โปรเจค,แพลนเนอร์', 'the sub-tabs are the pages in work');
+        check(await tab.eval(`document.querySelector('.subnav-link[aria-current="page"]')?.textContent.trim()`) === 'งาน', 'the open page is marked among them');
+        check(await tab.eval(`getComputedStyle(document.querySelector('.fab')).display`) === 'none', 'the floating add is for phones only');
 
         await key(tab, 'k', 2); // Ctrl+K
         await sleep(300);
@@ -150,7 +150,9 @@ async function main() {
         await tab.settle();
 
         check(await tab.eval(`document.querySelectorAll('[data-section]').length`) >= 6, 'the sections are on the page');
-        check(await tab.eval(`document.querySelector('.date-block .d').textContent.trim()`) === String(new Date().getDate()), 'the date block shows today\'s date');
+        check((await tab.eval(`document.querySelector('.today-title h1').textContent`)).includes(' ' + new Date().getDate() + ' '), 'the heading shows today\'s date');
+        check(await tab.eval(`document.querySelectorAll('.sec.taped').length`) >= 6, 'every card carries its tape');
+        check(await tab.eval(`document.querySelectorAll('.habit-tick.star-tick').length`) >= 1, 'habits are stars to stick on');
         check(await tab.eval(`document.querySelector('[aria-busy="true"]') === null`), 'every skeleton has been replaced');
         check(!(await tab.eval(`document.getElementById('todayTally').textContent`)).includes('undefined'), 'the summary line has no gaps');
         check(await tab.eval(`!!document.getElementById('todayError')`) === false, 'there is no error banner');
@@ -542,7 +544,7 @@ async function main() {
         console.log('Notes');
         await tab.goto(BASE + '/notes');
         await tab.settle();
-        check(await tab.eval(`document.querySelectorAll('#notesGrid .note-row').length`) >= 1, 'the notes are listed');
+        check(await tab.eval(`document.querySelectorAll('#notesGrid .note-card').length`) >= 1, 'the notes are listed');
         await click(tab, '[data-act="openCreateNote"][data-args="[true]"]');
         await sleep(300);
         check(await tab.eval(`!document.getElementById('createNotePwGroup').hidden`), 'an encrypted note asks for a password');
@@ -723,26 +725,18 @@ async function main() {
 
         await click(tab, '.settings-tab[data-tab="menus"]');
         await sleep(300);
-        check(await tab.eval(`document.querySelectorAll('.menu-group').length`) >= 5, 'menus are grouped like the rail');
-        check(await tab.eval(`document.getElementById('mobileTab1').options.length`) >= 10, 'the bottom bar choices list every shown menu');
-        await fill(tab, '#mobileTab1', 'notes');
-        await fill(tab, '#mobileTab2', 'notes');
-        check(await tab.eval(`document.getElementById('mobileTab1').value !== document.getElementById('mobileTab2').value`), 'the same menu cannot take both places');
-        await fill(tab, '#mobileTab1', 'finance');
-        await fill(tab, '#mobileTab2', 'notes');
+        check(await tab.eval(`document.querySelectorAll('.menu-group').length`) >= 5, 'menus are grouped by place');
+        check(!(await tab.eval(`!!document.getElementById('mobileTab1')`)), 'the old bottom-bar choice is gone');
+        // Hide every page in life: its index tab leaves with them.
+        await tab.eval(`['habits', 'focus', 'skills', 'exercise', 'food-notes'].forEach(k => { const box = document.querySelector('input[name="visible_menus[]"][value="' + k + '"]'); if (box) box.checked = false; })`);
         await click(tab, '#btnSaveMenus');
         await sleep(2000);
         await tab.settle();
-        await tab.viewport({ width: 390, height: 844, mobile: true });
-        await tab.goto(BASE + '/');
-        await tab.settle();
-        check(await tab.eval(`[...document.querySelectorAll('.tabbar .tab')].map(t => t.getAttribute('href') || '').join(' ').includes('/notes')`), 'a saved bottom bar choice shows on the phone');
-        await tab.viewport({ width: 1366, height: 900, mobile: false });
-        await tab.goto(BASE + '/settings');
-        await tab.settle();
+        check(!(await tab.eval(`!!document.querySelector('#appFlags [data-place="life"]')`)), 'a place with every page hidden loses its tab');
+        check(await tab.eval(`document.querySelectorAll('#appFlags .flag').length`) === 4, 'the other tabs stay');
         // Put the choice back.
-        const everyMenu = ['tasks', 'projects', 'planner', 'habits', 'focus', 'skills', 'notes', 'quick-notes', 'bookmarks', 'finance', 'subscriptions', 'stocks', 'exercise', 'food-notes', 'files', 'file-tools', 'transfer', 'ai', 'calculator'];
-        await api(tab, '/api/settings/menus', { method: 'POST', body: JSON.stringify({ menus: everyMenu, order: everyMenu, mobile_tabs: ['tasks', 'finance'] }) });
+        const everyMenu = ['tasks', 'projects', 'planner', 'habits', 'focus', 'skills', 'exercise', 'food-notes', 'finance', 'subscriptions', 'stocks', 'notes', 'quick-notes', 'bookmarks', 'files', 'transfer', 'file-tools', 'ai', 'calculator'];
+        await api(tab, '/api/settings/menus', { method: 'POST', body: JSON.stringify({ menus: everyMenu, order: everyMenu }) });
 
         await click(tab, '.settings-tab[data-tab="app-shares"]');
         await sleep(600);
@@ -878,7 +872,7 @@ async function main() {
             check(await anon.eval(`document.querySelector('.pub-bar').textContent.includes('ดูและดาวน์โหลดได้')`), 'a bar on top says what the link allows');
             check(await anon.eval(`document.querySelectorAll('.pub-row').length`) === 1, 'it lists what is inside');
             check(await anon.eval(`document.querySelector('.pub-row').textContent.includes('(โฟลเดอร์)')`), 'saying which are folders, in words a reader of the page can hear');
-            check(await anon.eval(`!document.getElementById('appRail') && !document.querySelector('script[src*="app.js"]')`), 'and carries nothing of the app');
+            check(await anon.eval(`!document.getElementById('appFlags') && !document.querySelector('script[src*="app.js"]')`), 'and carries nothing of the app');
             check(await anon.eval(`document.documentElement.scrollWidth <= window.innerWidth`), 'nothing scrolls sideways');
 
             await anon.goto(BASE + '/share/' + viewShare.body.token);
@@ -897,7 +891,7 @@ async function main() {
             check(await anon.eval(`location.pathname`) === '/tasks', 'a menu link opens the page it shares');
             check(await anon.eval(`document.querySelector('.share-topbar').textContent.includes('อ่านอย่างเดียว')`), 'under a bar that says it is read-only');
             check(await anon.eval(`document.querySelector('.share-topbar-link[aria-current="page"]')?.textContent`) === 'งาน', 'and marks the page that is open');
-            check(await anon.eval(`!document.getElementById('appRail')`), 'with no rail');
+            check(await anon.eval(`!document.getElementById('appFlags')`), 'with no index tabs');
             check(await anon.eval(`Math.round(document.querySelector('.share-topbar').getBoundingClientRect().width) === window.innerWidth`), 'the bar runs across the whole top');
             await anon.goto(BASE + '/exit-share');
 
@@ -968,7 +962,7 @@ async function main() {
             await click(anon, '#loginBtn');
             await sleep(2000);
             check(await anon.eval(`location.pathname`) === '/', 'signing in through the page lands on today');
-            check(await anon.eval(`!!document.getElementById('appRail')`), 'inside the app');
+            check(await anon.eval(`!!document.getElementById('appFlags')`), 'inside the app');
         } finally {
             await cdp.send('Target.disposeBrowserContext', { browserContextId }).catch(() => {});
         }
@@ -978,21 +972,22 @@ async function main() {
         await tab.viewport({ width: 390, height: 844, mobile: true });
         await tab.goto(BASE + '/tasks');
         await tab.settle();
-        check(await tab.eval(`getComputedStyle(document.getElementById('appRail')).display === 'none'`), 'the rail is hidden');
-        check(await tab.eval(`getComputedStyle(document.querySelector('.tabbar')).display !== 'none'`), 'the tab bar is shown');
-        check(await tab.eval(`document.querySelectorAll('.tabbar .tab').length`) === 5, 'it has five places');
-        check(await tab.eval(`document.querySelector('.tabbar [aria-current="page"] span')?.textContent`) === 'งาน', 'the current page is marked in it');
-        check(await tab.eval(`Math.min(...[...document.querySelectorAll('.tabbar .tab')].map(t => t.getBoundingClientRect().height))`) >= 44, 'every place is at least 44px tall');
+        check(await tab.eval(`getComputedStyle(document.getElementById('appFlags')).position`) === 'fixed', 'the index tabs move to the bottom');
+        check(await tab.eval(`document.getElementById('appFlags').getBoundingClientRect().bottom`) >= 844 - 1, 'and sit on the bottom edge');
+        check(await tab.eval(`document.querySelectorAll('#appFlags .flag').length`) === 5, 'five places');
+        check(await tab.eval(`document.querySelector('#appFlags [aria-current="page"] span')?.textContent`) === 'งาน', 'the current place is marked in them');
+        check(await tab.eval(`Math.min(...[...document.querySelectorAll('#appFlags .flag')].map(t => t.getBoundingClientRect().height))`) >= 44, 'every tab is at least 44px tall');
+        check(await tab.eval(`getComputedStyle(document.querySelector('.fab')).display`) !== 'none', 'the add button floats');
 
-        await click(tab, '.tabbar [data-act="openMenuSheet"]');
+        await click(tab, '.desk-top [data-act="openMenuSheet"]');
         await sleep(300);
         check(await tab.eval(`document.getElementById('menuSheet').open`), '"ทั้งหมด" opens the menu sheet');
         check(await tab.eval(`document.querySelectorAll('#menuSheet .sheet-link').length`) >= 19, 'it lists every menu');
         await tab.eval(`document.getElementById('menuSheet').close()`);
 
-        await click(tab, '.tabbar [data-act="openQuickAdd"]');
+        await click(tab, '.fab');
         await sleep(300);
-        check(await tab.eval(`document.getElementById('quickSheet').open`), 'the plus button opens quick add');
+        check(await tab.eval(`document.getElementById('quickSheet').open`), 'the floating add opens quick add');
         check(await tab.eval(`document.documentElement.scrollWidth <= window.innerWidth`), 'nothing scrolls sideways');
     } finally {
         // Leave the account as it was found.

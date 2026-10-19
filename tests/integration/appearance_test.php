@@ -87,16 +87,25 @@ test('the component gallery opens in development and needs a login', function (T
     assertContains($anonymous->get('/dev/components')['status'], [302, 401, 403], 'a visitor must not see it');
 });
 
-test('the two places in the bottom bar on a phone can be chosen, and only validly', function (TestClient $_c): void {
+test('each index tab leads to the first page shown in its place, and an emptied place loses its tab', function (TestClient $_c): void {
     $client = appearanceClient('look_tabs');
     $all = ['tasks', 'planner', 'notes', 'finance', 'stocks'];
 
-    $saved = $client->post('/api/settings/menus', ['menus' => $all, 'order' => $all, 'mobile_tabs' => ['finance', 'notes']]);
+    $saved = $client->post('/api/settings/menus', ['menus' => $all, 'order' => ['planner', 'tasks', 'notes', 'finance', 'stocks']]);
     assertSame(200, $saved['status'], substr($saved['body'], 0, 200));
     $page = $client->get('/')['body'];
-    preg_match('#<nav class="tabbar".*?</nav>#s', $page, $bar);
-    assertStringContains('/finance', $bar[0] ?? '', 'the chosen menu is in the tab bar');
-    assertStringContains('/notes', $bar[0] ?? '');
+    preg_match('#<nav class="flags".*?</nav>#s', $page, $bar);
+    $flags = $bar[0] ?? '';
+    assertStringContains('data-place="work" href="' . APP_URL . '/planner"', $flags, 'work opens on the first page in the saved order');
+    assertStringContains('data-place="money" href="' . APP_URL . '/finance"', $flags);
+    assertStringContains('data-place="vault" href="' . APP_URL . '/notes"', $flags);
+    assertFalse(str_contains($flags, 'data-place="life"'), 'every page in life is hidden, so is its tab');
+    assertStringContains('data-place="today" href="' . APP_URL . '/" aria-current="page"', $flags, 'the open place is marked');
+
+    // The old two-slot bottom bar is gone from the page, but the endpoint still
+    // validates a choice an older page might send.
+    $saved = $client->post('/api/settings/menus', ['menus' => $all, 'order' => $all, 'mobile_tabs' => ['finance', 'notes']]);
+    assertSame(200, $saved['status'], substr($saved['body'], 0, 200));
 
     // Two different menus that are still shown, or nothing at all.
     assertSame(422, $client->post('/api/settings/menus', ['menus' => $all, 'order' => $all, 'mobile_tabs' => ['finance']])['status'], 'one is not enough');
