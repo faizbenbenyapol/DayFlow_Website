@@ -589,6 +589,125 @@ select.form-control {
     cursor: pointer;
 }
 
+/* ---------------------------------------------------------------
+   Dropdowns. Where the browser lets a page draw the open list
+   (appearance: base-select, Chrome and Edge 135+), it becomes a card on a
+   step like the rest of v3: options as rows, the chosen one ticked in red
+   pen, a hover in the place's pastel. Elsewhere the system list stays, and
+   the closed box still looks the same. No script: every page that fills a
+   select with options keeps working as it did.
+--------------------------------------------------------------- */
+@supports (appearance: base-select) {
+    select:not([multiple]):not([size]),
+    select:not([multiple]):not([size])::picker(select) {
+        appearance: base-select;
+    }
+
+    select.form-control:not([multiple]):not([size]),
+    select.block-type {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding-right: 12px;
+        background-image: none;
+    }
+
+    select:not([multiple]):not([size])::picker-icon {
+        content: "";
+        width: 7px;
+        height: 7px;
+        margin-left: auto;
+        border: solid var(--edge);
+        border-width: 0 2px 2px 0;
+        transform: translateY(-2px) rotate(45deg);
+        transition: transform var(--dur) var(--ease);
+    }
+
+    select:not([multiple]):not([size]):open::picker-icon {
+        transform: translateY(2px) rotate(-135deg);
+    }
+
+    select:not([multiple]):not([size]):open {
+        border-color: var(--edge);
+        box-shadow: 0 0 0 3px var(--place-2);
+    }
+
+    ::picker(select) {
+        min-width: anchor-size(width);
+        max-height: min(340px, 60dvh);
+        margin-block: 6px;
+        padding: 4px;
+        overflow-y: auto;
+        background: var(--paper);
+        color: var(--ink);
+        border: 1.5px solid var(--edge);
+        border-radius: var(--r-control);
+        box-shadow: 0 3px 0 var(--edge), var(--lift-1);
+        opacity: 0;
+        transform: translateY(-4px);
+        transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease), overlay var(--dur) allow-discrete, display var(--dur) allow-discrete;
+    }
+
+    select:open::picker(select) {
+        opacity: 1;
+        transform: none;
+    }
+
+    @starting-style {
+        select:open::picker(select) {
+            opacity: 0;
+            transform: translateY(-4px);
+        }
+    }
+
+    select:not([multiple]):not([size]) option {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        min-height: 40px;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 0.9375rem;
+        cursor: pointer;
+    }
+
+    select:not([multiple]):not([size]) option:hover,
+    select:not([multiple]):not([size]) option:focus-visible {
+        background: var(--place);
+        outline: none;
+    }
+
+    select:not([multiple]):not([size]) option:checked {
+        font-weight: 600;
+    }
+
+    /* The tick of the chosen option, in red pen like every other tick. */
+    select:not([multiple]):not([size]) option::checkmark {
+        content: "✓";
+        order: 1;
+        margin-left: auto;
+        color: var(--stamp-red);
+        font-weight: 700;
+    }
+
+    select:not([multiple]):not([size]) option:disabled {
+        color: var(--pencil);
+        cursor: default;
+    }
+
+    select:not([multiple]):not([size]) optgroup {
+        padding-top: 4px;
+    }
+
+    select:not([multiple]):not([size]) optgroup legend,
+    select:not([multiple]):not([size]) optgroup::before {
+        padding: 6px 10px 2px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--pencil);
+    }
+}
+
 /* A date or time field opens its picker from anywhere in the box. */
 input[type="date"],
 input[type="time"],
