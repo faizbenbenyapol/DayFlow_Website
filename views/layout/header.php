@@ -105,7 +105,7 @@ $chromeColors = ['light' => '#FBFAF7', 'dark' => '#15181D'];
     // stylesheet to block the first paint. The two faces below cover almost
     // all body text, so they are fetched in parallel with the CSS rather than
     // after it.
-    foreach (['plexthai-thai-400', 'plexsans-latin-var'] as $criticalFont): ?>
+    foreach (['anuphan-thai-var', 'anuphan-latin-var'] as $criticalFont): ?>
     <link rel="preload" as="font" type="font/woff2" crossorigin
         href="<?= APP_URL ?>/assets/fonts/<?= $criticalFont ?>.woff2">
     <?php endforeach; ?>

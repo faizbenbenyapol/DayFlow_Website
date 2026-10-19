@@ -39,7 +39,7 @@ $sheet = static fn(string $path): string =>
     <title><?= isset($pageTitle) ? h($pageTitle) . ' — ' : '' ?><?= h(APP_NAME) ?></title>
     <!-- Sets the theme before the first paint, so the page never flashes the wrong one. -->
     <script src="<?= APP_URL ?>/assets/js/standalone.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/standalone.js') ?>"></script>
-    <?php foreach (['plexthai-thai-400', 'plexsans-latin-var'] as $criticalFont): ?>
+    <?php foreach (['anuphan-thai-var', 'anuphan-latin-var'] as $criticalFont): ?>
     <link rel="preload" as="font" type="font/woff2" crossorigin
         href="<?= APP_URL ?>/assets/fonts/<?= $criticalFont ?>.woff2">
     <?php endforeach; ?>
