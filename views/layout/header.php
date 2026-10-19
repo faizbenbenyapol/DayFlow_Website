@@ -224,36 +224,45 @@ require ROOT . '/views/partials/icons.php';
         <svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>
     </button>
 
-    <!-- Every menu, grouped by place, plus settings and sign-out -->
-    <dialog class="sheet" id="menuSheet" aria-labelledby="menuSheetTitle">
-        <div class="sheet-head">
+    <!-- Every menu, one pastel box per place, plus the account and sign-out -->
+    <dialog class="sheet menu-sheet" id="menuSheet" aria-labelledby="menuSheetTitle">
+        <div class="sheet-head menu-sheet-head">
             <h2 id="menuSheetTitle">เมนูทั้งหมด</h2>
+            <button type="button" class="sheet-search" data-act="searchFromSheet">
+                <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+                <span>ค้นหาหรือสั่งงาน</span>
+                <kbd data-shortcut>Ctrl K</kbd>
+            </button>
             <button type="button" class="icon-btn" data-act="closeSheet" data-args='["menuSheet"]' aria-label="ปิด">
                 <svg class="icon" aria-hidden="true"><use href="#i-close"/></svg>
             </button>
         </div>
-        <div class="sheet-body">
-            <button type="button" class="sheet-search" data-act="searchFromSheet">
-                <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
-                <span>ค้นหาหรือสั่งงาน</span>
-            </button>
+        <div class="sheet-body menu-places">
             <?php foreach ($navGroups as $group): ?>
-            <div class="sheet-group" data-place="<?= h($group['key']) ?>">
-                <div class="nav-label"><?= h($group['label']) ?></div>
-                <div class="sheet-links">
+            <section class="menu-place" data-place="<?= h($group['key']) ?>" aria-labelledby="menu-place-<?= h($group['key']) ?>">
+                <h3 class="menu-place-name" id="menu-place-<?= h($group['key']) ?>"><?= h($group['label']) ?></h3>
+                <div class="menu-tiles">
                     <?php foreach ($group['items'] as $item): ?>
-                    <a class="sheet-link" data-menu-key="<?= h($item['key']) ?>" href="<?= h(APP_URL . $item['path']) ?>"<?= isActive($item['path']) !== '' ? ' aria-current="page"' : '' ?>><?= h($item['label']) ?></a>
+                    <a class="sheet-link menu-tile" data-menu-key="<?= h($item['key']) ?>" href="<?= h(APP_URL . $item['path']) ?>"<?= isActive($item['path']) !== '' ? ' aria-current="page"' : '' ?>>
+                        <svg class="icon" aria-hidden="true"><use href="#i-<?= h($item['key']) ?>"/></svg><span><?= h($item['label']) ?></span>
+                    </a>
                     <?php endforeach; ?>
                 </div>
-            </div>
+            </section>
             <?php endforeach; ?>
-            <div class="sheet-group sheet-account">
-                <div class="nav-label"><?= h($navName) ?><?php if (!empty($user['email'])): ?> · <?= h($user['email']) ?><?php endif; ?></div>
-                <div class="sheet-links">
-                    <a class="sheet-link" data-menu-key="settings" href="<?= APP_URL ?>/settings"<?= isActive('/settings') !== '' ? ' aria-current="page"' : '' ?>>ตั้งค่า</a>
-                    <a class="sheet-link sheet-logout" href="<?= APP_URL ?>/logout">ออกจากระบบ</a>
-                </div>
-            </div>
+        </div>
+        <div class="menu-account">
+            <span class="menu-avatar" aria-hidden="true"><?= h(mb_substr($navName !== '' ? $navName : 'D', 0, 1)) ?></span>
+            <span class="menu-who">
+                <strong><?= h($navName) ?></strong>
+                <?php if (!empty($user['email'])): ?><span><?= h($user['email']) ?></span><?php endif; ?>
+            </span>
+            <a class="sheet-link btn btn-sm" data-menu-key="settings" href="<?= APP_URL ?>/settings"<?= isActive('/settings') !== '' ? ' aria-current="page"' : '' ?>>
+                <svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg>ตั้งค่า
+            </a>
+            <a class="sheet-link sheet-logout btn btn-sm btn-ghost" href="<?= APP_URL ?>/logout">
+                <svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg>ออกจากระบบ
+            </a>
         </div>
     </dialog>
 

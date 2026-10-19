@@ -387,46 +387,6 @@ body {
     }
 }
 
-/* Group headings in the "all menus" sheet, each with its place's swatch. */
-.nav-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0 0 4px;
-    font-size: 0.8125rem;
-    color: var(--pencil);
-}
-
-.sheet-group[data-place] .nav-label::before {
-    content: "";
-    width: 12px;
-    height: 12px;
-    border: 1.5px solid var(--edge);
-    border-radius: 3px;
-    background: var(--place);
-}
-
-.sheet-search {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    min-height: 44px;
-    padding: 0 12px;
-    border: 1.5px solid var(--rule-strong);
-    border-radius: var(--r-control);
-    background: var(--paper);
-    color: var(--pencil);
-    font-size: 0.9375rem;
-    text-align: left;
-    cursor: pointer;
-}
-
-.sheet-search:hover {
-    border-color: var(--edge);
-    color: var(--ink);
-}
-
 /* ---------------------------------------------------------------
    Sheets: a dialog that slides up on a phone and sits centred elsewhere
 --------------------------------------------------------------- */
@@ -489,36 +449,212 @@ dialog.sheet[open] {
     padding-top: 8px;
 }
 
-/* "All menus": every page, grouped by place, as a plain list. */
-.sheet-group {
-    padding-top: 12px;
+/* ---------------------------------------------------------------
+   "All menus": one pastel box per place, the pages in it as tiles with
+   their icon, so any page is one look and one tap away. The account sits
+   along the foot.
+--------------------------------------------------------------- */
+dialog.menu-sheet {
+    width: min(920px, calc(100% - 32px));
+    max-height: min(760px, 92dvh);
+    display: none;
+    flex-direction: column;
+    background: var(--paper);
 }
 
-.sheet-links {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    border-top: 1px solid var(--rule);
+dialog.menu-sheet[open] {
+    display: flex;
 }
 
-.sheet-link {
+.menu-sheet-head {
+    gap: var(--space-3);
+    padding: 14px 10px 10px 20px;
+    border-bottom: 1.5px solid var(--rule);
+}
+
+.menu-sheet-head h2 {
+    flex: none;
+    font-family: var(--font-hand);
+    font-size: 1.375rem;
+    font-weight: 700;
+}
+
+.menu-sheet-head .sheet-search {
+    flex: 1;
+    max-width: 380px;
+    margin-left: auto;
+}
+
+.sheet-search {
     display: flex;
     align-items: center;
-    min-height: 48px;
-    padding: 0 4px;
-    border-bottom: 1px solid var(--rule);
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1.5px solid var(--rule-strong);
+    border-radius: var(--r-control);
+    background: var(--paper-sunk);
+    color: var(--pencil);
+    font-size: 0.9375rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.sheet-search:hover {
+    border-color: var(--edge);
     color: var(--ink);
+}
+
+.sheet-search kbd {
+    margin-left: auto;
+    padding: 0 5px;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    font: 500 0.75rem var(--font-mono);
+}
+
+.menu-places {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    align-content: start;
+    gap: var(--space-4);
+    padding: var(--space-5);
+    overflow-y: auto;
+}
+
+/* A place: its pastel as the paper, its name hand-lettered. */
+.menu-place {
+    padding: 12px 12px 14px;
+    background: var(--place);
+    border: 1.5px solid var(--edge);
+    border-radius: var(--r-card);
+}
+
+.menu-place-name {
+    margin: 0 4px 8px;
+    font-family: var(--font-hand);
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+
+.menu-tiles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.menu-tile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 6px 10px;
+    background: var(--paper);
+    border: 1px solid transparent;
+    border-radius: var(--r-control);
+    color: var(--ink);
+    font-size: 0.875rem;
+    line-height: 1.35;
     text-decoration: none;
 }
 
-.sheet-link:hover {
-    text-decoration: none;
-    background: color-mix(in srgb, var(--ink) 5%, transparent);
+.menu-tile .icon {
+    color: var(--pencil);
 }
 
-.sheet-link[aria-current="page"] {
-    font-weight: 600;
-    box-shadow: inset 4px 0 0 var(--place-2);
-    padding-left: 12px;
+.menu-tile:hover {
+    border-color: var(--edge);
+    text-decoration: none;
+}
+
+/* The page that is open: outlined on its step, bold, so it is not colour alone. */
+.menu-tile[aria-current="page"] {
+    border-color: var(--edge);
+    box-shadow: var(--press);
+    font-weight: 700;
+}
+
+.menu-tile[aria-current="page"] .icon {
+    color: var(--ink);
+}
+
+.menu-account {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+    border-top: 1.5px solid var(--rule);
+    background: var(--paper-sunk);
+}
+
+.menu-avatar {
+    display: grid;
+    place-content: center;
+    width: 40px;
+    height: 40px;
+    flex: none;
+    border: 1.5px solid var(--edge);
+    border-radius: 50%;
+    background: var(--butter);
+    font-family: var(--font-hand);
+    font-weight: 700;
+}
+
+.menu-who {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    line-height: 1.4;
+}
+
+.menu-who strong,
+.menu-who span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.menu-who span {
+    font-size: 0.8125rem;
+    color: var(--pencil);
+}
+
+@media (max-width: 767px) {
+    dialog.menu-sheet {
+        width: 100%;
+        max-height: 92dvh;
+    }
+
+    .menu-sheet-head {
+        flex-wrap: wrap;
+    }
+
+    .menu-sheet-head .sheet-search {
+        order: 3;
+        flex-basis: 100%;
+        max-width: none;
+        margin: 0 10px 0 0;
+    }
+
+    .menu-sheet-head .sheet-search kbd {
+        display: none;
+    }
+
+    .menu-places {
+        grid-template-columns: minmax(0, 1fr);
+        padding: var(--space-4);
+    }
+
+    .menu-who {
+        flex-basis: calc(100% - 52px);
+    }
+
+    .menu-account .btn {
+        flex: 1;
+    }
 }
 
 /* Quick add: tabs as an underline, not as buttons in boxes. */
