@@ -73,8 +73,10 @@
     border-radius: var(--r-card);
 }
 
+/* Stops short of the pin in the corner, so the two never share a pixel. */
 .note-card-title {
-    padding-right: 32px;
+    align-self: flex-start;
+    max-width: calc(100% - 30px);
     font-weight: 700;
     line-height: 1.45;
     overflow-wrap: anywhere;

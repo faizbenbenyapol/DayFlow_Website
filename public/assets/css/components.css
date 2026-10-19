@@ -208,12 +208,21 @@
 
 /* Tabs: a row of words on a rule. The open one is underlined in the place's
    pastel, and bold, so the colour is never the only sign. */
+/* Scrolls sideways when the words do not fit, and never up and down: the
+   underline sits on the rule with a negative margin, which would otherwise
+   give the row a 1.5px vertical scrollbar. */
 .tabs {
     display: flex;
     gap: var(--space-5);
     overflow-x: auto;
+    overflow-y: hidden;
     border-bottom: 1.5px solid var(--rule);
+    scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
+}
+
+.tabs::-webkit-scrollbar {
+    display: none;
 }
 
 .tab {
