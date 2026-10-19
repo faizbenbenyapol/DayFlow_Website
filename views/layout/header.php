@@ -179,8 +179,9 @@ $navHidden = is_array($navHidden) ? $navHidden : [];
 $navGroups = AppMenus::grouped(AppMenus::ordered(json_decode($navSettings['menu_order'] ?? 'null', true)), $navHidden);
 $navByGroup = array_column($navGroups, null, 'key');
 $navName = (string)($user['display_name'] ?? $user['username'] ?? '');
-// The sub-tabs of the place being shown, when it has more than one page to offer.
-$subItems = $navByGroup[$placeKey]['items'] ?? [];
+// The sub-tabs of the place being shown, when it has more than one page to
+// offer. A page outside every menu (settings) belongs to no place's row.
+$subItems = AppMenus::menuForPath(Request::path()) !== null ? ($navByGroup[$placeKey]['items'] ?? []) : [];
 require ROOT . '/views/partials/icons.php';
 ?>
     <a class="skip-link" href="#appMain">ข้ามไปยังเนื้อหา</a>

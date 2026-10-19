@@ -95,18 +95,21 @@ function renderHabits() {
         meta.push(weekDone >= h.target_days
             ? '<span class="met">ครบเป้า ' + weekDone + '/' + h.target_days + ' วัน</span>'
             : weekDone + '/' + h.target_days + ' วัน');
-        if (h.streak > 0) meta.push('ติดกัน ' + h.streak + ' วัน');
+        if (h.streak > 0) meta.push('<span class="streak" title="ทำติดกัน ' + Number(h.streak) + ' วัน"><svg class="flame" viewBox="0 0 20 24" aria-hidden="true"><path d="M10 1c1 5 7 7 7 14a7 7 0 0 1-14 0c0-4 2-6 3-8 0 3 1 4 2 4 0-4 0-7 2-10z"/></svg>' + Number(h.streak) + ' วัน</span>');
 
         const cells = days.map(day => {
             const iso = habitIso(day);
             const future = iso > today;
             const label = name + ' วัน' + HABIT_DAYS_FULL[day.getDay()] + 'ที่ ' + day.getDate() + ' ' + HABIT_MONTHS[day.getMonth()];
             return '<td class="habit-cell' + (iso === today ? ' is-today' : '') + (future ? ' future' : '') + '">'
-                + '<label><input type="checkbox" data-habit="' + h.id + '" data-date="' + iso + '"'
+                + '<label><input type="checkbox" class="star-tick" data-habit="' + h.id + '" data-date="' + iso + '"'
                 + (done.has(iso) ? ' checked' : '') + (future ? ' disabled' : '') + ' aria-label="' + label + '"></label></td>';
         }).join('');
 
-        return '<tr><th scope="row" style="--habit:' + cssColor(h.color, '#10b981') + '">'
+        // The colour chosen in the form, softened into the paper so it sits
+        // with the pastels: the edge of the row and the star.
+        const soft = 'color-mix(in srgb, ' + cssColor(h.color, '#10b981') + ' 45%, var(--paper))';
+        return '<tr style="--habit: ' + soft + '; --habit-c: ' + soft + '"><th scope="row">'
             + '<button type="button" class="habit-name" data-edit-habit="' + h.id + '" title="แก้ไขนิสัย">' + name + '</button>'
             + '<span class="habit-meta">' + meta.join(' · ') + '</span></th>' + cells + '</tr>';
     }).join('');

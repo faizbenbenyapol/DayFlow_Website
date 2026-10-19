@@ -194,12 +194,10 @@
             return;
         }
 
-        // A habit done today gets a star stuck on; a run of days shows as a flame.
-        // Each habit keeps one pastel for its star (the picked colour is too
-        // loud beside the soft palette), chosen by id so it never changes.
-        const STARS = ['butter', 'blush', 'sky', 'mint', 'peach', 'lilac'];
+        // A habit done today gets a star stuck on, in the habit's own colour
+        // softened into the paper; a run of days shows as a flame.
         el.innerHTML = list(items.map(h => row(
-            `<input type="checkbox" class="habit-tick star-tick" style="--habit-c: var(--${STARS[Number(h.id) % STARS.length]}-2)"${h.done_today ? ' checked' : ''} aria-label="ทำแล้ววันนี้: ${esc(h.name)}">`
+            `<input type="checkbox" class="habit-tick star-tick" style="--habit-c: color-mix(in srgb, ${cssColor(h.color, '#10b981')} 45%, var(--paper))"${h.done_today ? ' checked' : ''} aria-label="ทำแล้ววันนี้: ${esc(h.name)}">`
             + `<span class="grow"><span class="title">${esc(h.name)}</span></span>`
             + (h.streak > 0
                 ? `<span class="side streak" title="ทำติดกัน ${Number(h.streak)} วัน"><svg class="flame" viewBox="0 0 20 24" aria-hidden="true"><path d="M10 1c1 5 7 7 7 14a7 7 0 0 1-14 0c0-4 2-6 3-8 0 3 1 4 2 4 0-4 0-7 2-10z"/></svg>${Number(h.streak)} วัน</span>`

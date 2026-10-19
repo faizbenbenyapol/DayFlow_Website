@@ -78,12 +78,19 @@ final class AppMenus
      */
     public static function groupForPath(string $path): string
     {
+        $key = self::menuForPath($path);
+        return $key !== null ? self::MENUS[$key]['group'] : 'tools';
+    }
+
+    /** The menu a request path is, or sits under; null for a page outside every menu. */
+    public static function menuForPath(string $path): ?string
+    {
         if ($path === '/' || $path === '') return 'today';
-        foreach (self::MENUS as $menu) {
+        foreach (self::MENUS as $key => $menu) {
             if ($menu['path'] === '/') continue;
-            if ($path === $menu['path'] || str_starts_with($path, $menu['path'] . '/')) return $menu['group'];
+            if ($path === $menu['path'] || str_starts_with($path, $menu['path'] . '/')) return $key;
         }
-        return 'tools';
+        return null;
     }
 
     /** The two menus the mobile tab bar offers beside Today, until the user picks others. */
