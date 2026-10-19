@@ -14,7 +14,6 @@
         const root = $('#menuVisibilityList');
         if (!root) return;
         const lists = $$('.menu-order-list', root);
-        const labels = window.menuLabels || {};
 
         const menuError = message => {
             const line = $('#menuError');
@@ -55,46 +54,23 @@
             });
         });
 
-        // The two places in the phone's bottom bar: any menu that is still shown.
-        const selects = [$('#mobileTab1'), $('#mobileTab2')];
         const shown = () => $$('input[name="visible_menus[]"]:checked', root).map(cb => cb.value);
-
-        function fillSelects(prefer) {
-            const keys = shown();
-            selects.forEach((select, i) => {
-                const wanted = prefer ? prefer[i] : (select.value || select.dataset.current);
-                select.innerHTML = keys.map(k => '<option value="' + k + '">' + (labels[k] || k) + '</option>').join('');
-                if (keys.includes(wanted)) select.value = wanted;
-            });
-            // The same menu cannot hold both places.
-            if (selects[0].value === selects[1].value) {
-                const other = keys.find(k => k !== selects[0].value);
-                if (other) selects[1].value = other;
-            }
-        }
-        fillSelects();
-        $$('input[name="visible_menus[]"]', root).forEach(cb => cb.addEventListener('change', () => fillSelects()));
-        selects.forEach((select, i) => select.addEventListener('change', () => {
-            const other = selects[1 - i];
-            if (other.value === select.value) {
-                const swapTo = shown().find(k => k !== select.value);
-                if (swapTo) other.value = swapTo;
-            }
-        }));
 
         $('#btnSaveMenus')?.addEventListener('click', async () => {
             const saveButton = $('#btnSaveMenus');
             const visibleMenus = shown();
             const order = lists.flatMap(list => $$('.menu-order-item', list).map(row => row.dataset.menuKey));
 
-            if (visibleMenus.length < 2) { menuError('ต้องแสดงอย่างน้อย 2 เมนู เพื่อให้แถบล่างบนมือถือมีที่ว่างครบ'); return; }
+            if (visibleMenus.length < 1) { menuError('ต้องแสดงอย่างน้อย 1 เมนู นอกจากหน้าวันนี้'); return; }
             menuError('');
 
             saveButton.disabled = true;
             try {
+                // The phone's bottom bar is the five places now, so the old
+                // two-slot choice (mobile_tabs) is left as it was saved.
                 await apiFetch(BASE_URL + '/api/settings/menus', {
                     method: 'POST',
-                    body: JSON.stringify({ menus: visibleMenus, order, mobile_tabs: [selects[0].value, selects[1].value] })
+                    body: JSON.stringify({ menus: visibleMenus, order })
                 });
                 toast('บันทึกเมนูแล้ว กำลังโหลดหน้าใหม่');
                 setTimeout(() => window.location.reload(), 900);

@@ -57,7 +57,6 @@ $topics = [
 $hiddenMenus = !empty($settings['hidden_menus']) ? json_decode($settings['hidden_menus'], true) : [];
 if (!is_array($hiddenMenus)) $hiddenMenus = [];
 $menuOrder = AppMenus::ordered(json_decode($settings['menu_order'] ?? 'null', true));
-[$tabA, $tabB] = AppMenus::mobileTabs(json_decode($settings['mobile_tabs'] ?? 'null', true), $hiddenMenus);
 ?>
 <div class="page-head">
     <div>
@@ -256,7 +255,7 @@ $menuOrder = AppMenus::ordered(json_decode($settings['menu_order'] ?? 'null', tr
             </div>
             <div class="day-color-text">
                 <label class="day-color-title" for="dayColorSwitch">ใช้สีตามวันในสัปดาห์</label>
-                <p class="form-hint">แถบวันที่ในหน้าวันนี้และขีดข้างเมนูที่เปิดอยู่จะเปลี่ยนสีตามวัน เช่น วันศุกร์เป็นสีฟ้า วันอาทิตย์เป็นสีแดง ปิดแล้วจะใช้สีหมึกตลอด</p>
+                <p class="form-hint">ไฮไลต์ใต้วันที่ในหน้าวันนี้จะเปลี่ยนสีตามวัน เช่น วันศุกร์เป็นสีฟ้า วันอาทิตย์เป็นสีแดง ปิดแล้วจะใช้สีเหลืองเนยของหน้าวันนี้ตลอด</p>
             </div>
             <label class="switch">
                 <input type="checkbox" id="dayColorSwitch" <?= ($settings['day_color'] ?? 1) ? 'checked' : '' ?>>
@@ -285,7 +284,7 @@ $menuOrder = AppMenus::ordered(json_decode($settings['menu_order'] ?? 'null', tr
 <!-- MENUS -->
 <section id="tab-menus" class="settings-pane" role="tabpanel" aria-labelledby="tabbtn-menus" hidden>
     <h2>เมนู</h2>
-    <p class="form-hint">ติ๊กเมนูที่ต้องการให้แสดง ลากที่จับ ⋮⋮ หรือกดลูกศรเพื่อเรียงลำดับ ลำดับมีผลภายในกลุ่มเดียวกัน เมนูที่ไม่ติ๊กจะถูกซ่อนจากแถบเมนูและหน้าอื่น</p>
+    <p class="form-hint">ติ๊กเมนูที่ต้องการให้แสดง ลากที่จับ ⋮⋮ หรือกดลูกศรเพื่อเรียงลำดับ ลำดับมีผลภายในกลุ่มเดียวกัน เมนูแรกของแต่ละกลุ่มคือหน้าที่แถบคั่นสีพาไป เมนูที่ไม่ติ๊กจะถูกซ่อนจากแท็บและหน้าอื่น ถ้าซ่อนทุกเมนูในกลุ่ม แถบคั่นของกลุ่มนั้นก็จะหายไปด้วย</p>
 
     <div id="menuVisibilityList" data-menu-order="<?= h(json_encode($menuOrder, JSON_UNESCAPED_UNICODE)) ?>">
         <?php foreach (AppMenus::GROUPS as $groupKey => $heading):
@@ -306,21 +305,7 @@ $menuOrder = AppMenus::ordered(json_decode($settings['menu_order'] ?? 'null', tr
         <?php endforeach; ?>
     </div>
 
-    <div class="settings-block">
-        <h2>แถบเมนูล่างบนมือถือ</h2>
-        <p class="form-hint">แถบล่างมี "วันนี้" ปุ่ม + และ "ทั้งหมด" อยู่แล้ว เลือกเมนูที่เปิดบ่อยอีกสองที่ให้อยู่ในแถบ</p>
-        <div class="form-row">
-            <div class="form-group">
-                <label class="form-label" for="mobileTab1">ช่องที่ 1</label>
-                <select class="form-control mobile-tab-select" id="mobileTab1" data-current="<?= h($tabA) ?>"></select>
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="mobileTab2">ช่องที่ 2</label>
-                <select class="form-control mobile-tab-select" id="mobileTab2" data-current="<?= h($tabB) ?>"></select>
-            </div>
-        </div>
-        <p class="form-error" id="menuError" role="alert" hidden></p>
-    </div>
+    <p class="form-error" id="menuError" role="alert" hidden></p>
 
     <div class="settings-actions">
         <button class="btn btn-primary" type="button" id="btnSaveMenus">บันทึกเมนู</button>
@@ -373,7 +358,6 @@ $menuOrder = AppMenus::ordered(json_decode($settings['menu_order'] ?? 'null', tr
 <script nonce="<?= h(Security::nonce()) ?>">
 window.dashboardLayout = <?= jsonForScript($layout) ?>;
 window.dashboardDefaults = <?= jsonForScript(DashboardLayout::defaults()) ?>;
-window.menuLabels = <?= jsonForScript(array_map(fn(array $m): string => $m['label'], AppMenus::MENUS)) ?>;
 </script>
 
 <!-- CATEGORIES AND TAGS -->
