@@ -27,3 +27,15 @@ function escHtml(value) {
 function cssColor(value, fallback = '#9ca3af') {
     return /^#[0-9a-f]{3,8}$/i.test(String(value ?? '')) ? String(value) : fallback;
 }
+
+/**
+ * One of the six pastels (tokens.css) for a name, the same every time: a
+ * category, a tag or a habit keeps its colour without anyone choosing it.
+ * Returns the token's stem, e.g. "mint"; add "-2" for the stronger shade.
+ */
+function pastelFor(name) {
+    const PASTELS = ['sky', 'blush', 'mint', 'peach', 'lilac', 'butter'];
+    let hash = 0;
+    for (const ch of String(name ?? '')) hash = (hash * 31 + ch.codePointAt(0)) >>> 0;
+    return PASTELS[hash % PASTELS.length];
+}

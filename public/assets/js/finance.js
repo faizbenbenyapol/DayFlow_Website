@@ -160,7 +160,7 @@ function renderCategoryBreakdown(rows, totalExpense) {
         return '<div class="breakdown-row">'
             + '<div class="breakdown-info"><span class="breakdown-cat-name">' + escHtml(c.name) + '</span>'
             + '<span class="breakdown-cat-amount">' + amountText(c.amount) + ' <span class="breakdown-cat-pct">' + pct.toFixed(0) + '%</span></span></div>'
-            + '<div class="progress" role="img" aria-label="' + pct.toFixed(0) + ' เปอร์เซ็นต์ของรายจ่าย"><div class="progress-bar" style="width:' + pct.toFixed(1) + '%"></div></div>'
+            + '<div class="progress" role="img" aria-label="' + pct.toFixed(0) + ' เปอร์เซ็นต์ของรายจ่าย"><div class="progress-bar" style="width:' + pct.toFixed(1) + '%; background: var(--' + pastelFor(c.name) + '-2)"></div></div>'
             + '</div>';
     }).join('');
 }
@@ -238,7 +238,7 @@ function renderTransactions(list) {
         const text = escHtml(t.description || t.category_name || 'ไม่มีรายละเอียด');
         html += '<li class="ruled-row txn-row">'
             + '<span class="grow"><span class="title">' + text + '</span>'
-            + '<span class="meta">' + escHtml(t.category_name || 'ไม่ระบุหมวด') + (income ? ' · รายรับ' : '') + '</span></span>'
+            + '<span class="meta"><span class="cat-chip" style="--chip: var(--' + pastelFor(t.category_name || '') + ')">' + escHtml(t.category_name || 'ไม่ระบุหมวด') + '</span>' + (income ? ' รายรับ' : '') + '</span></span>'
             + '<span class="side num ' + (income ? 'in' : 'out') + '">' + (income ? '+' : MINUS) + amountText(t.amount) + '</span>'
             + '<span class="txn-actions">'
             + '<button type="button" class="icon-btn sm" data-act="openEditTransaction" data-args="[' + t.id + ']" aria-label="แก้ไข: ' + text + '"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button>'

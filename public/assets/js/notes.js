@@ -39,18 +39,23 @@ function noteRow(n) {
     const title = escHtml(n.title);
     const tags = n.tags_list ? n.tags_list.split(',') : [];
     const pinned = !!Number(n.pinned);
+    const locked = !!Number(n.is_encrypted);
     const date = formatDate(n.updated_at ? n.updated_at.split(' ')[0] : '');
+    // A card takes the pastel of its first tag, so notes on one subject
+    // share a colour along the top.
+    const tone = pastelFor(tags[0] || 'โน้ต');
 
-    return '<li class="ruled-row note-row">'
-        + '<span class="grow">'
-        + '<a class="title" href="' + BASE_URL + '/notes/' + n.id + '">' + title
-        + (Number(n.is_encrypted) ? '<span class="tag note-lock"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>เข้ารหัส</span>' : '') + '</a>'
-        + (n.preview && !Number(n.is_encrypted) ? '<span class="meta">' + escHtml(n.preview.substring(0, 100)) + '</span>' : '')
-        + (tags.length ? '<span class="note-rowtags">' + tags.map(t => '<span class="tag">' + escHtml(t) + '</span>').join('') + '</span>' : '')
+    return '<li class="note-card" style="--nc: var(--' + tone + '-2)">'
+        + '<a class="note-card-title" href="' + BASE_URL + '/notes/' + n.id + '">' + title + '</a>'
+        + (locked
+            ? '<span class="note-card-text note-locked"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>เข้ารหัสไว้ ใส่รหัสเพื่อเปิด</span>'
+            : (n.preview ? '<span class="note-card-text">' + escHtml(n.preview.substring(0, 140)) + '</span>' : '<span class="note-card-text"></span>'))
+        + '<span class="note-card-foot">'
+        + tags.map(t => '<span class="cat-chip" style="--chip: var(--' + pastelFor(t) + ')">' + escHtml(t) + '</span>').join('')
+        + '<span class="note-card-date">' + escHtml(date) + '</span>'
+        + '<button type="button" class="icon-btn sm danger" data-act="deleteNote" data-args="[' + n.id + ']" aria-label="ลบโน้ต: ' + title + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>'
         + '</span>'
-        + '<span class="side">' + escHtml(date) + '</span>'
         + '<button type="button" class="icon-btn sm note-pin" data-act="togglePin" data-args="[' + n.id + ',' + (pinned ? 1 : 0) + ']" aria-pressed="' + pinned + '" aria-label="' + (pinned ? 'เลิกปักหมุด: ' : 'ปักหมุด: ') + title + '"><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg></button>'
-        + '<button type="button" class="icon-btn sm" data-act="deleteNote" data-args="[' + n.id + ']" aria-label="ลบโน้ต: ' + title + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>'
         + '</li>';
 }
 
@@ -74,14 +79,14 @@ function renderNotesList(notes) {
     const pinned = notes.filter(n => Number(n.pinned));
     const rest = notes.filter(n => !Number(n.pinned));
     const section = (label, list) => list.length
-        ? '<section class="sec" aria-label="' + label + '"><div class="sec-head"><h2>' + label + '<span class="count">' + list.length + '</span></h2></div>'
-          + '<ul class="ruled-list">' + list.map(noteRow).join('') + '</ul></section>'
+        ? '<section class="note-group" aria-label="' + label + '"><h2 class="note-group-head">' + label + '<span class="count">' + list.length + '</span></h2>'
+          + '<ul class="note-cards">' + list.map(noteRow).join('') + '</ul></section>'
         : '';
 
     // A heading only helps when there are two groups to tell apart.
     grid.innerHTML = pinned.length
         ? section('ปักหมุด', pinned) + section('โน้ตอื่น', rest)
-        : '<ul class="ruled-list note-list">' + rest.map(noteRow).join('') + '</ul>';
+        : '<ul class="note-cards">' + rest.map(noteRow).join('') + '</ul>';
 }
 
 // Exported below: a top-level const is not a window property, and the

@@ -104,7 +104,7 @@ function renderTaskItem(task) {
     return '<div class="task-item' + (isDone ? ' done' : '') + '" data-id="' + task.id + '" data-quadrant="' + task.quadrant + '">'
         + '<input type="checkbox" class="task-checkbox" ' + (isDone ? 'checked' : '') + ' aria-label="เสร็จแล้ว: ' + title + '" data-act="toggleTask" data-args="[' + task.id + ', &quot;$checked&quot;]" data-on="change">'
         + '<div class="task-content">'
-        + '<button type="button" class="task-title" data-act="openEditTask" data-args="[' + task.id + ']">' + title + '</button>'
+        + '<button type="button" class="task-title" data-act="openEditTask" data-args="[' + task.id + ']"><span class="done-mark">' + title + '</span></button>'
         + (meta ? '<div class="task-meta">' + meta + '</div>' : '')
         + '</div>'
         + '<div class="task-actions">'

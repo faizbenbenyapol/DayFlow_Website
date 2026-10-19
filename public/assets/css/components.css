@@ -761,7 +761,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 }
 
 .is-done .done-mark,
-.ruled-row.done .done-mark,
+.done .done-mark,
 input:checked + .done-mark,
 input:checked + label .done-mark {
     background-size: 100% 100%;
@@ -1160,6 +1160,18 @@ body.modal-open {
 
 .badge-warning {
     color: var(--caution);
+}
+
+/* A category in its pastel (pastelFor() in html.js picks it from the name). */
+.cat-chip {
+    display: inline-block;
+    padding: 0 8px;
+    border-radius: 10px;
+    background: var(--chip, var(--sky));
+    color: var(--ink);
+    font-size: 0.75rem;
+    line-height: 1.6;
+    white-space: nowrap;
 }
 
 .tag-list {
