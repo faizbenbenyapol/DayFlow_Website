@@ -44,7 +44,7 @@ function parseAmount(text) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-    fillCategorySelect(document.getElementById('qaCategory'), 'expense', '');
+    fillCategorySelect(document.getElementById('finCategory'), 'expense', '');
     fillCategoryFilter();
 
     document.querySelectorAll('input[name="qaType"]').forEach(radio => radio.addEventListener('change', onQuickTypeChange));
@@ -378,7 +378,7 @@ function quickType() {
 function onQuickTypeChange() {
     const type = quickType();
     document.getElementById('qaSubmit').textContent = type === 'income' ? 'บันทึกรายรับ' : 'บันทึกรายจ่าย';
-    fillCategorySelect(document.getElementById('qaCategory'), type, document.getElementById('qaCategory').value);
+    fillCategorySelect(document.getElementById('finCategory'), type, document.getElementById('finCategory').value);
 }
 
 /* ---------- the dialog ---------- */
@@ -449,10 +449,10 @@ async function saveTransaction() {
 }
 
 async function saveQuickTransaction() {
-    const amount = parseAmount(document.getElementById('qaAmount').value);
+    const amount = parseAmount(document.getElementById('finAmount').value);
     if (!(amount > 0)) {
         toast('ใส่จำนวนเงินเป็นตัวเลขที่มากกว่า 0', 'danger');
-        document.getElementById('qaAmount').focus();
+        document.getElementById('finAmount').focus();
         return;
     }
 
@@ -463,18 +463,18 @@ async function saveQuickTransaction() {
             body: JSON.stringify({
                 type,
                 amount,
-                category_id: document.getElementById('qaCategory').value,
+                category_id: document.getElementById('finCategory').value,
                 txn_date: todayISO(), // a line added here is for today
                 description: document.getElementById('qaDesc').value.trim(),
             }),
         });
 
-        document.getElementById('qaAmount').value = '';
+        document.getElementById('finAmount').value = '';
         document.getElementById('qaDesc').value = '';
         currentMonth = thisMonth(); // today's entry belongs to this month
         await refreshAfterChange();
         toast(type === 'income' ? 'บันทึกรายรับแล้ว' : 'บันทึกรายจ่ายแล้ว');
-        document.getElementById('qaAmount').focus();
+        document.getElementById('finAmount').focus();
     } catch (err) {
         toast(err.message || 'บันทึกไม่สำเร็จ ลองอีกครั้ง', 'danger');
     }

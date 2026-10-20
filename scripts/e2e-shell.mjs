@@ -356,7 +356,7 @@ async function main() {
         check(await tab.eval(`document.getElementById('monthLabel').textContent`) === monthBefore, '"กลับมาเดือนนี้" returns');
 
         await click(tab, 'input[name="qaType"][value="income"]');
-        await fill(tab, '#qaAmount', '123.45');
+        await fill(tab, '#finAmount', '123.45');
         await fill(tab, '#qaDesc', `รับทดสอบ ${STAMP}`);
         await click(tab, '#qaSubmit');
         await sleep(900);
@@ -830,7 +830,7 @@ async function main() {
         await tab.goto(BASE + '/no-such-page-' + STAMP);
         check(await tab.eval(`document.querySelector('h1').textContent`) === 'ไม่พบหน้าที่ต้องการ', 'a missing page says so in plain words');
         check(await tab.eval(`document.querySelector('.stmt-actions .btn-primary').textContent.trim()`) === 'กลับหน้าวันนี้', 'and offers the way back to today');
-        check(await tab.eval(`getComputedStyle(document.querySelector('.stmt-title')).fontSize`) === '25px', 'in the app\'s own type, not a private stylesheet');
+        check((await tab.eval(`getComputedStyle(document.querySelector('.stmt-title')).fontFamily`)).includes('Mali'), 'in the app\'s own type, not a private stylesheet');
         await click(tab, '.stmt-actions [data-back]');
         await sleep(600);
         check(await tab.eval(`location.pathname`) === '/bookmarks', 'the back button goes back');
@@ -838,7 +838,7 @@ async function main() {
         await tab.goto(BASE + '/offline.html');
         check(await tab.eval(`!!document.querySelector('[data-reload]')`), 'the offline notice has a retry button');
         check(await tab.eval(`document.documentElement.dataset.day.length === 3`), 'and takes today\'s colour from the clock');
-        check(await tab.eval(`getComputedStyle(document.querySelector('.stmt-title')).fontSize`) === '25px', 'in the app\'s own type');
+        check((await tab.eval(`getComputedStyle(document.querySelector('.stmt-title')).fontFamily`)).includes('Mali'), 'in the app\'s own type');
 
         // Links made for the people who open them without an account.
         await tab.goto(BASE + '/bookmarks');   // a page with a CSRF token to borrow

@@ -44,7 +44,7 @@ async function loadQuickItems() {
     }
 }
 
-document.getElementById('quickForm')?.addEventListener('submit', async e => {
+document.getElementById('quickCaptureForm')?.addEventListener('submit', async e => {
     e.preventDefault();
     const content = quickInput.value.trim();
     if (!content) return;

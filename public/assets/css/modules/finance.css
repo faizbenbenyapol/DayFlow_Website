@@ -267,3 +267,21 @@
         flex-wrap: wrap;
     }
 }
+
+/* A small phone: in, out and left as three rows, label beside figure, so a
+   six-figure month never runs out of its cell. */
+@media (max-width: 380px) {
+    .fin-summary .ledger tbody {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .fin-summary .ledger tr {
+        flex-direction: row;
+        align-items: baseline;
+        justify-content: space-between;
+    }
+
+    .fin-summary .ledger td.num {
+        font-size: 1.125rem;
+    }
+}

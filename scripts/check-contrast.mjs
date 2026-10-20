@@ -44,6 +44,12 @@ const PAIRS = [
     ['edge',           'mat',          UI,   'button and index-tab outline on the desk'],
 ];
 
+// Status colours on the tinted cards they appear on: income on the mint
+// money card, overdue on a blush card, due-today on butter.
+PAIRS.push(['ledger-green', 'mint', TEXT, 'income on the money card']);
+PAIRS.push(['stamp-red', 'blush', TEXT, 'overdue or expense on a blush card']);
+PAIRS.push(['caution', 'butter', TEXT, 'due today on a butter card']);
+
 // Every pastel carries ink: a tab label sits on strength 1, a heading on the
 // highlighter of strength 2, a tinted card's text on strength 1. Secondary
 // text appears on strength 1 too (the date on a tinted card).

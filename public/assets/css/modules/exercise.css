@@ -109,3 +109,14 @@
         flex: 1 1 0;
     }
 }
+
+/* A small phone: the month moves under the heading instead of past the edge. */
+@media (max-width: 400px) {
+    .sec-head:has(.ex-monthnav) {
+        flex-wrap: wrap;
+    }
+
+    .ex-monthlabel {
+        min-width: 7rem;
+    }
+}

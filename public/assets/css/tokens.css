@@ -26,7 +26,7 @@
 
     /* Meaning. Used only when the colour says something; pastels never do. */
     --stamp-red:    #B83232;   /* overdue, expense, delete, the tick of a done item */
-    --ledger-green: #1F7A52;   /* income, done, profit */
+    --ledger-green: #1A6B47;   /* income, done, profit; dark enough for a mint card */
     --caution:      #8A5800;   /* due today, nearly out of budget */
     --highlighter:  #FFEFB0;   /* a search hit, a row that just changed */
 

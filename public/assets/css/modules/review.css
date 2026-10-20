@@ -98,3 +98,14 @@
         border-top: 1px solid var(--rule);
     }
 }
+
+/* A small phone: a figure and its unit may share two lines, never spill. */
+@media (max-width: 400px) {
+    .rv-facts .fact .v {
+        overflow-wrap: anywhere;
+    }
+
+    .rv-facts .fact .v small {
+        display: inline-block;
+    }
+}

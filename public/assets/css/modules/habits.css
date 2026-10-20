@@ -168,3 +168,15 @@
         flex-wrap: wrap;
     }
 }
+
+/* A small phone: seven days of stars must fit beside the names. */
+@media (max-width: 400px) {
+    .habit-table .star-tick {
+        width: 20px;
+        height: 20px;
+    }
+
+    .habit-table .star-tick::before {
+        inset: -3px;
+    }
+}
