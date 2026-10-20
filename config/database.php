@@ -26,7 +26,12 @@ class DB
                         // with rowCount() >= 0, which reported success for a
                         // row that did not exist or belonged to someone else.
                         PDO::MYSQL_ATTR_FOUND_ROWS   => true,
-                        PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci"
+                        // Run the session on PHP's clock. The server
+                        // defaults to UTC while PHP uses TIMEZONE, so
+                        // CURDATE()/NOW() disagreed with date() for part of
+                        // every day. An offset like '+07:00' needs no
+                        // time zone tables on the server.
+                        PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci, time_zone = '" . date('P') . "'"
                     ]
                 );
             } catch (PDOException $e) {
