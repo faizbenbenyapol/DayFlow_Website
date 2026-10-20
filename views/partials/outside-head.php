@@ -18,13 +18,15 @@ $outsideStyles ??= [];
 $themeAttr = $outsideTheme === 'auto' ? 'light' : $outsideTheme;
 $dayKey = $outsideDay ?? strtolower(date('D'));
 $dayColor = ($outsideDayColor ?? 'on') === 'off' ? 'off' : 'on';
-$chromeColors = ['light' => '#FBFAF7', 'dark' => '#15181D'];
+// Someone signed out gets the default desk; a signed-in visitor their own.
+$desk = isset(User::DESKS[$outsideDesk ?? '']) ? $outsideDesk : 'sage';
+$chromeColors = ['light' => User::DESKS[$desk][0], 'dark' => User::DESKS[$desk][1]];
 
 $sheet = static fn(string $path): string =>
     '<link rel="stylesheet" href="' . APP_URL . '/assets/css/' . $path . '.css?v=' . @filemtime(PUBLIC_ROOT . '/assets/css/' . $path . '.css') . '">';
 ?>
 <!DOCTYPE html>
-<html lang="th" data-theme="<?= h($themeAttr) ?>" data-theme-pref="<?= h($outsideTheme) ?>" data-day="<?= h($dayKey) ?>" data-daycolor="<?= h($dayColor) ?>">
+<html lang="th" data-theme="<?= h($themeAttr) ?>" data-theme-pref="<?= h($outsideTheme) ?>" data-day="<?= h($dayKey) ?>" data-daycolor="<?= h($dayColor) ?>" data-desk="<?= h($desk) ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">

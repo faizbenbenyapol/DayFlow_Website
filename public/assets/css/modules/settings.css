@@ -169,6 +169,76 @@ fieldset.form-group {
 }
 
 /* ---------------------------------------------------------------
+   Desk colour: each swatch is a little desk (its own --mat, from the
+   data-desk rules in tokens.css) with a page lying on it.
+--------------------------------------------------------------- */
+.desk-swatches {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: var(--space-3);
+    max-width: 760px;
+    margin-top: var(--space-3);
+}
+
+@media (max-width: 640px) {
+    .desk-swatches {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.desk-swatch {
+    display: grid;
+    gap: 6px;
+    justify-items: center;
+    cursor: pointer;
+}
+
+.desk-swatch-chip {
+    display: grid;
+    place-items: end center;
+    width: 100%;
+    height: 64px;
+    padding: 12px 14px 0;
+    background: var(--mat);
+    border: 1.5px solid var(--rule-strong);
+    border-radius: var(--r-card);
+    transition: box-shadow var(--dur) var(--ease), transform 80ms var(--ease);
+}
+
+.desk-swatch-page {
+    width: 100%;
+    height: 100%;
+    background: var(--paper);
+    border-radius: 4px 4px 0 0;
+    box-shadow: 0 -1px 0 var(--rule);
+}
+
+.desk-swatch-label {
+    font-size: 0.875rem;
+    color: var(--pencil);
+}
+
+.desk-swatch:hover .desk-swatch-chip {
+    border-color: var(--edge);
+}
+
+/* The chosen desk: outlined on its step, the name in ink and bold. */
+.desk-swatch input:checked + .desk-swatch-chip {
+    border-color: var(--edge);
+    box-shadow: 0 3px 0 var(--edge);
+}
+
+.desk-swatch input:checked ~ .desk-swatch-label {
+    color: var(--ink);
+    font-weight: 700;
+}
+
+.desk-swatch input:focus-visible + .desk-swatch-chip {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------
    Theme and weekday colour
 --------------------------------------------------------------- */
 .theme-cards-container {

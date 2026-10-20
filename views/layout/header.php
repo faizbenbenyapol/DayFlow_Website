@@ -71,11 +71,14 @@ $dayColor = Auth::appearance()['day_color'] ? 'on' : 'off';
 // highlighter under the heading, the top edge of its cards (tokens.css).
 $placeKey = AppMenus::groupForPath(Request::path());
 
+// The pastel the page sits on, chosen in Settings (tokens.css, [data-desk]).
+$desk = Auth::appearance()['desk'];
+
 // The browser chrome follows the desk. "auto" lets the system decide which.
-$chromeColors = ['light' => '#DCE8E0', 'dark' => '#151A18'];
+$chromeColors = ['light' => User::DESKS[$desk][0], 'dark' => User::DESKS[$desk][1]];
 ?>
 <!DOCTYPE html>
-<html lang="th" data-theme="<?= h($themeAttr) ?>" data-theme-pref="<?= h($theme) ?>" data-day="<?= h($dayKey) ?>" data-daycolor="<?= h($dayColor) ?>" data-place="<?= h($placeKey) ?>">
+<html lang="th" data-theme="<?= h($themeAttr) ?>" data-theme-pref="<?= h($theme) ?>" data-day="<?= h($dayKey) ?>" data-daycolor="<?= h($dayColor) ?>" data-place="<?= h($placeKey) ?>" data-desk="<?= h($desk) ?>">
 
 <head>
     <meta charset="UTF-8">

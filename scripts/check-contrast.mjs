@@ -121,6 +121,18 @@ for (const day of DAYS) {
     }
 }
 
+// Each desk colour from Settings: the brand, the header buttons and the
+// index-tab outlines sit on it, in both themes.
+for (const desk of ['sky', 'blush', 'butter', 'lilac', 'peach', 'stone']) {
+    const lightDesk = { ...light, ...declarations(block(`[data-desk="${desk}"]`)) };
+    const darkDesk = { ...dark, ...declarations(block(`[data-theme="dark"][data-desk="${desk}"]`)) };
+    for (const [theme, scope] of [['light', lightDesk], ['dark', darkDesk]]) {
+        check(theme, scope, 'ink', 'mat', TEXT, `text on the ${desk} desk`);
+        check(theme, scope, 'pencil', 'mat', TEXT, `secondary text on the ${desk} desk`);
+        check(theme, scope, 'edge', 'mat', UI, `outlines on the ${desk} desk`);
+    }
+}
+
 console.log(rows.join('\n'));
 console.log(failures === 0 ? '\nAll required pairs pass.' : `\n${failures} required pair(s) fail.`);
 process.exit(failures === 0 ? 0 : 1);

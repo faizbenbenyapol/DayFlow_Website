@@ -116,6 +116,18 @@ class SettingsController
         Response::json(['ok' => true, 'day_color' => (bool)(int)$on]);
     }
 
+    /** The pastel the page sits on: one of User::DESKS. */
+    public function apiDesk(): void
+    {
+        $desk = Request::input('desk', null);
+        if (!is_string($desk) || !isset(User::DESKS[$desk])) {
+            Response::json(['error' => 'เลือกสีโต๊ะจากที่มีให้เท่านั้น'], 422);
+        }
+
+        User::updateDesk(Auth::userId(), $desk);
+        Response::json(['ok' => true, 'desk' => $desk]);
+    }
+
     public function apiTimezone(): void
     {
         $userId = Auth::userId();

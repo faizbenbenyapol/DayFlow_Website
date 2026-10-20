@@ -247,6 +247,21 @@ $menuOrder = AppMenus::ordered(json_decode($settings['menu_order'] ?? 'null', tr
     </div>
 
     <div class="settings-block">
+        <h2>สีโต๊ะ</h2>
+        <p class="form-hint">สีพื้นหลังรอบหน้าสมุด เปลี่ยนแล้วเห็นผลทันที และใช้กับทุกเครื่องที่เข้าบัญชีนี้ ทั้งโหมดสว่างและมืด</p>
+        <?php $currentDesk = isset(User::DESKS[$settings['desk'] ?? '']) ? $settings['desk'] : 'sage'; ?>
+        <div class="desk-swatches" role="radiogroup" aria-label="สีโต๊ะ">
+            <?php foreach (['sage' => 'เขียวเซจ', 'sky' => 'ฟ้า', 'blush' => 'ชมพู', 'butter' => 'เหลืองเนย', 'lilac' => 'ลาเวนเดอร์', 'peach' => 'พีช', 'stone' => 'เทาหิน'] as $value => $label): ?>
+            <label class="desk-swatch" data-desk="<?= $value ?>">
+                <input type="radio" name="desk" value="<?= $value ?>" <?= $currentDesk === $value ? 'checked' : '' ?> class="sr-only">
+                <span class="desk-swatch-chip" aria-hidden="true"><span class="desk-swatch-page"></span></span>
+                <span class="desk-swatch-label"><?= h($label) ?></span>
+            </label>
+            <?php endforeach; ?>
+        </div>
+    </div>
+
+    <div class="settings-block">
         <h2>สีประจำวัน</h2>
         <div class="day-color-row">
             <div class="day-color-preview" aria-hidden="true">

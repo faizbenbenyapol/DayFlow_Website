@@ -51,6 +51,28 @@ test('the weekday colour can be switched off and on, and the page says so', func
     assertSame(422, $client->post('/api/settings/day-color', [])['status']);
 });
 
+test('the desk colour can be chosen from the seven, and the page and browser bar follow it', function (TestClient $_c): void {
+    $client = appearanceClient('look_desk');
+
+    assertStringContains('data-desk="sage"', htmlTag($client->get('/')['body']), 'sage until chosen');
+
+    // The seven desks User::DESKS and tokens.css define.
+    foreach (['sage', 'sky', 'blush', 'butter', 'lilac', 'peach', 'stone'] as $desk) {
+        assertSame(200, $client->post('/api/settings/desk', ['desk' => $desk])['status'], "{$desk} should be accepted");
+    }
+    assertSame(200, $client->post('/api/settings/desk', ['desk' => 'lilac'])['status']);
+    $page = $client->get('/')['body'];
+    assertStringContains('data-desk="lilac"', htmlTag($page));
+    assertStringContains('content="#E3DFF2"', $page, 'the browser bar takes the desk colour');
+
+    // Only the seven; the setting is a token name, never CSS.
+    foreach (['red', '', 'sage; background: red', 'SAGE'] as $bad) {
+        assertSame(422, $client->post('/api/settings/desk', ['desk' => $bad])['status'], "'{$bad}' should be refused");
+    }
+    assertSame(422, $client->post('/api/settings/desk', [])['status']);
+    assertStringContains('data-desk="lilac"', htmlTag($client->get('/settings')['body']), 'a refused value changes nothing');
+});
+
 test('every page carries today\'s weekday for the date colour', function (TestClient $_c): void {
     $client = appearanceClient('look_week');
     $tag = htmlTag($client->get('/')['body']);

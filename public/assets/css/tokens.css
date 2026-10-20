@@ -122,6 +122,38 @@
     --lift-2:       0 14px 36px rgb(0 0 0 / .6), 0 0 0 1px var(--rule);
 }
 
+/* The desk the page sits on, chosen in Settings. Sage is the default and is
+   the --mat above; the same values are in User::DESKS for the browser bar.
+   The dark desks stay nearly black, with only a breath of their hue. */
+[data-desk="sky"] { --mat: #DAE6F2; }
+[data-desk="blush"] { --mat: #F2DEE4; }
+[data-desk="butter"] { --mat: #F1E8CB; }
+[data-desk="lilac"] { --mat: #E3DFF2; }
+[data-desk="peach"] { --mat: #F3E1D2; }
+[data-desk="stone"] { --mat: #E6E5E1; }
+
+[data-theme="dark"][data-desk="sky"] { --mat: #141A21; }
+[data-theme="dark"][data-desk="blush"] { --mat: #1E1619; }
+[data-theme="dark"][data-desk="butter"] { --mat: #1C1A12; }
+[data-theme="dark"][data-desk="lilac"] { --mat: #18161F; }
+[data-theme="dark"][data-desk="peach"] { --mat: #1E1814; }
+[data-theme="dark"][data-desk="stone"] { --mat: #18191A; }
+
+/* The same dark desks for a swatch inside a dark page (the Settings picker),
+   where data-desk sits on the swatch rather than on <html>. */
+[data-theme="dark"] [data-desk="sage"] { --mat: #151A18; }
+[data-theme="dark"] [data-desk="sky"] { --mat: #141A21; }
+[data-theme="dark"] [data-desk="blush"] { --mat: #1E1619; }
+[data-theme="dark"] [data-desk="butter"] { --mat: #1C1A12; }
+[data-theme="dark"] [data-desk="lilac"] { --mat: #18161F; }
+[data-theme="dark"] [data-desk="peach"] { --mat: #1E1814; }
+[data-theme="dark"] [data-desk="stone"] { --mat: #18191A; }
+
+/* Sage on a swatch in a light page; the second rule keeps a dark page on
+   dark sage, since the one above would otherwise win by coming later. */
+[data-desk="sage"] { --mat: #DCE8E0; }
+[data-theme="dark"][data-desk="sage"] { --mat: #151A18; }
+
 /* Each place owns one pastel: its index tab, the highlighter under the page
    heading, the underline of the open sub-tab, the top edge of its cards. */
 [data-place="today"] { --place: var(--butter); --place-2: var(--butter-2); }

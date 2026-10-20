@@ -65,7 +65,7 @@ final class AccountData
     private const UUID_IDS = ['skills', 'skill_logs'];
 
     /** user_settings columns a backup may carry. Telegram credentials are not among them. */
-    private const SETTINGS = ['theme', 'day_color', 'language', 'timezone', 'telegram_notify_events', 'hidden_menus', 'menu_order', 'mobile_tabs'];
+    private const SETTINGS = ['theme', 'day_color', 'desk', 'language', 'timezone', 'telegram_notify_events', 'hidden_menus', 'menu_order', 'mobile_tabs'];
 
     private const JSON_SETTINGS = ['telegram_notify_events', 'hidden_menus', 'menu_order', 'mobile_tabs'];
 
@@ -258,6 +258,8 @@ final class AccountData
                 if (in_array($value, User::THEMES, true)) $values[$key] = $value;
             } elseif ($key === 'day_color') {
                 if (in_array($value, [0, 1, '0', '1', true, false], true)) $values[$key] = (int)$value;
+            } elseif ($key === 'desk') {
+                if (is_string($value) && isset(User::DESKS[$value])) $values[$key] = $value;
             } elseif ($key === 'timezone') {
                 if (is_string($value) && in_array($value, DateTimeZone::listIdentifiers(), true)) $values[$key] = $value;
             } elseif ($key === 'language') {

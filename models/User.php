@@ -11,6 +11,21 @@ class User
     /** Palettes v1 offered and v2 removed. Old backups still name them. */
     public const LEGACY_THEMES = ['soft', 'lavender', 'ocean', 'peach'];
 
+    /**
+     * Every desk colour user_settings.desk accepts, with its light and dark
+     * value. tokens.css draws the same values ([data-desk]); these are for
+     * the browser's own bar (<meta name="theme-color">), which CSS cannot set.
+     */
+    public const DESKS = [
+        'sage'   => ['#DCE8E0', '#151A18'],
+        'sky'    => ['#DAE6F2', '#141A21'],
+        'blush'  => ['#F2DEE4', '#1E1619'],
+        'butter' => ['#F1E8CB', '#1C1A12'],
+        'lilac'  => ['#E3DFF2', '#18161F'],
+        'peach'  => ['#F3E1D2', '#1E1814'],
+        'stone'  => ['#E6E5E1', '#18191A'],
+    ];
+
     public static function findById(int $id): ?array
     {
         $stmt = DB::run(
@@ -131,6 +146,15 @@ class User
             'INSERT INTO user_settings (user_id, theme) VALUES (?, ?)
              ON DUPLICATE KEY UPDATE theme = VALUES(theme)',
             [$userId, $theme]
+        );
+    }
+
+    public static function updateDesk(int $userId, string $desk): void
+    {
+        DB::run(
+            'INSERT INTO user_settings (user_id, desk) VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE desk = VALUES(desk)',
+            [$userId, $desk]
         );
     }
 
