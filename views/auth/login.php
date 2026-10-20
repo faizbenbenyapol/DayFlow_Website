@@ -1,8 +1,9 @@
 <?php
 // =====================================================
 // views/auth/login.php
-// Sign in, register and the two-factor step, on one page. The right-hand side
-// is today's date block, large: it stands where an illustration would.
+// Sign in, register and the two-factor step, on one page. The form is a page
+// of the planner lying on the desk, its five index tabs showing; beside it
+// sit today's calendar sheet and what each of the five places holds.
 // =====================================================
 
 $outsideStyles = ['auth'];
@@ -19,8 +20,12 @@ require ROOT . '/views/partials/outside-head.php';
 
 <div class="auth" id="auth"
      data-google-client="<?= h(GOOGLE_CLIENT_ID) ?>">
+<div class="auth-book">
 
     <main class="auth-form-side">
+        <div class="auth-flags" aria-hidden="true">
+            <span data-place="today">วันนี้</span><span data-place="work">งาน</span><span data-place="life">ชีวิต</span><span data-place="money">เงิน</span><span data-place="vault">คลัง</span>
+        </div>
         <header class="auth-brand">
             <span class="auth-wordmark">DayFlow</span>
             <span class="auth-tagline">พื้นที่จัดการงาน โน้ต การเงิน และกิจวัตรส่วนตัว</span>
@@ -152,15 +157,27 @@ require ROOT . '/views/partials/outside-head.php';
         </div>
     </main>
 
-    <!-- Today, large. Decoration only: the page says nothing a screen reader needs from it. -->
-    <aside class="auth-day" aria-hidden="true">
-        <div class="auth-sheet">
+    <aside class="auth-day">
+        <!-- Today's sheet is decoration: a screen reader gets nothing from it. -->
+        <div class="auth-sheet" aria-hidden="true">
             <span class="auth-day-month"><?= h($thaiMonths[(int)$now->format('n')]) ?> <?= (int)$now->format('Y') + 543 ?></span>
             <span class="auth-day-number"><?= (int)$now->format('j') ?></span>
             <span class="auth-day-name">วัน<?= h($thaiDays[(int)$now->format('w')]) ?></span>
         </div>
+
+        <section class="auth-places" aria-labelledby="authPlacesTitle">
+            <h2 id="authPlacesTitle">ในสมุดเล่มนี้มี 5 ที่</h2>
+            <ul>
+                <li data-place="today"><b>วันนี้</b><span>งานที่ต้องทำ นัด นิสัย และเงินของวันนี้ในหน้าเดียว</span></li>
+                <li data-place="work"><b>งาน</b><span>งานแยก 4 ช่องตามความสำคัญ บอร์ดโปรเจค และแพลนเนอร์</span></li>
+                <li data-place="life"><b>ชีวิต</b><span>นิสัย จับเวลาโฟกัส ทักษะ ออกกำลังกาย และอาหาร</span></li>
+                <li data-place="money"><b>เงิน</b><span>รายรับรายจ่าย รายจ่ายประจำที่จะตัดเงิน และพอร์ตหุ้น</span></li>
+                <li data-place="vault"><b>คลัง</b><span>โน้ตที่เข้ารหัสได้ ลิงก์ ไฟล์ และลิงก์ส่งไฟล์</span></li>
+            </ul>
+        </section>
     </aside>
 
+</div>
 </div>
 
 <script src="<?= APP_URL ?>/assets/js/auth.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/auth.js') ?>"></script>
