@@ -6,7 +6,12 @@
    account, so they say what they are first and keep to one column, aligned left.
 ===================================================== */
 
-/* ---------- A page that says something ---------- */
+/* ---------- A page that says something ----------
+   The desk, with the message on a page lying on it (v3). */
+body.stmt-page {
+    background: var(--mat);
+}
+
 .stmt {
     display: flex;
     flex-direction: column;
@@ -16,8 +21,9 @@
 
 .stmt-brand {
     align-self: flex-start;
-    font-size: 1.5625rem;
-    font-weight: 600;
+    font-family: var(--font-hand);
+    font-size: 1.625rem;
+    font-weight: 700;
     line-height: 1.3;
 }
 
@@ -27,9 +33,12 @@
 
 .stmt-body {
     width: 100%;
-    max-width: 34rem;
+    max-width: 36rem;
     margin: auto 0;
-    padding: var(--space-8) 0;
+    padding: var(--space-8) clamp(1.25rem, 4vw, 2.5rem);
+    background: var(--paper);
+    border-radius: var(--r-card);
+    box-shadow: var(--lift-0);
 }
 
 .stmt-note {
@@ -38,16 +47,17 @@
     color: var(--pencil);
 }
 
-/* A big serif figure, the way the date is set elsewhere. */
+/* A big hand-lettered figure, the way the date is set on Today. */
 .stmt-code {
     margin-bottom: var(--space-2);
-    font: 500 5rem / 1 var(--font-num);
+    font: 700 5rem / 1.05 var(--font-num);
     color: var(--pencil);
 }
 
 .stmt-title {
-    font-size: 1.5625rem;
-    font-weight: 600;
+    font-family: var(--font-hand);
+    font-size: 1.625rem;
+    font-weight: 700;
 }
 
 .stmt-text {

@@ -10,9 +10,7 @@
 //   text   4.5:1  body-size text
 //   ui     3:1    the edge of a field, a checkbox, a focus ring
 //
-// A pair marked "info" is printed but never fails: the weekday marker beside
-// the open menu entry is a 3px stripe whose meaning is also carried by the
-// entry's bold text, so it is decoration for contrast purposes.
+// A pair marked "info" is printed but never fails.
 
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -39,8 +37,27 @@ const PAIRS = [
     ['ink',            'highlighter',  TEXT, 'a search hit'],
     ['paper',          'ink',          TEXT, 'text on a primary button'],
     ['rule-strong',    'paper',        UI,   'field and checkbox edge'],
-    ['rule-strong',    'paper-sunk',   UI,   'field edge on the rail'],
+    ['rule-strong',    'paper-sunk',   UI,   'field edge on a sunk surface'],
+    ['ink',            'mat',          TEXT, 'text on the desk: the brand, the header buttons'],
+    ['pencil',         'mat',          TEXT, 'secondary text on the desk'],
+    ['edge',           'paper',        UI,   'button and index-tab outline on the page'],
+    ['edge',           'mat',          UI,   'button and index-tab outline on the desk'],
 ];
+
+// Status colours on the tinted cards they appear on: income on the mint
+// money card, overdue on a blush card, due-today on butter.
+PAIRS.push(['ledger-green', 'mint', TEXT, 'income on the money card']);
+PAIRS.push(['stamp-red', 'blush', TEXT, 'overdue or expense on a blush card']);
+PAIRS.push(['caution', 'butter', TEXT, 'due today on a butter card']);
+
+// Every pastel carries ink: a tab label sits on strength 1, a heading on the
+// highlighter of strength 2, a tinted card's text on strength 1. Secondary
+// text appears on strength 1 too (the date on a tinted card).
+for (const p of ['butter', 'sky', 'blush', 'mint', 'peach', 'lilac', 'rose']) {
+    PAIRS.push(['ink', p, TEXT, `text on the ${p} tab or card`]);
+    PAIRS.push(['pencil', p, TEXT, `secondary text on a ${p} card`]);
+    PAIRS.push(['ink', p + '-2', TEXT, `a heading on the ${p} highlighter`]);
+}
 
 const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
@@ -106,8 +123,19 @@ for (const day of DAYS) {
     const body = declarations(block(`[data-day="${day}"]`));
     for (const [theme, scope] of [['light', light], ['dark', dark]]) {
         const withDay = { ...scope, 'day': body.day, 'on-day': body['on-day'] };
-        check(theme, withDay, 'on-day', 'day', TEXT, `text on the ${day} date block`);
-        check(theme, withDay, 'day', 'paper', UI, `the ${day} marker beside the open menu entry`, { info: true });
+        check(theme, withDay, 'on-day', 'day', TEXT, `the date on the ${day} highlighter`);
+    }
+}
+
+// Each desk colour from Settings: the brand, the header buttons and the
+// index-tab outlines sit on it, in both themes.
+for (const desk of ['sky', 'blush', 'butter', 'lilac', 'peach', 'stone']) {
+    const lightDesk = { ...light, ...declarations(block(`[data-desk="${desk}"]`)) };
+    const darkDesk = { ...dark, ...declarations(block(`[data-theme="dark"][data-desk="${desk}"]`)) };
+    for (const [theme, scope] of [['light', lightDesk], ['dark', darkDesk]]) {
+        check(theme, scope, 'ink', 'mat', TEXT, `text on the ${desk} desk`);
+        check(theme, scope, 'pencil', 'mat', TEXT, `secondary text on the ${desk} desk`);
+        check(theme, scope, 'edge', 'mat', UI, `outlines on the ${desk} desk`);
     }
 }
 

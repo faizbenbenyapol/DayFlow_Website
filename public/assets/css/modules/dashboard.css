@@ -1,70 +1,79 @@
 /* =====================================================
-   dashboard.css — the Today page
+   dashboard.css — the Today page (v3)
 
-   Two columns: what needs doing on the left, money and body on the right,
-   then a strip of extras below. No cards; sections are headings over ruled
-   rows (the .sec pattern in components.css). Mockup: docs/mockups/today.html
+   A planner spread: the date over the weekday's highlighter, then cards with
+   a strip of washi tape, each in the pastel of the place its rows come from.
+   Appointments and money are whole tinted cards. Two columns, then a strip
+   of extras below. docs/REDESIGN-V3.md §5, phase 3.
 ===================================================== */
 
 /* ---------------------------------------------------------------
-   Head: the date block, the weekday, and a line of real numbers
+   Head: the date over the weekday's highlighter, a line of real numbers
 --------------------------------------------------------------- */
 .today-head {
-    align-items: stretch;
-    gap: 20px;
+    margin-bottom: var(--space-6);
 }
 
 .today-title {
     flex: 1;
     min-width: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
 }
 
+/* The date takes the weekday's pastel, not the place's (tokens.css, --day). */
 .today-title h1 {
-    font-size: 1.9375rem;
+    font-size: 2.25rem;
+    background-image: linear-gradient(transparent 55%, var(--day) 55%, var(--day) 90%, transparent 90%);
 }
 
 .today-title .tally {
-    margin-top: 6px;
+    margin-top: 4px;
     font-size: 0.9375rem;
+    color: var(--pencil);
 }
 
 .tally b {
     font-weight: 600;
+    color: var(--ink);
 }
 
 .tally .late {
     color: var(--stamp-red);
 }
 
-.today-head .page-head-actions {
-    align-self: flex-start;
-    align-items: center;
-    flex-wrap: nowrap;
+/* ---------------------------------------------------------------
+   Cards
+--------------------------------------------------------------- */
+/* Room above each card for its tape. */
+.today .sec {
+    margin-top: var(--space-6);
 }
 
-.btn-search {
-    min-width: 260px;
-    justify-content: space-between;
-    background: var(--paper);
-    color: var(--pencil);
-    font-weight: 400;
+.today .cols > * > .sec:first-child {
+    margin-top: 0;
 }
 
-.btn-search:hover {
+/* A tinted card: the pastel is the paper, the rows rule in a darker wash. */
+.today .sec.tint {
+    background: var(--sec-bg);
+    border-color: transparent;
+}
+
+.today .sec.tint .ruled-list,
+.today .sec.tint .ruled-row,
+.today .sec.tint .ledger td {
+    border-color: color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+.today .sec.tint .sec-head a,
+.today .sec.tint .ruled-row .meta,
+.today .sec.tint .budget-note {
     color: var(--ink);
 }
 
-.btn-search-label {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-}
-
-.btn-search-icon {
-    display: none;
+/* The first list under a heading needs no rule of its own. */
+.today .sec-head + [data-body] > .ruled-list,
+.today .sec-head + [data-body] > div > .ruled-list:first-child {
+    border-top: 0;
 }
 
 /* ---------------------------------------------------------------
@@ -73,27 +82,26 @@
 .more {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 48px;
-    margin-top: var(--space-4);
+    gap: 0 var(--space-5);
+    margin-top: var(--space-2);
 }
 
 /* ---------------------------------------------------------------
    Rows specific to this page
 --------------------------------------------------------------- */
-.today .ruled-row.done .title {
-    color: var(--pencil);
-    text-decoration: line-through;
-}
-
 .today .ruled-row.past {
     color: var(--pencil);
+}
+
+.today .ruled-row.past .title {
+    text-decoration: line-through;
 }
 
 /* Time of an event: a clock, so it is set like one. */
 .time {
     width: 48px;
     flex: none;
-    font: 500 0.875rem var(--font-mono);
+    font: 600 0.875rem var(--font);
 }
 
 /* "Now" in the day's schedule: a thin line between what is over and what is next. */
@@ -103,7 +111,8 @@
     align-items: center;
     gap: var(--space-2);
     height: 0;
-    font: 500 0.75rem var(--font-mono);
+    margin: 2px 0;
+    font: 600 0.75rem var(--font);
     color: var(--stamp-red);
 }
 
@@ -119,18 +128,17 @@
 .now-line::after {
     content: "";
     flex: 1;
-    border-top: 1px solid var(--stamp-red);
+    border-top: 1.5px solid var(--stamp-red);
 }
 
-/* Habits sit two to a row, like a sheet of names to tick off. */
+/* Habits: a star to stick on per row, the run of days as a flame. */
 .ruled-list.habits {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: 24px;
+    grid-template-columns: minmax(0, 1fr);
 }
 
-.habits .ruled-row:has(.habit-tick:checked) .side {
-    color: var(--ledger-green);
+.ruled-list.habits .side.streak {
+    color: var(--caution);
 }
 
 /* Money and body */
@@ -156,55 +164,22 @@
     .more {
         grid-template-columns: minmax(0, 1fr);
     }
+
+    .today .cols > .col-side > .sec:first-child {
+        margin-top: var(--space-6);
+    }
 }
 
 @media (max-width: 767px) {
-    .ruled-list.habits {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
     .today-head {
-        gap: 14px;
-        padding-bottom: 14px;
-    }
-
-    .today-head .date-block {
-        width: 72px;
-        padding: 6px 0;
-    }
-
-    .today-head .date-block .d {
-        font-size: 2.75rem;
-    }
-
-    .today-head .date-block .m {
-        margin-top: 2px;
-        font-size: 0.8125rem;
+        margin-bottom: var(--space-4);
     }
 
     .today-title h1 {
-        font-size: 1.5625rem;
-    }
-
-    .today-title .sub {
-        font-size: 0.875rem;
+        font-size: 1.75rem;
     }
 
     .today-title .tally {
-        margin-top: 2px;
         font-size: 0.875rem;
-    }
-
-    .btn-search,
-    .today-head .btn-primary {
-        display: none;
-    }
-
-    .btn-search-icon {
-        display: inline-flex;
-    }
-
-    .sec {
-        padding-top: var(--space-5);
     }
 }

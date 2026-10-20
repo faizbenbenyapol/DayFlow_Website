@@ -45,10 +45,10 @@
         <label><input type="radio" name="qaType" value="expense" checked><span>รายจ่าย</span></label>
         <label><input type="radio" name="qaType" value="income"><span>รายรับ</span></label>
     </div>
-    <label class="sr-only" for="qaAmount">จำนวนเงิน (บาท)</label>
-    <input class="form-control entry-amount" id="qaAmount" inputmode="decimal" autocomplete="off" placeholder="จำนวนเงิน">
-    <label class="sr-only" for="qaCategory">หมวดหมู่</label>
-    <select class="form-control entry-category" id="qaCategory"><option value="">ไม่ระบุหมวด</option></select>
+    <label class="sr-only" for="finAmount">จำนวนเงิน (บาท)</label>
+    <input class="form-control entry-amount" id="finAmount" inputmode="decimal" autocomplete="off" placeholder="จำนวนเงิน">
+    <label class="sr-only" for="finCategory">หมวดหมู่</label>
+    <select class="form-control entry-category" id="finCategory"><option value="">ไม่ระบุหมวด</option></select>
     <label class="sr-only" for="qaDesc">รายการ</label>
     <input class="form-control entry-desc" id="qaDesc" maxlength="255" autocomplete="off" placeholder="รายการ เช่น ข้าวมันไก่ + ชาเย็น">
     <button class="btn btn-primary" type="submit" id="qaSubmit">บันทึกรายจ่าย</button>

@@ -1,43 +1,88 @@
 /* =====================================================
-   auth.css — sign in, register, two-factor
+   auth.css — sign in, register, two-factor (v3)
 
-   One column on the left, aligned left, and today's date block, large, on the
-   right where an illustration would go. On a phone the block shrinks to a
-   strip across the top.
+   The whole page is the desk. The form is a white page of the planner with
+   its five index tabs showing along the top; beside it, today's calendar
+   sheet under a strip of tape and a card that says what each place holds.
+   On a phone the sheet shrinks to a strip across the top and the card goes.
 ===================================================== */
+
+body.auth-page {
+    background: var(--mat);
+}
 
 .auth {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    place-items: center;
     min-height: 100dvh;
+    padding: var(--space-8) clamp(1rem, 4vw, 3rem);
 }
 
-/* ---------- The form side ---------- */
+.auth-book {
+    display: grid;
+    grid-template-columns: minmax(0, 460px) minmax(0, 380px);
+    align-items: center;
+    gap: clamp(2rem, 6vw, 5rem);
+    width: 100%;
+    max-width: 960px;
+}
+
+/* ---------- The form: a page with its index tabs ---------- */
 .auth-form-side {
+    position: relative;
     display: flex;
     flex-direction: column;
-    /* The brand and the form share one centred column, so the left edges line
-       up and the room on either side is equal instead of piling up on the right. */
-    align-items: center;
-    padding: var(--space-8) clamp(1.5rem, 6vw, 5rem);
+    margin-top: 40px;   /* room for the tabs above the page */
+    padding: var(--space-8) clamp(1.5rem, 4vw, 2.75rem) var(--space-6);
+    background: var(--paper);
+    border-radius: var(--r-card);
+    box-shadow: var(--lift-0);
+}
+
+.auth-flags {
+    position: absolute;
+    bottom: 100%;
+    left: 24px;
+    display: flex;
+    align-items: flex-end;
+    gap: 5px;
+}
+
+.auth-flags span {
+    padding: 4px 12px 6px;
+    background: var(--place);
+    border: 1.5px solid var(--edge);
+    border-bottom: 0;
+    border-radius: 9px 9px 0 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.auth-flags span:first-child {
+    padding-top: 9px;
+    font-weight: 700;
 }
 
 .auth-brand {
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
-    width: 100%;
-    max-width: 400px;
 }
 
 .auth-wordmark {
-    font-size: 1.5625rem;
-    font-weight: 600;
-    line-height: 1.3;
+    align-self: flex-start;
+    padding: 0 4px;
+    margin-left: -4px;
+    font-family: var(--font-hand);
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.35;
+    background: linear-gradient(transparent 55%, var(--butter-2) 55%, var(--butter-2) 90%, transparent 90%);
 }
 
 .auth-tagline {
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
     color: var(--pencil);
 }
 
@@ -45,8 +90,7 @@
     width: 100%;
     /* 400px is the widest button Google will draw, so the column matches it. */
     max-width: 400px;
-    margin: auto;
-    padding: var(--space-8) 0;
+    padding: var(--space-6) 0 0;
 }
 
 .auth-tabs {
@@ -59,10 +103,15 @@
     text-align: left;
 }
 
+.auth-tabs .tab[aria-selected="true"] {
+    border-bottom-color: var(--butter-2);
+}
+
 .auth-title {
     margin-bottom: var(--space-2);
+    font-family: var(--font-hand);
     font-size: 1.5625rem;
-    font-weight: 600;
+    font-weight: 700;
 }
 
 .auth-lead {
@@ -186,61 +235,121 @@
     border-top-color: var(--paper);
 }
 
-/* ---------- Today, large ---------- */
-/* One sheet of the tear-off calendar, centred on a sunk page. Only the month
-   band takes the colour of the weekday; the figure stays in ink. */
+/* ---------- Beside the page: today's sheet and the five places ---------- */
 .auth-day {
     display: grid;
-    place-items: center;
-    padding: var(--space-8) clamp(1.5rem, 5vw, 4rem);
-    background: var(--paper-sunk);
+    gap: var(--space-6);
+    justify-items: center;
 }
 
+/* One calendar sheet. Only the month band takes the weekday's pastel; the
+   figure stays in ink. */
 .auth-sheet {
+    position: relative;
     display: grid;
     width: 100%;
-    max-width: 22rem;
-    overflow: hidden;
-    border: 1px solid var(--rule);
+    max-width: 17rem;
+    border: 1.5px solid var(--edge);
     border-radius: var(--r-sheet);
+    box-shadow: 0 3px 0 var(--edge);
     background: var(--paper);
     color: var(--ink);
     text-align: center;
+    transform: rotate(2deg);
+}
+
+/* Washi tape over the top edge. */
+.auth-sheet::before {
+    content: "";
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    width: 90px;
+    height: 22px;
+    transform: translateX(-50%) rotate(-4deg);
+    background: repeating-linear-gradient(45deg, var(--mint-2) 0 7px, var(--mint) 7px 14px);
 }
 
 .auth-day-month {
     padding: var(--space-3) var(--space-4);
+    border-radius: 10px 10px 0 0;
     background: var(--day);
     color: var(--on-day);
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+
+.auth-day-number {
+    padding: var(--space-4) 0 var(--space-1);
+    font: 700 clamp(6rem, 11vw, 8.5rem) / 1.05 var(--font-num);
+}
+
+.auth-day-name {
+    padding: var(--space-3) var(--space-4);
+    border-top: 1.5px dashed var(--rule-strong);
     font-size: 1.25rem;
     font-weight: 600;
 }
 
-.auth-day-number {
-    padding: var(--space-6) 0 var(--space-2);
-    font: 500 clamp(8rem, 15vw, 13rem) / 1.1 var(--font-num);
+/* What is inside: one line per place, each on its own pastel tab edge. */
+.auth-places {
+    width: 100%;
+    padding: var(--space-4) var(--space-5);
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-card);
 }
 
-.auth-day-name {
-    padding: var(--space-4);
-    border-top: 1px dashed var(--rule-strong);
-    font-size: 1.5625rem;
-    font-weight: 600;
+.auth-places h2 {
+    margin-bottom: var(--space-2);
+    font-family: var(--font-hand);
+    font-size: 1.0625rem;
+    font-weight: 700;
+}
+
+.auth-places li {
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    gap: var(--space-2);
+    align-items: baseline;
+    padding: 6px 0 6px 10px;
+    border-left: 4px solid var(--place-2);
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.auth-places li + li {
+    margin-top: 4px;
+}
+
+.auth-places span {
+    color: var(--pencil);
 }
 
 /* ---------- Phone and narrow windows ---------- */
 @media (max-width: 859px) {
     .auth {
-        grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: auto 1fr;
+        display: block;
+        padding: 0;
     }
 
-    /* The sheet flattens into a coloured strip across the top. */
+    .auth-book {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        max-width: none;
+    }
+
+    /* The sheet flattens into a strip across the top; the places card goes. */
     .auth-day {
         order: -1;
         display: block;
-        padding: 0;
         background: var(--day);
+    }
+
+    .auth-places {
+        display: none;
     }
 
     .auth-sheet {
@@ -252,9 +361,15 @@
         padding: var(--space-3) var(--space-6);
         border: 0;
         border-radius: 0;
+        box-shadow: none;
         background: none;
         color: var(--on-day);
         text-align: left;
+        transform: none;
+    }
+
+    .auth-sheet::before {
+        display: none;
     }
 
     .auth-day-number {
@@ -277,11 +392,19 @@
     .auth-day-month { grid-area: month; align-self: start; font-weight: 500; }
 
     .auth-form-side {
-        padding: var(--space-6);
+        margin: 46px var(--space-3) var(--space-6);
+        padding: var(--space-6) var(--space-5);
+    }
+
+    .auth-flags {
+        left: 12px;
+    }
+
+    .auth-flags span {
+        padding: 4px 8px 6px;
     }
 
     .auth-panel {
-        margin: 0;
-        padding: var(--space-6) 0 0;
+        max-width: none;
     }
 }

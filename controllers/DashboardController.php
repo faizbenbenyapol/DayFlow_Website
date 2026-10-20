@@ -141,6 +141,7 @@ class DashboardController
                     'name'       => $h['name'],
                     'done_today' => (bool)$h['completed_today'],
                     'streak'     => $streaks[(int)$h['id']] ?? 0,
+                    'color'      => (string)($h['color'] ?? ''),
                 ], Habit::listForUser($userId));
             }, $warnings, []);
 

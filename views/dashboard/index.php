@@ -13,7 +13,6 @@ $thaiMonthsShort = [1 => 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', '
 
 $now = new DateTimeImmutable('now');
 $month = (int)$now->format('n');
-$fullDate = $now->format('j') . ' ' . $thaiMonths[$month] . ' ' . ((int)$now->format('Y') + 543);
 
 // Which menu each section belongs to: hiding the menu hides its section.
 $sectionMenu = [
@@ -21,6 +20,15 @@ $sectionMenu = [
     'finance' => 'finance', 'subscriptions' => 'subscriptions', 'workout' => 'exercise',
     'projects' => 'projects', 'notes' => 'notes', 'stocks' => 'stocks', 'transfer' => 'transfer',
 ];
+
+// The place each section's rows come from colours its top edge and its tape;
+// two of them are whole tinted cards, as on a planner page (REDESIGN-V3 §3.5).
+$sectionTone = [
+    'tasks' => 'sky', 'calendar' => 'butter', 'habits' => 'blush',
+    'finance' => 'mint', 'subscriptions' => 'mint', 'workout' => 'blush',
+    'projects' => 'sky', 'notes' => 'peach', 'stocks' => 'mint', 'transfer' => 'peach',
+];
+$tinted = ['calendar', 'finance'];
 
 // title, the link on the right, where it goes
 $sectionDef = [
@@ -56,10 +64,11 @@ $skeleton = '<div aria-busy="true"><div class="skel-row"><span class="skel box">
     . '<div class="skel-row"><span class="skel box"></span><span class="skel skel-w-45"></span></div>'
     . '<div class="skel-row"><span class="skel box"></span><span class="skel skel-w-52"></span></div></div>';
 
-$renderSection = function (string $key) use ($sectionDef, $skeleton): void {
+$renderSection = function (string $key) use ($sectionDef, $skeleton, $sectionTone, $tinted): void {
     [$title, $linkText, $path] = $sectionDef[$key];
+    $tone = $sectionTone[$key];
     ?>
-    <section class="sec" data-section="<?= h($key) ?>" aria-labelledby="sec-<?= h($key) ?>">
+    <section class="sec taped<?= in_array($key, $tinted, true) ? ' tint' : '' ?>" style="--sec-c: var(--<?= $tone ?>-2); --sec-c2: var(--<?= $tone ?>); --sec-bg: var(--<?= $tone ?>)" data-section="<?= h($key) ?>" aria-labelledby="sec-<?= h($key) ?>">
         <div class="sec-head">
             <h2 id="sec-<?= h($key) ?>"><?= h($title) ?><span class="count" data-count></span></h2>
             <a href="<?= APP_URL . h($path) ?>"><?= h($linkText) ?></a>
@@ -77,23 +86,13 @@ $renderSection = function (string $key) use ($sectionDef, $skeleton): void {
 };
 ?>
 <div class="today" id="today">
+    <!-- The date over the weekday's highlighter and a line of real numbers.
+         Search and add live in the frame, so the head carries no buttons. -->
     <header class="page-head today-head">
-        <div class="date-block" aria-hidden="true">
-            <span class="d"><?= (int)$now->format('j') ?></span>
-            <span class="m"><?= h($thaiMonthsShort[$month]) ?></span>
-        </div>
         <div class="today-title">
-            <h1>วัน<?= h($thaiDays[(int)$now->format('w')]) ?></h1>
-            <div class="sub"><?= h($fullDate) ?> · สัปดาห์ที่ <?= (int)$now->format('W') ?></div>
+            <h1><?= h($thaiDays[(int)$now->format('w')]) ?> <?= (int)$now->format('j') ?> <?= h($thaiMonthsShort[$month]) ?></h1>
+            <div class="sub"><?= (int)$now->format('Y') + 543 ?> · สัปดาห์ที่ <?= (int)$now->format('W') ?></div>
             <div class="tally" id="todayTally" aria-live="polite"><span class="skel skel-wide"></span></div>
-        </div>
-        <div class="page-head-actions">
-            <button type="button" class="btn btn-search" data-act="openCommandPalette" aria-label="ค้นหาหรือสั่งงาน">
-                <span class="btn-search-label"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>ค้นหาหรือสั่งงาน</span>
-                <span class="kbd" data-shortcut>Ctrl K</span>
-            </button>
-            <button type="button" class="btn btn-icon btn-search-icon" data-act="openCommandPalette" aria-label="ค้นหาหรือสั่งงาน"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg></button>
-            <button type="button" class="btn btn-primary" data-act="openQuickAdd"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>จดด่วน</button>
         </div>
     </header>
 

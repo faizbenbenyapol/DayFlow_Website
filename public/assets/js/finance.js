@@ -44,7 +44,7 @@ function parseAmount(text) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-    fillCategorySelect(document.getElementById('qaCategory'), 'expense', '');
+    fillCategorySelect(document.getElementById('finCategory'), 'expense', '');
     fillCategoryFilter();
 
     document.querySelectorAll('input[name="qaType"]').forEach(radio => radio.addEventListener('change', onQuickTypeChange));
@@ -160,7 +160,7 @@ function renderCategoryBreakdown(rows, totalExpense) {
         return '<div class="breakdown-row">'
             + '<div class="breakdown-info"><span class="breakdown-cat-name">' + escHtml(c.name) + '</span>'
             + '<span class="breakdown-cat-amount">' + amountText(c.amount) + ' <span class="breakdown-cat-pct">' + pct.toFixed(0) + '%</span></span></div>'
-            + '<div class="progress" role="img" aria-label="' + pct.toFixed(0) + ' เปอร์เซ็นต์ของรายจ่าย"><div class="progress-bar" style="width:' + pct.toFixed(1) + '%"></div></div>'
+            + '<div class="progress" role="img" aria-label="' + pct.toFixed(0) + ' เปอร์เซ็นต์ของรายจ่าย"><div class="progress-bar" style="width:' + pct.toFixed(1) + '%; background: var(--' + pastelFor(c.name) + '-2)"></div></div>'
             + '</div>';
     }).join('');
 }
@@ -238,7 +238,7 @@ function renderTransactions(list) {
         const text = escHtml(t.description || t.category_name || 'ไม่มีรายละเอียด');
         html += '<li class="ruled-row txn-row">'
             + '<span class="grow"><span class="title">' + text + '</span>'
-            + '<span class="meta">' + escHtml(t.category_name || 'ไม่ระบุหมวด') + (income ? ' · รายรับ' : '') + '</span></span>'
+            + '<span class="meta"><span class="cat-chip" style="--chip: var(--' + pastelFor(t.category_name || '') + ')">' + escHtml(t.category_name || 'ไม่ระบุหมวด') + '</span>' + (income ? ' รายรับ' : '') + '</span></span>'
             + '<span class="side num ' + (income ? 'in' : 'out') + '">' + (income ? '+' : MINUS) + amountText(t.amount) + '</span>'
             + '<span class="txn-actions">'
             + '<button type="button" class="icon-btn sm" data-act="openEditTransaction" data-args="[' + t.id + ']" aria-label="แก้ไข: ' + text + '"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button>'
@@ -378,7 +378,7 @@ function quickType() {
 function onQuickTypeChange() {
     const type = quickType();
     document.getElementById('qaSubmit').textContent = type === 'income' ? 'บันทึกรายรับ' : 'บันทึกรายจ่าย';
-    fillCategorySelect(document.getElementById('qaCategory'), type, document.getElementById('qaCategory').value);
+    fillCategorySelect(document.getElementById('finCategory'), type, document.getElementById('finCategory').value);
 }
 
 /* ---------- the dialog ---------- */
@@ -449,10 +449,10 @@ async function saveTransaction() {
 }
 
 async function saveQuickTransaction() {
-    const amount = parseAmount(document.getElementById('qaAmount').value);
+    const amount = parseAmount(document.getElementById('finAmount').value);
     if (!(amount > 0)) {
         toast('ใส่จำนวนเงินเป็นตัวเลขที่มากกว่า 0', 'danger');
-        document.getElementById('qaAmount').focus();
+        document.getElementById('finAmount').focus();
         return;
     }
 
@@ -463,18 +463,18 @@ async function saveQuickTransaction() {
             body: JSON.stringify({
                 type,
                 amount,
-                category_id: document.getElementById('qaCategory').value,
+                category_id: document.getElementById('finCategory').value,
                 txn_date: todayISO(), // a line added here is for today
                 description: document.getElementById('qaDesc').value.trim(),
             }),
         });
 
-        document.getElementById('qaAmount').value = '';
+        document.getElementById('finAmount').value = '';
         document.getElementById('qaDesc').value = '';
         currentMonth = thisMonth(); // today's entry belongs to this month
         await refreshAfterChange();
         toast(type === 'income' ? 'บันทึกรายรับแล้ว' : 'บันทึกรายจ่ายแล้ว');
-        document.getElementById('qaAmount').focus();
+        document.getElementById('finAmount').focus();
     } catch (err) {
         toast(err.message || 'บันทึกไม่สำเร็จ ลองอีกครั้ง', 'danger');
     }

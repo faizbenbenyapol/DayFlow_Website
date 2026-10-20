@@ -46,10 +46,12 @@ class Response
         // Someone who is not signed in has no saved preference: follow the device.
         $outsideTheme = 'auto';
         $outsideDayColor = 'on';
+        $outsideDesk = 'sage';
         if (class_exists('Auth')) {
             if ($signedIn) {
                 $outsideTheme = Auth::theme();
                 $outsideDayColor = Auth::appearance()['day_color'] ? 'on' : 'off';
+                $outsideDesk = Auth::appearance()['desk'];
             }
             $isReadOnly = Auth::isReadOnly();
             $sharedMenus = $isReadOnly ? Auth::getSharedMenus() : [];

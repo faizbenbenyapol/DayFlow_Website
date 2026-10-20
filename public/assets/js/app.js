@@ -328,17 +328,17 @@ function onThemeChange(callback) {
 /* =====================================================
    Command Palette (Ctrl/Cmd + K)
    One keystroke to reach any of the app's twenty-odd modules, or anything
-   inside them. Navigation targets are read from the rail that the server
-   already rendered, so hidden menus and share mode are respected without
-   duplicating that logic here.
+   inside them. Navigation targets are read from the "all menus" sheet the
+   server already rendered, so hidden menus and share mode are respected
+   without duplicating that logic here.
 ===================================================== */
 (function initCommandPalette() {
-    const rail = document.getElementById('appRail');
-    if (!rail) return; // login, share and other chrome-less pages
+    const sheet = document.getElementById('menuSheet');
+    if (!sheet) return; // login, share and other chrome-less pages
 
-    const navCommands = Array.from(rail.querySelectorAll('a.nav-item:not(.rail-logout)'))
+    const navCommands = Array.from(sheet.querySelectorAll('a.sheet-link:not(.sheet-logout)'))
         .map(link => ({
-            title: (link.querySelector('.nav-text')?.textContent || link.title || '').trim(),
+            title: (link.textContent || '').trim(),
             url: link.href,
             type: 'ไปที่',
         }))

@@ -130,19 +130,22 @@ class Auth
      * server whose migration has not run yet still renders (the column is
      * simply absent and the default applies).
      *
-     * @return array{theme: string, day_color: bool}
+     * @return array{theme: string, day_color: bool, desk: string}
      */
     public static function appearance(): array
     {
         static $appearance = null;
         if ($appearance !== null) return $appearance;
 
-        $appearance = ['theme' => 'light', 'day_color' => true];
+        $appearance = ['theme' => 'light', 'day_color' => true, 'desk' => 'sage'];
         if (self::check()) {
             $row = DB::run('SELECT * FROM user_settings WHERE user_id = ?', [self::userId()])->fetch();
             if ($row) {
                 $appearance['theme'] = $row['theme'] ?? 'light';
                 $appearance['day_color'] = (int)($row['day_color'] ?? 1) === 1;
+                // A value this build does not know (or no column yet) falls back to sage.
+                $desk = (string)($row['desk'] ?? 'sage');
+                $appearance['desk'] = isset(User::DESKS[$desk]) ? $desk : 'sage';
             }
         }
         return $appearance;

@@ -14,7 +14,7 @@
 </div>
 
 <div class="quick-page">
-    <form class="quick-capture" id="quickForm">
+    <form class="quick-capture" id="quickCaptureForm">
         <label class="sr-only" for="quickInput">สิ่งที่ต้องจำ</label>
         <input id="quickInput" class="form-control" maxlength="500" autocomplete="off" placeholder="พิมพ์สิ่งที่ต้องจำ แล้วกด Enter">
         <span class="quick-count" id="quickCount" aria-hidden="true">0 / 500</span>

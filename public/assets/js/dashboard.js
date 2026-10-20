@@ -103,7 +103,7 @@
         const side = late ? `<span class="side late">เกิน ${Math.abs(days)} วัน</span>` : '';
         return row(
             `<input type="checkbox" class="task-tick" aria-label="เสร็จแล้ว: ${esc(task.title)}">`
-            + `<span class="grow"><span class="title">${esc(task.title)}</span><span class="meta">${QUADRANT[task.quadrant] || ''}</span></span>`
+            + `<span class="grow"><span class="title"><span class="done-mark">${esc(task.title)}</span></span><span class="meta">${QUADRANT[task.quadrant] || ''}</span></span>`
             + side,
             ` data-task="${Number(task.id)}"`
         );
@@ -194,10 +194,14 @@
             return;
         }
 
+        // A habit done today gets a star stuck on, in the habit's own colour
+        // softened into the paper; a run of days shows as a flame.
         el.innerHTML = list(items.map(h => row(
-            `<input type="checkbox" class="habit-tick"${h.done_today ? ' checked' : ''} aria-label="ทำแล้ววันนี้: ${esc(h.name)}">`
+            `<input type="checkbox" class="habit-tick star-tick" style="--habit-c: color-mix(in srgb, ${cssColor(h.color, '#10b981')} 45%, var(--paper))"${h.done_today ? ' checked' : ''} aria-label="ทำแล้ววันนี้: ${esc(h.name)}">`
             + `<span class="grow"><span class="title">${esc(h.name)}</span></span>`
-            + `<span class="side">${h.streak > 0 ? 'ติดกัน ' + h.streak + ' วัน' : '—'}</span>`,
+            + (h.streak > 0
+                ? `<span class="side streak" title="ทำติดกัน ${Number(h.streak)} วัน"><svg class="flame" viewBox="0 0 20 24" aria-hidden="true"><path d="M10 1c1 5 7 7 7 14a7 7 0 0 1-14 0c0-4 2-6 3-8 0 3 1 4 2 4 0-4 0-7 2-10z"/></svg>${Number(h.streak)} วัน</span>`
+                : '<span class="side">เริ่มใหม่</span>'),
             ` data-habit="${Number(h.id)}"`
         )), ' habits');
     }

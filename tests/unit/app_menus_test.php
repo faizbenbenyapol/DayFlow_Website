@@ -42,27 +42,43 @@ test('every managed menu is defined once, in a known group, with a path', functi
     }
 });
 
-test('the rail shows a menu under its own group, in the user\'s order within it', function (): void {
+test('a menu sits under its own place, in the user\'s order within it', function (): void {
     $groups = AppMenus::grouped(AppMenus::ordered(['bookmarks', 'notes']), []);
 
     $keys = array_column($groups, 'key');
-    assertSame(['today', 'plan', 'notes', 'money', 'body', 'tools'], $keys);
+    assertSame(['today', 'work', 'life', 'money', 'vault', 'tools'], $keys);
+    assertSame(AppMenus::PLACES, array_slice($keys, 0, 5), 'the five places come first, in tab order');
 
-    $notes = array_column($groups[2]['items'], 'key');
-    assertSame('bookmarks', $notes[0], 'a reordered menu moves within its group');
-    assertSame('notes', $notes[1]);
+    $vault = array_column($groups[4]['items'], 'key');
+    assertSame('bookmarks', $vault[0], 'a reordered menu moves within its place');
+    assertSame('notes', $vault[1]);
 
     $today = array_column($groups[0]['items'], 'key');
     assertSame(['today', 'review'], $today, 'Today and Review keep their place');
 });
 
-test('a hidden menu leaves the rail, and an empty group leaves with it', function (): void {
-    $groups = AppMenus::grouped(AppMenus::KEYS, ['exercise', 'food-notes']);
+test('a hidden menu leaves its place, and an empty place leaves with it', function (): void {
+    $groups = AppMenus::grouped(AppMenus::KEYS, ['finance', 'subscriptions', 'stocks']);
 
-    assertNotContains('body', array_column($groups, 'key'));
+    assertNotContains('money', array_column($groups, 'key'));
     $all = array_merge(...array_column($groups, 'items'));
-    assertNotContains('exercise', array_column($all, 'key'));
+    assertNotContains('finance', array_column($all, 'key'));
     assertContains('tasks', array_column($all, 'key'));
+});
+
+test('a path belongs to the menu it is or sits under, and to that menu\'s place', function (): void {
+    assertSame('today', AppMenus::menuForPath('/'));
+    assertSame('finance', AppMenus::menuForPath('/finance'));
+    assertSame('notes', AppMenus::menuForPath('/notes/12'), 'a page under a menu belongs to it');
+    assertSame('quick-notes', AppMenus::menuForPath('/quick-notes'), 'not mistaken for /notes');
+    assertSame(null, AppMenus::menuForPath('/settings'));
+
+    assertSame('money', AppMenus::groupForPath('/subscriptions'));
+    assertSame('life', AppMenus::groupForPath('/food-notes'));
+    assertSame('tools', AppMenus::groupForPath('/settings'), 'outside every menu: the neutral tools pastel');
+    foreach (AppMenus::PLACES as $place) {
+        assertTrue(isset(AppMenus::PLACE_ICONS[$place]), "the $place tab has an icon");
+    }
 });
 
 test('the mobile tab bar offers two visible menus and never repeats one', function (): void {

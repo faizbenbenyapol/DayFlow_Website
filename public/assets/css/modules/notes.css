@@ -1,8 +1,8 @@
 /* =====================================================
    notes.css — the notes list and the editor
 
-   The list is ruled rows like the rest of the app. The editor is a page of
-   paper: a title, tags, and blocks separated by thin rules. The controls of a
+   The list is a grid of cards, each in the pastel of its first tag. The
+   editor is a page of paper: a title, tags, and blocks separated by thin rules. The controls of a
    block show when it is hovered or focused, and always on a touch screen.
 ===================================================== */
 
@@ -32,67 +32,118 @@
     opacity: 0.75;
 }
 
-.note-row {
-    align-items: flex-start;
+/* A note is a card: the pastel of its first tag along the top, the title,
+   two lines of what it says, its tags, the date. The pin sits in the corner. */
+.note-group {
+    margin-top: var(--space-5);
 }
 
-.note-row .title {
-    display: block;
-    text-decoration: none;
-}
-
-.note-row a.title:hover {
-    text-decoration: underline;
-}
-
-.note-row .meta {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.note-rowtags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-1);
-    margin-top: 4px;
-}
-
-.note-rowtags .tag,
-.note-lock {
-    padding: 0 6px;
-    cursor: default;
-}
-
-.note-rowtags .tag:hover,
-.note-lock:hover {
-    border-color: var(--rule-strong);
+.note-group-head {
+    margin-bottom: var(--space-3);
+    font-family: var(--font-hand);
+    font-size: 1rem;
+    font-weight: 700;
     color: var(--pencil);
 }
 
-.note-lock {
-    margin-left: var(--space-2);
-    vertical-align: 2px;
+.note-group-head .count {
+    margin-left: 6px;
+    font-family: var(--font);
+    font-weight: 400;
 }
 
-.note-lock .icon {
-    width: 12px;
-    height: 12px;
-    margin-right: 4px;
+.note-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: var(--space-4);
+    margin-top: var(--space-4);
 }
 
-.note-row .side {
-    padding-top: 2px;
-    white-space: nowrap;
+.note-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    min-height: 140px;
+    padding: 12px 14px 8px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--nc, var(--place-2));
+    border-radius: var(--r-card);
 }
 
-.note-row .icon-btn {
-    align-self: center;
+/* Stops short of the pin in the corner, so the two never share a pixel. */
+.note-card-title {
+    align-self: flex-start;
+    max-width: calc(100% - 30px);
+    font-weight: 700;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    text-decoration: none;
+}
+
+.note-card-title:hover {
+    text-decoration: underline;
+}
+
+/* The whole card answers a click through its title link. */
+.note-card-title::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+}
+
+.note-card-text {
+    flex: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 0.875rem;
+    color: var(--pencil);
+    overflow-wrap: anywhere;
+}
+
+.note-locked {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.note-locked .icon {
+    width: 14px;
+    height: 14px;
+}
+
+.note-card-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: var(--pencil);
+}
+
+.note-card-date {
+    margin-left: auto;
+}
+
+/* Buttons sit above the card-wide link. */
+.note-card .icon-btn {
+    position: relative;
+    z-index: 1;
+}
+
+.note-pin {
+    position: absolute !important;
+    top: 6px;
+    right: 6px;
+    color: var(--rule-strong);
 }
 
 .note-pin[aria-pressed="true"] {
-    color: var(--caution);
+    color: var(--stamp-red);
 }
 
 .note-pin[aria-pressed="true"] .icon {

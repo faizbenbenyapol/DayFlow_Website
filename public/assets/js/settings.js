@@ -189,6 +189,22 @@
         }
     }
 
+    // The desk colour shows at once; a failed save puts the old one back.
+    async function setDesk(radio) {
+        const root = document.documentElement;
+        const before = root.dataset.desk || 'sage';
+        root.dataset.desk = radio.value;
+        try {
+            await apiFetch(BASE_URL + '/api/settings/desk', { method: 'POST', body: JSON.stringify({ desk: radio.value }) });
+            toast('เปลี่ยนสีโต๊ะแล้ว');
+        } catch (err) {
+            root.dataset.desk = before;
+            const old = document.querySelector('input[name="desk"][value="' + before + '"]');
+            if (old) old.checked = true;
+            toast(err.message || 'บันทึกไม่สำเร็จ', 'danger');
+        }
+    }
+
     // ---------- Password ----------
     function scorePassword(pw) {
         if (!pw) return { score: 0, label: 'อย่างน้อย 8 ตัวอักษร' };
@@ -435,6 +451,7 @@
         $('#btnSaveProfile')?.addEventListener('click', saveProfile);
         $$('input[name="theme"]').forEach(r => r.addEventListener('change', () => setTheme(r.value)));
         $('#dayColorSwitch')?.addEventListener('change', e => setDayColor(e.target));
+        $$('input[name="desk"]').forEach(r => r.addEventListener('change', () => setDesk(r)));
         initPasswordForm();
         initTimezone();
         initLocalStorage();

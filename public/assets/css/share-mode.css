@@ -1,11 +1,10 @@
 /* =====================================================
    share-mode.css — pages opened through a share link
    Loaded only then: an app share link (read-only, body.is-readonly) or a
-   public project link opened by a guest. A thin bar of ink sits on top and
-   says so; the page below it is the ordinary page, without its rail.
+   public project link opened by a guest. A bar on the desk sits on top and
+   says so; the page below it is the ordinary page, without its index tabs.
 ===================================================== */
 
-/* No rail, so the page is one column again (shell.css lays a body out as a row from 768px). */
 body.share-body {
     flex-direction: column;
 }
@@ -21,8 +20,9 @@ body.share-body {
     gap: var(--space-1) var(--space-4);
     min-height: 44px;
     padding: var(--space-1) clamp(1rem, 3vw, 2rem);
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--mat);
+    border-bottom: 1.5px solid var(--edge);
+    color: var(--ink);
     font-size: 0.875rem;
 }
 
@@ -39,7 +39,9 @@ body.share-body {
 }
 
 .share-topbar-name {
-    font-weight: 600;
+    font-family: var(--font-hand);
+    font-size: 1.125rem;
+    font-weight: 700;
 }
 
 .share-topbar-menu {
@@ -58,8 +60,8 @@ body.share-body {
 }
 
 .share-topbar-link[aria-current="page"] {
-    font-weight: 600;
-    border-bottom-color: var(--paper);
+    font-weight: 700;
+    border-bottom: 3px solid var(--edge);
 }
 
 .share-topbar-actions {
@@ -69,30 +71,20 @@ body.share-body {
     flex: none;
 }
 
-/* A button on ink is paper on ink: outline by default, filled for the main one. */
+/* The buttons are the ordinary ones on their step; sign-up is the main one. */
 .share-topbar .btn {
-    min-height: 32px;
-    border-color: var(--paper);
-    color: var(--paper);
-}
-
-.share-topbar .btn:hover {
-    background: color-mix(in srgb, var(--paper) 16%, transparent);
-    color: var(--paper);
+    min-height: 34px;
 }
 
 .share-topbar .share-topbar-signup {
-    background: var(--paper);
-    color: var(--ink);
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--paper);
 }
 
 .share-topbar .share-topbar-signup:hover {
-    background: color-mix(in srgb, var(--paper) 86%, var(--ink));
-    color: var(--ink);
-}
-
-.share-topbar :focus-visible {
-    outline-color: var(--paper);
+    background: color-mix(in srgb, var(--ink) 86%, var(--paper));
+    color: var(--paper);
 }
 
 @media (min-width: 900px) {
@@ -104,19 +96,21 @@ body.share-body {
 
 .app-main.share-main {
     flex: 1;
-    width: 100%;
     display: block;
+    margin-top: var(--space-5);
 }
 
 /* --- Read-only (app share link): hide everything that would change data --- */
 .is-readonly .mode-readonly-hide,
-.is-readonly .btn-link {
+.is-readonly .btn-link,
+.is-readonly .add-row {
     display: none !important;
 }
 
 /* Add/record buttons in the page itself (tabs, toggles, filters and close
    buttons stay). The server refuses writes in share mode regardless. */
-.is-readonly .app-main button:not([class*="tabs"]):not([class*="toggle"]):not([class*="filter"]):not([class*="close"]),
+/* A title drawn as a button (a task, a habit) is the content, not an action. */
+.is-readonly .app-main button:not([class*="tabs"]):not([class*="toggle"]):not([class*="filter"]):not([class*="close"]):not(.task-title):not(.habit-name),
 .is-readonly .app-main .btn:not([class*="tabs"]):not([class*="toggle"]):not([class*="filter"]):not([class*="close"]):not([class*="btn-secondary"]) {
     display: none !important;
 }
@@ -130,4 +124,14 @@ body.share-body {
 .is-readonly .task-title {
     pointer-events: none !important;
     cursor: default !important;
+}
+
+.is-readonly .habit-name {
+    pointer-events: none !important;
+    cursor: default !important;
+}
+
+/* No index tabs or floating add here, so the page needs no room for them. */
+.share-body .app-content {
+    padding-bottom: var(--space-8);
 }

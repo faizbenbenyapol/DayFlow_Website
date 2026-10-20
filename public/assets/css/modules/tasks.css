@@ -1,15 +1,15 @@
 /* =====================================================
    tasks.css — the Eisenhower matrix
 
-   One ruled box cut into four by a cross, like the grid drawn on paper. On a
-   phone the four become one list with four headings. Colour appears only
-   where it says something: an overdue date.
+   Four cards, each with its own pastel along the top: do now (blush), plan
+   (sky), hand off (butter), drop (lilac). On a phone they stack. Colour that
+   means something is kept for dates: overdue in red, due today in brown.
 ===================================================== */
 
 .matrix-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    border: 1px solid var(--rule-strong);
+    gap: var(--space-5);
 }
 
 .quadrant {
@@ -17,27 +17,31 @@
     flex-direction: column;
     min-width: 0;
     min-height: 280px;
-    padding: 0 var(--space-5) var(--space-2);
-    border-right: 1px solid var(--rule-strong);
-    border-bottom: 1px solid var(--rule-strong);
+    padding: 0 var(--space-4) var(--space-2);
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--q, var(--place-2));
+    border-radius: var(--r-card);
 }
 
-/* The cross: no line after the right column or under the bottom row. */
-.quadrant:nth-child(2n) { border-right: 0; }
-.quadrant:nth-child(n + 3) { border-bottom: 0; }
+#q1 { --q: var(--blush-2); }
+#q2 { --q: var(--sky-2); }
+#q3 { --q: var(--butter-2); }
+#q4 { --q: var(--lilac-2); }
 
 .quadrant-head {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: var(--space-3);
-    padding: var(--space-4) 0 var(--space-2);
-    border-bottom: 1px solid var(--ink);
+    padding: var(--space-3) 0 var(--space-2);
+    border-bottom: 1.5px solid var(--rule);
 }
 
 .quadrant-label {
-    font-size: 1.125rem;
-    font-weight: 600;
+    font-family: var(--font-hand);
+    font-size: 1.1875rem;
+    font-weight: 700;
 }
 
 .quadrant-title {
@@ -99,9 +103,15 @@
     text-decoration: underline;
 }
 
+/* Done: a stroke of highlighter over the words (.done-mark in components.css). */
 .task-item.done .task-title {
     color: var(--pencil);
-    text-decoration: line-through;
+}
+
+.task-repeat {
+    padding: 0 6px;
+    border: 1px solid var(--rule);
+    border-radius: 10px;
 }
 
 .task-meta {
@@ -141,19 +151,8 @@
         grid-template-columns: minmax(0, 1fr);
     }
 
-    .quadrant,
-    .quadrant:nth-child(2n) {
+    .quadrant {
         min-height: 0;
-        padding: 0 var(--space-4) var(--space-2);
-        border-right: 0;
-    }
-
-    .quadrant:nth-child(n + 3) {
-        border-bottom: 1px solid var(--rule-strong);
-    }
-
-    .quadrant:last-child {
-        border-bottom: 0;
     }
 
     .quadrant-body {

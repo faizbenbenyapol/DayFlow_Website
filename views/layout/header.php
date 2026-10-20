@@ -67,11 +67,18 @@ $themeAttr = $theme === 'auto' ? 'light' : $theme;
 $dayKey = strtolower(date('D'));
 $dayColor = Auth::appearance()['day_color'] ? 'on' : 'off';
 
-// The browser chrome follows the paper. "auto" lets the system decide which.
-$chromeColors = ['light' => '#FBFAF7', 'dark' => '#15181D'];
+// The place the page belongs to picks its pastel: the open index tab, the
+// highlighter under the heading, the top edge of its cards (tokens.css).
+$placeKey = AppMenus::groupForPath(Request::path());
+
+// The pastel the page sits on, chosen in Settings (tokens.css, [data-desk]).
+$desk = Auth::appearance()['desk'];
+
+// The browser chrome follows the desk. "auto" lets the system decide which.
+$chromeColors = ['light' => User::DESKS[$desk][0], 'dark' => User::DESKS[$desk][1]];
 ?>
 <!DOCTYPE html>
-<html lang="th" data-theme="<?= h($themeAttr) ?>" data-theme-pref="<?= h($theme) ?>" data-day="<?= h($dayKey) ?>" data-daycolor="<?= h($dayColor) ?>">
+<html lang="th" data-theme="<?= h($themeAttr) ?>" data-theme-pref="<?= h($theme) ?>" data-day="<?= h($dayKey) ?>" data-daycolor="<?= h($dayColor) ?>" data-place="<?= h($placeKey) ?>" data-desk="<?= h($desk) ?>">
 
 <head>
     <meta charset="UTF-8">
@@ -105,7 +112,7 @@ $chromeColors = ['light' => '#FBFAF7', 'dark' => '#15181D'];
     // stylesheet to block the first paint. The two faces below cover almost
     // all body text, so they are fetched in parallel with the CSS rather than
     // after it.
-    foreach (['plexthai-thai-400', 'plexsans-latin-var'] as $criticalFont): ?>
+    foreach (['anuphan-thai-var', 'anuphan-latin-var'] as $criticalFont): ?>
     <link rel="preload" as="font" type="font/woff2" crossorigin
         href="<?= APP_URL ?>/assets/fonts/<?= $criticalFont ?>.woff2">
     <?php endforeach; ?>
@@ -168,109 +175,97 @@ $chromeColors = ['light' => '#FBFAF7', 'dark' => '#15181D'];
             <div class="toast-container" id="toastContainer" role="status" aria-live="polite" aria-atomic="true"></div>
 <?php else: ?>
 <?php
-// What the rail, the tab bar and the "all menus" sheet show, worked out once.
+// What the index tabs, the sub-tabs and the "all menus" sheet show, worked out once.
 $navSettings = User::getSettings(Auth::userId());
 $navHidden = json_decode($navSettings['hidden_menus'] ?? 'null', true);
 $navHidden = is_array($navHidden) ? $navHidden : [];
 $navGroups = AppMenus::grouped(AppMenus::ordered(json_decode($navSettings['menu_order'] ?? 'null', true)), $navHidden);
-[$tabA, $tabB] = AppMenus::mobileTabs(json_decode($navSettings['mobile_tabs'] ?? 'null', true), $navHidden);
-$onTab = fn(string $key): bool => isActive(AppMenus::MENUS[$key]['path']) !== '';
-$allTabIsCurrent = !$onTab('today') && !$onTab($tabA) && !$onTab($tabB);
+$navByGroup = array_column($navGroups, null, 'key');
 $navName = (string)($user['display_name'] ?? $user['username'] ?? '');
+// The sub-tabs of the place being shown, when it has more than one page to
+// offer. A page outside every menu (settings) belongs to no place's row.
+$subItems = AppMenus::menuForPath(Request::path()) !== null ? ($navByGroup[$placeKey]['items'] ?? []) : [];
 require ROOT . '/views/partials/icons.php';
 ?>
     <a class="skip-link" href="#appMain">ข้ามไปยังเนื้อหา</a>
 
-    <!-- Side rail: text on a wide screen, icons only on a tablet, hidden on a phone -->
-    <aside class="rail" id="appRail" aria-label="เมนูหลัก">
-        <a class="rail-brand" href="<?= APP_URL ?>/" aria-label="DayFlow หน้าวันนี้">
-            <span class="brand-full">DayFlow</span><span class="brand-short" aria-hidden="true">D</span>
-        </a>
-        <button type="button" class="rail-search" data-act="openCommandPalette" title="ค้นหาหรือสั่งงาน (Ctrl K)">
-            <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
-            <span class="nav-text">ค้นหา</span>
-            <kbd class="nav-text" data-shortcut>Ctrl K</kbd>
-        </button>
+    <!-- The desk's top edge: the brand, five index tabs, and the three things
+         a person can do from anywhere. On a phone the tabs move to the bottom. -->
+    <header class="desk-top" id="appTop">
+        <a class="brand" href="<?= APP_URL ?>/" aria-label="DayFlow หน้าวันนี้">DayFlow</a>
 
-        <nav class="rail-nav">
-            <?php foreach ($navGroups as $group): ?>
-            <div class="nav-group">
-                <?php if ($group['key'] !== 'today'): ?><div class="nav-label"><?= h($group['label']) ?></div><?php endif; ?>
-                <?php foreach ($group['items'] as $item): ?>
-                <a class="nav-item" href="<?= h(APP_URL . $item['path']) ?>" title="<?= h($item['label']) ?>"
-                   data-menu-key="<?= h($item['key']) ?>"<?= isActive($item['path']) !== '' ? ' aria-current="page"' : '' ?>>
-                    <svg class="icon nav-icon" aria-hidden="true"><use href="#i-<?= h($item['key']) ?>"/></svg>
-                    <span class="nav-text"><?= h($item['label']) ?></span>
-                </a>
-                <?php endforeach; ?>
-            </div>
+        <nav class="flags" id="appFlags" aria-label="ที่หลัก">
+            <?php foreach (AppMenus::PLACES as $place):
+                if (!isset($navByGroup[$place])) continue; // every page in it is hidden
+                $first = $navByGroup[$place]['items'][0];
+            ?>
+            <a class="flag" data-place="<?= h($place) ?>" href="<?= h(APP_URL . $first['path']) ?>"<?= $place === $placeKey ? ' aria-current="page"' : '' ?>>
+                <svg class="icon" aria-hidden="true"><use href="#i-<?= h(AppMenus::PLACE_ICONS[$place]) ?>"/></svg>
+                <span><?= h(AppMenus::GROUPS[$place]) ?></span>
+            </a>
             <?php endforeach; ?>
         </nav>
 
-        <div class="rail-foot">
-            <a class="nav-item" href="<?= APP_URL ?>/settings" title="ตั้งค่า" data-menu-key="settings"<?= isActive('/settings') !== '' ? ' aria-current="page"' : '' ?>>
-                <svg class="icon nav-icon" aria-hidden="true"><use href="#i-settings"/></svg>
-                <span class="nav-text">ตั้งค่า</span>
-            </a>
-            <div class="rail-user nav-text">
-                <strong><?= h($navName) ?></strong>
-                <span><?= h($user['email'] ?? '') ?></span>
-            </div>
-            <a class="nav-item rail-logout" href="<?= APP_URL ?>/logout" title="ออกจากระบบ">
-                <svg class="icon nav-icon" aria-hidden="true"><use href="#i-logout"/></svg>
-                <span class="nav-text">ออกจากระบบ</span>
-            </a>
+        <div class="top-actions">
+            <button type="button" class="top-btn top-search" data-act="openCommandPalette" title="ค้นหาหรือสั่งงาน (Ctrl K)" aria-label="ค้นหาหรือสั่งงาน">
+                <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+                <span class="top-label">ค้นหา</span>
+                <kbd class="top-label" data-shortcut>Ctrl K</kbd>
+            </button>
+            <button type="button" class="btn btn-primary top-add" data-act="openQuickAdd">
+                <svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>เพิ่ม
+            </button>
+            <button type="button" class="top-btn" data-act="openMenuSheet" aria-haspopup="dialog" aria-label="เมนูทั้งหมด ตั้งค่า และบัญชี">
+                <svg class="icon" aria-hidden="true"><use href="#i-all"/></svg>
+                <span class="top-label">ทั้งหมด</span>
+            </button>
         </div>
-    </aside>
+    </header>
 
-    <!-- Phone: five fixed places, the middle one adds something -->
-    <nav class="tabbar" aria-label="เมนูลัด">
-        <?php foreach ([['today', 'วันนี้'], [$tabA, AppMenus::label($tabA)]] as [$key, $label]): ?>
-        <a class="tab" href="<?= h(APP_URL . AppMenus::MENUS[$key]['path']) ?>"<?= $onTab($key) ? ' aria-current="page"' : '' ?>>
-            <svg class="icon" aria-hidden="true"><use href="#i-<?= h($key) ?>"/></svg><span><?= h($label) ?></span>
-        </a>
-        <?php endforeach; ?>
-        <button type="button" class="tab tab-add" data-act="openQuickAdd" aria-label="เพิ่มงาน จดด่วน หรือรายจ่าย">
-            <span class="sq"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></span>
-        </button>
-        <a class="tab" href="<?= h(APP_URL . AppMenus::MENUS[$tabB]['path']) ?>"<?= $onTab($tabB) ? ' aria-current="page"' : '' ?>>
-            <svg class="icon" aria-hidden="true"><use href="#i-<?= h($tabB) ?>"/></svg><span><?= h(AppMenus::label($tabB)) ?></span>
-        </a>
-        <button type="button" class="tab<?= $allTabIsCurrent ? ' is-current' : '' ?>" data-act="openMenuSheet" aria-haspopup="dialog">
-            <svg class="icon" aria-hidden="true"><use href="#i-all"/></svg><span>ทั้งหมด</span>
-        </button>
-    </nav>
+    <!-- Phone: add from anywhere, within reach of the thumb -->
+    <button type="button" class="fab" data-act="openQuickAdd" aria-label="เพิ่มงาน จดด่วน หรือรายจ่าย">
+        <svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>
+    </button>
 
-    <!-- Phone: every menu, plus search, settings and sign-out -->
-    <dialog class="sheet" id="menuSheet" aria-labelledby="menuSheetTitle">
-        <div class="sheet-head">
+    <!-- Every menu, one pastel box per place, plus the account and sign-out -->
+    <dialog class="sheet menu-sheet" id="menuSheet" aria-labelledby="menuSheetTitle">
+        <div class="sheet-head menu-sheet-head">
             <h2 id="menuSheetTitle">เมนูทั้งหมด</h2>
+            <button type="button" class="sheet-search" data-act="searchFromSheet">
+                <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+                <span>ค้นหาหรือสั่งงาน</span>
+                <kbd data-shortcut>Ctrl K</kbd>
+            </button>
             <button type="button" class="icon-btn" data-act="closeSheet" data-args='["menuSheet"]' aria-label="ปิด">
                 <svg class="icon" aria-hidden="true"><use href="#i-close"/></svg>
             </button>
         </div>
-        <div class="sheet-body">
-            <button type="button" class="rail-search" data-act="searchFromSheet">
-                <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
-                <span>ค้นหาหรือสั่งงาน</span>
-            </button>
+        <div class="sheet-body menu-places">
             <?php foreach ($navGroups as $group): ?>
-            <div class="sheet-group">
-                <?php if ($group['key'] !== 'today'): ?><div class="nav-label"><?= h($group['label']) ?></div><?php endif; ?>
-                <div class="sheet-links">
+            <section class="menu-place" data-place="<?= h($group['key']) ?>" aria-labelledby="menu-place-<?= h($group['key']) ?>">
+                <h3 class="menu-place-name" id="menu-place-<?= h($group['key']) ?>"><?= h($group['label']) ?></h3>
+                <div class="menu-tiles">
                     <?php foreach ($group['items'] as $item): ?>
-                    <a class="sheet-link" href="<?= h(APP_URL . $item['path']) ?>"<?= isActive($item['path']) !== '' ? ' aria-current="page"' : '' ?>><?= h($item['label']) ?></a>
+                    <a class="sheet-link menu-tile" data-menu-key="<?= h($item['key']) ?>" href="<?= h(APP_URL . $item['path']) ?>"<?= isActive($item['path']) !== '' ? ' aria-current="page"' : '' ?>>
+                        <svg class="icon" aria-hidden="true"><use href="#i-<?= h($item['key']) ?>"/></svg><span><?= h($item['label']) ?></span>
+                    </a>
                     <?php endforeach; ?>
                 </div>
-            </div>
+            </section>
             <?php endforeach; ?>
-            <div class="sheet-group sheet-account">
-                <div class="nav-label"><?= h($navName) ?></div>
-                <div class="sheet-links">
-                    <a class="sheet-link" href="<?= APP_URL ?>/settings">ตั้งค่า</a>
-                    <a class="sheet-link" href="<?= APP_URL ?>/logout">ออกจากระบบ</a>
-                </div>
-            </div>
+        </div>
+        <div class="menu-account">
+            <span class="menu-avatar" aria-hidden="true"><?= h(mb_substr($navName !== '' ? $navName : 'D', 0, 1)) ?></span>
+            <span class="menu-who">
+                <strong><?= h($navName) ?></strong>
+                <?php if (!empty($user['email'])): ?><span><?= h($user['email']) ?></span><?php endif; ?>
+            </span>
+            <a class="sheet-link btn btn-sm" data-menu-key="settings" href="<?= APP_URL ?>/settings"<?= isActive('/settings') !== '' ? ' aria-current="page"' : '' ?>>
+                <svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg>ตั้งค่า
+            </a>
+            <a class="sheet-link sheet-logout btn btn-sm btn-ghost" href="<?= APP_URL ?>/logout">
+                <svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg>ออกจากระบบ
+            </a>
         </div>
     </dialog>
 
@@ -356,8 +351,14 @@ require ROOT . '/views/partials/icons.php';
         </form>
     </dialog>
 
-<!-- Main Content -->
     <main class="app-main" id="appMain">
+        <?php if (count($subItems) > 1): ?>
+        <nav class="subnav" aria-label="<?= h(AppMenus::GROUPS[$placeKey]) ?>">
+            <?php foreach ($subItems as $item): ?>
+            <a class="subnav-link" href="<?= h(APP_URL . $item['path']) ?>"<?= isActive($item['path']) !== '' ? ' aria-current="page"' : '' ?>><?= h($item['label']) ?></a>
+            <?php endforeach; ?>
+        </nav>
+        <?php endif; ?>
         <div class="app-content">
 
             <div class="toast-container" id="toastContainer" role="status" aria-live="polite" aria-atomic="true"></div>

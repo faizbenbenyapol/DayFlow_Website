@@ -16,50 +16,82 @@ final class AppMenus
      * Review are not here: they are always on.
      */
     public const KEYS = [
-        'tasks', 'projects', 'planner', 'habits', 'focus', 'skills',
-        'notes', 'quick-notes', 'bookmarks',
+        'tasks', 'projects', 'planner',
+        'habits', 'focus', 'skills', 'exercise', 'food-notes',
         'finance', 'subscriptions', 'stocks',
-        'exercise', 'food-notes',
-        'files', 'file-tools', 'transfer', 'ai', 'calculator',
-    ];
-
-    /** Group key => heading, in the order the rail shows them. */
-    public const GROUPS = [
-        'today' => 'วันนี้',
-        'plan'  => 'แผนและงาน',
-        'notes' => 'บันทึก',
-        'money' => 'เงิน',
-        'body'  => 'ร่างกาย',
-        'tools' => 'เครื่องมือ',
+        'notes', 'quick-notes', 'bookmarks', 'files', 'transfer',
+        'file-tools', 'ai', 'calculator',
     ];
 
     /**
-     * Every entry the rail can show. The label is what the page's own heading
+     * Group key => heading. The first five are the places: each has an index
+     * tab and a pastel (docs/REDESIGN-V3.md §2). Tools has no tab; it is
+     * reached from "ทั้งหมด" and the command palette.
+     */
+    public const GROUPS = [
+        'today' => 'วันนี้',
+        'work'  => 'งาน',
+        'life'  => 'ชีวิต',
+        'money' => 'เงิน',
+        'vault' => 'คลัง',
+        'tools' => 'เครื่องมือ',
+    ];
+
+    /** The groups that get an index tab, in order. */
+    public const PLACES = ['today', 'work', 'life', 'money', 'vault'];
+
+    /** The icon (views/partials/icons.php) each index tab shows on a phone. */
+    public const PLACE_ICONS = ['today' => 'today', 'work' => 'tasks', 'life' => 'habits', 'money' => 'finance', 'vault' => 'notes'];
+
+    /**
+     * Every entry the menus can show. The label is what the page's own heading
      * says too, so a person who clicks "งาน" lands on a page titled "งาน".
      */
     public const MENUS = [
         'today'         => ['group' => 'today', 'label' => 'วันนี้',          'path' => '/'],
         'review'        => ['group' => 'today', 'label' => 'สรุปผล',          'path' => '/review'],
-        'tasks'         => ['group' => 'plan',  'label' => 'งาน',             'path' => '/tasks'],
-        'projects'      => ['group' => 'plan',  'label' => 'โปรเจค',          'path' => '/projects'],
-        'planner'       => ['group' => 'plan',  'label' => 'แพลนเนอร์',       'path' => '/planner'],
-        'habits'        => ['group' => 'plan',  'label' => 'นิสัย',           'path' => '/habits'],
-        'focus'         => ['group' => 'plan',  'label' => 'โฟกัส',           'path' => '/focus'],
-        'skills'        => ['group' => 'plan',  'label' => 'ทักษะ',           'path' => '/skills'],
-        'notes'         => ['group' => 'notes', 'label' => 'โน้ต',            'path' => '/notes'],
-        'quick-notes'   => ['group' => 'notes', 'label' => 'จดด่วน',         'path' => '/quick-notes'],
-        'bookmarks'     => ['group' => 'notes', 'label' => 'ลิงก์',           'path' => '/bookmarks'],
+        'tasks'         => ['group' => 'work',  'label' => 'งาน',             'path' => '/tasks'],
+        'projects'      => ['group' => 'work',  'label' => 'โปรเจค',          'path' => '/projects'],
+        'planner'       => ['group' => 'work',  'label' => 'แพลนเนอร์',       'path' => '/planner'],
+        'habits'        => ['group' => 'life',  'label' => 'นิสัย',           'path' => '/habits'],
+        'focus'         => ['group' => 'life',  'label' => 'โฟกัส',           'path' => '/focus'],
+        'skills'        => ['group' => 'life',  'label' => 'ทักษะ',           'path' => '/skills'],
+        'exercise'      => ['group' => 'life',  'label' => 'ออกกำลังกาย',     'path' => '/exercise'],
+        'food-notes'    => ['group' => 'life',  'label' => 'อาหาร',           'path' => '/food-notes'],
         'finance'       => ['group' => 'money', 'label' => 'รายรับรายจ่าย',   'path' => '/finance'],
         'subscriptions' => ['group' => 'money', 'label' => 'รายจ่ายประจำ',    'path' => '/subscriptions'],
         'stocks'        => ['group' => 'money', 'label' => 'หุ้น',            'path' => '/stocks'],
-        'exercise'      => ['group' => 'body',  'label' => 'ออกกำลังกาย',     'path' => '/exercise'],
-        'food-notes'    => ['group' => 'body',  'label' => 'อาหาร',           'path' => '/food-notes'],
-        'files'         => ['group' => 'tools', 'label' => 'ไฟล์',            'path' => '/files'],
+        'notes'         => ['group' => 'vault', 'label' => 'โน้ต',            'path' => '/notes'],
+        'quick-notes'   => ['group' => 'vault', 'label' => 'จดด่วน',         'path' => '/quick-notes'],
+        'bookmarks'     => ['group' => 'vault', 'label' => 'ลิงก์',           'path' => '/bookmarks'],
+        'files'         => ['group' => 'vault', 'label' => 'ไฟล์',            'path' => '/files'],
+        'transfer'      => ['group' => 'vault', 'label' => 'ส่งไฟล์',         'path' => '/transfer'],
         'file-tools'    => ['group' => 'tools', 'label' => 'แปลงไฟล์',        'path' => '/file-tools'],
-        'transfer'      => ['group' => 'tools', 'label' => 'ส่งไฟล์',         'path' => '/transfer'],
         'ai'            => ['group' => 'tools', 'label' => 'ผู้ช่วย AI',      'path' => '/ai'],
         'calculator'    => ['group' => 'tools', 'label' => 'เครื่องคิดเลข',   'path' => '/calculator'],
     ];
+
+    /**
+     * The group a request path belongs to: the menu whose path it is or sits
+     * under. Pages outside every menu (settings, a note editor reached by its
+     * own path) fall back to tools, whose pastel is the neutral lilac.
+     */
+    public static function groupForPath(string $path): string
+    {
+        $key = self::menuForPath($path);
+        return $key !== null ? self::MENUS[$key]['group'] : 'tools';
+    }
+
+    /** The menu a request path is, or sits under; null for a page outside every menu. */
+    public static function menuForPath(string $path): ?string
+    {
+        if ($path === '/' || $path === '') return 'today';
+        foreach (self::MENUS as $key => $menu) {
+            if ($menu['path'] === '/') continue;
+            if ($path === $menu['path'] || str_starts_with($path, $menu['path'] . '/')) return $key;
+        }
+        return null;
+    }
 
     /** The two menus the mobile tab bar offers beside Today, until the user picks others. */
     public const DEFAULT_TABS = ['tasks', 'finance'];

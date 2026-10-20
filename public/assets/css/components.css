@@ -17,6 +17,8 @@
    Buttons
    One primary per view. Words on a button say what it does.
 --------------------------------------------------------------- */
+/* A button sits on a solid 2px step and sinks onto it when pressed: the one
+   playful touch every control shares. */
 .btn {
     display: inline-flex;
     align-items: center;
@@ -24,13 +26,14 @@
     gap: var(--space-2);
     min-height: 40px;
     padding: 6px 16px;
-    border: 1px solid var(--rule-strong);
+    border: 1.5px solid var(--edge);
     border-radius: var(--r-control);
-    background: transparent;
+    background: var(--paper);
+    box-shadow: var(--press);
     color: var(--ink);
     font: inherit;
     font-size: 0.9375rem;
-    font-weight: 500;
+    font-weight: 600;
     line-height: 1.5;
     text-align: center;
     text-decoration: none;
@@ -39,23 +42,25 @@
     max-width: 100%;
     overflow-wrap: break-word;
     cursor: pointer;
-    transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+    transition: background var(--dur) var(--ease), transform 80ms var(--ease), box-shadow 80ms var(--ease);
 }
 
 .btn:hover {
-    background: color-mix(in srgb, var(--ink) 6%, transparent);
+    background: var(--paper-sunk);
     color: var(--ink);
     text-decoration: none;
 }
 
 .btn:active {
-    background: color-mix(in srgb, var(--ink) 12%, transparent);
+    transform: translateY(2px);
+    box-shadow: 0 0 0 var(--edge);
 }
 
 .btn:disabled,
 .btn[aria-disabled="true"] {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
 }
 
 .btn-primary {
@@ -69,26 +74,29 @@
     color: var(--paper);
 }
 
-.btn-primary:active {
-    background: color-mix(in srgb, var(--ink) 74%, var(--paper));
-}
-
-/* Quiet: no outline until it is touched. */
+/* Quiet: no outline or step until it is touched. */
 .btn-ghost {
     border-color: transparent;
+    background: transparent;
+    box-shadow: none;
 }
 
 .btn-ghost:hover {
-    border-color: var(--rule);
+    border-color: var(--rule-strong);
+}
+
+.btn-ghost:active {
+    transform: none;
 }
 
 .btn-danger {
     border-color: var(--stamp-red);
+    box-shadow: 0 2px 0 var(--stamp-red);
     color: var(--stamp-red);
 }
 
 .btn-danger:hover {
-    background: color-mix(in srgb, var(--stamp-red) 10%, transparent);
+    background: color-mix(in srgb, var(--stamp-red) 8%, var(--paper));
     color: var(--stamp-red);
 }
 
@@ -97,6 +105,7 @@
     min-height: 0;
     padding: var(--space-1) var(--space-2);
     border: 0;
+    box-shadow: none;
     background: none;
     color: var(--pencil);
     font: inherit;
@@ -137,8 +146,9 @@
 .seg-pair {
     display: inline-flex;
     overflow: hidden;
-    border: 1px solid var(--rule-strong);
+    border: 1.5px solid var(--edge);
     border-radius: var(--r-control);
+    background: var(--paper);
 }
 
 .seg-pair label {
@@ -166,14 +176,14 @@
 
 .seg-pair button + button,
 .seg-pair label + label {
-    border-left: 1px solid var(--rule-strong);
+    border-left: 1px solid var(--rule);
 }
 
 .seg-pair input:checked + span,
 .seg-pair button[aria-pressed="true"] {
     background: var(--ink);
     color: var(--paper);
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .seg-pair input:focus-visible + span {
@@ -196,22 +206,32 @@
     max-width: 960px;
 }
 
-/* Tabs: a row of words on a rule. The open one is underlined in ink. */
+/* Tabs: a row of words on a rule. The open one is underlined in the place's
+   pastel, and bold, so the colour is never the only sign. */
+/* Scrolls sideways when the words do not fit, and never up and down: the
+   underline sits on the rule with a negative margin, which would otherwise
+   give the row a 1.5px vertical scrollbar. */
 .tabs {
     display: flex;
     gap: var(--space-5);
     overflow-x: auto;
-    border-bottom: 1px solid var(--rule);
+    overflow-y: hidden;
+    border-bottom: 1.5px solid var(--rule);
+    scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
+}
+
+.tabs::-webkit-scrollbar {
+    display: none;
 }
 
 .tab {
     flex: none;
     min-height: 44px;
     padding: 8px 2px;
-    margin-bottom: -1px;
+    margin-bottom: -1.5px;
     border: 0;
-    border-bottom: 2px solid transparent;
+    border-bottom: 3px solid transparent;
     background: none;
     color: var(--pencil);
     font: inherit;
@@ -225,9 +245,9 @@
 }
 
 .tab[aria-selected="true"] {
-    border-bottom-color: var(--ink);
+    border-bottom-color: var(--place-2);
     color: var(--ink);
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .tab:focus-visible {
@@ -280,8 +300,9 @@
 }
 
 /* ---------------------------------------------------------------
-   Page heading: the title, a line of real numbers under it, and the one
-   thing a person is likely to want to do. A heavy rule closes it.
+   Page heading: the title in the hand-lettered face over a stroke of the
+   place's highlighter, a line of real numbers under it, and the one thing a
+   person is likely to want to do.
 --------------------------------------------------------------- */
 .page-head,
 .page-header {
@@ -289,9 +310,7 @@
     align-items: flex-end;
     justify-content: space-between;
     gap: var(--space-4);
-    margin-bottom: var(--space-6);
-    padding-bottom: var(--space-4);
-    border-bottom: 1px solid var(--ink);
+    margin-bottom: var(--space-5);
 }
 
 /* The title keeps its room; the actions drop to their own line when it is short. */
@@ -306,15 +325,26 @@
 
 .page-head h1,
 .page-title {
-    font-size: 1.5625rem;
-    font-weight: 600;
-    line-height: 1.3;
+    display: inline;
+    font-family: var(--font-hand);
+    font-size: 1.875rem;
+    font-weight: 700;
+    line-height: 1.45;
     letter-spacing: 0;
     color: var(--ink);
+    /* The highlighter: a band across the lower half of the letters. A
+       background, not a pseudo-element, so it follows a title onto a second
+       line. */
+    background: linear-gradient(transparent 55%, var(--place-2) 55%, var(--place-2) 90%, transparent 90%);
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    padding: 0 4px;
+    margin-left: -4px;
 }
 
 .page-head .sub,
 .page-subtitle {
+    display: block;
     margin-top: var(--space-1);
     font-size: 0.9375rem;
     letter-spacing: 0;
@@ -329,13 +359,14 @@
 
 /* ---------------------------------------------------------------
    Sections and cards
-   A box is for things that truly belong together. Most lists need none.
+   White on the white page, held by a hairline. A card that belongs to a
+   place takes its pastel along the top edge (.sec does this by default).
 --------------------------------------------------------------- */
 .card {
     padding: var(--space-5);
     background: var(--paper);
     border: 1px solid var(--rule);
-    border-radius: 0;
+    border-radius: var(--r-card);
 }
 
 .card-sm {
@@ -347,14 +378,13 @@
     align-items: baseline;
     justify-content: space-between;
     gap: var(--space-3);
-    margin-bottom: var(--space-4);
-    padding-bottom: var(--space-2);
-    border-bottom: 1px solid var(--rule-strong);
+    margin-bottom: var(--space-3);
 }
 
 .card-title {
+    font-family: var(--font-hand);
     font-size: 1.125rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--ink);
 }
 
@@ -362,27 +392,38 @@
     flex: 1;
 }
 
-/* The date block: the weekday's colour, a big serif figure, the month. */
+/* The date block: a small calendar sheet, the weekday's pastel along its
+   top, the day in the hand-lettered face. */
 .date-block {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 104px;
+    width: 84px;
     flex: none;
-    padding: 10px 0 8px;
-    background: var(--day);
-    color: var(--on-day);
-}
-
-.date-block .d {
-    font: 500 4rem/1 var(--font-num);
+    padding: 0 0 6px;
+    background: var(--paper);
+    border: 1.5px solid var(--edge);
+    border-radius: var(--r-card);
+    box-shadow: var(--press);
+    color: var(--ink);
+    overflow: hidden;
 }
 
 .date-block .m {
+    order: -1;
+    align-self: stretch;
+    padding: 2px 0;
+    background: var(--day);
+    color: var(--on-day);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.date-block .d {
     margin-top: 4px;
-    font-size: 0.875rem;
-    font-weight: 500;
+    font: 700 2.5rem/1.1 var(--font-num);
 }
 
 /* ---------------------------------------------------------------
@@ -459,7 +500,7 @@
 
 .ledger tr.total td {
     padding-top: 10px;
-    border-top: 3px double var(--ink);
+    border-top: 2px solid var(--ink);
     border-bottom: 0;
     font-weight: 600;
 }
@@ -468,9 +509,9 @@
     font-weight: 600;
 }
 
-/* The one figure a ledger exists to give, set large in the serif. */
+/* The one figure a ledger exists to give, set large and hand-lettered. */
 .ledger-lg tr.total .num {
-    font: 500 1.9375rem/1.1 var(--font-num);
+    font: 700 1.9375rem/1.2 var(--font-num);
 }
 
 .ledger .meta {
@@ -510,7 +551,13 @@
 }
 
 .form-control:hover {
-    border-color: var(--ink);
+    border-color: var(--edge);
+}
+
+.form-control:focus {
+    border-color: var(--edge);
+    box-shadow: 0 0 0 3px var(--place-2);
+    outline: none;
 }
 
 .form-control::placeholder {
@@ -540,6 +587,125 @@ select.form-control {
     appearance: none;
     -webkit-appearance: none;
     cursor: pointer;
+}
+
+/* ---------------------------------------------------------------
+   Dropdowns. Where the browser lets a page draw the open list
+   (appearance: base-select, Chrome and Edge 135+), it becomes a card on a
+   step like the rest of v3: options as rows, the chosen one ticked in red
+   pen, a hover in the place's pastel. Elsewhere the system list stays, and
+   the closed box still looks the same. No script: every page that fills a
+   select with options keeps working as it did.
+--------------------------------------------------------------- */
+@supports (appearance: base-select) {
+    select:not([multiple]):not([size]),
+    select:not([multiple]):not([size])::picker(select) {
+        appearance: base-select;
+    }
+
+    select.form-control:not([multiple]):not([size]),
+    select.block-type {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding-right: 12px;
+        background-image: none;
+    }
+
+    select:not([multiple]):not([size])::picker-icon {
+        content: "";
+        width: 7px;
+        height: 7px;
+        margin-left: auto;
+        border: solid var(--edge);
+        border-width: 0 2px 2px 0;
+        transform: translateY(-2px) rotate(45deg);
+        transition: transform var(--dur) var(--ease);
+    }
+
+    select:not([multiple]):not([size]):open::picker-icon {
+        transform: translateY(2px) rotate(-135deg);
+    }
+
+    select:not([multiple]):not([size]):open {
+        border-color: var(--edge);
+        box-shadow: 0 0 0 3px var(--place-2);
+    }
+
+    ::picker(select) {
+        min-width: anchor-size(width);
+        max-height: min(340px, 60dvh);
+        margin-block: 6px;
+        padding: 4px;
+        overflow-y: auto;
+        background: var(--paper);
+        color: var(--ink);
+        border: 1.5px solid var(--edge);
+        border-radius: var(--r-control);
+        box-shadow: 0 3px 0 var(--edge), var(--lift-1);
+        opacity: 0;
+        transform: translateY(-4px);
+        transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease), overlay var(--dur) allow-discrete, display var(--dur) allow-discrete;
+    }
+
+    select:open::picker(select) {
+        opacity: 1;
+        transform: none;
+    }
+
+    @starting-style {
+        select:open::picker(select) {
+            opacity: 0;
+            transform: translateY(-4px);
+        }
+    }
+
+    select:not([multiple]):not([size]) option {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        min-height: 40px;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 0.9375rem;
+        cursor: pointer;
+    }
+
+    select:not([multiple]):not([size]) option:hover,
+    select:not([multiple]):not([size]) option:focus-visible {
+        background: var(--place);
+        outline: none;
+    }
+
+    select:not([multiple]):not([size]) option:checked {
+        font-weight: 600;
+    }
+
+    /* The tick of the chosen option, in red pen like every other tick. */
+    select:not([multiple]):not([size]) option::checkmark {
+        content: "✓";
+        order: 1;
+        margin-left: auto;
+        color: var(--stamp-red);
+        font-weight: 700;
+    }
+
+    select:not([multiple]):not([size]) option:disabled {
+        color: var(--pencil);
+        cursor: default;
+    }
+
+    select:not([multiple]):not([size]) optgroup {
+        padding-top: 4px;
+    }
+
+    select:not([multiple]):not([size]) optgroup legend,
+    select:not([multiple]):not([size]) optgroup::before {
+        padding: 6px 10px 2px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--pencil);
+    }
 }
 
 /* A date or time field opens its picker from anywhere in the box. */
@@ -622,7 +788,8 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 }
 
 /* ---------------------------------------------------------------
-   Checkbox and radio: a square drawn on paper, filled with ink when ticked.
+   Checkbox and radio: a box on a 1.5px step. Ticking one writes a check in
+   red pen, the way a done item is marked in a paper planner.
    :where() keeps the specificity at zero, so .sr-only and a page's own rule
    can still hide or resize one.
 --------------------------------------------------------------- */
@@ -642,7 +809,9 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 }
 
 :where(input[type="checkbox"]) {
-    border-radius: 3px;
+    border-color: var(--edge);
+    border-radius: 5px;
+    box-shadow: 0 1.5px 0 var(--edge);
 }
 
 :where(input[type="radio"]) {
@@ -654,12 +823,14 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     opacity: 0;
 }
 
+/* The tick overshoots the box a little, as a pen stroke would. */
 :where(input[type="checkbox"])::after {
-    width: 11px;
-    height: 6px;
-    border: solid var(--paper);
-    border-width: 0 0 2px 2px;
-    transform: translateY(-1px) rotate(-45deg);
+    width: 15px;
+    height: 7px;
+    border: solid var(--stamp-red);
+    border-width: 0 0 2.5px 2.5px;
+    border-radius: 0 0 0 2px;
+    transform: translate(2px, -3px) rotate(-48deg);
 }
 
 :where(input[type="radio"])::after {
@@ -670,8 +841,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 }
 
 :where(input[type="checkbox"]:checked) {
-    background: var(--ink);
-    border-color: var(--ink);
+    background: var(--paper);
 }
 
 :where(input[type="radio"]:checked) {
@@ -708,7 +878,94 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     text-decoration: line-through;
 }
 
-/* A switch is a square toggle, so it does not read as a pill button. */
+/* A done item's words get a stroke of mint highlighter instead of a plain
+   strike, the planner's way of crossing a thing off. Any list can opt in with
+   .done-mark on the element that holds the words. */
+.done-mark {
+    background: linear-gradient(transparent 52%, var(--mint-2) 52%, var(--mint-2) 82%, transparent 82%) no-repeat 0 0 / 0% 100%;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    transition: background-size 240ms var(--ease);
+}
+
+.is-done .done-mark,
+.done .done-mark,
+input:checked + .done-mark,
+input:checked + label .done-mark {
+    background-size: 100% 100%;
+    color: var(--pencil);
+}
+
+/* A star to stick on: a habit done today. Empty, it is a dashed ring; ticked,
+   a star in the habit's own colour (--habit-c) pops in at a slight angle.
+   The star is a mask, so its colours come from tokens. */
+:where(input[type="checkbox"]).star-tick {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: 1.5px dashed var(--rule-strong);
+    border-radius: 50%;
+    box-shadow: none;
+    --star: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.5l2.9 6.1 6.6.8-4.9 4.5 1.3 6.6L12 17.2 6.1 20.5l1.3-6.6L2.5 9.4l6.6-.8z' fill='black'/%3E%3C/svg%3E");
+}
+
+/* Two masks: the ink outline behind, the colour in front, a size apart. */
+:where(input[type="checkbox"]).star-tick::before,
+:where(input[type="checkbox"]).star-tick::after {
+    content: "";
+    position: absolute;
+    border: 0;
+    border-radius: 0;
+    opacity: 1;
+    -webkit-mask: var(--star) center / contain no-repeat;
+    mask: var(--star) center / contain no-repeat;
+    transform: scale(0) rotate(-40deg);
+    transition: transform 220ms cubic-bezier(.3, 1.7, .5, 1);
+}
+
+:where(input[type="checkbox"]).star-tick::before {
+    inset: -4px;
+    background: var(--edge);
+}
+
+:where(input[type="checkbox"]).star-tick::after {
+    inset: -1px;
+    width: auto;
+    height: auto;
+    background: var(--habit-c, var(--butter-2));
+}
+
+:where(input[type="checkbox"]).star-tick:checked {
+    border-color: transparent;
+    background: transparent;
+}
+
+:where(input[type="checkbox"]).star-tick:checked::before,
+:where(input[type="checkbox"]).star-tick:checked::after {
+    transform: scale(1) rotate(8deg);
+}
+
+/* Days in a row: a small flame and the count. */
+.streak {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-weight: 600;
+    color: var(--caution);
+    white-space: nowrap;
+}
+
+.streak .flame {
+    width: 14px;
+    height: 17px;
+    fill: var(--peach-2);
+    stroke: var(--edge);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+}
+
+/* A switch is a rounded toggle with a knob. */
 .switch {
     position: relative;
     display: inline-block;
@@ -728,8 +985,8 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     inset: 0;
     cursor: pointer;
     background: var(--paper);
-    border: 1.5px solid var(--rule-strong);
-    border-radius: 4px;
+    border: 1.5px solid var(--edge);
+    border-radius: 12px;
     transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
 
@@ -738,16 +995,16 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     position: absolute;
     left: 3px;
     top: 3px;
-    width: 14px;
-    height: 14px;
+    width: 15px;
+    height: 15px;
     background: var(--rule-strong);
-    border-radius: 2px;
+    border-radius: 50%;
     transition: transform var(--dur) var(--ease), background var(--dur) var(--ease);
 }
 
 input:checked + .slider {
-    background: var(--ink);
-    border-color: var(--ink);
+    background: var(--ledger-green);
+    border-color: var(--ledger-green);
 }
 
 input:checked + .slider::before {
@@ -770,7 +1027,7 @@ input:focus-visible + .slider {
     background: var(--paper-sunk);
     border: 1px solid var(--rule-strong);
     border-left-width: 4px;
-    border-radius: 0;
+    border-radius: var(--r-card);
     color: var(--ink);
 }
 
@@ -853,8 +1110,9 @@ input:focus-visible + .slider {
 }
 
 .modal-title {
-    font-size: 1.125rem;
-    font-weight: 600;
+    font-family: var(--font-hand);
+    font-size: 1.25rem;
+    font-weight: 700;
 }
 
 .modal-close {
@@ -1002,7 +1260,7 @@ body.modal-open {
     align-items: center;
     padding: 1px 8px;
     border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
-    border-radius: 4px;
+    border-radius: 10px;
     font-size: 0.8125rem;
     font-weight: 500;
     line-height: 1.5;
@@ -1032,6 +1290,18 @@ body.modal-open {
     color: var(--caution);
 }
 
+/* A category in its pastel (pastelFor() in html.js picks it from the name). */
+.cat-chip {
+    display: inline-block;
+    padding: 0 8px;
+    border-radius: 10px;
+    background: var(--chip, var(--sky));
+    color: var(--ink);
+    font-size: 0.75rem;
+    line-height: 1.6;
+    white-space: nowrap;
+}
+
 .tag-list {
     display: flex;
     flex-wrap: wrap;
@@ -1043,10 +1313,10 @@ body.modal-open {
     align-items: center;
     gap: var(--space-1);
     padding: 2px 10px;
-    background: transparent;
-    border: 1px solid var(--rule-strong);
-    border-radius: 4px;
-    color: var(--pencil);
+    background: var(--paper);
+    border: 1.5px solid var(--rule-strong);
+    border-radius: 14px;
+    color: var(--ink);
     font-size: 0.8125rem;
     line-height: 1.5;
     white-space: nowrap;
@@ -1063,25 +1333,30 @@ body.modal-open {
 }
 
 .tag.active {
-    background: var(--ink);
-    border-color: var(--ink);
-    color: var(--paper);
+    background: var(--place);
+    border-color: var(--edge);
+    color: var(--ink);
+    font-weight: 600;
 }
 
 /* ---------------------------------------------------------------
    Empty, loading and error: three states every list needs
 --------------------------------------------------------------- */
+/* An empty list is a dashed space on the page with the next step in it. */
 .empty-state {
-    padding: var(--space-6) 0;
-    border-bottom: 1px solid var(--rule);
+    margin: var(--space-3) 0;
+    padding: var(--space-6) var(--space-5);
+    border: 1.5px dashed var(--rule-strong);
+    border-radius: var(--r-card);
     color: var(--pencil);
     text-align: left;
 }
 
 .empty-state-title {
     margin-bottom: var(--space-1);
-    font-size: 1rem;
-    font-weight: 500;
+    font-family: var(--font-hand);
+    font-size: 1.125rem;
+    font-weight: 700;
     color: var(--ink);
 }
 
@@ -1147,14 +1422,16 @@ body.modal-open {
    Progress, dividers, status dots
 --------------------------------------------------------------- */
 .progress {
-    height: 6px;
+    height: 8px;
     overflow: hidden;
     background: var(--rule);
+    border-radius: 4px;
 }
 
 .progress-bar {
     height: 100%;
-    background: var(--ink);
+    background: var(--place-2);
+    border-radius: 4px;
     transition: width var(--dur) var(--ease);
 }
 
@@ -1273,7 +1550,7 @@ body.modal-open {
 
 .cmdk-item.is-active {
     background: var(--paper-sunk);
-    box-shadow: inset 3px 0 0 var(--day);
+    box-shadow: inset 3px 0 0 var(--edge);
 }
 
 .cmdk-item-type {
@@ -1312,11 +1589,27 @@ body.modal-open {
 }
 
 /* ---------------------------------------------------------------
-   Sections: a heading with a rule under it, then rows. The pattern the Today
-   page is made of, and most pages after it.
+   Sections: a card with a hand-lettered heading, then rows. The pattern the
+   Today page is made of, and most pages after it. The top edge carries the
+   pastel of the place the rows come from (--sec-c), the page's own place by
+   default.
 --------------------------------------------------------------- */
 .sec {
-    padding-top: var(--space-6);
+    position: relative;
+    margin-top: var(--space-5);
+    padding: var(--space-3) var(--space-4) var(--space-3);
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--sec-c, var(--place-2));
+    border-radius: var(--r-card);
+}
+
+/* A section inside a section keeps only its heading. */
+.sec .sec {
+    margin-top: var(--space-4);
+    padding: 0;
+    border: 0;
+    border-radius: 0;
 }
 
 .sec-head {
@@ -1324,12 +1617,27 @@ body.modal-open {
     align-items: baseline;
     justify-content: space-between;
     gap: var(--space-3);
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--rule-strong);
+    padding-bottom: 4px;
 }
 
 .sec-head h2 {
+    font-family: var(--font-hand);
     font-size: 1.125rem;
+    font-weight: 700;
+}
+
+/* Washi tape: a short striped strip over the top edge. Today's cards only. */
+.taped::before {
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: 18px;
+    width: 54px;
+    height: 16px;
+    transform: rotate(-2deg);
+    background: repeating-linear-gradient(45deg, var(--sec-c, var(--place-2)) 0 6px, var(--sec-c2, var(--place)) 6px 12px);
+    opacity: .95;
+    pointer-events: none;
 }
 
 .sec-head .count {
@@ -1431,22 +1739,16 @@ body.modal-open {
 .cols {
     display: grid;
     grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
-    gap: 0 48px;
+    gap: 0 var(--space-5);
 }
 
 .col-side {
-    padding-left: 32px;
-    border-left: 1px solid var(--rule);
+    min-width: 0;
 }
 
 @media (max-width: 1023px) {
     .cols {
         grid-template-columns: minmax(0, 1fr);
-    }
-
-    .col-side {
-        padding-left: 0;
-        border-left: 0;
     }
 }
 
