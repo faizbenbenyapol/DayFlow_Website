@@ -904,7 +904,9 @@ async function main() {
             await sleep(200);
             check(await anon.eval(`document.documentElement.dataset.theme`) === 'dark', 'and turns dark when the device does, without a reload');
             await scheme('light');
-            check(await anon.eval(`!!document.querySelector('.auth-day-number') && getComputedStyle(document.querySelector('.auth-day')).backgroundColor !== 'rgba(0, 0, 0, 0)'`), 'today\'s date block stands beside the form');
+            check(await anon.eval(`!!document.querySelector('.auth-day-number') && document.querySelector('.auth-sheet').getBoundingClientRect().left > document.querySelector('.auth-form-side').getBoundingClientRect().right`), 'today\'s calendar sheet stands beside the form');
+            check(await anon.eval(`document.querySelectorAll('.auth-places li').length`) === 5, 'and says what the five places hold');
+            check(await anon.eval(`getComputedStyle(document.body).backgroundColor !== getComputedStyle(document.querySelector('.auth-form-side')).backgroundColor`), 'the form lies as a page on the desk');
             check(await anon.eval(`document.querySelectorAll('label[for]').length`) >= 2, 'every field has a label tied to it');
             check(await anon.eval(`document.activeElement.id`) === 'loginIdentifier', 'the first field has focus');
 
