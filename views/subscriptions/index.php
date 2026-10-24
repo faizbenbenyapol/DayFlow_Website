@@ -6,15 +6,19 @@
 // assets/js/subscriptions.js draws the list from /api/subscriptions.
 // =====================================================
 $cycles = ['monthly' => 'รายเดือน', 'yearly' => 'รายปี', 'weekly' => 'รายสัปดาห์', 'one_time' => 'ครั้งเดียว'];
+// A share link is for looking: nothing that adds or changes a record is printed.
+$readOnly = Auth::isReadOnly();
 ?>
 <div class="page-head">
     <div>
         <h1>รายจ่ายประจำ</h1>
         <p class="sub" id="subTally" aria-live="polite">กำลังโหลดรายการ…</p>
     </div>
+    <?php if (!$readOnly): ?>
     <div class="page-head-actions">
         <button class="btn btn-primary" type="button" data-act="openAddSub"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>เพิ่มรายการ</button>
     </div>
+    <?php endif; ?>
 </div>
 
 <div class="facts sub-facts" id="subFacts" hidden>
@@ -29,6 +33,7 @@ $cycles = ['monthly' => 'รายเดือน', 'yearly' => 'รายปี
     <div class="skel-row"><span class="skel skel-w-52"></span></div>
 </div>
 
+<?php if (!$readOnly): ?>
 <!-- Modal -->
 <div class="modal-backdrop" id="subModal" aria-hidden="true">
     <div class="modal" role="dialog" aria-labelledby="subModalTitle">
@@ -85,3 +90,4 @@ $cycles = ['monthly' => 'รายเดือน', 'yearly' => 'รายปี
         </div>
     </div>
 </div>
+<?php endif; ?>

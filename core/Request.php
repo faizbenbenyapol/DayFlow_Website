@@ -48,38 +48,61 @@ class Request
      * neither kept data intact nor made it safe inside an attribute. Output
      * is escaped where it is rendered — h() in PHP, escHtml() in JS.
      */
-    public static function input(string $key, $default = null)
+    public static function input(string $key, mixed $default = null): mixed
     {
-        $json = self::json();
-        if (array_key_exists($key, $json)) {
-            return is_string($json[$key]) ? trim($json[$key]) : $json[$key];
-        }
-        foreach ([$_POST, $_GET] as $source) {
-            if (isset($source[$key])) {
-                return is_string($source[$key]) ? trim($source[$key]) : $source[$key];
-            }
-        }
-        return $default;
+        $value = self::rawInput($key, $default);
+        return is_string($value) ? trim($value) : $value;
     }
 
     /**
      * Get raw input: not even trimmed (passwords, content whose whitespace matters)
+     *
+     * JSON lets any field arrive as a list. Where the caller's default says a
+     * single value is expected, a list is treated as not sent: trim() and
+     * (string) on it threw, and twenty endpoints answered with a 500. A field
+     * that really is a list asks with an array default, or with list().
      */
-    public static function rawInput(string $key, $default = null)
+    public static function rawInput(string $key, mixed $default = null): mixed
+    {
+        [$found, $value] = self::find($key);
+        if (!$found) return $default;
+        if (is_array($value) && !is_array($default)) return $default;
+        return $value;
+    }
+
+    /**
+     * A field that is a list: the list as sent, or null when it was left out
+     * or is not a list (a caller tells "not sent" from "sent empty").
+     */
+    public static function list(string $key): ?array
+    {
+        [$found, $value] = self::find($key);
+        return $found && is_array($value) ? $value : null;
+    }
+
+    /**
+     * Looks a field up in the JSON body, then the form, then the query string.
+     *
+     * @return array{bool, mixed} whether it was sent, and its value
+     */
+    private static function find(string $key): array
     {
         $json = self::json();
-        if (array_key_exists($key, $json)) return $json[$key];
-        if (isset($_POST[$key])) return $_POST[$key];
-        if (isset($_GET[$key])) return $_GET[$key];
-        return $default;
+        if (array_key_exists($key, $json)) return [true, $json[$key]];
+        foreach ([$_POST, $_GET] as $source) {
+            if (isset($source[$key])) return [true, $source[$key]];
+        }
+        return [false, null];
     }
 
     /**
      * Get query string param
      */
-    public static function query(string $key, $default = null)
+    public static function query(string $key, mixed $default = null): mixed
     {
-        return isset($_GET[$key]) ? trim($_GET[$key]) : $default;
+        // ?month[]=1 makes the value an array; trim() then threw and the
+        // request ended in a 500. A query word is a string or it is absent.
+        return isset($_GET[$key]) && is_string($_GET[$key]) ? trim($_GET[$key]) : $default;
     }
 
     /**

@@ -27,6 +27,22 @@ test('summary returns only the requested modules', function (TestClient $client)
     assertSame(['tasks', 'finance'], $data['meta']['modules']);
 });
 
+test('summary carries the server clock that note times are written in', function (TestClient $client): void {
+    // The page measures "x นาทีที่แล้ว" against this, not the browser's clock.
+    $client->post('/api/notes', ['title' => 'นาฬิกา ' . TEST_RUN_ID, 'is_encrypted' => false]);
+    $data = $client->json($client->get('/api/dashboard/summary?modules=notes'));
+
+    $serverTime = (string)($data['meta']['server_time'] ?? '');
+    assertTrue((bool)preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $serverTime), 'a wall clock: ' . $serverTime);
+
+    // Pinned notes come first, so the newest is not always the first one.
+    $stamps = array_column($data['notes']['items'] ?? [], 'updated_at');
+    $latest = $stamps === [] ? null : max($stamps);
+    assertTrue(is_string($latest), 'a note to compare: ' . json_encode($data['notes'] ?? null));
+    $gap = strtotime($serverTime) - strtotime($latest);
+    assertTrue($gap >= 0 && $gap < 120, "the note was just saved, yet it is {$gap}s from the server clock");
+});
+
 test('summary ignores module names it does not know', function (TestClient $client): void {
     $data = $client->json($client->get('/api/dashboard/summary?modules=tasks,bogus,../etc/passwd'));
 

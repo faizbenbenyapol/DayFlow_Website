@@ -44,6 +44,51 @@ function hardeningImport(TestClient $client, array $data): array
 }
 
 // =====================================================
+// Query strings
+// =====================================================
+
+test('an array where a query word belongs is a bad request, not a crash', function (TestClient $client): void {
+    // ?month[]=1 used to reach trim() as an array and end in a 500.
+    $source = (string)file_get_contents(ROOT . '/core/Router.php');
+    preg_match_all("#add\('GET',\s*'(/api/[a-z0-9/_-]+)'#", $source, $m);
+    preg_match_all("#Request::query\('([a-z_]+)'#", implode('', array_map('file_get_contents', glob(ROOT . '/controllers/*.php'))), $q);
+
+    $query = implode('&', array_map(fn(string $name): string => $name . '[]=1', array_unique($q[1])));
+    assertTrue(count($m[1]) > 20 && $query !== '', 'the routes and parameters were found');
+
+    $crashed = [];
+    foreach (array_unique($m[1]) as $path) {
+        $status = $client->get($path . '?' . $query)['status'];
+        if ($status >= 500) $crashed[] = "$path ($status)";
+    }
+    assertSame([], $crashed, 'these crashed');
+});
+
+test('an array where a body field belongs is refused, not a crash', function (TestClient $_c): void {
+    // JSON lets any field be a list; trim() or (string) on one threw a 500.
+    // A fresh account, since some of these calls really write.
+    $client = hardeningClient('arrays');
+    $source = (string)file_get_contents(ROOT . '/core/Router.php');
+    preg_match_all("#add\('POST',\s*'(/api/[a-z0-9/_-]+)'#", $source, $m);
+    preg_match_all("#Request::(?:input|rawInput)\('([a-z_]+)'#", implode('', array_map('file_get_contents', glob(ROOT . '/controllers/*.php'))), $f);
+
+    // Sign-in, credentials, account removal and calls that leave the server
+    // (push answers 503 on purpose until VAPID keys are set).
+    $skip = '#^/api/(auth/|settings/(delete|password|two-factor|devices|telegram/test|import)|ai/|push/|stocks/(refresh|analyze|keys/test))#';
+    $body = array_fill_keys(array_unique($f[1]), ['x']);
+    assertTrue(count($m[1]) > 30 && count($body) > 50, 'the routes and fields were found');
+
+    $client->get('/settings');   // a fresh CSRF token
+    $crashed = [];
+    foreach (array_unique($m[1]) as $path) {
+        if (preg_match($skip, $path)) continue;
+        $status = $client->post($path, $body)['status'];
+        if ($status >= 500) $crashed[] = "$path ($status)";
+    }
+    assertSame([], $crashed, 'these crashed');
+});
+
+// =====================================================
 // Share links
 // =====================================================
 

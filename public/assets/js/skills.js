@@ -136,8 +136,9 @@ function timerError(message) {
 
 function setActiveTimer(timer) {
     activeTimer = timer;
-    // "2026-10-02 14:00:00" is not parsed the same everywhere; slashes are.
-    timerStartTime = new Date(timer.start_time.replace(/-/g, '/')).getTime();
+    // From the elapsed time, not start_time: that is the server's wall clock,
+    // which a browser in another time zone reads hours off.
+    timerStartTime = Date.now() - Number(timer.elapsed_seconds || 0) * 1000;
 
     const select = document.getElementById('timerSkillSelect');
     select.value = timer.skill_id;

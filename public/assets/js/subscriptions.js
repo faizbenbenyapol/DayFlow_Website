@@ -87,7 +87,7 @@ function subRow(sub) {
     else if (alert) timing += ' soon';
 
     const meta = [CYCLE_LABEL[sub.billing_cycle] || escHtml(sub.billing_cycle), formatDate(sub.next_due_date)];
-    const renew = sub.billing_cycle !== 'one_time' && sub.is_active
+    const renew = !IS_READ_ONLY && sub.billing_cycle !== 'one_time' && sub.is_active
         ? '<button type="button" class="btn btn-sm" data-act="renewSub" data-args="[' + sub.id + ']" aria-label="ชำระแล้ว ต่ออายุ: ' + name + '">ชำระแล้ว</button>'
         : '';
 
@@ -98,7 +98,7 @@ function subRow(sub) {
         + '<span class="' + timing + '">' + dueWords(days) + '</span>'
         + '<span class="num sub-amount">' + (Number(sub.amount) > 0 ? bahtText(Number(sub.amount)) : '—') + '</span>'
         + renew
-        + '<button type="button" class="icon-btn sm" data-act="openEditSub" data-args="[' + sub.id + ']" aria-label="แก้ไข: ' + name + '"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button>'
+        + (IS_READ_ONLY ? '' : '<button type="button" class="icon-btn sm" data-act="openEditSub" data-args="[' + sub.id + ']" aria-label="แก้ไข: ' + name + '"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button>')
         + '</li>';
 }
 
@@ -127,7 +127,9 @@ function renderSubs() {
     renderFacts();
 
     if (!subs.length) {
-        grid.innerHTML = '<div class="empty-state"><p class="empty-state-title">ยังไม่มีรายจ่ายประจำ</p>'
+        grid.innerHTML = IS_READ_ONLY
+            ? '<div class="empty-state"><p class="empty-state-title">ยังไม่มีรายจ่ายประจำ</p></div>'
+            : '<div class="empty-state"><p class="empty-state-title">ยังไม่มีรายจ่ายประจำ</p>'
             + '<p class="empty-state-text">ใส่ค่าไฟ ค่าอินเทอร์เน็ต หรือ Netflix แล้วจะเห็นว่าอะไรกำลังจะตัดเงิน และเดือนหนึ่งรวมเท่าไร</p>'
             + '<button type="button" class="btn btn-primary" data-act="openAddSub">เพิ่มรายการแรก</button></div>';
         return;

@@ -64,7 +64,7 @@ class ProjectTaskController
             'due_date'  => Request::input('due_date', ''),
             'category'  => Request::input('category', ''),
             'assignee'  => Request::input('assignee', ''),
-            'checklist' => Request::input('checklist', null)
+            'checklist' => Request::list('checklist')
         ];
 
         $taskId = ProjectTask::create($userId, $projectId, $data);
@@ -98,7 +98,7 @@ class ProjectTaskController
         $changes = [];
 
         foreach ($allowed as $field) {
-            $val = Request::input($field);
+            $val = $field === 'checklist' ? Request::list($field) : Request::input($field);
             if ($val !== null) {
                 $data[$field] = $val;
                 if ($field === 'checklist') {

@@ -12,6 +12,11 @@
     align-items: start;
 }
 
+/* A share link shows the history alone, without the timer beside it. */
+.focus-layout-grid.is-history-only {
+    grid-template-columns: minmax(0, 1fr);
+}
+
 .focus-mode-selector {
     padding: 0;
 }

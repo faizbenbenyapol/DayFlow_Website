@@ -310,6 +310,10 @@ class DashboardController
         Response::json([
             'meta' => [
                 'generated_at' => gmdate('c'),
+                // The same wall clock the rows' timestamps are written in, so
+                // the page can tell how long ago they were without knowing
+                // the server's time zone.
+                'server_time'  => date('Y-m-d H:i:s'),
                 'partial'  => !empty($warnings),
                 'warnings' => array_values(array_unique($warnings)),
                 'modules'  => array_keys($need),

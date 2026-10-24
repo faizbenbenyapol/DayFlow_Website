@@ -23,18 +23,16 @@
 ## 3. Frontend
 
 - [ ] **inline style ที่เหลือ** (วัดหลังออกแบบใหม่ 3 ต.ค. 2026): 10 จุดใน view, 60 จุดใน JS (57 จุดเป็นรายงาน PDF ของ `finance.js` ซึ่งต้องเป็นแบบนี้ เพราะรายงานต้องอยู่ได้ด้วยตัวเอง)
-- [ ] **`!important` 14 คำสั่ง** ทั้งหมดอยู่ใน utility ซ่อน/แสดงและกฎโหมดแชร์ (`share-mode.css`) ซึ่งตั้งใจให้ชนะกฎอื่น
+- [ ] **`!important` 8 คำสั่ง** (วัด 24 ต.ค. 2026) อยู่ใน utility ซ่อน/แสดงของ `base.css`, `components.css` และ `notes.css` ซึ่งตั้งใจให้ชนะกฎอื่น โหมดแชร์ไม่ใช้แล้ว
 - [ ] **สี hex นอก `tokens.css`** ไม่มีใน CSS แล้ว (`check-css.mjs` ตรวจใน CI) เหลือ 81 จุดใน JS/PHP: รายงาน PDF 49, ที่เหลือเป็นสีหมวดเริ่มต้น/ตัวอย่างสีที่ผู้ใช้เลือกและ `theme-color` ของเบราว์เซอร์
-- [ ] **โหมดแชร์: ปุ่มแก้ไขยังถูกซ่อนด้วย CSS ไม่ใช่ไม่ render** (`share-mode.css` กฎ `.is-readonly …`) เซิร์ฟเวอร์ปฏิเสธการเขียนอยู่แล้ว แต่ `docs/REDESIGN.md` §2.6 ต้องการให้ view ไม่พิมพ์ปุ่มเหล่านั้นเลย ต้องไล่ทุก view ตาม `Auth::isReadOnly()`
-- [ ] **ลิงก์แชร์ไฟล์แบบ "ดูอย่างเดียว" ดูรูปไม่ได้** หน้าแชร์แสดงตัวอย่างรูปเฉพาะลิงก์ที่ดาวน์โหลดได้ เพราะ route `/share/{token}/download/{id}` ปฏิเสธลิงก์ดูอย่างเดียว ต้องเพิ่ม route ที่ส่งรูป inline ให้ลิงก์ดูอย่างเดียว (เฉพาะ `image/*`)
-- [ ] PHPStan ระดับ 6 ขึ้นไป (ตอนนี้ระดับ 5 ผ่าน 0 error) ส่วนใหญ่ต้องเพิ่ม type ให้ array
+- [ ] PHPStan: ระดับ 6 ผ่านแล้ว แต่ยังพักกฎ `missingType.iterableValue` ไว้ใน `phpstan.neon` (228 จุดที่ array ไม่บอกชนิดของค่า) เปิดกฎกลับเมื่อจะเขียน shape ของแถวข้อมูลจริง ๆ
+- [ ] **ต้องตัดสินใจ: เขตเวลาของผู้ใช้** หน้าตั้งค่าบอกว่า "เขตเวลาที่ใช้แสดงผล" แต่ค่านี้ใช้แค่กับวันของการแจ้งเตือน Telegram ใน `cron.php` ส่วนหน้าเว็บทั้งหมด ("วันนี้" ยอดเดือนนี้ งานเกินกำหนด) ใช้ `TIMEZONE` ของเซิร์ฟเวอร์ ถ้าจะให้ใช้ของผู้ใช้จริง ต้องตั้ง PHP และ DB session ตามผู้ใช้ทุก request และย้าย `expires_at` ของ `app_shares`, `file_shares`, `file_transfers`, `remember_tokens` กับ `skill_active_timers.start_time` ให้ไม่ผูกกับเขตเวลา (เก็บเป็น UTC หรือ TIMESTAMP) เพราะคอลัมน์เหล่านี้ถูกตรวจจากหน้าสาธารณะและ cron ที่ใช้เขตเวลาของเซิร์ฟเวอร์ อีกทางคือเปลี่ยนป้ายให้ตรงความจริง ("เขตเวลาของการแจ้งเตือน")
 - [ ] ตัดสินใจเรื่อง Composer + namespace เมื่อจะเริ่มใช้ library ภายนอก (รอบนี้เลือกข้ามไปก่อน)
-- [ ] บัญชี demo: snapshot ยังไม่ครอบคลุมโปรเจคที่ผู้เยี่ยมชมสร้างไว้ (ตอนนี้ค้างจนกว่าจะลบเอง)
 
 ---
 
 ## เครื่องมือตรวจที่ใช้ในรอบนี้
 
-- `php tests/run.php http://localhost` รันใน container (358 เทสต์) ถ้าชื่อ container ชนกับโปรเจกต์เก่า ใช้ `docker compose -p dayflowtest -f docker-compose.yml -f <override>` ที่เปลี่ยน `container_name` และพอร์ต
+- `php tests/run.php http://localhost` รันใน container (389 เทสต์) ถ้าชื่อ container ชนกับโปรเจกต์เก่า ใช้ `docker compose -p dayflowtest -f docker-compose.yml -f <override>` ที่เปลี่ยน `container_name` และพอร์ต
 - PHPStan: `docker run --rm -v "$PWD":/app -w /app ghcr.io/phpstan/phpstan:2.2.16 analyse`
 - งาน CSS/JS ตรวจด้วยการเทียบภาพหน้าจอก่อน/หลังทีละพิกเซลผ่าน headless Edge (สคริปต์อยู่นอก repo ถ้าจะใช้อีกให้ขอให้สร้างใหม่)

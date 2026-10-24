@@ -19,6 +19,11 @@ const BASE_URL = (function () {
     return window.location.origin;
 })();
 
+// Opened through an app share link (views/layout/header.php sets the class).
+// A page draws no control that would change data; the server refuses writes
+// in this mode anyway.
+const IS_READ_ONLY = document.body.classList.contains('is-readonly');
+
 /**
  * CSRF-aware fetch wrapper — sends JSON, returns JSON
  */
@@ -240,9 +245,24 @@ function setFormErrors(form, errors) {
 /* =====================================================
    Date Utilities
 ===================================================== */
+/**
+ * A date or datetime from the server, as the visitor's own wall clock.
+ *
+ * new Date('2026-10-24') is midnight UTC, which west of Greenwich is the
+ * evening before: every date on the page showed a day early there. With a
+ * time part ('T00:00:00', or the 'T' in place of MySQL's space) the string is
+ * read as local time, and Safari reads it at all.
+ */
+function parseServerDate(value) {
+    const s = String(value);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(s + 'T00:00:00');
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?$/.test(s)) return new Date(s.replace(' ', 'T'));
+    return new Date(s);
+}
+
 function formatDate(dateStr) {
     if (!dateStr) return '';
-    const d = new Date(dateStr);
+    const d = parseServerDate(dateStr);
     const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
         'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
     return d.getDate() + ' ' + months[d.getMonth()] + ' ' + (d.getFullYear() + 543);
@@ -250,7 +270,7 @@ function formatDate(dateStr) {
 
 function formatDateTime(dateStr) {
     if (!dateStr) return '';
-    const d = new Date(dateStr);
+    const d = parseServerDate(dateStr);
     const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
         'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
     const time = d.toTimeString().slice(0, 5);
@@ -267,7 +287,7 @@ function daysUntil(dateStr) {
     if (!dateStr) return null;
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    const target = new Date(dateStr);
+    const target = parseServerDate(dateStr);
     target.setHours(0, 0, 0, 0);
     return Math.round((target - now) / 86400000);
 }

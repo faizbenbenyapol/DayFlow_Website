@@ -203,7 +203,8 @@ async function loadDayPanel(date, animate) {
     const evEl = document.getElementById('dayEvents');
     const evs = eventsOn(date);
     if (evs.length === 0) {
-        evEl.innerHTML = '<p class="day-empty">ไม่มีกิจกรรมในวันนี้ · <button type="button" class="btn-link" data-act="openAddEvent">เพิ่มกิจกรรม</button></p>';
+        evEl.innerHTML = '<p class="day-empty">ไม่มีกิจกรรมในวันนี้'
+            + (IS_READ_ONLY ? '' : ' · <button type="button" class="btn-link" data-act="openAddEvent">เพิ่มกิจกรรม</button>') + '</p>';
     } else {
         evEl.innerHTML = evs.map(ev => {
             const timeStr = ev.is_all_day ? 'ทั้งวัน' : ev.start_datetime.slice(11, 16);
@@ -211,7 +212,7 @@ async function loadDayPanel(date, animate) {
             return '<div class="day-event-item" style="--ev: ' + cssColor(ev.color, DEFAULT_EVENT_COLOR) + '">'
                 + '<span class="day-event-time">' + escHtml(timeStr) + '</span>'
                 + '<span class="day-event-title">' + title + '</span>'
-                + '<button type="button" class="icon-btn sm" data-act="openEditEvent" data-args="[' + ev.id + ']" aria-label="แก้ไข: ' + title + '"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button>'
+                + (IS_READ_ONLY ? '' : '<button type="button" class="icon-btn sm" data-act="openEditEvent" data-args="[' + ev.id + ']" aria-label="แก้ไข: ' + title + '"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button>')
                 + '</div>';
         }).join('');
     }
@@ -238,16 +239,20 @@ function renderTodos() {
     if (!el) return;
 
     if (!todosCache.length) {
-        el.innerHTML = '<p class="day-empty">ยังไม่มีสิ่งที่ต้องทำในวันนี้ พิมพ์ในช่องด้านล่างแล้วกด Enter</p>';
+        el.innerHTML = IS_READ_ONLY
+            ? '<p class="day-empty">ไม่มีสิ่งที่ต้องทำในวันนี้</p>'
+            : '<p class="day-empty">ยังไม่มีสิ่งที่ต้องทำในวันนี้ พิมพ์ในช่องด้านล่างแล้วกด Enter</p>';
         return;
     }
 
     el.innerHTML = todosCache.map(t => {
         const title = escHtml(t.title);
         return '<div class="day-todo-item' + (t.is_done ? ' done' : '') + '" data-id="' + t.id + '">'
-            + '<input type="checkbox" ' + (t.is_done ? 'checked' : '') + ' aria-label="เสร็จแล้ว: ' + title + '" data-act="toggleTodo" data-args="[' + t.id + ', &quot;$checked&quot;]" data-on="change">'
+            + (IS_READ_ONLY
+                ? '<input type="checkbox" disabled ' + (t.is_done ? 'checked' : '') + ' aria-label="เสร็จแล้ว: ' + title + '">'
+                : '<input type="checkbox" ' + (t.is_done ? 'checked' : '') + ' aria-label="เสร็จแล้ว: ' + title + '" data-act="toggleTodo" data-args="[' + t.id + ', &quot;$checked&quot;]" data-on="change">')
             + '<span class="day-todo-text">' + title + '</span>'
-            + '<button type="button" class="icon-btn sm danger" data-act="deleteTodo" data-args="[' + t.id + ']" aria-label="ลบ: ' + title + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>'
+            + (IS_READ_ONLY ? '' : '<button type="button" class="icon-btn sm danger" data-act="deleteTodo" data-args="[' + t.id + ']" aria-label="ลบ: ' + title + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>')
             + '</div>';
     }).join('');
 }

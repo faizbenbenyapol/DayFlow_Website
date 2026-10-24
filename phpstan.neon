@@ -1,8 +1,14 @@
 # Static analysis, also run in CI. Locally:
 #   docker run --rm -v "$PWD":/app -w /app ghcr.io/phpstan/phpstan:2.2.16 analyse
 parameters:
-    level: 5
+    level: 6
     phpVersion: 80200
+    # Level 6 also asks what every array holds. Rows straight from PDO are
+    # arrays of mixed, and writing array<string, mixed> on 200+ methods would
+    # add noise, not knowledge; the shapes worth spelling out are written by
+    # hand where they matter. Every parameter and return still needs a type.
+    ignoreErrors:
+        - identifier: missingType.iterableValue
     paths:
         - config
         - core

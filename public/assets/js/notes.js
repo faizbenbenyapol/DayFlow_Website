@@ -48,15 +48,15 @@ function noteRow(n) {
     return '<li class="note-card" style="--nc: var(--' + tone + '-2)">'
         + '<a class="note-card-title" href="' + BASE_URL + '/notes/' + n.id + '">' + title + '</a>'
         + (locked
-            ? '<span class="note-card-text note-locked"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>เข้ารหัสไว้ ใส่รหัสเพื่อเปิด</span>'
+            ? '<span class="note-card-text note-locked"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>' + (IS_READ_ONLY ? 'เข้ารหัสไว้' : 'เข้ารหัสไว้ ใส่รหัสเพื่อเปิด') + '</span>'
             : (n.preview ? '<span class="note-card-text">' + escHtml(n.preview.substring(0, 140)) + '</span>' : '<span class="note-card-text"></span>'))
         + '<span class="note-card-foot">'
         + tags.map(t => '<span class="cat-chip" style="--chip: var(--' + pastelFor(t) + ')">' + escHtml(t) + '</span>').join('')
         + '<span class="note-card-date">' + escHtml(date) + '</span>'
-        + '<button type="button" class="icon-btn sm danger" data-act="deleteNote" data-args="[' + n.id + ']" aria-label="ลบโน้ต: ' + title + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>'
+        + (IS_READ_ONLY ? '</span></li>' : '<button type="button" class="icon-btn sm danger" data-act="deleteNote" data-args="[' + n.id + ']" aria-label="ลบโน้ต: ' + title + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>'
         + '</span>'
         + '<button type="button" class="icon-btn sm note-pin" data-act="togglePin" data-args="[' + n.id + ',' + (pinned ? 1 : 0) + ']" aria-pressed="' + pinned + '" aria-label="' + (pinned ? 'เลิกปักหมุด: ' : 'ปักหมุด: ') + title + '"><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg></button>'
-        + '</li>';
+        + '</li>');
 }
 
 function renderNotesList(notes) {
@@ -70,6 +70,8 @@ function renderNotesList(notes) {
     if (!notes.length) {
         grid.innerHTML = filtered
             ? '<div class="empty-state"><p class="empty-state-text">ไม่พบโน้ตที่ตรงกับตัวกรอง</p><button type="button" class="btn btn-sm" data-act="clearNoteFilters">ล้างตัวกรอง</button></div>'
+            : IS_READ_ONLY
+            ? '<div class="empty-state"><p class="empty-state-title">ยังไม่มีโน้ต</p></div>'
             : '<div class="empty-state"><p class="empty-state-title">ยังไม่มีโน้ต</p>'
               + '<p class="empty-state-text">จดความคิด รายการ หรือลิงก์ไว้ที่นี่ โน้ตหนึ่งอันประกอบด้วยข้อความ ลิงก์ และเช็กลิสต์ และเข้ารหัสด้วยรหัสผ่านได้</p>'
               + '<button type="button" class="btn btn-primary" data-act="openCreateNote" data-args="[false]">สร้างโน้ตแรก</button></div>';
@@ -196,6 +198,12 @@ if (document.getElementById('noteEditor')) {
         noteId      = parseInt(el.dataset.noteId, 10);
         noteEncrypt = el.dataset.encrypted === '1';
         noteTags    = (window.NOTE_TAGS || []).map(t => t.name);
+
+        if (IS_READ_ONLY) {
+            // Shown, not edited: an encrypted note has no body on the page.
+            if (!noteEncrypt) { renderTagList(); loadBlocks(); }
+            return;
+        }
 
         renderTagList();
         autoResize(document.getElementById('noteTitle'));
@@ -338,10 +346,57 @@ function renderBlocks() {
     const container = document.getElementById('blocksContainer');
     container.innerHTML = '';
     if (!blocks.length) {
-        container.innerHTML = '<p class="blocks-empty">โน้ตนี้ยังว่างอยู่ เพิ่มข้อความ ลิงก์ หรือเช็กลิสต์ด้านล่าง</p>';
+        container.innerHTML = IS_READ_ONLY
+            ? '<p class="blocks-empty">โน้ตนี้ยังว่างอยู่</p>'
+            : '<p class="blocks-empty">โน้ตนี้ยังว่างอยู่ เพิ่มข้อความ ลิงก์ หรือเช็กลิสต์ด้านล่าง</p>';
         return;
     }
-    blocks.forEach(b => container.appendChild(createBlockEl(b)));
+    blocks.forEach(b => container.appendChild(IS_READ_ONLY ? createReadBlockEl(b) : createBlockEl(b)));
+}
+
+/** A block to read on a share link: text, a link, a list of what is done. */
+function createReadBlockEl(block) {
+    const div = document.createElement('div');
+    div.className = 'block block-read';
+    div.dataset.type = block.type;
+
+    if (block.type === 'text') {
+        const p = document.createElement('p');
+        p.className = 'block-text-read';
+        p.textContent = block.content || '';
+        div.appendChild(p);
+
+    } else if (block.type === 'link') {
+        let link = {};
+        try { link = JSON.parse(block.content) || {}; } catch { /* an empty link block */ }
+        const url = String(link.url || '').trim();
+        if (url === '') return div;
+        const a = document.createElement('a');
+        a.href = /^https?:\/\//i.test(url) ? url : 'https://' + url;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.textContent = link.label || url;
+        div.appendChild(a);
+
+    } else if (block.type === 'checklist') {
+        let items = [];
+        try { items = JSON.parse(block.content) || []; } catch { /* an empty checklist */ }
+        const ul = document.createElement('ul');
+        ul.className = 'checklist checklist-read';
+        items.forEach(item => {
+            const li = document.createElement('li');
+            li.className = 'checklist-row' + (item.checked ? ' done' : '');
+            const cb = field('input', 'checklist-box', item.checked ? 'ทำแล้ว' : 'ยังไม่ทำ', { type: 'checkbox', checked: !!item.checked, disabled: true });
+            const text = document.createElement('span');
+            text.className = 'checklist-text';
+            text.textContent = item.text || '';
+            li.appendChild(cb);
+            li.appendChild(text);
+            ul.appendChild(li);
+        });
+        div.appendChild(ul);
+    }
+    return div;
 }
 
 const BLOCK_LABEL = { text: 'ข้อความ', link: 'ลิงก์', checklist: 'เช็กลิสต์' };
@@ -625,7 +680,7 @@ function removeTag(name) {
 function renderTagList() {
     document.getElementById('noteTagList').innerHTML = noteTags.map(name =>
         '<li class="tag active">' + escHtml(name)
-        + '<button type="button" class="tag-remove" data-act="removeTag" data-args="' + escHtml(JSON.stringify([name])) + '" aria-label="ลบแท็ก ' + escHtml(name) + '">&times;</button></li>'
+        + (IS_READ_ONLY ? '</li>' : '<button type="button" class="tag-remove" data-act="removeTag" data-args="' + escHtml(JSON.stringify([name])) + '" aria-label="ลบแท็ก ' + escHtml(name) + '">&times;</button></li>')
     ).join('');
 }
 

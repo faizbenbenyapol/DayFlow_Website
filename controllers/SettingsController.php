@@ -147,7 +147,7 @@ class SettingsController
         $userId = Auth::userId();
         $menus  = Request::input('menus', []);
         $order  = Request::input('order', []);
-        $tabs   = Request::input('mobile_tabs', null);
+        $tabs   = Request::list('mobile_tabs');
 
         if (!is_array($menus) || !is_array($order)) {
             Response::json(['error' => 'รูปแบบข้อมูลไม่ถูกต้อง'], 422);
@@ -169,7 +169,7 @@ class SettingsController
         // also shown. Left out of the request, the saved choice stays as it is.
         $tabsJson = null;
         if ($tabs !== null) {
-            $tabs = is_array($tabs) ? array_values(array_map('strval', $tabs)) : [];
+            $tabs = array_values(array_map('strval', $tabs));
             $valid = count($tabs) === 2 && $tabs[0] !== $tabs[1]
                 && !array_diff($tabs, AppMenus::KEYS) && !array_diff($tabs, $menus);
             if (!$valid) {

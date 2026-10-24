@@ -6,16 +6,20 @@
 // tag or a word. $tags comes from NoteController. assets/js/notes.js draws the
 // list from /api/notes. The editor is views/notes/editor.php.
 // =====================================================
+// A share link is for looking: nothing that adds a note is printed.
+$readOnly = Auth::isReadOnly();
 ?>
 <div class="page-head">
     <div>
         <h1>โน้ต</h1>
         <p class="sub" id="noteTally" aria-live="polite">กำลังโหลดโน้ต…</p>
     </div>
+    <?php if (!$readOnly): ?>
     <div class="page-head-actions">
         <button class="btn btn-ghost" type="button" data-act="openCreateNote" data-args="[true]"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>โน้ตเข้ารหัส</button>
         <button class="btn btn-primary" type="button" data-act="openCreateNote" data-args="[false]"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>โน้ตใหม่</button>
     </div>
+    <?php endif; ?>
 </div>
 
 <div class="note-filters">
@@ -38,6 +42,7 @@
     <div class="skel-row"><span class="skel skel-w-52"></span></div>
 </div>
 
+<?php if (!$readOnly): ?>
 <!-- Create -->
 <div class="modal-backdrop" id="createNoteModal" aria-hidden="true">
     <div class="modal modal-narrow" role="dialog" aria-labelledby="createNoteModalTitle">
@@ -66,3 +71,4 @@
         </form>
     </div>
 </div>
+<?php endif; ?>

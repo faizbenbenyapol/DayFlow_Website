@@ -396,6 +396,32 @@
     margin-top: var(--space-1);
 }
 
+/* --- A note read through a share link: the same blocks, as text --- */
+.block.block-read {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.block-text-read {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.checklist-read {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.checklist-read .checklist-row {
+    min-height: 36px;
+}
+
+.checklist-read .done .checklist-text {
+    color: var(--pencil);
+    text-decoration: line-through;
+}
+
 .note-add {
     display: flex;
     flex-wrap: wrap;

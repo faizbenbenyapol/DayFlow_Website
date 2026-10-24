@@ -34,6 +34,8 @@ test('sending files returns a code and a link', function (TestClient $_c): void 
     assertTrue((bool)preg_match('/^\d{6}$/', (string)($data['code'] ?? '')), 'a six-digit code is expected');
     assertStringContains('/transfer/download/', (string)($data['download_url'] ?? ''));
     assertSame(1, $data['files_count'] ?? 0);
+    // The countdown runs from seconds left, not from a wall clock.
+    assertTrue(is_int($data['expires_in'] ?? null) && $data['expires_in'] > 0, 'expires_in: ' . json_encode($data['expires_in'] ?? null));
 });
 
 test('a script file cannot be sent', function (TestClient $_c): void {
@@ -111,6 +113,22 @@ test('a share link is created for the chosen menus', function (TestClient $_c): 
     assertStringContains('/shared/', (string)($created['link'] ?? ''));
 });
 
+test('the share list says which links have run out', function (TestClient $_c): void {
+    // expires_at is the server's wall clock; a browser elsewhere cannot compare it.
+    require_once ROOT . '/config/database.php';
+    $client = shareClient('owner');
+    $client->post('/api/app-shares', ['label' => 'ยังใช้ได้ ' . TEST_RUN_ID, 'menus' => ['tasks'], 'expires_at' => date('Y-m-d H:i:s', time() + 3600)]);
+    $shares = $client->json($client->get('/api/app-shares'))['shares'] ?? [];
+
+    $live = array_values(array_filter($shares, fn($s) => $s['label'] === 'ยังใช้ได้ ' . TEST_RUN_ID));
+    assertSame(1, count($live));
+    assertSame(false, $live[0]['is_expired'], 'a link with an hour left is not expired');
+
+    DB::run('UPDATE app_shares SET expires_at = ? WHERE id = ?', [date('Y-m-d H:i:s', time() - 60), $live[0]['id']]);
+    $after = array_values(array_filter($client->json($client->get('/api/app-shares'))['shares'], fn($s) => (int)$s['id'] === (int)$live[0]['id']));
+    assertSame(true, $after[0]['is_expired'], 'a minute past its expiry it is');
+});
+
 test('a share link needs a label and at least one real menu', function (TestClient $_c): void {
     $client = shareClient('owner');
 
@@ -152,6 +170,34 @@ test('share mode is read-only', function (TestClient $_c): void {
 
     $response = $guest->post('/api/tasks', ['title' => 'แอบเพิ่มงาน', 'quadrant' => 1]);
     assertContains($response['status'], [403, 401], 'a share-mode visitor must not write');
+});
+
+/** The controls that add, change or remove something, as the pages print them. */
+const WRITE_CONTROL = '/data-act="(open(Add|Create|Edit)\w*|save\w*|delete\w*|add\w*|import\w*|renew\w*)"|class="add-row"|class="quick-add"|id="noteTitle"/';
+
+test('a shared page prints no control that would change data', function (TestClient $_c): void {
+    // docs/REDESIGN.md §2.6: not hidden by CSS, not printed at all.
+    $owner = shareClient('owner');
+    $note = $owner->json($owner->post('/api/notes', ['title' => 'โน้ตที่แชร์ ' . TEST_RUN_ID, 'is_encrypted' => false]))['note'];
+    $pages = ['/tasks', '/notes', '/notes/' . $note['id'], '/planner', '/focus', '/exercise', '/food-notes', '/finance', '/subscriptions', '/stocks'];
+
+    // The pattern does find them on the owner's own pages.
+    foreach (['/tasks', '/notes/' . $note['id'], '/finance'] as $path) {
+        assertTrue(preg_match(WRITE_CONTROL, $owner->get($path)['body']) === 1, 'the owner sees the controls on ' . $path);
+    }
+
+    $created = $owner->json($owner->post('/api/app-shares', [
+        'label' => 'ทุกเมนู ' . TEST_RUN_ID,
+        'menus' => ['tasks', 'notes', 'planner', 'focus', 'exercise', 'food-notes', 'finance', 'subscriptions', 'stocks'],
+    ]));
+    $guest = new TestClient(TEST_BASE_URL);
+    $guest->get('/shared/' . $created['token']);
+
+    foreach ($pages as $path) {
+        $page = $guest->get($path);
+        assertSame(200, $page['status'], $path . ' should open on the link');
+        assertTrue(preg_match(WRITE_CONTROL, $page['body'], $found) === 0, $path . ' still prints ' . ($found[0] ?? ''));
+    }
 });
 
 test('an unknown share token shows the expired page, not the account', function (TestClient $_c): void {

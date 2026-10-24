@@ -10,6 +10,9 @@ $noteData = jsonForScript($note);
 $tags = Note::getTagsForNote($note['id']);
 $tagsData = jsonForScript($tags);
 $encrypted = (bool)$note['is_encrypted'];
+// On a share link the note is a page to read: no fields, nothing that saves.
+// An encrypted one stays shut, since unlocking it is a request share mode refuses.
+$readOnly = Auth::isReadOnly();
 ?>
 <div class="note-editor" id="noteEditor"
      data-note-id="<?= (int)$note['id'] ?>"
@@ -20,10 +23,17 @@ $encrypted = (bool)$note['is_encrypted'];
         <?php if ($encrypted): ?>
         <span class="badge badge-dark">เข้ารหัสแล้ว</span>
         <?php endif; ?>
+        <?php if (!$readOnly): ?>
         <span class="note-status" id="saveStatus" role="status" aria-live="polite">บันทึกอัตโนมัติ</span>
+        <?php endif; ?>
     </div>
 
-    <?php if ($encrypted): ?>
+    <?php if ($encrypted && $readOnly): ?>
+    <div class="empty-state">
+        <p class="empty-state-title">โน้ตนี้เข้ารหัสอยู่</p>
+        <p class="empty-state-text">โน้ตที่เข้ารหัสเปิดผ่านลิงก์แชร์ไม่ได้ ต้องให้เจ้าของเปิดด้วยรหัสผ่าน</p>
+    </div>
+    <?php elseif ($encrypted): ?>
     <form class="note-unlock" id="encryptedPrompt" data-act="unlockNote" novalidate>
         <h2>โน้ตนี้เข้ารหัสอยู่</h2>
         <div class="form-group">
@@ -35,6 +45,13 @@ $encrypted = (bool)$note['is_encrypted'];
     </form>
     <?php endif; ?>
 
+    <?php if ($readOnly && !$encrypted): ?>
+    <div id="editorBody">
+        <h1 class="note-title"><?= h($note['title']) ?></h1>
+        <ul class="note-taglist" id="noteTagList" aria-label="แท็กของโน้ตนี้"></ul>
+        <div class="blocks" id="blocksContainer" aria-busy="true"></div>
+    </div>
+    <?php elseif (!$readOnly): ?>
     <div id="editorBody"<?= $encrypted ? ' hidden' : '' ?>>
         <label class="sr-only" for="noteTitle">ชื่อโน้ต</label>
         <textarea class="note-title" id="noteTitle" placeholder="ชื่อโน้ต" rows="1" maxlength="255"
@@ -55,6 +72,7 @@ $encrypted = (bool)$note['is_encrypted'];
             <button class="btn btn-sm" type="button" data-act="addBlock" data-args='["checklist"]'><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>เช็กลิสต์</button>
         </div>
     </div>
+    <?php endif; ?>
 </div>
 
 <script nonce="<?= h(Security::nonce()) ?>">

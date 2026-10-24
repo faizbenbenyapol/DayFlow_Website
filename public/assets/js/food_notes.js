@@ -60,7 +60,7 @@ function itemRow(item) {
         + (item.symptoms ? '<span class="meta">อาการ: ' + escHtml(item.symptoms) + '</span>' : '')
         + (item.notes ? '<span class="meta">' + escHtml(item.notes) + '</span>' : '') + '</span>'
         + (severity ? '<span class="side fn-sev" data-level="' + escHtml(item.severity) + '">' + severityMarks(item.severity) + severity + '</span>' : '')
-        + '<button type="button" class="icon-btn sm" data-act="openEdit" data-args="[' + item.id + ']" aria-label="แก้ไข: ' + name + '"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button>'
+        + (IS_READ_ONLY ? '' : '<button type="button" class="icon-btn sm" data-act="openEdit" data-args="[' + item.id + ']" aria-label="แก้ไข: ' + name + '"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button>')
         + '</li>';
 }
 
@@ -77,6 +77,8 @@ function renderList() {
         const filtered = filters.type || filters.reaction;
         el.innerHTML = filtered
             ? '<div class="empty-state"><p class="empty-state-text">ไม่พบรายการที่ตรงกับตัวกรอง</p><button type="button" class="btn btn-sm" data-act="clearFilters">ล้างตัวกรอง</button></div>'
+            : IS_READ_ONLY
+            ? '<div class="empty-state"><p class="empty-state-title">ยังไม่มีรายการ</p></div>'
             : '<div class="empty-state"><p class="empty-state-title">ยังไม่มีรายการ</p>'
               + '<p class="empty-state-text">จดอาหารหรือเครื่องดื่มที่แพ้หรือควรเลี่ยง พร้อมอาการที่เกิด ไว้ดูตอนสั่งอาหารหรือตอนพบแพทย์</p>'
               + '<button type="button" class="btn btn-primary" data-act="openAdd">เพิ่มรายการแรก</button></div>';

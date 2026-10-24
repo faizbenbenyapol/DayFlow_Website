@@ -59,9 +59,12 @@ function renderRange(period) {
     const el = document.getElementById('reviewRange');
     if (!el || !period) return;
     // The stored end is exclusive; show the last day that is actually included.
-    const lastDay = new Date(period.end);
+    // Noon, so a daylight-saving change cannot move the day; the string is
+    // built from local fields, not toISOString(), which gives UTC's date.
+    const lastDay = new Date(period.end + 'T12:00:00');
     lastDay.setDate(lastDay.getDate() - 1);
-    el.textContent = formatDate(period.start) + ' – ' + formatDate(lastDay.toISOString().slice(0, 10));
+    const iso = lastDay.getFullYear() + '-' + String(lastDay.getMonth() + 1).padStart(2, '0') + '-' + String(lastDay.getDate()).padStart(2, '0');
+    el.textContent = formatDate(period.start) + ' – ' + formatDate(iso);
 }
 
 function setHtml(id, html) {

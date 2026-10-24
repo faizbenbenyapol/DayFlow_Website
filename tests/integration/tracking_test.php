@@ -264,6 +264,69 @@ test('a file share link is created and opens without signing in', function (Test
     assertSame(200, $guest->get('/share/' . $token)['status'], 'the public page should open');
 });
 
+/** Uploads one file as the shares user and links it; returns [file id, token]. */
+function shareUploaded(string $name, string $contents, string $type, string $permission): array
+{
+    $client = trackClient('shares');
+    $uploaded = $client->json($client->uploadMany('/api/files/upload', 'file', [
+        ['name' => $name, 'contents' => $contents, 'type' => $type],
+    ]));
+    $fileId = (int)($uploaded['id'] ?? 0);
+    assertTrue($fileId > 0, 'upload failed: ' . json_encode($uploaded, JSON_UNESCAPED_UNICODE));
+
+    $share = $client->json($client->post('/api/shares', ['file_id' => $fileId, 'permission' => $permission]));
+    $token = (string)($share['token'] ?? '');
+    assertTrue($token !== '', 'share create failed: ' . json_encode($share, JSON_UNESCAPED_UNICODE));
+    return [$fileId, $token];
+}
+
+test('a download link really downloads the file', function (TestClient $_c): void {
+    [$fileId, $token] = shareUploaded('ส่งให้.txt', 'the shared contents', 'text/plain', 'download');
+
+    $download = (new TestClient(TEST_BASE_URL))->get('/share/' . $token . '/download/' . $fileId);
+    assertSame(200, $download['status'], 'the {fileId} route used to match nothing');
+    assertSame('the shared contents', $download['body']);
+    assertTrue(stripos($download['headers'], 'Content-Disposition: attachment') !== false, 'saved, not shown');
+});
+
+test('a view-only link shows its picture but still will not download it', function (TestClient $_c): void {
+    $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
+    [$fileId, $token] = shareUploaded('ภาพที่แชร์.png', $png, 'image/png', 'view');
+    $guest = new TestClient(TEST_BASE_URL);
+
+    $page = $guest->get('/share/' . $token);
+    assertTrue(str_contains($page['body'], '/share/' . $token . '/image/' . $fileId), 'the page should show the picture');
+
+    $image = $guest->get('/share/' . $token . '/image/' . $fileId);
+    assertSame(200, $image['status']);
+    assertSame($png, $image['body']);
+    assertTrue(stripos($image['headers'], 'Content-Type: image/png') !== false, 'sent as the picture it is');
+    assertTrue(stripos($image['headers'], 'Content-Disposition: inline') !== false, 'shown, not saved');
+
+    assertSame(403, $guest->get('/share/' . $token . '/download/' . $fileId)['status'], 'view-only must not download');
+});
+
+test('a shared SVG or document is never sent as a picture', function (TestClient $_c): void {
+    $svg = '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>';
+    $guest = new TestClient(TEST_BASE_URL);
+
+    foreach ([['drawing.svg', $svg, 'image/svg+xml'], ['notes.txt', 'plain words', 'text/plain']] as [$name, $contents, $type]) {
+        [$fileId, $token] = shareUploaded($name, $contents, $type, 'download');
+        assertSame(403, $guest->get('/share/' . $token . '/image/' . $fileId)['status'], $name . ' must not be sent inline');
+        assertFalse(str_contains($guest->get('/share/' . $token)['body'], '/share/' . $token . '/image/'), $name . ' gets no picture on the page');
+    }
+});
+
+test('a share link cannot reach a picture outside what it shares', function (TestClient $_c): void {
+    $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
+    [$otherId] = shareUploaded('other.png', $png, 'image/png', 'view');
+    [, $token] = shareUploaded('shared.png', $png, 'image/png', 'view');
+
+    $guest = new TestClient(TEST_BASE_URL);
+    assertSame(403, $guest->get('/share/' . $token . '/image/' . $otherId)['status']);
+    assertContains($guest->get('/share/' . str_repeat('9', 64) . '/image/' . $otherId)['status'], [403, 404, 410]);
+});
+
 test('a share link needs a file and a valid permission', function (TestClient $_c): void {
     $client = trackClient('shares');
 
@@ -346,6 +409,23 @@ test('older records are reachable through the offset', function (TestClient $_c)
     );
     assertSame(5, count($ids));
     assertSame(5, count(array_unique($ids)), 'pages must not overlap or skip');
+});
+
+test('a running skill timer says how long it has run, not just when it began', function (TestClient $_c): void {
+    // start_time is the server's wall clock; a browser in another time zone
+    // read it hours off and the clock never moved from 00:00:00.
+    $client = trackClient('timer');
+    $skillId = (string)($client->json($client->post('/api/skills', ['name' => 'กีตาร์', 'target_hours' => 100]))['id'] ?? '');
+    assertTrue($skillId !== '', 'skill create failed');
+
+    assertSame(200, $client->post('/api/skills/timer/start', ['skill_id' => $skillId, 'notes' => ''])['status']);
+    $timer = $client->json($client->get('/api/skills/stats'))['active_timer'] ?? null;
+
+    assertTrue(is_array($timer), 'the timer is running');
+    assertTrue(is_int($timer['elapsed_seconds'] ?? null), 'it carries the elapsed seconds');
+    assertTrue($timer['elapsed_seconds'] >= 0 && $timer['elapsed_seconds'] < 60, 'just started: ' . json_encode($timer));
+
+    $client->post('/api/skills/timer/stop', []);
 });
 
 test('the skill log reports its window in headers', function (TestClient $_c): void {

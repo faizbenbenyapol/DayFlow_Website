@@ -10,12 +10,11 @@
     // ---- Helpers ----
     function fmtDate(d) {
         if (!d) return null;
-        return new Date(d).toLocaleString('th-TH');
+        return parseServerDate(d).toLocaleString('th-TH');
     }
-    function isExpired(d) {
-        if (!d) return false;
-        return new Date(d) < new Date();
-    }
+    // The server says whether a link has run out; its expires_at is a wall
+    // clock in the server's time zone, not one this browser can compare.
+    const isExpired = s => !!s.is_expired;
 
     // ---- Load shares list ----
     async function loadShares() {
@@ -31,7 +30,7 @@
             }
             tbody.innerHTML = shares.map(s => {
                 const link = BASE_URL + '/share/' + s.token;
-                const expired = isExpired(s.expires_at);
+                const expired = isExpired(s);
                 const exp = s.expires_at
                     ? `<span class="${expired ? 'share-expired' : 'share-no-expiry'}">${expired ? 'หมดอายุแล้ว' : fmtDate(s.expires_at)}</span>`
                     : '<span class="share-no-expiry">ไม่มีกำหนด</span>';

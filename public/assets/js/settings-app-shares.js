@@ -12,8 +12,9 @@
         'finance': 'รายรับรายจ่าย', 'subscriptions': 'รายจ่ายประจำ', 'stocks': 'หุ้น'
     };
 
-    const fmtDate = d => new Date(d).toLocaleString('th-TH');
-    const isExpired = d => !!d && new Date(d) < new Date();
+    const fmtDate = d => parseServerDate(d).toLocaleString('th-TH');
+    // The server decides: expires_at is its wall clock, not this browser's.
+    const isExpired = s => !!s.is_expired;
 
     function showError(message) {
         const line = $('#appShareError');
@@ -34,7 +35,7 @@
             }
             tbody.innerHTML = shares.map(s => {
                 const link = BASE_URL + '/shared/' + s.token;
-                const expired = isExpired(s.expires_at);
+                const expired = isExpired(s);
                 const expiry = s.expires_at
                     ? '<span class="' + (expired ? 'share-expired' : 'share-no-expiry') + '">' + (expired ? 'หมดอายุแล้ว' : escHtml(fmtDate(s.expires_at))) + '</span>'
                     : '<span class="share-no-expiry">ไม่มีกำหนด</span>';

@@ -33,7 +33,7 @@ function renderCapitalList() {
             + '<td class="num">' + formatMoney(f.amount) + '</td>'
             + '<td>' + escHtml(f.currency) + '</td>'
             + '<td>' + (f.notes ? escHtml(f.notes) : STK_DASH) + '</td>'
-            + '<td class="stk-act mode-readonly-hide"><button type="button" class="icon-btn sm" data-act="openEditCapital" data-args="[' + f.id + ']" aria-label="แก้ไขรายการเงินลงทุน"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button></td>'
+            + '<td class="stk-act"><button type="button" class="icon-btn sm" data-act="openEditCapital" data-args="[' + f.id + ']" aria-label="แก้ไขรายการเงินลงทุน"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button></td>'
             + '</tr>';
     }).join('');
 }

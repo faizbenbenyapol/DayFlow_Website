@@ -219,8 +219,9 @@ function renderTransactions(list) {
         el.innerHTML = filtered
             ? '<div class="empty-state"><p class="empty-state-text">ไม่มีรายการที่ตรงกับตัวกรอง</p><button type="button" class="btn btn-sm" data-act="clearTransactionFilters">ล้างตัวกรอง</button></div>'
             : '<div class="empty-state"><p class="empty-state-title">ยังไม่มีรายการในเดือนนี้</p>'
-              + '<p class="empty-state-text">บันทึกรายรับหรือรายจ่ายแรก แล้วยอดคงเหลือจะขึ้นด้านบน</p>'
-              + '<button type="button" class="btn" data-act="openAddTransaction">บันทึกรายการแรก</button></div>';
+              + (IS_READ_ONLY ? '</div>'
+                : '<p class="empty-state-text">บันทึกรายรับหรือรายจ่ายแรก แล้วยอดคงเหลือจะขึ้นด้านบน</p>'
+                + '<button type="button" class="btn" data-act="openAddTransaction">บันทึกรายการแรก</button></div>');
         return;
     }
 
@@ -240,10 +241,10 @@ function renderTransactions(list) {
             + '<span class="grow"><span class="title">' + text + '</span>'
             + '<span class="meta"><span class="cat-chip" style="--chip: var(--' + pastelFor(t.category_name || '') + ')">' + escHtml(t.category_name || 'ไม่ระบุหมวด') + '</span>' + (income ? ' รายรับ' : '') + '</span></span>'
             + '<span class="side num ' + (income ? 'in' : 'out') + '">' + (income ? '+' : MINUS) + amountText(t.amount) + '</span>'
-            + '<span class="txn-actions">'
+            + (IS_READ_ONLY ? '</li>' : '<span class="txn-actions">'
             + '<button type="button" class="icon-btn sm" data-act="openEditTransaction" data-args="[' + t.id + ']" aria-label="แก้ไข: ' + text + '"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button>'
             + '<button type="button" class="icon-btn sm danger" data-act="deleteTxn" data-args="[' + t.id + ']" aria-label="ลบ: ' + text + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>'
-            + '</span></li>';
+            + '</span></li>');
     });
     el.innerHTML = html + '</ul>';
 }

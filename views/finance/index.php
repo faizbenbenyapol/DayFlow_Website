@@ -6,6 +6,8 @@
 // add an entry; the entries by day; where the expenses went; and the year as a
 // chart. $cats comes from FinanceController. assets/js/finance.js draws it all.
 // =====================================================
+// A share link is for looking: the accounts and the PDF report, no entry forms.
+$readOnly = Auth::isReadOnly();
 ?>
 <div class="page-head">
     <div>
@@ -14,7 +16,9 @@
     </div>
     <div class="page-head-actions">
         <button class="btn btn-ghost" type="button" data-act="openExportModal">ส่งออก PDF</button>
+        <?php if (!$readOnly): ?>
         <button class="btn btn-primary" type="button" data-act="openAddTransaction"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>บันทึกรายการ</button>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -39,6 +43,7 @@
     </div>
 </div>
 
+<?php if (!$readOnly): ?>
 <!-- Add an entry in one line -->
 <form id="quickAddForm" class="entry-form" data-act="saveQuickTransaction" novalidate>
     <div class="seg-pair" role="radiogroup" aria-label="ประเภทรายการ">
@@ -53,6 +58,7 @@
     <input class="form-control entry-desc" id="qaDesc" maxlength="255" autocomplete="off" placeholder="รายการ เช่น ข้าวมันไก่ + ชาเย็น">
     <button class="btn btn-primary" type="submit" id="qaSubmit">บันทึกรายจ่าย</button>
 </form>
+<?php endif; ?>
 
 <div class="cols fin-cols">
     <div class="col-main">
@@ -116,6 +122,7 @@
 window.financeCategories = <?= jsonForScript($cats) ?>;
 </script>
 
+<?php if (!$readOnly): ?>
 <!-- Add/Edit Transaction Modal -->
 <div class="modal-backdrop" id="txnModal" aria-hidden="true">
     <div class="modal" role="dialog" aria-labelledby="txnModalTitle">
@@ -160,6 +167,7 @@ window.financeCategories = <?= jsonForScript($cats) ?>;
         </div>
     </div>
 </div>
+<?php endif; ?>
 
 <!-- Export PDF Modal -->
 <div class="modal-backdrop" id="exportPdfModal" aria-hidden="true">

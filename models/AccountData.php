@@ -281,7 +281,7 @@ final class AccountData
      * The real columns of a table as a name => true map; empty when the table
      * does not exist here.
      */
-    private static function columns(string $table): array
+    public static function columns(string $table): array
     {
         static $cache = [];
         if (isset($cache[$table])) return $cache[$table];

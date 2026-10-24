@@ -180,12 +180,13 @@
         $('codeDigits').textContent = data.code;
         $('codeFilesSummary').textContent = data.files_count + ' ไฟล์ · ' + formatSize(data.total_size);
         generateQR(data.download_url);
-        startCountdown(data.expires_at);
+        startCountdown(data.expires_in);
     }
 
-    function startCountdown(expiresAt) {
+    /** Counts down from the seconds the server gave, so no time zone is involved. */
+    function startCountdown(expiresIn) {
         if (countdownInterval) clearInterval(countdownInterval);
-        const expires = new Date(expiresAt).getTime();
+        const expires = Date.now() + Number(expiresIn || 0) * 1000;
         const started = Date.now();
         const span = Math.max(1, expires - started);
         const bar = $('codeBar');

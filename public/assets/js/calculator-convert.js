@@ -115,10 +115,15 @@
     // ============================================================
     function recalcDate() {
         // d1: diff
+        // A date field's "2026-10-24" is read as midnight UTC by new Date(),
+        // which is the day before in any zone west of Greenwich. Reading it
+        // with a time makes it the visitor's own midnight.
+        const localDay = value => new Date(value + 'T00:00:00');
+
         const d1Els = document.querySelectorAll('[data-calc="d1"]');
         const a = d1Els[0]?.value, b = d1Els[1]?.value;
         if (a && b) {
-            const da = new Date(a), db = new Date(b);
+            const da = localDay(a), db = localDay(b);
             const diffMs = db - da;
             const days = Math.round(diffMs / 86400000);
             const y = db.getFullYear() - da.getFullYear();
@@ -136,7 +141,7 @@
         const unit = d2Els[2]?.value;
         const opv = d2Els[3]?.value;
         if (start && !isNaN(cnt)) {
-            const d = new Date(start);
+            const d = localDay(start);
             const delta = opv === 'sub' ? -cnt : cnt;
             if (unit === 'd') d.setDate(d.getDate() + delta);
             else if (unit === 'w') d.setDate(d.getDate() + delta * 7);
@@ -150,9 +155,9 @@
         // d3: age
         const d3Els = document.querySelectorAll('[data-calc="d3"]');
         const bd = d3Els[0]?.value;
-        const at = d3Els[1]?.value || new Date().toISOString().slice(0, 10);
+        const at = d3Els[1]?.value || todayISO();   // the visitor's today, not UTC's
         if (bd) {
-            const bDate = new Date(bd), aDate = new Date(at);
+            const bDate = localDay(bd), aDate = localDay(at);
             let y = aDate.getFullYear() - bDate.getFullYear();
             let m = aDate.getMonth() - bDate.getMonth();
             let d = aDate.getDate() - bDate.getDate();
