@@ -27,6 +27,10 @@
     const esc = escHtml;
 
     let loadedAt = 0;
+    // Browser clock minus the server's wall clock, both read as local time.
+    // Timestamps come in the server's zone; comparing them with this instead
+    // of Date.now() keeps "5 นาทีที่แล้ว" right in any time zone.
+    let clockGap = 0;
     let reloadTimer = null;
     const shownDate = localToday();
 
@@ -72,7 +76,7 @@
 
     function relativeTime(stamp) {
         if (!stamp) return '';
-        const seconds = Math.floor((Date.now() - parseLocal(stamp)) / 1000);
+        const seconds = Math.floor((Date.now() - clockGap - parseLocal(stamp)) / 1000);
         if (seconds < 60) return 'เมื่อครู่';
         if (seconds < 3600) return Math.floor(seconds / 60) + ' นาทีที่แล้ว';
         if (seconds < 86400) return Math.floor(seconds / 3600) + ' ชั่วโมงที่แล้ว';
@@ -418,6 +422,7 @@
         try {
             const data = await apiFetch(BASE_URL + '/api/dashboard/summary?modules=' + encodeURIComponent(modules.join(',')));
             document.getElementById('todayError')?.remove();
+            if (data.meta?.server_time) clockGap = Date.now() - parseLocal(data.meta.server_time);
 
             renderTasks(data.tasks);
             renderCalendar(data.calendar);

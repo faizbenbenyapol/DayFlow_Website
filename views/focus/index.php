@@ -6,6 +6,9 @@
 // in the background or a locked phone does not make it run slow.
 // $openTasks comes from FocusController.
 // =====================================================
+// On a share link the timer is left out: a finished round is saved, and
+// share mode saves nothing. What has been counted is still there to see.
+$readOnly = Auth::isReadOnly();
 ?>
 <div class="page-head">
     <div>
@@ -14,7 +17,8 @@
     </div>
 </div>
 
-<div class="focus-layout-grid" data-mode="work">
+<div class="focus-layout-grid<?= $readOnly ? ' is-history-only' : '' ?>" data-mode="work">
+    <?php if (!$readOnly): ?>
     <section class="focus-timer-section" aria-label="ตัวจับเวลา">
         <div class="seg focus-mode-selector" role="group" aria-label="ช่วงเวลา">
             <button type="button" class="focus-mode-btn active" data-mode="work" aria-pressed="true">โฟกัสงาน</button>
@@ -68,6 +72,7 @@
             </div>
         </details>
     </section>
+    <?php endif; ?>
 
     <section class="focus-stats-section" aria-label="สถิติและประวัติ">
         <div class="facts">

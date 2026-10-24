@@ -11,6 +11,7 @@ $isFolder = $file['type'] !== 'file';
 $thaiMonthsShort = [1 => 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
 $downloadUrl = fn(int $id): string => APP_URL . '/share/' . rawurlencode((string)$share['token']) . '/download/' . $id;
+$imageUrl = fn(int $id): string => APP_URL . '/share/' . rawurlencode((string)$share['token']) . '/image/' . $id;
 
 // The kind of a file as a short tag: its extension, as the files page shows it.
 $extension = static function (string $name): string {
@@ -24,7 +25,7 @@ if (!empty($share['expires_at'])) {
     $expiry = $when->format('j') . ' ' . $thaiMonthsShort[(int)$when->format('n')] . ' ' . ((int)$when->format('Y') + 543) . ' เวลา ' . $when->format('H:i') . ' น.';
 }
 
-$isImage = !$isFolder && $file['mime_type'] && str_starts_with($file['mime_type'], 'image/');
+$isImage = !$isFolder && ShareController::isPreviewableImage((string)$file['mime_type']);
 
 require ROOT . '/views/partials/outside-head.php';
 ?>
@@ -62,9 +63,8 @@ require ROOT . '/views/partials/outside-head.php';
         <?php endif; ?>
     </header>
 
-    <?php if ($isImage && $canDownload): ?>
-        <!-- The picture is served by the download route, which a view-only link may not use. -->
-        <img class="pub-image" src="<?= h($downloadUrl((int)$file['id'])) ?>" alt="<?= h($file['name']) ?>">
+    <?php if ($isImage): ?>
+        <img class="pub-image" src="<?= h($imageUrl((int)$file['id'])) ?>" alt="<?= h($file['name']) ?>">
     <?php endif; ?>
 
     <?php if ($isFolder): ?>

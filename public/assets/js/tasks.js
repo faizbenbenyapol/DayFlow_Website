@@ -13,6 +13,7 @@ const QUADRANTS = [1, 2, 3, 4];
 
 document.addEventListener('DOMContentLoaded', async function () {
     await loadTasks();
+    if (IS_READ_ONLY) return;
     initSortable();
     initQuickAdd();
 });
@@ -101,6 +102,14 @@ function renderTaskItem(task) {
     }
 
     const title = escHtml(task.title);
+    if (IS_READ_ONLY) {
+        // Looking only: the box says done or not, the title is just a title.
+        return '<div class="task-item' + (isDone ? ' done' : '') + '" data-id="' + task.id + '">'
+            + '<input type="checkbox" class="task-checkbox" disabled ' + (isDone ? 'checked' : '') + ' aria-label="เสร็จแล้ว: ' + title + '">'
+            + '<div class="task-content"><span class="task-title"><span class="done-mark">' + title + '</span></span>'
+            + (meta ? '<div class="task-meta">' + meta + '</div>' : '')
+            + '</div></div>';
+    }
     return '<div class="task-item' + (isDone ? ' done' : '') + '" data-id="' + task.id + '" data-quadrant="' + task.quadrant + '">'
         + '<input type="checkbox" class="task-checkbox" ' + (isDone ? 'checked' : '') + ' aria-label="เสร็จแล้ว: ' + title + '" data-act="toggleTask" data-args="[' + task.id + ', &quot;$checked&quot;]" data-on="change">'
         + '<div class="task-content">'

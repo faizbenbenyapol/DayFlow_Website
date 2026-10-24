@@ -6,15 +6,19 @@
 // kind of workout has been done. assets/js/exercise.js draws it from
 // /api/exercise and /api/exercise/stats.
 // =====================================================
+// A share link is for looking: nothing that adds or changes a record is printed.
+$readOnly = Auth::isReadOnly();
 ?>
 <div class="page-head">
     <div>
         <h1>ออกกำลังกาย</h1>
         <p class="sub" id="exTally" aria-live="polite">กำลังโหลดบันทึก…</p>
     </div>
+    <?php if (!$readOnly): ?>
     <div class="page-head-actions">
         <button class="btn btn-primary" type="button" data-act="openAddWorkout"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>บันทึกการออกกำลังกาย</button>
     </div>
+    <?php endif; ?>
 </div>
 
 <div class="facts ex-facts">
@@ -49,6 +53,7 @@
     </aside>
 </div>
 
+<?php if (!$readOnly): ?>
 <!-- Add / edit -->
 <div class="modal-backdrop" id="workoutModal" aria-hidden="true">
     <div class="modal" role="dialog" aria-labelledby="workoutModalTitle">
@@ -101,3 +106,4 @@
         </div>
     </div>
 </div>
+<?php endif; ?>

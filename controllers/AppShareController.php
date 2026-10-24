@@ -57,7 +57,11 @@ class AppShareController
         // Decode JSON menus for frontend
         foreach ($shares as &$s) {
             $s['menus'] = json_decode($s['menus'], true) ?: [];
+            // Decided here: expires_at is the server's wall clock, which a
+            // browser in another time zone would read hours off.
+            $s['is_expired'] = !empty($s['expires_at']) && strtotime($s['expires_at']) <= time();
         }
+        unset($s);
 
         Response::json(['shares' => $shares]);
     }

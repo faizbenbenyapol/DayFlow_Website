@@ -38,7 +38,7 @@ class SkillLog
     }
 
     // Active Timer functions
-    public static function getActiveTimer(int $userId)
+    public static function getActiveTimer(int $userId): array|false
     {
         $sql = "SELECT t.*, s.name as skill_name, s.color as skill_color 
                 FROM skill_active_timers t

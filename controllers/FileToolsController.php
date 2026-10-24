@@ -70,7 +70,7 @@ class FileToolsController
         };
     }
 
-    private function gdLoad(string $path, string $mime)
+    private function gdLoad(string $path, string $mime): \GdImage|false
     {
         return match ($mime) {
             'image/jpeg'              => @imagecreatefromjpeg($path),
@@ -82,7 +82,7 @@ class FileToolsController
         };
     }
 
-    private function doConvert($src, string $name, string $format): never
+    private function doConvert(\GdImage $src, string $name, string $format): never
     {
         $format = strtolower($format);
         ob_start();
@@ -124,7 +124,7 @@ class FileToolsController
         exit;
     }
 
-    private function doResize($src, string $name, string $mime): never
+    private function doResize(\GdImage $src, string $name, string $mime): never
     {
         $targetW     = (int) Request::input('width', 0);
         $targetH     = (int) Request::input('height', 0);
@@ -164,13 +164,13 @@ class FileToolsController
         $this->streamGd($dst, $name, $mime);
     }
 
-    private function doCompress($src, string $name, string $mime): never
+    private function doCompress(\GdImage $src, string $name, string $mime): never
     {
         $quality = max(1, min(100, (int) Request::input('quality', 80)));
         $this->streamGd($src, $name, $mime, $quality);
     }
 
-    private function doTransform($src, string $name, string $mime): never
+    private function doTransform(\GdImage $src, string $name, string $mime): never
     {
         $op = Request::input('op', '');
 
@@ -214,7 +214,7 @@ class FileToolsController
         $this->streamGd($src, $name, $mime);
     }
 
-    private function streamGd($img, string $name, string $mime, int $quality = 90): never
+    private function streamGd(\GdImage $img, string $name, string $mime, int $quality = 90): never
     {
         ob_start();
         switch ($mime) {

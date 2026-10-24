@@ -8,6 +8,11 @@ require_once ROOT . '/models/FileShare.php';
 
 class ShareController
 {
+    /** Picture types every current browser draws, so the share page can show them. */
+    private const PREVIEW_TYPES = [
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'image/bmp',
+    ];
+
     // ------------------------------------------------------------------ //
     // Public share page (no login required)
     // ------------------------------------------------------------------ //
@@ -51,7 +56,66 @@ class ShareController
             Response::abort(403, 'ไม่มีสิทธิ์ดาวน์โหลด');
         }
 
-        $fid  = (int)$fileId;
+        $file     = self::fileInShare($share, (int)$fileId);
+        $fullPath = UPLOAD_DIR . $file['file_path'];
+
+        header('Content-Type: ' . ($file['mime_type'] ?: 'application/octet-stream'));
+        header('Content-Disposition: ' . contentDisposition((string)$file['name']));
+        header('Content-Length: ' . filesize($fullPath));
+        header('X-Content-Type-Options: nosniff');
+        header('Cache-Control: no-store');
+        readfile($fullPath);
+        exit;
+    }
+
+    // ------------------------------------------------------------------ //
+    // Public image preview via share token: for view-only links too, since
+    // seeing a picture is viewing it. Shown inline, never as an attachment.
+    // ------------------------------------------------------------------ //
+    public function publicImage(string $token, string $fileId): never
+    {
+        $share = FileShare::getByToken($token);
+
+        if (!$share || !FileShare::isValid($share)) {
+            Response::abort(403, 'ไม่มีสิทธิ์ดูไฟล์');
+        }
+
+        $file = self::fileInShare($share, (int)$fileId);
+        if (!self::isPreviewableImage((string)$file['mime_type'])) {
+            Response::abort(403, 'ไฟล์นี้เปิดดูเป็นรูปไม่ได้');
+        }
+
+        $fullPath = UPLOAD_DIR . $file['file_path'];
+        header('Content-Type: ' . $file['mime_type']);
+        header('Content-Disposition: inline');
+        header('Content-Length: ' . filesize($fullPath));
+        header('X-Content-Type-Options: nosniff');
+        header("Content-Security-Policy: default-src 'none'; sandbox");
+        header('Cache-Control: no-store');
+        readfile($fullPath);
+        exit;
+    }
+
+    /**
+     * Whether a shared file may be sent inline as a picture for the share page.
+     * The type was read from the bytes at upload (FileController::apiUpload).
+     */
+    public static function isPreviewableImage(string $mimeType): bool
+    {
+        // A list of types, not "image/*": SVG is an image that can carry script,
+        // and HEIC and TIFF would only show as a broken picture in most browsers.
+        return in_array($mimeType, self::PREVIEW_TYPES, true);
+    }
+
+    /**
+     * The file a share link reaches by id: the shared file itself, or a file
+     * directly inside the shared folder. Aborts for anything else.
+     *
+     * @param array<string, mixed> $share
+     * @return array<string, mixed>
+     */
+    private static function fileInShare(array $share, int $fid): array
+    {
         $file = FileModel::getByIdPublic($fid);
 
         // File must be within the shared folder or be the shared file itself
@@ -75,13 +139,7 @@ class ShareController
             Response::abort(404, 'ไม่พบไฟล์บนเซิร์ฟเวอร์');
         }
 
-        header('Content-Type: ' . ($file['mime_type'] ?: 'application/octet-stream'));
-        header('Content-Disposition: ' . contentDisposition((string)$file['name']));
-        header('Content-Length: ' . filesize($fullPath));
-        header('X-Content-Type-Options: nosniff');
-        header('Cache-Control: no-store');
-        readfile($fullPath);
-        exit;
+        return $file;
     }
 
     // ------------------------------------------------------------------ //
@@ -91,6 +149,12 @@ class ShareController
     {
         $userId = Auth::userId();
         $shares = FileShare::listByUser($userId);
+        // Decided here: expires_at is the server's wall clock, which a
+        // browser in another time zone would read hours off.
+        foreach ($shares as &$s) {
+            $s['is_expired'] = !empty($s['expires_at']) && strtotime($s['expires_at']) <= time();
+        }
+        unset($s);
         Response::json(['shares' => $shares]);
     }
 

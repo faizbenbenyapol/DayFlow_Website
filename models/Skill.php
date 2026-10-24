@@ -8,7 +8,7 @@ class Skill
         return DB::run($sql, [$userId])->fetchAll();
     }
 
-    public static function find(string $id, int $userId)
+    public static function find(string $id, int $userId): array|false
     {
         $sql = "SELECT * FROM skills WHERE id = ? AND user_id = ?";
         return DB::run($sql, [$id, $userId])->fetch();

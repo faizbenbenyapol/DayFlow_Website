@@ -12,7 +12,7 @@ class SkillController
         }
     }
 
-    public function index()
+    public function index(): void
     {
         $pageTitle = 'ทักษะ';
         $pageStyle = 'skills';
@@ -22,22 +22,20 @@ class SkillController
         require dirname(__DIR__) . '/views/layout/footer.php';
     }
 
-    public function apiList()
+    public function apiList(): void
     {
         $userId = Auth::userId();
         $skills = Skill::all($userId);
         Response::json($skills);
     }
 
-    public function apiCreate()
+    public function apiCreate(): void
     {
         $userId = Auth::userId();
-        $data = json_decode(file_get_contents('php://input'), true);
-        if (!$data) $data = $_POST;
 
-        $name = trim($data['name'] ?? '');
-        $targetHours = (int)($data['target_hours'] ?? 10000);
-        $color = trim($data['color'] ?? '#3b82f6');
+        $name = (string)Request::input('name', '');
+        $targetHours = (int)Request::input('target_hours', 10000);
+        $color = (string)Request::input('color', '#3b82f6');
 
         if (!$name) {
             Response::json(['error' => 'กรุณาระบุชื่อทักษะ / เป้าหมาย'], 400);
@@ -48,15 +46,13 @@ class SkillController
         Response::json(['success' => true, 'id' => $id]);
     }
 
-    public function apiUpdate(string $id)
+    public function apiUpdate(string $id): void
     {
         $userId = Auth::userId();
-        $data = json_decode(file_get_contents('php://input'), true);
-        if (!$data) $data = $_POST;
 
-        $name = trim($data['name'] ?? '');
-        $targetHours = (int)($data['target_hours'] ?? 10000);
-        $color = trim($data['color'] ?? '#3b82f6');
+        $name = (string)Request::input('name', '');
+        $targetHours = (int)Request::input('target_hours', 10000);
+        $color = (string)Request::input('color', '#3b82f6');
 
         if (!$name) {
             Response::json(['error' => 'กรุณาระบุชื่อทักษะ / เป้าหมาย'], 400);
@@ -73,7 +69,7 @@ class SkillController
         Response::json(['success' => true]);
     }
 
-    public function apiDelete(string $id)
+    public function apiDelete(string $id): void
     {
         $userId = Auth::userId();
         if (!Skill::delete($id, $userId)) {
@@ -84,7 +80,7 @@ class SkillController
 
     // --- Logs & Timers ---
 
-    public function apiLogsList()
+    public function apiLogsList(): void
     {
         $userId = Auth::userId();
         $window = Paginator::fromRequest(50);
@@ -100,23 +96,29 @@ class SkillController
         Response::json($logs);
     }
 
-    public function apiStats()
+    public function apiStats(): void
     {
         $userId = Auth::userId();
         $stats = SkillLog::getStats($userId);
         $activeTimer = SkillLog::getActiveTimer($userId);
-        
+
+        // start_time is a wall clock in the server's zone. A browser in
+        // another zone read it as its own and saw a start in the future, so
+        // the clock stood at 00:00:00. The elapsed time needs no zone at all.
+        if ($activeTimer) {
+            $activeTimer['elapsed_seconds'] = max(0, time() - (new DateTime($activeTimer['start_time']))->getTimestamp());
+        }
+
         $stats['active_timer'] = $activeTimer;
         // Adjust skill progress based on active timer if needed
         Response::json($stats);
     }
 
-    public function apiStartTimer()
+    public function apiStartTimer(): void
     {
         $userId = Auth::userId();
-        $data = json_decode(file_get_contents('php://input'), true);
-        $skillId = trim($data['skill_id'] ?? '');
-        $notes = trim($data['notes'] ?? '');
+        $skillId = (string)Request::input('skill_id', '');
+        $notes = (string)Request::input('notes', '');
 
         if (!$skillId) {
             Response::json(['error' => 'กรุณาเลือกทักษะที่ต้องการจับเวลา'], 400);
@@ -127,23 +129,22 @@ class SkillController
         Response::json(['success' => true]);
     }
 
-    public function apiUpdateTimer()
+    public function apiUpdateTimer(): void
     {
         $userId = Auth::userId();
-        $data = json_decode(file_get_contents('php://input'), true);
-        $notes = trim($data['notes'] ?? '');
+        $notes = (string)Request::input('notes', '');
         SkillLog::updateTimerNotes($userId, $notes);
         Response::json(['success' => true]);
     }
 
-    public function apiStopTimer()
+    public function apiStopTimer(): void
     {
         $userId = Auth::userId();
         SkillLog::stopTimerAndLog($userId);
         Response::json(['success' => true]);
     }
 
-    public function apiDeleteLog(string $id)
+    public function apiDeleteLog(string $id): void
     {
         $userId = Auth::userId();
         if (!SkillLog::delete($id, $userId)) {

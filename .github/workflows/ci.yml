@@ -49,6 +49,10 @@ jobs:
       - name: Check for stray colours
         run: node scripts/check-css.mjs
 
+      # A date from the server must stay that day in every time zone.
+      - name: Check date handling
+        run: node scripts/check-dates.mjs
+
   unit:
     name: Unit tests
     runs-on: ubuntu-latest

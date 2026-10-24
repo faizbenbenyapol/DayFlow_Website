@@ -15,15 +15,19 @@ $quadrants = [
 $repeatOptions = [
     'none' => 'ไม่ทำซ้ำ', 'daily' => 'ทุกวัน', 'weekly' => 'ทุกสัปดาห์', 'monthly' => 'ทุกเดือน', 'yearly' => 'ทุกปี',
 ];
+// A share link is for looking: nothing that adds or changes a task is printed.
+$readOnly = Auth::isReadOnly();
 ?>
 <div class="page-head">
     <div>
         <h1>งาน</h1>
         <p class="sub" id="tasksTally" aria-live="polite">กำลังนับงาน…</p>
     </div>
+    <?php if (!$readOnly): ?>
     <div class="page-head-actions">
         <button type="button" class="btn btn-primary" data-act="openAddTask" data-args="[1]"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>เพิ่มงาน</button>
     </div>
+    <?php endif; ?>
 </div>
 
 <div class="matrix-grid" id="matrixGrid">
@@ -40,16 +44,19 @@ $repeatOptions = [
             <div class="skel-row"><span class="skel box"></span><span class="skel skel-w-60"></span></div>
             <div class="skel-row"><span class="skel box"></span><span class="skel skel-w-45"></span></div>
         </div>
+        <?php if (!$readOnly): ?>
         <label class="add-row">
             <span class="plus" aria-hidden="true">+</span>
             <span class="sr-only">เพิ่มงานใน <?= h($label) ?></span>
             <input type="text" class="quick-add" data-quadrant="<?= $q ?>" maxlength="255" autocomplete="off" placeholder="เพิ่มงาน แล้วกด Enter">
         </label>
+        <?php endif; ?>
     </section>
     <?php endforeach; ?>
 </div>
 
 <!-- Edit and add share one set of fields, written once. -->
+<?php if (!$readOnly): ?>
 <?php foreach (['edit' => ['แก้ไขงาน', 'บันทึกงาน', 'saveEditTask'], 'add' => ['เพิ่มงานใหม่', 'เพิ่มงาน', 'saveAddTask']] as $mode => [$heading, $button, $action]):
     $p = $mode; // id prefix: editTask…, addTask…
 ?>
@@ -107,3 +114,4 @@ $repeatOptions = [
     </div>
 </div>
 <?php endforeach; ?>
+<?php endif; ?>

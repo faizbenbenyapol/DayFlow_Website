@@ -151,6 +151,7 @@ class Router
         // --- Share Links (public, no auth) ---
         $this->add('GET', '/share/{token}',                     'ShareController', 'viewShare',      false);
         $this->add('GET', '/share/{token}/download/{fileId}',   'ShareController', 'publicDownload', false);
+        $this->add('GET', '/share/{token}/image/{fileId}',      'ShareController', 'publicImage',    false);
 
         // --- API: Share Links (auth) ---
         $this->add('GET',    '/api/shares',      'ShareController', 'apiList',   true);
@@ -469,12 +470,14 @@ class Router
         // Exact match fast path
         if ($pattern === $path) return [];
 
-        // Convert pattern to regex
-        $regex = preg_replace('/\{[a-z_]+\}/', '([^/]+)', $pattern);
+        // Convert pattern to regex. Names may be camelCase ({fileId}): with
+        // [a-z_] only, such a name stayed a literal "{fileId}" and the route
+        // never matched anything.
+        $regex = preg_replace('/\{[A-Za-z_]+\}/', '([^/]+)', $pattern);
         $regex = '#^' . $regex . '$#';
 
         // Extract param names from pattern
-        preg_match_all('/\{([a-z_]+)\}/', $pattern, $names);
+        preg_match_all('/\{([A-Za-z_]+)\}/', $pattern, $names);
         $paramNames = $names[1];
 
         if (!preg_match($regex, $path, $matches)) return null;

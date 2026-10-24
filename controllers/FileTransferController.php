@@ -143,6 +143,9 @@ class FileTransferController
             'token'        => $transfer['token'],
             'download_url' => $downloadUrl,
             'expires_at'   => $transfer['expires_at'],
+            // The countdown runs from this, not from expires_at: that is the
+            // server's wall clock, hours off in a browser in another zone.
+            'expires_in'   => max(0, strtotime($transfer['expires_at']) - time()),
             'files_count'  => count($uploaded),
             'total_size'   => $totalSize,
         ], 201);

@@ -17,7 +17,7 @@ const DEFAULT_TYPES = ['วิ่ง', 'ยกน้ำหนัก', 'ว่า
 document.addEventListener('DOMContentLoaded', function () {
     loadWorkouts();
     loadStats();
-    loadTypeSuggestions();
+    if (!IS_READ_ONLY) loadTypeSuggestions();   // fills the form, which a share link has none of
 });
 
 function showListError(id, retry) {
@@ -81,8 +81,8 @@ function workoutRow(w) {
         + '<span class="grow"><span class="title">' + escHtml(w.type) + '</span>'
         + (details ? '<span class="meta">' + details + '</span>' : '')
         + (w.notes ? '<span class="meta">' + escHtml(w.notes) + '</span>' : '') + '</span>'
-        + '<button type="button" class="icon-btn sm" data-act="openEditWorkout" data-args="[' + w.id + ']" aria-label="แก้ไข: ' + label + '"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button>'
-        + '<button type="button" class="icon-btn sm" data-act="deleteWorkout" data-args="[' + w.id + ']" aria-label="ลบ: ' + label + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>'
+        + (IS_READ_ONLY ? '' : '<button type="button" class="icon-btn sm" data-act="openEditWorkout" data-args="[' + w.id + ']" aria-label="แก้ไข: ' + label + '"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button>'
+        + '<button type="button" class="icon-btn sm" data-act="deleteWorkout" data-args="[' + w.id + ']" aria-label="ลบ: ' + label + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>')
         + '</li>';
 }
 
@@ -99,8 +99,9 @@ function renderWorkouts() {
     if (!workouts.length) {
         count.textContent = '';
         el.innerHTML = '<div class="empty-state"><p class="empty-state-title">ไม่มีบันทึกในเดือนนี้</p>'
-            + '<p class="empty-state-text">' + (thisMonth ? 'บันทึกการออกกำลังกายครั้งแรกของเดือน แล้วสถิติจะขึ้นด้านบน' : 'เลือกเดือนอื่น หรือเพิ่มบันทึกย้อนหลัง') + '</p>'
-            + '<button type="button" class="btn btn-primary" data-act="openAddWorkout">บันทึกการออกกำลังกาย</button></div>';
+            + (IS_READ_ONLY ? '<p class="empty-state-text">เลือกเดือนอื่นเพื่อดูบันทึก</p></div>'
+                : '<p class="empty-state-text">' + (thisMonth ? 'บันทึกการออกกำลังกายครั้งแรกของเดือน แล้วสถิติจะขึ้นด้านบน' : 'เลือกเดือนอื่น หรือเพิ่มบันทึกย้อนหลัง') + '</p>'
+                + '<button type="button" class="btn btn-primary" data-act="openAddWorkout">บันทึกการออกกำลังกาย</button></div>');
         return;
     }
 

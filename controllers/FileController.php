@@ -7,7 +7,7 @@ require_once ROOT . '/models/File.php';
 
 class FileController
 {
-    private function validateName($name, string $kind = 'ไฟล์'): string
+    private function validateName(mixed $name, string $kind = 'ไฟล์'): string
     {
         $name = trim(basename((string)$name));
         if ($name === '' || $name === '.' || $name === '..' || mb_strlen($name) > 255) {

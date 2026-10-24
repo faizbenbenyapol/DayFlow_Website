@@ -10,9 +10,6 @@
 // =====================================================
 $readOnly = Auth::isReadOnly();
 ?>
-<script nonce="<?= h(Security::nonce()) ?>">
-    const IS_READ_ONLY = <?= $readOnly ? 'true' : 'false' ?>;
-</script>
 
 <?php if ($readOnly): ?>
 <div class="page-head">
@@ -268,6 +265,7 @@ $readOnly = Auth::isReadOnly();
 </div>
 <?php endif; ?>
 
+<?php if (!$readOnly): ?>
 <!-- Add/Edit trade -->
 <div class="modal-backdrop" id="stockModal" aria-hidden="true">
     <div class="modal" role="dialog" aria-labelledby="stockModalTitle">
@@ -382,6 +380,8 @@ $readOnly = Auth::isReadOnly();
         </div>
     </div>
 </div>
+
+<?php endif; ?>
 
 <!-- A screenshot at full size -->
 <div class="modal-backdrop" id="screenshotLightboxModal" aria-hidden="true">

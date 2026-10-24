@@ -38,7 +38,7 @@ function renderScreenshotsGrid() {
             + '<span class="grow"><span class="title" title="' + name + '">' + name + '</span>'
             + (s.description ? '<span class="meta">' + escHtml(s.description) + '</span>' : '')
             + '<span class="meta">อัปโหลด ' + escHtml(formatDateTime(s.created_at)) + '</span></span>'
-            + '<button type="button" class="icon-btn sm mode-readonly-hide" data-act="deleteScreenshot" data-args="[' + s.id + ']" aria-label="ลบรูป: ' + name + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>'
+            + (IS_READ_ONLY ? '' : '<button type="button" class="icon-btn sm" data-act="deleteScreenshot" data-args="[' + s.id + ']" aria-label="ลบรูป: ' + name + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>')
             + '</figcaption></figure>';
     }).join('');
 }

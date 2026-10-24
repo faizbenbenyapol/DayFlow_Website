@@ -12,6 +12,8 @@ $eventColors = [
     '#f43f5e' => 'ชมพูแดง', '#8b5cf6' => 'ม่วง', '#64748b' => 'เทา',
 ];
 $repeatOptions = ['none' => 'ไม่ทำซ้ำ', 'daily' => 'ทุกวัน', 'weekly' => 'ทุกสัปดาห์', 'monthly' => 'ทุกเดือน', 'yearly' => 'ทุกปี'];
+// A share link is for looking: the calendar can be read and exported, not changed.
+$readOnly = Auth::isReadOnly();
 ?>
 <div class="page-head">
     <div>
@@ -21,10 +23,12 @@ $repeatOptions = ['none' => 'ไม่ทำซ้ำ', 'daily' => 'ทุกว
     <div class="page-head-actions">
         <a class="btn btn-ghost" href="<?= APP_URL ?>/api/planner/events/export.ics"
            title="ดาวน์โหลดปฏิทินเป็นไฟล์ .ics เพื่อนำเข้า Google Calendar หรือ Apple Calendar">ส่งออก .ics</a>
+        <?php if (!$readOnly): ?>
         <button class="btn btn-ghost" type="button" data-click="#icsFile" title="นำเข้ากิจกรรมจากไฟล์ .ics">นำเข้า .ics</button>
         <input type="file" id="icsFile" class="sr-only" accept=".ics,text/calendar" tabindex="-1" aria-label="เลือกไฟล์ .ics"
                data-act="importIcs" data-args="[&quot;$el&quot;]" data-on="change">
         <button class="btn btn-primary" type="button" data-act="openAddEvent"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>เพิ่มกิจกรรม</button>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -57,15 +61,18 @@ $repeatOptions = ['none' => 'ไม่ทำซ้ำ', 'daily' => 'ทุกว
         <section class="sec" aria-labelledby="dayTodosTitle">
             <div class="sec-head"><h2 id="dayTodosTitle">สิ่งที่ต้องทำ</h2></div>
             <div id="dayTodos"></div>
+            <?php if (!$readOnly): ?>
             <form class="add-row" data-act="addTodo">
                 <span class="plus" aria-hidden="true">+</span>
                 <label class="sr-only" for="todoInput">เพิ่มสิ่งที่ต้องทำในวันนี้</label>
                 <input type="text" id="todoInput" placeholder="เพิ่มสิ่งที่ต้องทำ แล้วกด Enter" maxlength="255" autocomplete="off">
             </form>
+            <?php endif; ?>
         </section>
     </aside>
 </div>
 
+<?php if (!$readOnly): ?>
 <!-- Event Create/Edit Modal -->
 <div class="modal-backdrop" id="eventModal" aria-hidden="true">
     <div class="modal" role="dialog" aria-labelledby="eventModalTitle">
@@ -142,3 +149,4 @@ $repeatOptions = ['none' => 'ไม่ทำซ้ำ', 'daily' => 'ทุกว
         </div>
     </div>
 </div>
+<?php endif; ?>

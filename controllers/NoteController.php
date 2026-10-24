@@ -11,15 +11,17 @@ class NoteController
 {
     private const BLOCK_TYPES = ['text', 'link', 'checklist'];
 
-    private function validateTitle($title): string
+    private function validateTitle(mixed $title): string
     {
+        // A list would be cast to the word "Array" and saved as the title.
+        if (is_array($title)) Response::json(['error' => 'ชื่อโน้ตไม่ถูกต้อง'], 422);
         $title = trim((string)$title);
         if ($title === '') $title = 'ไม่มีชื่อ';
         if (mb_strlen($title) > 255) Response::json(['error' => 'ชื่อโน้ตยาวเกิน 255 ตัวอักษร'], 422);
         return $title;
     }
 
-    private function validateBlock(string $type, $content): array
+    private function validateBlock(string $type, mixed $content): array
     {
         if (!in_array($type, self::BLOCK_TYPES, true)) Response::json(['error' => 'ประเภทบล็อกไม่ถูกต้อง'], 422);
         if (is_array($content) || is_object($content)) {
@@ -46,7 +48,7 @@ class NoteController
 
     public function editor(string $id): void
     {
-        $pageTitle  = 'แก้ไขโน้ต';
+        $pageTitle  = Auth::isReadOnly() ? 'โน้ต' : 'แก้ไขโน้ต';
         $pageStyle  = 'notes';
         $pageScript = 'notes';
 
@@ -211,7 +213,7 @@ class NoteController
 
         [$type, $content] = $this->validateBlock(
             (string)Request::input('type', 'text'),
-            Request::rawInput('content', '')
+            Request::list('content') ?? Request::rawInput('content', '')
         );
 
         if ($note['is_encrypted']) {
@@ -234,7 +236,7 @@ class NoteController
 
         [$type, $content] = $this->validateBlock(
             (string)Request::input('type', 'text'),
-            Request::rawInput('content', '')
+            Request::list('content') ?? Request::rawInput('content', '')
         );
 
         if ($note['is_encrypted']) {

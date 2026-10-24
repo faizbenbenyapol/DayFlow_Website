@@ -6,15 +6,19 @@
 // most serious reaction down. assets/js/food_notes.js draws it from
 // /api/food-notes.
 // =====================================================
+// A share link is for looking: nothing that adds or changes a record is printed.
+$readOnly = Auth::isReadOnly();
 ?>
 <div class="page-head">
     <div>
         <h1>บันทึกอาหาร / เครื่องดื่ม</h1>
         <p class="sub" id="fnTally" aria-live="polite">กำลังโหลดรายการ…</p>
     </div>
+    <?php if (!$readOnly): ?>
     <div class="page-head-actions">
         <button class="btn btn-primary" type="button" data-act="openAdd"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>เพิ่มรายการ</button>
     </div>
+    <?php endif; ?>
 </div>
 
 <div class="fn-filters">
@@ -39,6 +43,7 @@
     <div class="skel-row"><span class="skel skel-w-52"></span></div>
 </div>
 
+<?php if (!$readOnly): ?>
 <!-- Add / edit -->
 <div class="modal-backdrop" id="fnModal" aria-hidden="true">
     <div class="modal" role="dialog" aria-labelledby="fnModalTitle">
@@ -100,3 +105,4 @@
         </div>
     </div>
 </div>
+<?php endif; ?>

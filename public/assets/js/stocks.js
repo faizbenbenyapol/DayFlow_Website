@@ -442,7 +442,7 @@ function renderStockTxnList() {
             + '<td class="num">' + formatMoney(t.price) + '<small>' + escHtml(t.currency) + '</small></td>'
             + '<td class="num">' + formatMoney(t.fee) + '</td>'
             + '<td class="num">' + formatMoney(value) + '</td>'
-            + '<td class="stk-act mode-readonly-hide"><button type="button" class="icon-btn sm" data-act="openEditStock" data-args="[' + t.id + ']" aria-label="แก้ไขรายการ ' + escHtml(t.ticker) + '"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button></td>'
+            + '<td class="stk-act"><button type="button" class="icon-btn sm" data-act="openEditStock" data-args="[' + t.id + ']" aria-label="แก้ไขรายการ ' + escHtml(t.ticker) + '"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button></td>'
             + '</tr>';
     }).join('');
 }

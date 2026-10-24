@@ -100,35 +100,16 @@ body.share-body {
     margin-top: var(--space-5);
 }
 
-/* --- Read-only (app share link): hide everything that would change data --- */
-.is-readonly .mode-readonly-hide,
-.is-readonly .btn-link,
-.is-readonly .add-row {
-    display: none !important;
-}
-
-/* Add/record buttons in the page itself (tabs, toggles, filters and close
-   buttons stay). The server refuses writes in share mode regardless. */
-/* A title drawn as a button (a task, a habit) is the content, not an action. */
-.is-readonly .app-main button:not([class*="tabs"]):not([class*="toggle"]):not([class*="filter"]):not([class*="close"]):not(.task-title):not(.habit-name),
-.is-readonly .app-main .btn:not([class*="tabs"]):not([class*="toggle"]):not([class*="filter"]):not([class*="close"]):not([class*="btn-secondary"]) {
-    display: none !important;
-}
-
-.is-readonly .task-checkbox {
-    pointer-events: none !important;
-    opacity: 0.7 !important;
-    cursor: not-allowed !important;
-}
-
-.is-readonly .task-title {
-    pointer-events: none !important;
-    cursor: default !important;
-}
-
-.is-readonly .habit-name {
-    pointer-events: none !important;
-    cursor: default !important;
+/* --- Read-only (app share link) ---
+   The pages print no control that would change data (each view checks
+   Auth::isReadOnly(), each script IS_READ_ONLY), so nothing is hidden here:
+   what is left, like a month arrow or a filter, works. A done box is shown
+   disabled; it reads as a fact, not as a box to tick. */
+.is-readonly .task-checkbox:disabled,
+.is-readonly .day-todo-item input:disabled,
+.is-readonly .checklist-box:disabled {
+    opacity: 1;
+    cursor: default;
 }
 
 /* No index tabs or floating add here, so the page needs no room for them. */

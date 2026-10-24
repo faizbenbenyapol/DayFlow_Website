@@ -75,6 +75,50 @@ test('the demo account returns to its snapshot and nobody else is touched', func
     });
 });
 
+test('projects visitors made are cleared and the sample projects come back whole', function (TestClient $_c): void {
+    withDemoAccount(function (int $demoId, int $otherId): void {
+        DB::run("INSERT INTO projects (user_id, name) VALUES (?, 'โปรเจกต์ตัวอย่าง')", [$demoId]);
+        $sampleId = (int)DB::conn()->lastInsertId();
+        DB::run("INSERT INTO project_tasks (project_id, user_id, title, status) VALUES (?, ?, 'งานในโปรเจกต์', 'Review')", [$sampleId, $demoId]);
+        DB::run("INSERT INTO project_chats (project_id, user_id, message) VALUES (?, ?, 'สวัสดี')", [$sampleId, $demoId]);
+        DB::run("INSERT INTO projects (user_id, name) VALUES (?, 'ของคนจริง')", [$otherId]);
+        $realId = (int)DB::conn()->lastInsertId();
+
+        assertStringContains('บันทึก snapshot แล้ว', demoScript('--snapshot'));
+
+        // A day of visitors: a new project, the sample renamed and emptied.
+        DB::run("INSERT INTO projects (user_id, name) VALUES (?, 'ขยะจากผู้เยี่ยมชม')", [$demoId]);
+        DB::run("UPDATE projects SET name = 'ถูกแก้' WHERE id = ?", [$sampleId]);
+        DB::run('DELETE FROM project_tasks WHERE project_id = ?', [$sampleId]);
+
+        assertStringContains('รีเซ็ตบัญชี demo แล้ว', demoScript());
+
+        $projects = DB::run('SELECT id, name FROM projects WHERE user_id = ?', [$demoId])->fetchAll();
+        assertSame(['โปรเจกต์ตัวอย่าง'], array_column($projects, 'name'), 'only the sample project is left');
+        $restoredId = (int)$projects[0]['id'];
+        assertSame(
+            [['title' => 'งานในโปรเจกต์', 'status' => 'Review']],
+            DB::run('SELECT title, status FROM project_tasks WHERE project_id = ?', [$restoredId])->fetchAll(),
+            'its tasks are back inside it'
+        );
+        assertSame(['สวัสดี'], DB::run('SELECT message FROM project_chats WHERE project_id = ?', [$restoredId])->fetchAll(PDO::FETCH_COLUMN));
+        assertSame('ของคนจริง', DB::run('SELECT name FROM projects WHERE id = ?', [$realId])->fetchColumn(), 'a real project is never touched');
+    });
+});
+
+test('a snapshot from before projects were covered leaves the projects alone', function (TestClient $_c): void {
+    withDemoAccount(function (int $demoId, int $_otherId): void {
+        demoScript('--snapshot');
+        $data = json_decode((string)file_get_contents(DemoReset::snapshotPath()), true);
+        unset($data['demo_projects']);
+        file_put_contents(DemoReset::snapshotPath(), json_encode($data));
+
+        DB::run("INSERT INTO projects (user_id, name) VALUES (?, 'ต้องอยู่ต่อ')", [$demoId]);
+        demoScript();
+        assertSame(['ต้องอยู่ต่อ'], DB::run('SELECT name FROM projects WHERE user_id = ?', [$demoId])->fetchAll(PDO::FETCH_COLUMN));
+    });
+});
+
 test('the snapshot never carries the account row or its password hash', function (TestClient $_c): void {
     withDemoAccount(function (int $demoId, int $_otherId): void {
         demoScript('--snapshot');

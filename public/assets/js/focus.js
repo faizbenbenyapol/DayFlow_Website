@@ -40,6 +40,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const isRunning = () => endsAt !== null;
 
     fetchLogs();
+    // A share link has no timer on the page, only what it counted.
+    if (IS_READ_ONLY) return;
 
     document.querySelectorAll('.focus-mode-btn').forEach(btn => {
         btn.addEventListener('click', () => switchMode(btn.dataset.mode));
@@ -248,7 +250,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 + '<div class="grow"><span class="title">' + text + '</span>'
                 + '<span class="meta">' + when + ' · ' + (TYPE_LABEL[s.type] || escHtml(s.type)) + task + '</span></div>'
                 + '<span class="side">' + s.duration_min + ' นาที</span>'
-                + '<button type="button" class="icon-btn sm danger btn-delete-log" data-id="' + s.id + '" aria-label="ลบประวัติ: ' + text + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>'
+                + (IS_READ_ONLY ? '' : '<button type="button" class="icon-btn sm danger btn-delete-log" data-id="' + s.id + '" aria-label="ลบประวัติ: ' + text + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>')
                 + '</div>';
         }).join('');
 
