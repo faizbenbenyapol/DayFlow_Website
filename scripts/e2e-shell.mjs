@@ -3,7 +3,7 @@
 // command palette, the quick-add sheet and the phone's bottom tabs. PHP tests cannot see any of this, and
 // it is where a broken data-act or a renamed id fails silently.
 //
-//   node scripts/e2e-shell.mjs [--base http://localhost:8089]
+//   node scripts/e2e-shell.mjs [--base http://localhost:8080]
 //
 // Signs in as the account scripts/seed-screenshots.php creates, adds a task, a
 // quick note and an expense through the sheet, checks each arrived through the
@@ -11,7 +11,7 @@
 
 import { Cdp, Tab, accountPassword, launch, openPage, signIn, sleep } from './screenshots.mjs';
 
-const BASE = (process.argv.includes('--base') ? process.argv[process.argv.indexOf('--base') + 1] : 'http://localhost:8089').replace(/\/$/, '');
+const BASE = (process.argv.includes('--base') ? process.argv[process.argv.indexOf('--base') + 1] : 'http://localhost:8080').replace(/\/$/, '');
 const STAMP = 'e2e-' + Date.now().toString(36);
 
 let checks = 0;

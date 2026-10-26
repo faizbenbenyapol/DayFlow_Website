@@ -6,7 +6,7 @@
 //   node scripts/screenshots.mjs --label after --only today,finance --themes dark
 //
 // Options (all optional):
-//   --base      app address                 (default http://localhost:8089)
+//   --base      app address                 (default http://localhost:8080)
 //   --label     folder under docs/screenshots (default "shots")
 //   --account   shots | shots_empty         (default shots; see seed-screenshots.php)
 //   --only      comma list of page names
@@ -97,7 +97,7 @@ function args() {
 }
 
 const opt = args();
-const BASE = String(opt.base || 'http://localhost:8089').replace(/\/$/, '');
+const BASE = String(opt.base || 'http://localhost:8080').replace(/\/$/, '');
 const LABEL = String(opt.label || 'shots');
 const ACCOUNT = String(opt.account || 'shots');
 const VIEWPORT_NAMES = String(opt.viewports || 'desktop,mobile').split(',');
