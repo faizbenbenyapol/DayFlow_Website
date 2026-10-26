@@ -209,7 +209,7 @@ $menuOrder = AppMenus::ordered(json_decode($settings['menu_order'] ?? 'null', tr
         <dt>ชื่อที่แสดง</dt>
         <dd><?= h($user['display_name'] ?? '—') ?></dd>
 
-        <dt>เขตเวลา</dt>
+        <dt>เขตเวลาของการแจ้งเตือน</dt>
         <dd><?= h($currentTz) ?></dd>
 
         <dt>ธีม</dt>
@@ -280,15 +280,17 @@ $menuOrder = AppMenus::ordered(json_decode($settings['menu_order'] ?? 'null', tr
     </div>
 
     <div class="settings-block">
-        <h2>เขตเวลา</h2>
+        <h2>เขตเวลาของการแจ้งเตือน</h2>
+        <?php // cron.php reads this to decide "today" for Telegram reminders; the pages run on TIMEZONE. ?>
         <div class="form-group">
-            <label class="form-label" for="timezoneSelect">เขตเวลาที่ใช้แสดงผล</label>
+            <label class="form-label" for="timezoneSelect">เขตเวลาที่ใช้นับวันของการแจ้งเตือน Telegram</label>
             <select class="form-control" id="timezoneSelect">
                 <?php foreach ($timezones as $tz => $label): ?>
                     <option value="<?= h($tz) ?>" <?= $tz === $currentTz ? 'selected' : '' ?>><?= h($label) ?></option>
                 <?php endforeach; ?>
             </select>
             <p class="form-hint">เวลาตอนนี้ในเขตนี้: <span id="tzCurrentTime">—</span></p>
+            <p class="form-hint">ใช้ตัดสินว่ากิจกรรมเป็นของวันนี้หรือพรุ่งนี้ และบิลใกล้ครบกำหนดเมื่อไร ในข้อความ Telegram ส่วนหน้าเว็บแสดงวันและเวลาตามเขตเวลาของระบบ (<?= h($timezones[TIMEZONE] ?? TIMEZONE) ?>)</p>
         </div>
         <div class="settings-actions">
             <button class="btn btn-primary" type="button" id="btnSaveTimezone">บันทึกเขตเวลา</button>

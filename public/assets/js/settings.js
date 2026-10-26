@@ -296,7 +296,7 @@
                 await apiFetch(BASE_URL + '/api/settings/timezone', {
                     method: 'POST', body: JSON.stringify({ timezone: sel.value })
                 });
-                toast('บันทึกเขตเวลาแล้ว');
+                toast('บันทึกเขตเวลาของการแจ้งเตือนแล้ว');
             } catch (err) { toast(err.message || 'บันทึกไม่สำเร็จ', 'danger'); }
         });
     }
