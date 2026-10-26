@@ -11,7 +11,7 @@
 //   naming     a button, link or field a screen reader cannot name; an id
 //              used twice; an image with no alt
 //
-//   node scripts/audit-layout.mjs [--base http://localhost:8089] [--only finance]
+//   node scripts/audit-layout.mjs [--base http://localhost:8080] [--only finance]
 //                                 [--theme light|dark] [--account shots_empty]
 //
 // Signs in as the account scripts/seed-screenshots.php creates (--account
@@ -21,7 +21,7 @@
 import { Tab, accountPassword, launch, openPage, signIn, sleep } from './screenshots.mjs';
 
 const arg = name => (process.argv.includes(name) ? process.argv[process.argv.indexOf(name) + 1] : null);
-const BASE = (arg('--base') || 'http://localhost:8089').replace(/\/$/, '');
+const BASE = (arg('--base') || 'http://localhost:8080').replace(/\/$/, '');
 const ONLY = arg('--only');
 const THEME = arg('--theme') || 'light';
 

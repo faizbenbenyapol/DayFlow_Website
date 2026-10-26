@@ -67,12 +67,12 @@
 ## 6. วิธีรันซ้ำ
 
 ```
-docker start dayflow-test-db dayflow-test-app
-docker exec dayflow-test-app php /var/www/html/scripts/seed-screenshots.php
-docker exec dayflow-test-app php /var/www/html/tests/run.php http://localhost:80
-node scripts/e2e-shell.mjs --base http://localhost:8089
-node scripts/audit-layout.mjs --base http://localhost:8089
-node scripts/audit-layout.mjs --base http://localhost:8089 --theme dark
-node scripts/audit-layout.mjs --base http://localhost:8089 --account shots_empty
+docker compose up -d
+docker exec dayflow-app php /var/www/html/scripts/seed-screenshots.php
+docker exec dayflow-app php /var/www/html/tests/run.php http://localhost:80
+node scripts/e2e-shell.mjs
+node scripts/audit-layout.mjs
+node scripts/audit-layout.mjs --theme dark
+node scripts/audit-layout.mjs --account shots_empty
 node scripts/check-css.mjs && node scripts/check-contrast.mjs
 ```

@@ -33,6 +33,7 @@
 
 ## เครื่องมือตรวจที่ใช้ในรอบนี้
 
-- `php tests/run.php http://localhost` รันใน container (389 เทสต์) ถ้าชื่อ container ชนกับโปรเจกต์เก่า ใช้ `docker compose -p dayflowtest -f docker-compose.yml -f <override>` ที่เปลี่ยน `container_name` และพอร์ต
+- Docker ในเครื่องมีชุดเดียวคือ `docker compose up -d` (แอปที่ `localhost:8080`) ใช้ทดสอบอย่างเดียว เทสต์สร้างบัญชีทิ้งไว้ในฐานข้อมูลนี้ได้ตามสบาย สคริปต์ `e2e-shell`, `audit-layout` และ `screenshots` ชี้ไปที่ :8080 อยู่แล้ว
+- `docker exec dayflow-app php /var/www/html/tests/run.php http://localhost` (389 เทสต์) ใน Git Bash ให้ `export MSYS_NO_PATHCONV=1` ก่อน
 - PHPStan: `docker run --rm -v "$PWD":/app -w /app ghcr.io/phpstan/phpstan:2.2.16 analyse`
 - งาน CSS/JS ตรวจด้วยการเทียบภาพหน้าจอก่อน/หลังทีละพิกเซลผ่าน headless Edge (สคริปต์อยู่นอก repo ถ้าจะใช้อีกให้ขอให้สร้างใหม่)
