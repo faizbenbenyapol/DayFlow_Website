@@ -25,11 +25,74 @@ class Task
         )->fetch() ?: null;
     }
 
+    /**
+     * คืนรายการงานที่ครบกำหนดในวันที่ระบุ พร้อม is_done ในรูป 0/1
+     *
+     * @param int $userId รหัสผู้ใช้
+     * @param string $date วันที่ Y-m-d
+     * @return array แถวงานเรียงตาม position, id
+     */
+    public static function getForDate(int $userId, string $date): array
+    {
+        return DB::run(
+            'SELECT id, title, status, position
+             FROM tasks
+             WHERE user_id = ? AND due_date = ?
+             ORDER BY position ASC, id ASC',
+            [$userId, $date]
+        )->fetchAll();
+    }
+
+    /**
+     * คืนตำแหน่งถัดไปสำหรับงานที่ครบกำหนดในวันนั้น
+     *
+     * @param int $userId รหัสผู้ใช้
+     * @param string $date วันที่ Y-m-d
+     * @return int ตำแหน่งถัดไป (เริ่มที่ 0)
+     */
+    public static function nextPositionForDate(int $userId, string $date): int
+    {
+        return 1 + (int)DB::run(
+            'SELECT COALESCE(MAX(position), -1) FROM tasks WHERE user_id = ? AND due_date = ?',
+            [$userId, $date]
+        )->fetchColumn();
+    }
+
+    /**
+     * คืนรายการจดด่วน (inbox task ที่ไม่มี due_date) พร้อม is_done ในรูป 0/1
+     *
+     * @param int $userId รหัสผู้ใช้
+     * @return array แถวงาน open ก่อน แล้วตาม created_at DESC
+     */
+    public static function getInboxForUser(int $userId): array
+    {
+        return DB::run(
+            'SELECT id, title, description, status, created_at
+             FROM tasks
+             WHERE user_id = ? AND quadrant IS NULL AND due_date IS NULL
+             ORDER BY status ASC, created_at DESC',
+            [$userId]
+        )->fetchAll();
+    }
+
+    /**
+     * สร้างงานใหม่
+     *
+     * รองรับ quadrant เป็น null (inbox) และรับตำแหน่งที่ส่งมาล่วงหน้าได้
+     *
+     * @param int $userId รหัสผู้ใช้
+     * @param array<string, mixed> $data ข้อมูลงาน
+     * @return int รหัสงานที่สร้าง
+     */
     public static function create(int $userId, array $data): int
     {
+        $quadrant = array_key_exists('quadrant', $data) && $data['quadrant'] === null
+            ? null
+            : (int)($data['quadrant'] ?? 1);
+
         $maxPos = (int)DB::run(
-            'SELECT COALESCE(MAX(position), -1) FROM tasks WHERE user_id = ? AND quadrant = ?',
-            [$userId, (int)($data['quadrant'] ?? 1)]
+            'SELECT COALESCE(MAX(position), -1) FROM tasks WHERE user_id = ? AND quadrant <=> ?',
+            [$userId, $quadrant]
         )->fetchColumn();
 
         DB::run(
@@ -40,12 +103,12 @@ class Task
                 $userId,
                 $data['title'],
                 $data['description'] ?? null,
-                (int)($data['quadrant'] ?? 1),
+                $quadrant,
                 $data['status'] ?? 'open',
-                $data['due_date'] ?: null,
+                ($data['due_date'] ?? null) ?: null,
                 Recurrence::normalise($data['repeat_rule'] ?? 'none'),
-                $data['repeat_until'] ?: null,
-                $maxPos + 1
+                ($data['repeat_until'] ?? null) ?: null,
+                array_key_exists('position', $data) ? (int)$data['position'] : $maxPos + 1
             ]
         );
         return (int)DB::conn()->lastInsertId();
@@ -147,6 +210,44 @@ class Task
             'repeat_rule'  => $rule,
             'repeat_until' => $until,
         ]);
+    }
+
+    /**
+     * สลับสถานะ open/done ของงาน คืน true เมื่อพบงานของผู้ใช้
+     *
+     * @param int $id รหัสงาน
+     * @param int $userId รหัสผู้ใช้
+     * @return bool พบและอัปเดตหรือไม่
+     */
+    public static function toggle(int $id, int $userId): bool
+    {
+        return DB::run(
+            "UPDATE tasks SET status = IF(status = 'done', 'open', 'done'), updated_at = NOW()
+             WHERE id = ? AND user_id = ?",
+            [$id, $userId]
+        )->rowCount() > 0;
+    }
+
+    /**
+     * เรียงตำแหน่งให้กับงานหนึ่งชุด โดยเปลี่ยนเฉพาะ position
+     *
+     * @param int $userId รหัสผู้ใช้
+     * @param array<int, array<string, mixed>> $items แต่ละรายการมี id, position
+     */
+    public static function reorderPositions(int $userId, array $items): void
+    {
+        $db = DB::conn();
+        $stmt = $db->prepare(
+            'UPDATE tasks SET position = ?, updated_at = NOW()
+             WHERE id = ? AND user_id = ?'
+        );
+        foreach ($items as $item) {
+            $stmt->execute([
+                (int)$item['position'],
+                (int)$item['id'],
+                $userId
+            ]);
+        }
     }
 
     public static function reorder(int $userId, array $items): void

@@ -55,11 +55,6 @@ class SearchController
                    WHERE user_id = ? AND (title LIKE ? OR url LIKE ?)
                    ORDER BY id DESC LIMIT 5'],
 
-        ['key' => 'quick_items',   'label' => 'จดด่วน',         'path' => '/quick-notes',   'deep' => false, 'binds' => 2,
-         'sql' => 'SELECT %d AS src, id, content AS title, "" AS subtitle FROM quick_items
-                   WHERE user_id = ? AND content LIKE ?
-                   ORDER BY id DESC LIMIT 5'],
-
         ['key' => 'food_notes',    'label' => 'อาหาร',          'path' => '/food-notes',    'deep' => false, 'binds' => 3,
          'sql' => 'SELECT %d AS src, id, name AS title, notes AS subtitle FROM food_notes
                    WHERE user_id = ? AND (name LIKE ? OR notes LIKE ?)

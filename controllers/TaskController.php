@@ -63,15 +63,20 @@ class TaskController
 
     // --- API ---
 
+    /**
+     * คืนรายการงานทั้งหมดของผู้ใช้ จัดกลุ่มตาม quadrant
+     *
+     * งานที่ยังไม่ได้จัดหมวดหมู่ (quadrant = null) อยู่ในกลุ่ม 0
+     */
     public function apiList(): void
     {
         $userId = Auth::userId();
         $tasks  = Task::getAllForUser($userId);
 
-        // Group by quadrant
-        $quadrants = [1 => [], 2 => [], 3 => [], 4 => []];
+        // Group by quadrant; null quadrant becomes group 0 so inbox tasks are visible too
+        $quadrants = [0 => [], 1 => [], 2 => [], 3 => [], 4 => []];
         foreach ($tasks as $t) {
-            $q = (int)$t['quadrant'];
+            $q = $t['quadrant'] === null ? 0 : (int)$t['quadrant'];
             if (isset($quadrants[$q])) $quadrants[$q][] = $t;
         }
 

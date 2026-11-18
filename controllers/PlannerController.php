@@ -4,7 +4,7 @@
 // =====================================================
 
 require_once ROOT . '/models/CalendarEvent.php';
-require_once ROOT . '/models/DailyTodo.php';
+require_once ROOT . '/models/Task.php';
 require_once ROOT . '/core/TelegramService.php';
 
 class PlannerController
@@ -202,14 +202,20 @@ class PlannerController
 
     // --- Todos ---
 
+    /**
+     * คืนรายการ to-do ของวันที่ระบุในรูปแบบเดิม (id, title, is_done, position)
+     */
     public function apiTodosList(): void
     {
         $userId = Auth::userId();
         $date   = Request::query('date', date('Y-m-d'));
-        $todos  = DailyTodo::getForDate($userId, $date);
-        Response::json(['todos' => $todos]);
+        $rows   = Task::getForDate($userId, $date);
+        Response::json(['todos' => array_map([$this, 'formatTodo'], $rows)]);
     }
 
+    /**
+     * สร้าง to-do ใหม่ในวันที่ระบุ เก็บเป็น task ที่มี quadrant null
+     */
     public function apiTodoCreate(): void
     {
         $userId = Auth::userId();
@@ -220,41 +226,115 @@ class PlannerController
 
         $title = trim($title);
         if (mb_strlen($title) > 255 || !$this->validDate($date)) Response::json(['error' => 'ข้อมูลรายการประจำวันไม่ถูกต้อง'], 422);
-        $id   = DailyTodo::create($userId, $date, $title);
-        $todo = DailyTodo::getById($id, $userId);
-        Response::json(['ok' => true, 'todo' => $todo], 201);
+
+        $id = Task::create($userId, [
+            'title'     => $title,
+            'due_date'  => $date,
+            'quadrant'  => null,
+            'position'  => Task::nextPositionForDate($userId, $date),
+        ]);
+
+        $row = Task::getById($id, $userId);
+        Response::json(['ok' => true, 'todo' => $row ? $this->formatTodo($row) : null], 201);
     }
 
+    /**
+     * อัปเดตชื่อและ/หรือสถานะของ to-do
+     *
+     * ถ้า task เปลี่ยนจาก open เป็น done จะสร้าง occurrence ถัดไปให้งานที่ทำซ้ำ
+     *
+     * @param string $id รหัส task
+     */
     public function apiTodoUpdate(string $id): void
     {
         $userId  = Auth::userId();
         $todoId  = (int)$id;
-        $todo    = DailyTodo::getById($todoId, $userId);
+        $todo    = Task::getById($todoId, $userId);
         if (!$todo) Response::json(['error' => 'ไม่พบรายการ'], 404);
 
-        $data = array_filter([
-            'title'   => Request::input('title'),
-            'is_done' => Request::input('is_done') !== null ? (int)Request::input('is_done') : null,
-        ], fn($v) => $v !== null);
+        $payload = [];
+        $title   = Request::input('title');
+        if ($title !== null) {
+            $title = trim($title);
+            if ($title === '' || mb_strlen($title) > 255) Response::json(['error' => 'ข้อมูลรายการประจำวันไม่ถูกต้อง'], 422);
+            $payload['title'] = $title;
+        }
 
-        DailyTodo::update($todoId, $userId, $data);
-        Response::json(['ok' => true]);
+        $isDone = Request::input('is_done');
+        if ($isDone !== null) {
+            $payload['status'] = (int)$isDone ? 'done' : 'open';
+        }
+
+        Task::update($todoId, $userId, $payload);
+        $updated = Task::getById($todoId, $userId);
+
+        $nextTask = null;
+        if (isset($payload['status']) && $payload['status'] === 'done' && $todo['status'] !== 'done') {
+            $nextId   = Task::scheduleNextOccurrence($updated ?: $todo, $userId);
+            $nextTask = $nextId !== null ? Task::getById($nextId, $userId) : null;
+        }
+
+        Response::json(array_filter([
+            'ok'        => true,
+            'todo'      => $updated ? $this->formatTodo($updated) : null,
+            'next_task' => $nextTask,
+        ], static fn($v) => $v !== null));
     }
 
+    /**
+     * ลบ to-do ตามรหัส
+     *
+     * @param string $id รหัส task
+     */
     public function apiTodoDelete(string $id): void
     {
         $userId = Auth::userId();
-        if (!DailyTodo::delete((int)$id, $userId)) {
+        if (!Task::delete((int)$id, $userId)) {
             Response::json(['error' => 'ไม่พบรายการ'], 404);
         }
         Response::json(['ok' => true]);
     }
 
+    /**
+     * เรียงลำดับ to-do ในวันเดียวกัน
+     */
     public function apiTodoReorder(): void
     {
         $userId = Auth::userId();
         $items  = Request::json()['items'] ?? [];
-        DailyTodo::reorder($userId, $items);
+
+        if (!is_array($items)) {
+            Response::json(['error' => 'ข้อมูลไม่ถูกต้อง'], 422);
+        }
+
+        if (count($items) > 500) {
+            Response::json(['error' => 'จำนวนงานที่ส่งมามากเกินไป'], 422);
+        }
+
+        foreach ($items as $item) {
+            if (!is_array($item) || (int)($item['id'] ?? 0) < 1
+                || (int)($item['position'] ?? -1) < 0) {
+                Response::json(['error' => 'ข้อมูลการเรียงงานไม่ถูกต้อง'], 422);
+            }
+        }
+
+        Task::reorderPositions($userId, $items);
         Response::json(['ok' => true]);
+    }
+
+    /**
+     * แปลงแถว task เป็นรูปแบบ to-do ที่ planner.js คาดหวัง
+     *
+     * @param array<string, mixed> $row แถวจาก Task
+     * @return array<string, mixed> แถวพร้อม id, title, is_done, position
+     */
+    private function formatTodo(array $row): array
+    {
+        return [
+            'id'       => (int)$row['id'],
+            'title'    => $row['title'],
+            'is_done'  => ($row['status'] ?? 'open') === 'done' ? 1 : 0,
+            'position' => (int)$row['position'],
+        ];
     }
 }

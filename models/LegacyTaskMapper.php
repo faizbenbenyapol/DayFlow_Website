@@ -29,16 +29,40 @@ class LegacyTaskMapper
         }
 
         return [
-            'user_id'       => (int)$row['user_id'],
+            'user_id'       => (int)($row['user_id'] ?? 0),
             'title'         => $title,
             'description'   => null,
             'quadrant'      => null,
             'status'        => (int)($row['is_done'] ?? 0) ? 'done' : 'open',
-            'due_date'      => $row['todo_date'],
+            'due_date'      => $row['todo_date'] ?? null,
             'repeat_rule'   => 'none',
             'position'      => (int)($row['position'] ?? 0),
             'legacy_source' => 'daily_todo',
-            'legacy_id'     => (int)$row['id'],
+            'legacy_id'     => (int)($row['id'] ?? 0),
+        ];
+    }
+
+    /**
+     * แยกข้อความจดด่วนเป็นชื่อเรื่องกับรายละเอียด
+     *
+     * บรรทัดแรกที่ไม่ว่างเป็นชื่อเรื่อง ข้อความทั้งหมดเป็น description
+     * เมื่อข้อความมีมากกว่าหนึ่งบรรทัด หรือชื่อเรื่องถูกตัดสั้น
+     *
+     * @param string $content ข้อความดิบ
+     * @return array<string, string|null> คีย์ title, description
+     */
+    public static function splitText(string $content): array
+    {
+        $text  = trim($content);
+        $title = self::firstNonEmptyLine($text);
+        if ($title === '') {
+            $title = self::UNTITLED;
+        }
+        $title = mb_substr($title, 0, self::TITLE_MAX_LENGTH);
+
+        return [
+            'title'       => $title,
+            'description' => $text !== '' && $text !== $title ? $text : null,
         ];
     }
 
@@ -50,18 +74,12 @@ class LegacyTaskMapper
      */
     public static function fromQuickItem(array $row): array
     {
-        $content = trim((string)($row['content'] ?? ''));
-        $title   = self::firstNonEmptyLine($content);
-        if ($title === '') {
-            $title = self::UNTITLED;
-        }
-
-        $title = mb_substr($title, 0, self::TITLE_MAX_LENGTH);
+        $split = self::splitText((string)($row['content'] ?? ''));
 
         return [
-            'user_id'       => (int)$row['user_id'],
-            'title'         => $title,
-            'description'   => $content !== '' && $content !== $title ? $content : null,
+            'user_id'       => (int)($row['user_id'] ?? 0),
+            'title'         => $split['title'],
+            'description'   => $split['description'],
             'quadrant'      => null,
             'status'        => (int)($row['is_done'] ?? 0) ? 'done' : 'open',
             'due_date'      => null,
@@ -70,7 +88,7 @@ class LegacyTaskMapper
             'created_at'    => $row['created_at'] ?? null,
             'updated_at'    => $row['updated_at'] ?? null,
             'legacy_source' => 'quick_item',
-            'legacy_id'     => (int)$row['id'],
+            'legacy_id'     => (int)($row['id'] ?? 0),
         ];
     }
 
