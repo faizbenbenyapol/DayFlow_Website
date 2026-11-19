@@ -73,11 +73,18 @@ class Router
         $this->add('POST',   '/api/push/test',        'PushController', 'apiTest',        true);
 
         // --- API: Tasks ---
-        $this->add('GET',    '/api/tasks',         'TaskController', 'apiList',    true);
-        $this->add('POST',   '/api/tasks',         'TaskController', 'apiCreate',  true);
-        $this->add('PUT',    '/api/tasks/{id}',    'TaskController', 'apiUpdate',  true);
-        $this->add('DELETE', '/api/tasks/{id}',    'TaskController', 'apiDelete',  true);
-        $this->add('POST',   '/api/tasks/reorder', 'TaskController', 'apiReorder', true);
+        $this->add('GET',    '/api/tasks',                      'TaskController',         'apiList',    true);
+        $this->add('POST',   '/api/tasks',                      'TaskController',         'apiCreate',  true);
+        $this->add('PUT',    '/api/tasks/{id}',                 'TaskController',         'apiUpdate',  true);
+        $this->add('DELETE', '/api/tasks/{id}',                 'TaskController',         'apiDelete',  true);
+        $this->add('POST',   '/api/tasks/reorder',              'TaskController',         'apiReorder', true);
+
+        // --- API: Task Subtasks ---
+        $this->add('GET',    '/api/tasks/{id}/subtasks',        'TaskSubtaskController',  'apiList',    true);
+        $this->add('POST',   '/api/tasks/{id}/subtasks',        'TaskSubtaskController',  'apiCreate',  true);
+        $this->add('PUT',    '/api/tasks/subtasks/{sid}',       'TaskSubtaskController',  'apiUpdate',  true);
+        $this->add('DELETE', '/api/tasks/subtasks/{sid}',       'TaskSubtaskController',  'apiDelete',  true);
+        $this->add('POST',   '/api/tasks/{id}/subtasks/reorder','TaskSubtaskController',  'apiReorder', true);
 
         // --- API: Notes ---
         $this->add('GET',    '/api/notes',                       'NoteController', 'apiList',         true);

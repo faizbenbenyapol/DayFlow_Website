@@ -34,6 +34,7 @@ final class AccountData
      */
     private const TABLES = [
         'tasks'               => [],
+        'task_subtasks'       => ['task_id' => ['tasks', true]],
         'notes'               => [],
         'note_tags'           => [],
         'note_blocks'         => ['note_id' => ['notes', true]],

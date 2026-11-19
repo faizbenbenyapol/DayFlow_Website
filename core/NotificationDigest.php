@@ -10,11 +10,35 @@
 final class NotificationDigest
 {
     /**
+     * คืนรายการการแจ้งเตือนที่ควรแสดงให้ผู้ใช้เห็นตอนนี้
+     *
+     * @param int $userId รหัสผู้ใช้
      * @return array<int, array{title: string, body: string, url: string, tag: string}>
      */
     public static function pendingFor(int $userId): array
     {
         $items = [];
+
+        // Reminders fired within the last hour, but not for reminders older
+        // than two hours (those were skipped as too late).
+        $reminders = DB::run(
+            'SELECT id, title, remind_at
+             FROM tasks
+             WHERE user_id = ? AND status = "open"
+               AND reminded_at >= NOW() - INTERVAL 1 HOUR
+               AND remind_at >= NOW() - INTERVAL 2 HOUR
+             ORDER BY remind_at DESC LIMIT 3',
+            [$userId]
+        )->fetchAll();
+
+        foreach ($reminders as $task) {
+            $items[] = [
+                'title' => '🔔 ' . $task['title'],
+                'body'  => 'เตือนเวลา ' . date('H:i', strtotime((string)$task['remind_at'])) . ' น.',
+                'url'   => APP_URL . '/tasks#task-' . (int)$task['id'],
+                'tag'   => 'task-remind-' . (int)$task['id'],
+            ];
+        }
 
         $overdue = (int)DB::run(
             'SELECT COUNT(*) FROM tasks
