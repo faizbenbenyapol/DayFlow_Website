@@ -141,7 +141,9 @@
     color: var(--pencil);
 }
 
-.task-repeat {
+.task-repeat,
+.task-subtasks,
+.task-remind {
     padding: 0 6px;
     border: 1px solid var(--rule);
     border-radius: 10px;
@@ -191,4 +193,71 @@
     .quadrant-body {
         max-height: none;
     }
+}
+
+/* ---------------------------------------------------------------
+   Subtasks inside the edit dialog
+--------------------------------------------------------------- */
+.subtask-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+}
+
+.subtask-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.subtask-item.done .subtask-title {
+    color: var(--pencil);
+    text-decoration: line-through;
+}
+
+.subtask-drag {
+    flex: none;
+    padding: 0 2px;
+    color: var(--pencil);
+    cursor: grab;
+}
+
+.subtask-check {
+    flex: none;
+}
+
+.subtask-title,
+.subtask-title:focus {
+    flex: 1;
+    min-width: 0;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    outline: none;
+}
+
+.subtask-title:hover,
+.subtask-title:focus-visible {
+    border-color: var(--rule-strong);
+    background: var(--paper-sunk);
+    box-shadow: none;
+}
+
+.subtask-title:focus-visible {
+    outline: 2px solid var(--rule-strong);
+    outline-offset: 2px;
+}
+
+.subtask-item .icon-btn {
+    flex: none;
+}
+
+.task-channel-hint {
+    margin-bottom: var(--space-3);
+}
+
+.task-channel-hint a {
+    color: var(--ink);
+    text-decoration: underline;
 }

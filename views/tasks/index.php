@@ -98,6 +98,15 @@ $readOnly = Auth::isReadOnly();
                 <label class="form-label" for="<?= $p ?>TaskDesc">รายละเอียด</label>
                 <textarea class="form-control" id="<?= $p ?>TaskDesc" rows="3"></textarea>
             </div>
+            <?php if ($mode === 'edit'): ?>
+            <div class="form-group" id="editSubtasksWrap">
+                <label class="form-label" for="editSubtaskNew">งานย่อย</label>
+                <div id="editSubtasksList" class="subtask-list" aria-live="polite"><p class="form-hint">กำลังโหลด…</p></div>
+                <input type="text" class="form-control" id="editSubtaskNew" maxlength="255" placeholder="เพิ่มงานย่อย แล้วกด Enter">
+            </div>
+            <?php else: ?>
+            <p class="form-hint">เพิ่มงานย่อยได้หลังบันทึกงานแล้ว</p>
+            <?php endif; ?>
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label" for="<?= $p ?>TaskQuadrant">ความสำคัญ</label>
@@ -112,6 +121,20 @@ $readOnly = Auth::isReadOnly();
                     <input type="date" class="form-control" id="<?= $p ?>TaskDue">
                 </div>
             </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="<?= $p ?>TaskRemindDate">เตือนวันที่</label>
+                    <input type="date" class="form-control" id="<?= $p ?>TaskRemindDate">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="<?= $p ?>TaskRemindTime">เวลา</label>
+                    <input type="time" class="form-control" id="<?= $p ?>TaskRemindTime">
+                    <button type="button" class="btn btn-sm btn-ghost" data-act="clearTaskRemindTime" data-args='["<?= $p ?>"]'>ล้างเวลาเตือน</button>
+                </div>
+            </div>
+            <?php if ($needsChannelHint): ?>
+            <p class="form-hint task-channel-hint">ยังไม่ได้เปิดการแจ้งเตือน <a href="<?= h(APP_URL) ?>/settings#telegram">เปิดในตั้งค่า</a></p>
+            <?php endif; ?>
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label" for="<?= $p ?>TaskRepeat">ทำซ้ำ</label>
