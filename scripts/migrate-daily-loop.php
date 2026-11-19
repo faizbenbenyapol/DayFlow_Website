@@ -130,7 +130,14 @@ function dryRunCounts(string $sourceTable, string $legacySource, string $emptySq
 
 /**
  * คัดลอกแถวที่ยังไม่ถูกคัดลอกจาก daily_todos และ quick_items ไปยัง tasks
- * พร้อมบันทึกลง legacy_task_copies ใช้ transaction เดียว และตรวจสอบความถูกต้องก่อน commit
+ * พร้อมบันทึกลง legacy_task_copies ใช้ transaction เดียว
+ *
+ * ตรวจสอบโดยนับแถวต้นทางที่ยังไม่มี copy-log (not_copied) แทนการเทียบ COUNT(*)
+ * เพราะเมื่อผู้ใช้ถูกลบ แถว daily_todos/quick_items จะ cascade หายไป
+ * แต่ legacy_task_copies ไม่มี foreign key ทำให้บันทึกการคัดลอกค้างอยู่
+ *
+ * จำนวนที่รายงานคือแถวต้นทางปัจจุบันที่มีแถว tasks ตรงกัน (JOIN) ไม่ใช่จำนวนที่ copy
+ * เพราะผู้ใช้อาจลบงานที่คัดลอกไปแล้วภายหลัง ทำให้ตัวเลขต่ำกว่าจำนวนต้นทางปัจจุบัน
  */
 function apply(): void
 {
@@ -141,28 +148,71 @@ function apply(): void
         copySource('daily_todos', 'daily_todo', LegacyTaskMapper::fromDailyTodo(...));
         copySource('quick_items', 'quick_item', LegacyTaskMapper::fromQuickItem(...));
 
-        $dailySource = (int)DB::run('SELECT COUNT(*) FROM daily_todos')->fetchColumn();
-        $dailyCopied = (int)DB::run("SELECT COUNT(*) FROM legacy_task_copies WHERE legacy_source = 'daily_todo'")->fetchColumn();
+        $dailyNotCopied = dryRunCounts('daily_todos', 'daily_todo', '0', '');
+        $quickNotCopied = dryRunCounts('quick_items', 'quick_item', '0', '');
 
-        $quickSource = (int)DB::run('SELECT COUNT(*) FROM quick_items')->fetchColumn();
-        $quickCopied = (int)DB::run("SELECT COUNT(*) FROM legacy_task_copies WHERE legacy_source = 'quick_item'")->fetchColumn();
+        if ($dailyNotCopied['not_copied'] > 0) {
+            throw new RuntimeException("daily_todos mismatch: {$dailyNotCopied['not_copied']} source rows without copy log");
+        }
+        if ($quickNotCopied['not_copied'] > 0) {
+            throw new RuntimeException("quick_items mismatch: {$quickNotCopied['not_copied']} source rows without copy log");
+        }
 
-        if ($dailySource !== $dailyCopied) {
-            throw new RuntimeException("daily_todos mismatch: source {$dailySource} rows, copy log {$dailyCopied}");
-        }
-        if ($quickSource !== $quickCopied) {
-            throw new RuntimeException("quick_items mismatch: source {$quickSource} rows, copy log {$quickCopied}");
-        }
+        $daily = copiedCounts('daily_todos', 'daily_todo');
+        $quick = copiedCounts('quick_items', 'quick_item');
 
         $db->commit();
 
-        echo "Copied daily_todo: {$dailyCopied} / {$dailySource}\n";
-        echo "Copied quick_item: {$quickCopied} / {$quickSource}\n";
+        echo reportLine('daily_todo', $daily['copied'], $daily['total']) . "\n";
+        echo reportLine('quick_item', $quick['copied'], $quick['total']) . "\n";
     } catch (Throwable $e) {
         $db->rollBack();
         fwrite(STDERR, "Apply failed: " . $e->getMessage() . "\n");
         exit(1);
     }
+}
+
+/**
+ * นับแถวต้นทางปัจจุบันที่มีแถว tasks ตรงกัน
+ *
+ * @param string $sourceTable  ชื่อตารางต้นทาง
+ * @param string $legacySource ค่า legacy_source ที่ใช้เชื่อม
+ * @return array<string, int>  จำนวน total (แถวต้นทาง) และ copied (มีแถว tasks ตรงกัน)
+ */
+function copiedCounts(string $sourceTable, string $legacySource): array
+{
+    $alias = $sourceTable === 'daily_todos' ? 'dt' : 'qi';
+
+    $sql = "SELECT
+        COUNT(*) AS total,
+        COUNT(t.id) AS copied
+    FROM {$sourceTable} {$alias}
+    LEFT JOIN tasks t ON t.legacy_source = '{$legacySource}' AND t.legacy_id = {$alias}.id";
+
+    $row = DB::run($sql)->fetch() ?: [];
+
+    return [
+        'total' => (int)($row['total'] ?? 0),
+        'copied' => (int)($row['copied'] ?? 0),
+    ];
+}
+
+/**
+ * สร้างข้อความรายงานจำนวนที่คัดลอก พร้อมบอกจำนวนที่ถูกลบหลังคัดลอกถ้ามี
+ *
+ * @param string $label  ชื่อแหล่งข้อมูล
+ * @param int $copied    จำนวนต้นทางที่มีแถว tasks ตรงกัน
+ * @param int $total     จำนวนต้นทางทั้งหมด
+ * @return string ข้อความรายงาน
+ */
+function reportLine(string $label, int $copied, int $total): string
+{
+    $line = "Copied {$label}: {$copied} / {$total}";
+    if ($copied < $total) {
+        $deleted = $total - $copied;
+        $line .= " ({$deleted} deleted from tasks since copied)";
+    }
+    return $line;
 }
 
 /**
@@ -286,6 +336,7 @@ function rollback(bool $confirmed): void
         echo "Deleted copy-log rows: {$logDeleted}\n";
         echo "Set NULL quadrant to 2: {$updated}\n";
         echo "Warning: edits made to copied tasks are lost.\n";
+        echo "Warning: tasks created after the move stay in Tasks (inbox ones moved to quadrant 2) and do not appear in the old Planner.\n";
     } catch (Throwable $e) {
         $db->rollBack();
         fwrite(STDERR, "Rollback failed: " . $e->getMessage() . "\n");
