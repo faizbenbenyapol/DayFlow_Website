@@ -11,33 +11,42 @@ class Task
     public const INBOX_DONE_DAYS = 7;
 
     /**
-     * คืนรายการงานทั้งหมดของผู้ใช้ โดย inbox (quadrant IS NULL) ซ่อนงาน done
-     * ที่ทำเสร็จเกิน INBOX_DONE_DAYS วัน งานใน quadrant 1-4 แสดงทั้งหมด
+     * คืนรายการงานทั้งหมดของผู้ใช้ พร้อมเวลาเตือนและจำนวนงานย่อย โดย inbox (quadrant IS NULL)
+     * ซ่อนงาน done ที่ทำเสร็จเกิน INBOX_DONE_DAYS วัน งานใน quadrant 1-4 แสดงทั้งหมด
      *
      * ถ้าระบุ $showId งานนั้นจะถูกคืนเสมอ แม้จะถูกกฎ 7 วันซ่อนไว้
      * (ใช้เมื่อผู้ใช้คลิกผลค้นหาที่ลิงก์มายังงานนั้น)
      *
      * @param int $userId รหัสผู้ใช้
      * @param int|null $showId รหัสงานที่ต้องการบังคับแสดง
-     * @return array แถวงานเรียงตาม quadrant, position, id
+     * @return array<int, array<string, mixed>> แถวงานเรียงตาม quadrant, position, id
      */
     public static function getAllForUser(int $userId, ?int $showId = null): array
     {
         $params = [$userId];
         $force  = '';
         if ($showId !== null) {
-            $force  = ' OR id = ?';
+            $force  = ' OR t.id = ?';
             $params[] = $showId;
         }
 
         return DB::run(
-            'SELECT id, title, description, quadrant, status, due_date,
-                    repeat_rule, repeat_until, position
-             FROM tasks
-             WHERE user_id = ?
-               AND (quadrant IS NOT NULL OR status = \'open\'
-                    OR completed_at >= NOW() - INTERVAL ' . self::INBOX_DONE_DAYS . ' DAY' . $force . ')
-             ORDER BY quadrant ASC, position ASC, id ASC',
+            'SELECT t.id, t.title, t.description, t.quadrant, t.status, t.due_date,
+                    t.repeat_rule, t.repeat_until, t.remind_at, t.position,
+                    COALESCE(s.subtask_total, 0) AS subtask_total,
+                    COALESCE(s.subtask_done, 0) AS subtask_done
+             FROM tasks t
+             LEFT JOIN (
+                 SELECT task_id,
+                        COUNT(*) AS subtask_total,
+                        SUM(is_done) AS subtask_done
+                 FROM task_subtasks
+                 GROUP BY task_id
+             ) s ON s.task_id = t.id
+             WHERE t.user_id = ?
+               AND (t.quadrant IS NOT NULL OR t.status = \'open\'
+                    OR t.completed_at >= NOW() - INTERVAL ' . self::INBOX_DONE_DAYS . ' DAY' . $force . ')
+             ORDER BY t.quadrant ASC, t.position ASC, t.id ASC',
             $params
         )->fetchAll();
     }
@@ -109,9 +118,7 @@ class Task
     }
 
     /**
-     * สร้างงานใหม่
-     *
-     * รองรับ quadrant เป็น null (inbox) และรับตำแหน่งที่ส่งมาล่วงหน้าได้
+     * สร้างงานใหม่ รองรับ quadrant null (inbox), ตำแหน่งล่วงหน้า และเวลาเตือน
      * ถ้าไม่ได้ระบุ day_position และมี due_date งานจะไปต่อท้ายวันนั้น
      *
      * @param int $userId รหัสผู้ใช้
@@ -142,8 +149,8 @@ class Task
 
         DB::run(
             'INSERT INTO tasks (user_id, title, description, quadrant, status, completed_at, due_date,
-                                repeat_rule, repeat_until, position, day_position)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                                repeat_rule, repeat_until, remind_at, position, day_position)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 $userId,
                 $data['title'],
@@ -154,6 +161,7 @@ class Task
                 $dueDate,
                 Recurrence::normalise($data['repeat_rule'] ?? 'none'),
                 ($data['repeat_until'] ?? null) ?: null,
+                ($data['remind_at'] ?? null) ?: null,
                 array_key_exists('position', $data) ? (int)$data['position'] : $maxPos + 1,
                 $dayPos,
             ]
@@ -162,7 +170,7 @@ class Task
     }
 
     /**
-     * อัปเดตงาน โดย quadrant เป็น 0 หรือ null จะเก็บเป็น NULL (inbox)
+     * อัปเดตงาน โดย quadrant 0/null เป็น inbox และเมื่อเปลี่ยน remind_at จะลบ reminded_at
      *
      * ถ้าเปลี่ยน due_date ให้ไปต่อท้ายวันใหม่ โดย day_position ต้องอยู่ก่อน due_date
      * ใน SET เพราะ MariaDB ประเมินจากซ้ายไปขวาและใช้ค่าที่อัปเดตแล้ว
@@ -219,6 +227,14 @@ class Task
             $fields[] = 'repeat_until = ?';
             $params[] = $data['repeat_until'] ?: null;
         }
+        if (array_key_exists('remind_at', $data)) {
+            // บรรทัดนี้ต้องอยู่ก่อน remind_at = ? เพราะ MariaDB ประเมิน SET จากซ้ายไปขวา
+            // ตอนนี้ remind_at ในฟังก์ชัน IF ยังเป็นค่าเก่าอยู่ จึงเปรียบเทียบกับค่าใหม่ได้ถูกต้อง
+            $fields[] = 'reminded_at = IF(remind_at <=> ?, reminded_at, NULL)';
+            $fields[] = 'remind_at = ?';
+            $params[] = $data['remind_at'] ?: null;
+            $params[] = $data['remind_at'] ?: null;
+        }
 
         if (empty($fields)) return false;
 
@@ -240,14 +256,13 @@ class Task
     }
 
     /**
-     * สร้างงานถัดไปของงานที่ทำซ้ำ เมื่องานปัจจุบันถูกทำเสร็จ
+     * สร้างงานถัดไปของงานที่ทำซ้ำเมื่อทำเสร็จ พร้อมเลื่อน remind_at และคัดลอกงานย่อย
      *
-     * งานเดิมยังคงอยู่เป็นประวัติ ฟังก์ชันนี้ insert งานใหม่ลง tasks
-     * คืน id ของงานใหม่ หรือ null เมื่องานไม่ซ้ำ ไม่มี due_date หรือหมดช่วงซ้ำ
+     * งานเดิมยังคงอยู่เป็นประวัติ รอบใหม่อยู่ช่องเดิม (รวม inbox) และต่อท้ายวันใหม่ใน Planner
      *
-     * @param array<string, mixed> $task แถวงานที่ทำเสร็จ
+     * @param array<string, mixed> $task แถวงานเดิม
      * @param int $userId รหัสผู้ใช้
-     * @return int|null id งานใหม่ หรือ null ถ้าไม่ต้องสร้าง
+     * @return int|null รหัสงานใหม่ หรือ null ถ้าไม่มีการทำซ้ำ/ครบกำหนด/เกิน repeat_until
      */
     public static function scheduleNextOccurrence(array $task, int $userId): ?int
     {
@@ -271,7 +286,17 @@ class Task
             $next = $candidate;
         }
 
-        return self::create($userId, [
+        $remindAt = null;
+        if (!empty($task['remind_at'])) {
+            $diffDays = (int)(new DateTimeImmutable($task['due_date']))
+                ->diff(new DateTimeImmutable($next))
+                ->format('%r%a');
+            $remindAt = (new DateTimeImmutable($task['remind_at']))
+                ->modify("{$diffDays} days")
+                ->format('Y-m-d H:i:s');
+        }
+
+        $newId = self::create($userId, [
             'title'        => $task['title'],
             'description'  => $task['description'] ?? null,
             'quadrant'     => $task['quadrant'] ?? null,
@@ -279,8 +304,19 @@ class Task
             'due_date'     => $next,
             'repeat_rule'  => $rule,
             'repeat_until' => $until,
+            'remind_at'    => $remindAt,
             'day_position' => self::nextPositionForDate($userId, $next),
         ]);
+
+        DB::run(
+            'INSERT INTO task_subtasks (task_id, user_id, title, is_done, position)
+             SELECT ?, user_id, title, 0, position
+             FROM task_subtasks
+             WHERE task_id = ? AND user_id = ?',
+            [$newId, (int)$task['id'], $userId]
+        );
+
+        return $newId;
     }
 
     /**
