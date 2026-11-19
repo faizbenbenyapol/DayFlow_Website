@@ -1,6 +1,6 @@
 # รีไควร์เมนต์: งานย่อยและเวลาเตือนของงานส่วนตัว
 
-สถานะ: ยืนยันแล้ว (2026-11-19)
+สถานะ: ส่งมอบแล้ว (2026-11-19)
 ระดับงาน: กลาง   ·   playbook: feature
 
 ## 1. ปัญหาและเป้าหมาย
@@ -79,7 +79,7 @@ OpenCode เขียนโค้ดตามแต่ละขั้น Claude 
 | 1 | migration 029: ตาราง `task_subtasks` และคอลัมน์ `tasks.remind_at`, `tasks.reminded_at` | — | รัน `scripts/migrate.php` บน Docker สองครั้ง ครั้งที่สองต้องไม่ error | Sonnet |
 | 2 | model และ API: งานย่อย (เพิ่ม แก้ ติ๊ก ลบ เรียง), `remind_at` ใน validate/create/update, การ์ดได้จำนวนงานย่อย, รอบถัดไปของงานทำซ้ำ | REQ-1–7, 12, EDGE-3–7, 9, 11, 12 | เทสต์ใน `tests/run.php` ยิง API จริง | Sonnet |
 | 3 | หน้าต่างงานและการ์ดใน `views/tasks` กับ `tasks.js` | REQ-1–8, EDGE-4, 12 | เดินหน้าจอจริงในเบราว์เซอร์ + layout audit | Sonnet |
-| 4 | รอบเตือนใน `cron.php` และรายการเตือนใน `NotificationDigest` | REQ-9–11, EDGE-1, 2, 8, 10 | ตั้งเตือนในอดีต 5 นาทีและ 2 ชม. แล้วรัน cron สองรอบ ดู log การส่งและ `/api/push/pending` | Sonnet |
+| 4 | รอบเตือนใน `cron.php` รายการเตือนใน `NotificationDigest` และคืนตัวรับ push/notificationclick ใน `public/sw.js` (CR-1) | REQ-9–11, EDGE-1, 2, 8, 10 | ตั้งเตือนในอดีต 5 นาทีและ 2 ชม. แล้วรัน cron สองรอบ ดู log การส่งและ `/api/push/pending` | Sonnet |
 | 5 | export/import ใน `AccountData` และเทสต์ชุดเต็ม | REQ-13 | export → import บัญชีใหม่ เทียบข้อมูล + ชุดเช็กเต็มใน QA-V3.md | Sonnet |
 
 ผมตัดสินเองได้: ชื่อตารางและคอลัมน์ รูปแบบ endpoint ของ API วิธีกันเตือนซ้ำ (เก็บเวลาที่เตือนแล้วในงาน) และวิธีให้ service worker รู้ว่าต้องแสดงเตือนงานไหน
@@ -88,3 +88,4 @@ OpenCode เขียนโค้ดตามแต่ละขั้น Claude 
 ## 14. ประวัติการเปลี่ยน
 | วันที่ | รหัส | เปลี่ยนอะไร | เพราะอะไร | ผู้ใช้อนุมัติ |
 | --- | --- | --- | --- | --- |
+| 2026-11-19 | CR-1 | ขั้น 4 คืนตัวรับ `push` และ `notificationclick` ใน service worker จาก git history และเปลี่ยน cache เป็น v7 ผลพลอยได้: สรุปรายวันทาง Web Push กลับมาแสดงด้วย | commit e08f805 (3 ต.ค. 2026) ลบตัวรับออกโดยไม่ได้ตั้งใจ ทำให้ push ไม่ขึ้นแจ้งเตือนเลย REQ-10 จึงทำไม่ได้ | อนุมัติ 2026-11-19 |
