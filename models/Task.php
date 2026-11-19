@@ -84,6 +84,39 @@ class Task
     }
 
     /**
+     * คืนรายการงานที่ถึงเวลาเตือนแล้วแต่ยังไม่ได้ mark ว่าแจ้งแล้ว
+     *
+     * @return array<int, array{id: int, user_id: int, title: string, remind_at: string}>
+     */
+    public static function dueReminders(): array
+    {
+        return DB::run(
+            'SELECT id, user_id, title, remind_at
+             FROM tasks
+             WHERE status = "open"
+               AND remind_at IS NOT NULL
+               AND remind_at <= NOW()
+               AND reminded_at IS NULL'
+        )->fetchAll();
+    }
+
+    /**
+     * mark รายการงานว่าได้แจ้งเตือนแล้ว
+     *
+     * @param array<int, int> $ids รหัสงานที่ต้องการ mark
+     */
+    public static function markReminded(array $ids): void
+    {
+        if (empty($ids)) return;
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        DB::run(
+            "UPDATE tasks SET reminded_at = NOW() WHERE id IN ({$placeholders})",
+            $ids
+        );
+    }
+
+    /**
      * คืนตำแหน่งถัดไปสำหรับงานที่ครบกำหนดในวันนั้น
      *
      * ใช้ day_position เพื่อให้ลำดับใน Planner แยกจากลำดับในหน้า Tasks
