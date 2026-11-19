@@ -18,6 +18,9 @@ class LegacyTaskMapper
     /**
      * แปลงแถวจาก daily_todos ให้เป็นรูปแบบคอลัมน์ของ tasks
      *
+     * daily_todos ไม่มี created_at/updated_at จึงใช้ todo_date เป็นเวลาสร้างและแก้ไข
+     * เพื่อให้ Review page นับวันที่ของงานตามวันที่จริง ไม่ใช่วันย้ายข้อมูล
+     *
      * @param array<string, mixed> $row แถวจาก daily_todos
      * @return array<string, mixed> ข้อมูลที่พร้อม insert ลง tasks
      */
@@ -28,15 +31,22 @@ class LegacyTaskMapper
             $title = self::UNTITLED;
         }
 
+        $isDone = (int)($row['is_done'] ?? 0) === 1;
+        $dateAt = !empty($row['todo_date']) ? $row['todo_date'] . ' 00:00:00' : null;
+
         return [
             'user_id'       => (int)($row['user_id'] ?? 0),
             'title'         => $title,
             'description'   => null,
             'quadrant'      => null,
-            'status'        => (int)($row['is_done'] ?? 0) ? 'done' : 'open',
+            'status'        => $isDone ? 'done' : 'open',
+            'completed_at'  => $isDone ? $dateAt : null,
             'due_date'      => $row['todo_date'] ?? null,
             'repeat_rule'   => 'none',
             'position'      => (int)($row['position'] ?? 0),
+            'day_position'  => (int)($row['position'] ?? 0),
+            'created_at'    => $dateAt,
+            'updated_at'    => $dateAt,
             'legacy_source' => 'daily_todo',
             'legacy_id'     => (int)($row['id'] ?? 0),
         ];
@@ -76,15 +86,19 @@ class LegacyTaskMapper
     {
         $split = self::splitText((string)($row['content'] ?? ''));
 
+        $isDone = (int)($row['is_done'] ?? 0) === 1;
+
         return [
             'user_id'       => (int)($row['user_id'] ?? 0),
             'title'         => $split['title'],
             'description'   => $split['description'],
             'quadrant'      => null,
-            'status'        => (int)($row['is_done'] ?? 0) ? 'done' : 'open',
+            'status'        => $isDone ? 'done' : 'open',
+            'completed_at'  => $isDone ? ($row['updated_at'] ?? null) : null,
             'due_date'      => null,
             'repeat_rule'   => 'none',
             'position'      => 0,
+            'day_position'  => 0,
             'created_at'    => $row['created_at'] ?? null,
             'updated_at'    => $row['updated_at'] ?? null,
             'legacy_source' => 'quick_item',

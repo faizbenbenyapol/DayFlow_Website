@@ -131,15 +131,24 @@ final class AccountData
             throw new InvalidArgumentException('ไฟล์นี้มาจาก DayFlow เวอร์ชันใหม่กว่า กรุณาอัปเดตระบบก่อนนำเข้า');
         }
 
+        // จำไว้ว่าไฟล์ต้นฉบับมีส่วน tasks จริงหรือไม่ ถ้าไม่มี
+        // ต้องไม่ลบงานเดิมของผู้ใช้ แต่ยังนำเข้าแถวที่แปลงจาก legacy ได้
+        $hadTasksSection = isset($data['tasks']) && is_array($data['tasks']);
+
+        if (array_key_exists('tasks', $data) && !is_array($data['tasks'])) {
+            throw new InvalidArgumentException('ไฟล์มีข้อมูลที่ไม่ถูกต้องในส่วน tasks');
+        }
+
         self::convertLegacyTasks($userId, $data);
 
         $present = array_values(array_filter(
             array_keys(self::TABLES),
-            fn(string $t): bool => isset($data[$t]) && is_array($data[$t]) && self::columns($t) !== []
+            fn(string $t): bool => ($t !== 'tasks' || $hadTasksSection) && isset($data[$t]) && is_array($data[$t]) && self::columns($t) !== []
         ));
         $hasSettings = isset($data['settings']) && is_array($data['settings']);
 
-        if ($present === [] && !$hasSettings) {
+        $hasConvertedTasks = !$hadTasksSection && !empty($data['tasks']);
+        if ($present === [] && !$hasSettings && !$hasConvertedTasks) {
             throw new InvalidArgumentException('ไม่พบข้อมูล DayFlow ในไฟล์นี้');
         }
 
@@ -160,6 +169,12 @@ final class AccountData
             $counts = [];
             foreach ($present as $table) {
                 $counts[$table] = self::importTable($userId, $table, $data[$table], $idMap);
+            }
+
+            // ถ้าไฟล์ไม่มีส่วน tasks ให้นำเข้าแถวที่แปลงจาก daily_todos/quick_items
+            // เพิ่มเข้าไปโดยไม่ลบงานเดิมของผู้ใช้
+            if (!$hadTasksSection && !empty($data['tasks'])) {
+                $counts['tasks'] = ($counts['tasks'] ?? 0) + self::importTable($userId, 'tasks', $data['tasks'], $idMap);
             }
 
             if ($hasSettings) self::importSettings($userId, $data['settings']);
@@ -212,8 +227,7 @@ final class AccountData
                 $row['user_id'] = $userId;
                 $task = LegacyTaskMapper::$method($row);
                 unset($task['legacy_source'], $task['legacy_id']);
-                // แถวที่แปลงจาก daily_todos/quick_items ไม่ควรเก็บ id เดิม
-                // เพราะอาจทับ id ของ tasks จริงใน backup แล้วทำให้ reference ผิด
+                // แถวที่แปลงไม่มี id เพื่อไม่ให้ชนกับ id ของ tasks จริงใน backup
                 $tasks[] = $task;
             }
         }
@@ -234,6 +248,12 @@ final class AccountData
             // คอลัมน์ legacy ของ tasks ไม่ควรนำเข้า เพราะ UNIQUE key จะชนกัน
             if ($table === 'tasks') {
                 unset($row['legacy_source'], $row['legacy_id']);
+
+                // backup เก่าอาจไม่มี completed_at แต่มีงาน done อยู่
+                // ต้องเติม completed_at เพื่อให้งานยังคงแสดงใน inbox ตามกฎ 7 วัน
+                if (($row['status'] ?? '') === 'done' && empty($row['completed_at'])) {
+                    $row['completed_at'] = !empty($row['updated_at']) ? $row['updated_at'] : date('Y-m-d H:i:s');
+                }
             }
 
             // คีย์ที่ไม่รู้จะถูกทิ้ง ไม่ส่งต่อเข้า SQL

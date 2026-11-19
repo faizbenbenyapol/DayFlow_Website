@@ -66,18 +66,18 @@ $data = [
         ['title' => 'อัพเดตเว็บไซต์ส่วนตัวให้ตรงกับผลงานล่าสุดและเพิ่มหน้า case study ของโปรเจกต์ที่เพิ่งส่งมอบ', 'quadrant' => 2, 'status' => 'open', 'due_date' => day(9), 'position' => 2],
         ['title' => 'ตอบอีเมลลูกค้าเรื่องใบเสนอราคา', 'quadrant' => 3, 'status' => 'open', 'due_date' => day(-1), 'position' => 0],
         ['title' => 'จัดโต๊ะทำงาน', 'quadrant' => 4, 'status' => 'open', 'due_date' => null, 'position' => 0],
-        ['title' => 'จองโต๊ะร้านอาหารวันเสาร์', 'quadrant' => 1, 'status' => 'done', 'due_date' => day(0), 'position' => 3],
-        ['title' => 'ส่งใบแจ้งหนี้เดือนที่แล้ว', 'quadrant' => 1, 'status' => 'done', 'due_date' => day(-4), 'position' => 4],
+        ['title' => 'จองโต๊ะร้านอาหารวันเสาร์', 'quadrant' => 1, 'status' => 'done', 'completed_at' => day(0) . ' 00:00:00', 'due_date' => day(0), 'position' => 3],
+        ['title' => 'ส่งใบแจ้งหนี้เดือนที่แล้ว', 'quadrant' => 1, 'status' => 'done', 'completed_at' => day(-4) . ' 00:00:00', 'due_date' => day(-4), 'position' => 4],
 
         // planner to-dos for today (moved from daily_todos)
         ['title' => 'โทรหาช่างแอร์', 'quadrant' => null, 'status' => 'open', 'due_date' => day(0), 'position' => 10],
         ['title' => 'ซื้อของเข้าบ้าน', 'quadrant' => null, 'status' => 'open', 'due_date' => day(0), 'position' => 11],
-        ['title' => 'เติมน้ำมัน', 'quadrant' => null, 'status' => 'done', 'due_date' => day(0), 'position' => 12],
+        ['title' => 'เติมน้ำมัน', 'quadrant' => null, 'status' => 'done', 'completed_at' => day(0) . ' 00:00:00', 'due_date' => day(0), 'position' => 12],
 
         // quick notes (moved from quick_items)
         ['title' => 'โทรถามราคาเปลี่ยนแบตเตอรี่รถ', 'quadrant' => null, 'status' => 'open', 'due_date' => null, 'position' => 0],
         ['title' => 'อ่านรีวิวหูฟังตัวใหม่ก่อนซื้อ', 'quadrant' => null, 'status' => 'open', 'due_date' => null, 'position' => 0],
-        ['title' => 'ส่งรูปงานแต่งให้พี่ตุ๊กตา', 'quadrant' => null, 'status' => 'done', 'due_date' => null, 'position' => 0],
+        ['title' => 'ส่งรูปงานแต่งให้พี่ตุ๊กตา', 'quadrant' => null, 'status' => 'done', 'completed_at' => date('Y-m-d H:i:s'), 'due_date' => null, 'position' => 0],
     ],
 
     'calendar_events' => [

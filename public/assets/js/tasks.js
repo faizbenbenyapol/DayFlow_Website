@@ -23,12 +23,26 @@ document.addEventListener('DOMContentLoaded', async function () {
     initQuickAdd();
 });
 
+// ถ้ากำลังอยู่บนหน้า /tasks แล้วคลิกผลค้นหา เบราว์เซอร์เปลี่ยนแค่ hash ไม่โหลดหน้าใหม่ จึงต้องโหลดงานเอง
+window.addEventListener('hashchange', function () {
+    if (!/^#task-\d+$/.test(location.hash) && location.hash !== '#inbox') return;
+    hashHandled = false;
+    loadTasks();
+});
+
 /**
  * โหลดรายการงานจาก API แล้ววาดทุกช่อง จากนั้นตรวจ hash ครั้งแรกสุดเพื่อเลื่อนไปงานเป้าหมาย
  */
 async function loadTasks() {
     try {
-        const data = await apiFetch(BASE_URL + '/api/tasks');
+        let url = BASE_URL + '/api/tasks';
+        // ถ้าโหลดครั้งแรกและ URL มี #task-<id> ให้ขอแสดงงานนั้นด้วย
+        // เพราะงานเสร็จเก่าใน inbox อาจถูกซ่อนตามกฎ 7 วัน
+        if (!hashHandled) {
+            const match = location.hash.match(/^#task-(\d+)$/);
+            if (match) url += '?show=' + encodeURIComponent(match[1]);
+        }
+        const data = await apiFetch(url);
         allTasks = data.quadrants || {};
         renderAllQuadrants();
         if (!hashHandled) {

@@ -75,11 +75,14 @@ class TaskController
      * คืนรายการงานทั้งหมดของผู้ใช้ จัดกลุ่มตาม quadrant
      *
      * งานที่ยังไม่ได้จัดหมวดหมู่ (quadrant = null) อยู่ในกลุ่ม 0
+     * ถ้า query ?show=<id> ระบุมา งานนั้นจะถูกบังคับแสดงแม้จะถูกกฎ 7 วันซ่อน
      */
     public function apiList(): void
     {
         $userId = Auth::userId();
-        $tasks  = Task::getAllForUser($userId);
+        $show   = Request::query('show');
+        $showId = is_string($show) && ctype_digit($show) && (int)$show > 0 ? (int)$show : null;
+        $tasks  = Task::getAllForUser($userId, $showId);
 
         // Group by quadrant; null quadrant becomes group 0 so inbox tasks are visible too
         $quadrants = [0 => [], 1 => [], 2 => [], 3 => [], 4 => []];

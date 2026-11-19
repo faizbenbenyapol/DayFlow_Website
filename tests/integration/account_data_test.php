@@ -257,3 +257,88 @@ test('malformed legacy rows are rejected without PHP warnings', function (TestCl
     assertFalse(array_key_exists('daily_todos', $export), 'daily_todos should not exist');
     assertFalse(array_key_exists('quick_items', $export), 'quick_items should not exist');
 });
+
+test('imported done tasks without completed_at get a fallback timestamp', function (TestClient $_c): void {
+    $label = 'done_fallback';
+    $client = accountClient($label);
+    $username = 'acct_' . $label . '_' . TEST_RUN_ID;
+    $keptCompletedAt = '2026-10-05 14:30:00';
+
+    $response = accountImport($client, [
+        'format'  => 'dayflow-export',
+        'version' => 2,
+        'tasks'   => [
+            ['id' => 1, 'title' => 'Done no completed_at', 'quadrant' => 1, 'status' => 'done', 'updated_at' => '2026-10-03 08:00:00'],
+            ['id' => 2, 'title' => 'Done with completed_at', 'quadrant' => 1, 'status' => 'done', 'completed_at' => $keptCompletedAt, 'updated_at' => '2026-10-04 08:00:00'],
+        ],
+    ]);
+    assertSame(200, $response['status'], 'import should succeed: ' . substr($response['body'], 0, 300));
+
+    $userId = (int)DB::run('SELECT id FROM users WHERE username = ?', [$username])->fetchColumn();
+    $rows = DB::run(
+        'SELECT title, completed_at FROM tasks WHERE user_id = ? AND title LIKE ? ORDER BY title',
+        [$userId, 'Done%']
+    )->fetchAll();
+
+    $byTitle = [];
+    foreach ($rows as $row) {
+        $byTitle[$row['title']] = $row['completed_at'];
+    }
+
+    assertTrue(isset($byTitle['Done no completed_at']) && $byTitle['Done no completed_at'] !== null, 'missing completed_at is filled from updated_at');
+    assertSame('2026-10-03 08:00:00', $byTitle['Done no completed_at'] ?? null, 'uses updated_at when completed_at is missing');
+    assertSame($keptCompletedAt, $byTitle['Done with completed_at'] ?? null, 'explicit completed_at must be preserved');
+});
+
+test('a backup without a tasks section does not wipe existing tasks', function (TestClient $_c): void {
+    $client = accountClient('no_tasks_section');
+
+    // สร้างงานเดิมของผู้ใช้ไว้ก่อน
+    $client->post('/api/tasks', ['title' => 'Existing task ' . TEST_RUN_ID, 'quadrant' => 1]);
+
+    // นำเข้าไฟล์สำรองเก่าที่มีแค่ quick_items ไม่มีส่วน tasks
+    $response = accountImport($client, [
+        'format'      => 'dayflow-export',
+        'version'     => 2,
+        'quick_items' => [['id' => 1, 'content' => 'Imported quick ' . TEST_RUN_ID, 'is_done' => 0]],
+    ]);
+    assertSame(200, $response['status'], 'import should succeed');
+
+    $export = accountExport($client);
+    $titles = array_column($export['tasks'] ?? [], 'title');
+    assertContains('Existing task ' . TEST_RUN_ID, $titles, 'existing task must survive');
+    assertContains('Imported quick ' . TEST_RUN_ID, $titles, 'quick item must become a task');
+});
+
+test('a backup whose tasks section is not an array returns 422 and leaves tasks untouched', function (TestClient $_c): void {
+    $client = accountClient('tasks_not_array');
+    $client->post('/api/tasks', ['title' => 'Keep me ' . TEST_RUN_ID, 'quadrant' => 1]);
+
+    $response = accountImport($client, [
+        'format'  => 'dayflow-export',
+        'version' => 2,
+        'tasks'   => 5,
+    ]);
+    assertSame(422, $response['status'], 'numeric tasks should be rejected');
+
+    $export = accountExport($client);
+    $titles = array_column($export['tasks'] ?? [], 'title');
+    assertSame(['Keep me ' . TEST_RUN_ID], $titles, 'existing tasks must be untouched');
+});
+
+test('a backup with string tasks and quick_items returns 422 without crashing', function (TestClient $_c): void {
+    $client = accountClient('tasks_string');
+    $client->post('/api/tasks', ['title' => 'Keep me too ' . TEST_RUN_ID, 'quadrant' => 1]);
+
+    $response = accountImport($client, [
+        'format'      => 'dayflow-export',
+        'version'     => 2,
+        'tasks'       => 'abc',
+        'quick_items' => [['id' => 1, 'content' => 'Quick ' . TEST_RUN_ID, 'is_done' => 0]],
+    ]);
+    assertSame(422, $response['status'], 'string tasks should be rejected');
+
+    $export = accountExport($client);
+    $titles = array_column($export['tasks'] ?? [], 'title');
+    assertSame(['Keep me too ' . TEST_RUN_ID], $titles, 'existing tasks must be untouched');
+});

@@ -1,10 +1,12 @@
 -- =====================================================
--- Migration: คอลัมน์ inbox และบันทึกการคัดลอกงานเก่า
+-- Migration: คอลัมน์ inbox, completed_at และบันทึกการคัดลอกงานเก่า
 --
 -- เตรียมตาราง tasks ให้พร้อมรับข้อมูลจาก daily_todos และ quick_items
 -- ใน step 1 ของ daily-loop refactor
 --   - quadrant เปลี่ยนเป็น nullable เพื่อให้งานที่ "ยังไม่จัดหมวดหมู่"
 --     อยู่ใน inbox ได้
+--   - completed_at บันทึกเวลาทำงานเสร็จ (ไม่ใช้ updated_at เพราะลากเรียงลำดับ
+--     จะเปลี่ยนค่า และข้อมูลย้ายถิ่นฐานจะได้เวลาย้าย)
 --   - legacy_source / legacy_id ชี้กลับไปยังแถวต้นทาง
 --   - legacy_task_copies บันทึกว่าแถวต้นทางถูกคัดลอกแล้ว แม้งานใน tasks
 --     ถูกลบไปก็ไม่คัดลอกซ้ำ
@@ -46,3 +48,31 @@ SET @modify_ddl := IF(@quadrant_needs_modify = 1,
 PREPARE modify_stmt FROM @modify_ddl;
 EXECUTE modify_stmt;
 DEALLOCATE PREPARE modify_stmt;
+
+SET @has_completed_at := (
+    SELECT COUNT(*) FROM information_schema.columns
+    WHERE table_schema = DATABASE() AND table_name = 'tasks' AND column_name = 'completed_at'
+);
+SET @completed_at_ddl := IF(@has_completed_at = 0,
+    'ALTER TABLE `tasks`
+       ADD COLUMN `completed_at` DATETIME NULL DEFAULT NULL AFTER `status`',
+    'SELECT 1'
+);
+PREPARE completed_at_stmt FROM @completed_at_ddl;
+EXECUTE completed_at_stmt;
+DEALLOCATE PREPARE completed_at_stmt;
+
+UPDATE tasks SET completed_at = updated_at, updated_at = updated_at WHERE status = 'done' AND completed_at IS NULL;
+
+SET @has_day_position := (
+    SELECT COUNT(*) FROM information_schema.columns
+    WHERE table_schema = DATABASE() AND table_name = 'tasks' AND column_name = 'day_position'
+);
+SET @day_position_ddl := IF(@has_day_position = 0,
+    'ALTER TABLE `tasks`
+       ADD COLUMN `day_position` SMALLINT UNSIGNED NOT NULL DEFAULT 0 AFTER `position`',
+    'SELECT 1'
+);
+PREPARE day_position_stmt FROM @day_position_ddl;
+EXECUTE day_position_stmt;
+DEALLOCATE PREPARE day_position_stmt;

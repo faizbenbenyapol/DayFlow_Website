@@ -204,12 +204,16 @@ class PlannerController
 
     /**
      * คืนรายการ to-do ของวันที่ระบุในรูปแบบเดิม (id, title, is_done, position)
+     *
+     * ถ้าอยู่ในโหมดแชร์ read-only ที่แชร์ planner แต่ไม่แชร์ tasks
+     * จะคืนเฉพาะงานที่ไม่มี quadrant (เทียบเท่า to-do รายวันเดิม)
      */
     public function apiTodosList(): void
     {
         $userId = Auth::userId();
         $date   = Request::query('date', date('Y-m-d'));
-        $rows   = Task::getForDate($userId, $date);
+        $inboxOnly = Auth::isReadOnly() && !in_array('tasks', Auth::getSharedMenus(), true);
+        $rows   = Task::getForDate($userId, $date, $inboxOnly);
         Response::json(['todos' => array_map([$this, 'formatTodo'], $rows)]);
     }
 
@@ -228,10 +232,10 @@ class PlannerController
         if (mb_strlen($title) > 255 || !$this->validDate($date)) Response::json(['error' => 'ข้อมูลรายการประจำวันไม่ถูกต้อง'], 422);
 
         $id = Task::create($userId, [
-            'title'     => $title,
-            'due_date'  => $date,
-            'quadrant'  => null,
-            'position'  => Task::nextPositionForDate($userId, $date),
+            'title'        => $title,
+            'due_date'     => $date,
+            'quadrant'     => null,
+            'day_position' => Task::nextPositionForDate($userId, $date),
         ]);
 
         $row = Task::getById($id, $userId);
@@ -326,7 +330,7 @@ class PlannerController
      * แปลงแถว task เป็นรูปแบบ to-do ที่ planner.js คาดหวัง
      *
      * @param array<string, mixed> $row แถวจาก Task
-     * @return array<string, mixed> แถวพร้อม id, title, is_done, position
+     * @return array<string, mixed> แถวพร้อม id, title, is_done, position, quadrant
      */
     private function formatTodo(array $row): array
     {
@@ -334,7 +338,8 @@ class PlannerController
             'id'       => (int)$row['id'],
             'title'    => $row['title'],
             'is_done'  => ($row['status'] ?? 'open') === 'done' ? 1 : 0,
-            'position' => (int)$row['position'],
+            'position' => (int)$row['day_position'],
+            'quadrant' => $row['quadrant'] === null ? null : (int)$row['quadrant'],
         ];
     }
 }

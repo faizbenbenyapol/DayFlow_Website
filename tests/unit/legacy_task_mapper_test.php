@@ -24,9 +24,13 @@ test('open daily todo maps to open task', function (): void {
     assertSame(null, $mapped['description']);
     assertSame(null, $mapped['quadrant']);
     assertSame('open', $mapped['status']);
+    assertSame(null, $mapped['completed_at']);
     assertSame('2026-03-10', $mapped['due_date']);
     assertSame('none', $mapped['repeat_rule']);
     assertSame(3, $mapped['position']);
+    assertSame(3, $mapped['day_position']);
+    assertSame('2026-03-10 00:00:00', $mapped['created_at']);
+    assertSame('2026-03-10 00:00:00', $mapped['updated_at']);
     assertSame('daily_todo', $mapped['legacy_source']);
     assertSame(1, $mapped['legacy_id']);
 });
@@ -44,6 +48,9 @@ test('done daily todo maps to done task', function (): void {
     $mapped = LegacyTaskMapper::fromDailyTodo($row);
 
     assertSame('done', $mapped['status']);
+    assertSame('2026-03-11 00:00:00', $mapped['completed_at']);
+    assertSame('2026-03-11 00:00:00', $mapped['created_at']);
+    assertSame('2026-03-11 00:00:00', $mapped['updated_at']);
     assertSame('ออกกำลังกาย', $mapped['title']);
 });
 
@@ -77,8 +84,10 @@ test('short single-line quick item uses content as title with no description', f
     assertSame('โทรหาแม่', $mapped['title']);
     assertSame(null, $mapped['description']);
     assertSame('open', $mapped['status']);
+    assertSame(null, $mapped['completed_at']);
     assertSame(null, $mapped['due_date']);
     assertSame(0, $mapped['position']);
+    assertSame(0, $mapped['day_position']);
     assertSame('none', $mapped['repeat_rule']);
     assertSame('quick_item', $mapped['legacy_source']);
     assertSame(10, $mapped['legacy_id']);
@@ -133,6 +142,7 @@ test('done quick item maps to done task', function (): void {
     $mapped = LegacyTaskMapper::fromQuickItem($row);
 
     assertSame('done', $mapped['status']);
+    assertSame('2026-03-10 12:00:00', $mapped['completed_at']);
     assertSame('จ่ายบิล', $mapped['title']);
 });
 
@@ -150,6 +160,7 @@ test('empty quick item becomes untitled with null description', function (): voi
 
     assertSame('(ไม่มีชื่อ)', $mapped['title']);
     assertSame(null, $mapped['description']);
+    assertSame(null, $mapped['completed_at']);
 });
 
 test('quick item with leading blank lines skips to the first non-empty line', function (): void {
