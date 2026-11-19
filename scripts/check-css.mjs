@@ -20,7 +20,7 @@ const CHECKED = [
     'base.css', 'components.css', 'shell.css',
     // Pages that are finished (docs/REDESIGN.md, phases 4 and 5).
     'modules/dashboard.css', 'modules/tasks.css', 'modules/planner.css',
-    'modules/habits.css', 'modules/focus.css', 'modules/quick.css',
+    'modules/habits.css', 'modules/focus.css',
     'modules/finance.css', 'modules/subscriptions.css', 'modules/stocks.css',
     'modules/notes.css', 'modules/skills.css', 'modules/exercise.css', 'modules/food_notes.css',
     'modules/review.css', 'modules/bookmarks.css',

@@ -114,6 +114,14 @@ class Task
         return (int)DB::conn()->lastInsertId();
     }
 
+    /**
+     * อัปเดตงาน โดย quadrant เป็น 0 หรือ null จะเก็บเป็น NULL (inbox)
+     *
+     * @param int $id รหัสงาน
+     * @param int $userId รหัสผู้ใช้
+     * @param array<string, mixed> $data ข้อมูลที่ต้องการอัปเดต
+     * @return bool พบและอัปเดตหรือไม่
+     */
     public static function update(int $id, int $userId, array $data): bool
     {
         $fields = [];
@@ -129,7 +137,8 @@ class Task
         }
         if (array_key_exists('quadrant', $data)) {
             $fields[] = 'quadrant = ?';
-            $params[] = (int)$data['quadrant'];
+            // quadrant 0/null หมายถึง inbox ต้องเก็บเป็น NULL ในฐานข้อมูล
+            $params[] = ($data['quadrant'] === null || $data['quadrant'] === 0) ? null : (int)$data['quadrant'];
         }
         if (array_key_exists('status', $data)) {
             $fields[] = 'status = ?';
@@ -250,17 +259,25 @@ class Task
         }
     }
 
+    /**
+     * ย้ายงานระหว่าง quadrant รองรับการลากเข้า/ออก inbox (quadrant 0 = NULL)
+     *
+     * @param int $userId รหัสผู้ใช้
+     * @param array<int, array<string, mixed>> $items รายการที่มี id, quadrant, position
+     */
     public static function reorder(int $userId, array $items): void
     {
-        // $items = [['id' => 1, 'quadrant' => 1, 'position' => 0], ...]
+        // $items = [['id' => 1, 'quadrant' => 0, 'position' => 0], ...]
+        // quadrant 0 หมายถึง inbox ต้องเก็บเป็น NULL
         $db = DB::conn();
         $stmt = $db->prepare(
             'UPDATE tasks SET quadrant = ?, position = ?, updated_at = NOW()
              WHERE id = ? AND user_id = ?'
         );
         foreach ($items as $item) {
+            $quadrant = ($item['quadrant'] === null || (int)$item['quadrant'] === 0) ? null : (int)$item['quadrant'];
             $stmt->execute([
-                (int)$item['quadrant'],
+                $quadrant,
                 (int)$item['position'],
                 (int)$item['id'],
                 $userId

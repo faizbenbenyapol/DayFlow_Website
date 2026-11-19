@@ -8,6 +8,13 @@ require_once ROOT . '/core/TelegramService.php';
 
 class TaskController
 {
+    /**
+     * ตรวจสอบข้อมูลงานที่ส่งเข้ามา รองรับ quadrant 0 เป็น inbox (null)
+     *
+     * @param array<string, mixed> $data ข้อมูลงาน
+     * @param bool $requireTitle บังคับให้มีชื่องานหรือไม่
+     * @return array<string, mixed> ข้อมูลที่ผ่านการตรวจสอบ quadrant 0 จะถูกแปลงเป็น null
+     */
     private function validatePayload(array $data, bool $requireTitle = false): array
     {
         $title = array_key_exists('title', $data) ? trim((string)$data['title']) : null;
@@ -18,8 +25,9 @@ class TaskController
         }
         if (array_key_exists('quadrant', $data)) {
             $quadrant = (int)$data['quadrant'];
-            if ($quadrant < 1 || $quadrant > 4) Response::json(['error' => 'หมวดหมู่งานไม่ถูกต้อง'], 422);
-            $data['quadrant'] = $quadrant;
+            // 0 = inbox (stored as NULL); 1-4 = the matrix boxes
+            if ($quadrant < 0 || $quadrant > 4) Response::json(['error' => 'หมวดหมู่งานไม่ถูกต้อง'], 422);
+            $data['quadrant'] = $quadrant === 0 ? null : $quadrant;
         }
         if (array_key_exists('status', $data) && !in_array($data['status'], ['open', 'done'], true)) {
             Response::json(['error' => 'สถานะงานไม่ถูกต้อง'], 422);
@@ -184,7 +192,7 @@ class TaskController
         }
         foreach ($items as $item) {
             if (!is_array($item) || (int)($item['id'] ?? 0) < 1
-                || (int)($item['quadrant'] ?? 0) < 1 || (int)($item['quadrant'] ?? 0) > 4
+                || (int)($item['quadrant'] ?? -1) < 0 || (int)($item['quadrant'] ?? -1) > 4
                 || (int)($item['position'] ?? -1) < 0) {
                 Response::json(['error' => 'ข้อมูลการเรียงงานไม่ถูกต้อง'], 422);
             }

@@ -3,7 +3,13 @@ require_once ROOT . '/models/Task.php';
 require_once ROOT . '/models/LegacyTaskMapper.php';
 
 class QuickController {
-    public function index(): void { $pageTitle = 'จดด่วน'; $pageStyle = 'quick'; $pageScript = 'quick'; require ROOT . '/views/layout/header.php'; require ROOT . '/views/quick/index.php'; require ROOT . '/views/layout/footer.php'; }
+    /**
+     * หน้าจดด่วนเดิมย้ายไปอยู่ใน /tasks#inbox แล้ว
+     */
+    public function index(): void
+    {
+        Response::redirect('/tasks#inbox');
+    }
 
     /**
      * คืนรายการจดด่วนทั้งหมดของผู้ใช้ (inbox task ที่ไม่มี due_date)
