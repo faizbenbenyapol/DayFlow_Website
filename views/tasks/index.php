@@ -12,6 +12,7 @@ $quadrants = [
     3 => ['มอบหมาย', 'ไม่สำคัญ + เร่งด่วน'],
     4 => ['ตัดทิ้ง', 'ไม่สำคัญ + ไม่เร่งด่วน'],
 ];
+$quadrantOptions = [0 => ['ยังไม่จัด', '']] + $quadrants;
 $repeatOptions = [
     'none' => 'ไม่ทำซ้ำ', 'daily' => 'ทุกวัน', 'weekly' => 'ทุกสัปดาห์', 'monthly' => 'ทุกเดือน', 'yearly' => 'ทุกปี',
 ];
@@ -29,6 +30,27 @@ $readOnly = Auth::isReadOnly();
     </div>
     <?php endif; ?>
 </div>
+
+<section class="quadrant" id="inbox" aria-labelledby="inbox-label">
+    <header class="quadrant-head">
+        <div>
+            <h2 class="quadrant-label" id="inbox-label">ยังไม่จัด</h2>
+            <p class="quadrant-title">ลากเข้าช่องด้านล่าง หรือใส่วันครบกำหนด</p>
+        </div>
+        <span class="quadrant-count" id="q0-count"></span>
+    </header>
+    <div class="quadrant-body" id="q0-list" data-quadrant="0" aria-busy="true">
+        <div class="skel-row"><span class="skel box"></span><span class="skel skel-w-60"></span></div>
+        <div class="skel-row"><span class="skel box"></span><span class="skel skel-w-45"></span></div>
+    </div>
+    <?php if (!$readOnly): ?>
+    <label class="add-row">
+        <span class="plus" aria-hidden="true">+</span>
+        <span class="sr-only">เพิ่มงานใน ยังไม่จัด</span>
+        <input type="text" class="quick-add" data-quadrant="0" maxlength="255" autocomplete="off" placeholder="จดไว้ก่อน แล้วกด Enter">
+    </label>
+    <?php endif; ?>
+</section>
 
 <div class="matrix-grid" id="matrixGrid">
     <?php foreach ($quadrants as $q => [$label, $title]): ?>
@@ -80,8 +102,8 @@ $readOnly = Auth::isReadOnly();
                 <div class="form-group">
                     <label class="form-label" for="<?= $p ?>TaskQuadrant">ความสำคัญ</label>
                     <select class="form-control" id="<?= $p ?>TaskQuadrant">
-                        <?php foreach ($quadrants as $q => [$label, $title]): ?>
-                        <option value="<?= $q ?>"><?= h($title) ?> (<?= h($label) ?>)</option>
+                        <?php foreach ($quadrantOptions as $q => [$label, $title]): ?>
+                        <option value="<?= $q ?>"><?= h($title) ?><?= $title === '' ? h($label) : ' (' . h($label) . ')' ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>

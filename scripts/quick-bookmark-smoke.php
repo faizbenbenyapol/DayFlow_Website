@@ -7,10 +7,11 @@ if (PHP_SAPI !== 'cli') {
 if (!defined('ROOT')) define('ROOT', dirname(__DIR__));
 require_once ROOT . '/config/config.php';
 require_once ROOT . '/config/database.php';
-require_once ROOT . '/models/QuickItem.php';
+require_once ROOT . '/core/Recurrence.php';
+require_once ROOT . '/models/Task.php';
 require_once ROOT . '/models/Bookmark.php';
 
-foreach (['quick_items', 'bookmarks'] as $table) {
+foreach (['tasks', 'bookmarks'] as $table) {
     if (!(int)DB::run(
         'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
         [$table]
@@ -23,8 +24,14 @@ foreach (['quick_items', 'bookmarks'] as $table) {
 $userId = (int)DB::run('SELECT id FROM users ORDER BY id ASC LIMIT 1')->fetchColumn();
 if ($userId > 0) {
     DB::conn()->beginTransaction();
-    $quickId = QuickItem::create($userId, 'smoke quick item');
-    if (!QuickItem::toggle($quickId, $userId) || !QuickItem::delete($quickId, $userId)) {
+    $quickId = Task::create($userId, [
+        'title'    => 'smoke quick item',
+        'quadrant' => null,
+        'due_date' => null,
+        'status'   => 'open',
+        'position' => 0,
+    ]);
+    if (!Task::toggle($quickId, $userId) || !Task::delete($quickId, $userId)) {
         DB::conn()->rollBack();
         exit(1);
     }

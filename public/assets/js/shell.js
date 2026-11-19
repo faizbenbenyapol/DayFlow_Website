@@ -144,7 +144,7 @@ document.addEventListener('click', event => {
         return window.location.pathname.slice(base.length).replace(/\/$/, '') || '/';
     }
 
-    const REFRESH_ON = { task: ['/', '/tasks'], note: ['/', '/quick-notes'], money: ['/', '/finance'] };
+    const REFRESH_ON = { task: ['/', '/tasks'], note: ['/', '/tasks'], money: ['/', '/finance'] };
 
     async function send() {
         if (kind === 'task') {

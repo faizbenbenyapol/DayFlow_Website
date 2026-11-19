@@ -52,7 +52,7 @@ const api = (tab, path, options = {}) => tab.eval(`(async () => {
 
 async function main() {
     const { cdp, stop } = await launch();
-    const made = { tasks: [], items: [], finance: [], todos: [], events: [], subs: [], stocks: [], bookmarks: [], foods: [], workouts: [], skills: [], notes: [], files: [], appShares: [], projects: [] };
+    const made = { tasks: [], items: [], finance: [], todos: [], events: [], subs: [], stocks: [], bookmarks: [], foods: [], workouts: [], skills: [], notes: [], files: [], appShares: [], projects: [], focus: [] };
     let tab;
 
     try {
@@ -216,7 +216,8 @@ async function main() {
         console.log('Tasks');
         await tab.goto(BASE + '/tasks');
         await tab.settle();
-        check(await tab.eval(`document.querySelectorAll('.quadrant').length`) === 4, 'four boxes');
+        check(await tab.eval(`document.querySelectorAll('#matrixGrid .quadrant').length`) === 4, 'four boxes inside the matrix');
+        check(await tab.eval(`!!document.getElementById('inbox')`), 'the inbox box exists above the matrix');
         check(await tab.eval(`document.querySelectorAll('.task-item').length`) >= 1, 'tasks are listed');
         check(!(await tab.eval(`document.getElementById('tasksTally').textContent`)).includes('กำลัง'), 'the summary line is filled');
 
@@ -323,23 +324,37 @@ async function main() {
         await click(tab, '#btnResetTimer');
         check(await tab.eval(`document.getElementById('timerDisplay').textContent`) === '25:00', 'start over returns to 25:00');
 
-        console.log('Quick notes');
+        // Log a short focus session so the review chart has data to draw.
+        const focusSession = await api(tab, '/api/focus', {
+            method: 'POST',
+            body: JSON.stringify({ type: 'work', duration_min: 5, title: `โฟกัส ${STAMP}` })
+        });
+        check(focusSession.status === 201, 'a focus session can be logged for the review chart');
+        if (focusSession.body?.id) made.focus.push(focusSession.body.id);
+
+        console.log('Inbox');
         await tab.goto(BASE + '/quick-notes');
         await tab.settle();
-        await fill(tab, '#quickInput', 'abc');
-        check(await tab.eval(`document.getElementById('quickCount').textContent`) === '3 / 500', 'the counter follows the text');
-        await fill(tab, '#quickInput', `ไม่ลืม ${STAMP}`);
-        await tab.eval(`document.getElementById('quickInput').focus()`);
+        check(await tab.eval(`location.pathname`) === '/tasks', '/quick-notes redirects to /tasks');
+        check(await tab.eval(`!!document.getElementById('inbox')`), 'the inbox box is present after the redirect');
+
+        await fill(tab, '.quick-add[data-quadrant="0"]', `ไม่ลืม ${STAMP}`);
+        await tab.eval(`document.querySelector('.quick-add[data-quadrant="0"]').focus()`);
         await key(tab, 'Enter');
         await sleep(1000);
-        check(await tab.eval(`document.getElementById('quickList').textContent.includes('${STAMP}')`), 'a typed line joins the list');
-        const quick = ((await api(tab, '/api/quick-items')).body.items || []).find(i => (i.content || '').includes(STAMP));
-        check(!!quick, 'and is saved');
-        if (quick) made.items.push(quick.id);
-        await tab.eval(`document.querySelector('[data-quick-toggle="${quick.id}"]').click()`);
+        check(await tab.eval(`document.getElementById('q0-list').textContent.includes('${STAMP}')`), 'a typed line joins the inbox');
+        const inboxTask = Object.values((await api(tab, '/api/tasks')).body.quadrants || {}).flat().find(t => t.title === `ไม่ลืม ${STAMP}`);
+        check(!!inboxTask && inboxTask.quadrant === null, 'and is saved under key 0 with quadrant null');
+        if (inboxTask) made.tasks.push(inboxTask.id);
+
+        if (await tab.eval(`!!document.querySelector('#q0-list .inbox-more')`)) {
+            await click(tab, '#q0-list .inbox-more');
+            await sleep(300);
+        }
+        await tab.eval(`document.querySelector('#q0-list .task-item[data-id="${inboxTask.id}"] .task-checkbox').click()`);
         await sleep(900);
-        check(await tab.eval(`document.querySelector('[data-quick-toggle="${quick.id}"]').checked`), 'a ticked line stays ticked after the list redraws');
-        check(await tab.eval(`document.getElementById('quickList').textContent.includes('เสร็จแล้ว')`), 'under a "done" heading');
+        check(await tab.eval(`document.querySelector('#q0-list .task-item[data-id="${inboxTask.id}"] .task-checkbox').checked`), 'a ticked inbox task stays ticked after the list redraws');
+        check(await tab.eval(`document.querySelector('#q0-list .task-item[data-id="${inboxTask.id}"]').classList.contains('done')`), 'the item has the done class');
 
         // ---------- the money pages ----------
         console.log('Finance');
@@ -1010,6 +1025,7 @@ async function main() {
             for (const id of made.appShares) await api(tab, `/api/app-shares/${id}`, { method: 'DELETE' }).catch(() => {});
             for (const id of made.projects) await api(tab, `/api/projects/${id}`, { method: 'DELETE' }).catch(() => {});
             for (const id of made.events) await api(tab, `/api/planner/events/${id}`, { method: 'DELETE' }).catch(() => {});
+            for (const id of made.focus) await api(tab, `/api/focus/${id}`, { method: 'DELETE' }).catch(() => {});
         }
         stop();
     }

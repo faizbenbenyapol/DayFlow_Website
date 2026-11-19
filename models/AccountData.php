@@ -18,10 +18,12 @@
 //   - share links and file transfers: public tokens are not re-issued blindly.
 // =====================================================
 
+require_once ROOT . '/models/LegacyTaskMapper.php';
+
 final class AccountData
 {
     public const FORMAT  = 'dayflow-export';
-    public const VERSION = 2;
+    public const VERSION = 3;
 
     /**
      * Every table a backup carries, parents before children.
@@ -37,7 +39,6 @@ final class AccountData
         'note_blocks'         => ['note_id' => ['notes', true]],
         'note_tag_relations'  => ['note_id' => ['notes', true], 'tag_id' => ['note_tags', true]],
         'calendar_events'     => [],
-        'daily_todos'         => [],
         'exercise_categories' => [],
         'workouts'            => [],
         'finance_categories'  => [],
@@ -50,7 +51,6 @@ final class AccountData
         'focus_sessions'      => ['task_id' => ['tasks', false]],
         'habits'              => [],
         'habit_logs'          => ['habit_id' => ['habits', true]],
-        'quick_items'         => [],
         'bookmarks'           => [],
         'stock_transactions'  => [],
         'stock_watchlists'    => [],
@@ -70,11 +70,13 @@ final class AccountData
     private const JSON_SETTINGS = ['telegram_notify_events', 'hidden_menus', 'menu_order', 'mobile_tabs'];
 
     /**
-     * The user's data as a portable document.
+     * ส่งออกข้อมูลผู้ใช้เป็นไฟล์ JSON ที่ย้ายไปบัญชีอื่นได้
      *
-     * A table that does not exist on this server is left out; any other
-     * failure is thrown, because a backup that silently misses a table is
-     * worse than no backup.
+     * ตารางที่ไม่มีในเซิร์ฟเวอร์จะถูกข้าม ส่วนความผิดพลาดอื่นจะ throw
+     * เพราะ backup ที่เงียบๆ ขาดตารางย่อมแย่กว่าไม่มี backup
+     *
+     * @param int $userId รหัสผู้ใช้
+     * @return array ข้อมูลทั้งหมดที่จะส่งออก
      */
     public static function export(int $userId): array
     {
@@ -89,9 +91,16 @@ final class AccountData
         foreach (array_keys(self::TABLES) as $table) {
             if (self::columns($table) === []) continue;
 
-            $sql = in_array($table, self::VIA_NOTE, true)
-                ? "SELECT c.* FROM `$table` c JOIN notes n ON n.id = c.note_id WHERE n.user_id = ?"
-                : "SELECT * FROM `$table` WHERE user_id = ?";
+            if (in_array($table, self::VIA_NOTE, true)) {
+                $sql = "SELECT c.* FROM `$table` c JOIN notes n ON n.id = c.note_id WHERE n.user_id = ?";
+            } else {
+                $columns = array_keys(self::columns($table));
+                if ($table === 'tasks') {
+                    // คอลัมน์ legacy ไม่ควรเดินทางไปกับ backup เพราะ UNIQUE key จะชนกัน
+                    $columns = array_values(array_diff($columns, ['legacy_source', 'legacy_id']));
+                }
+                $sql = 'SELECT `' . implode('`, `', $columns) . "` FROM `$table` WHERE user_id = ?";
+            }
             $data[$table] = DB::run($sql, [$userId])->fetchAll();
         }
 
@@ -99,19 +108,19 @@ final class AccountData
     }
 
     /**
-     * Restores a backup into the user's account and returns rows imported per table.
+     * นำเข้า backup กลับเข้าบัญชีผู้ใช้ และคืนจำนวนแถวที่นำเข้าแยกตามตาราง
      *
-     * Only the tables present in the file are replaced, so an older backup
-     * that predates a feature leaves that feature's data alone. Ids are never
-     * taken from the file: every row gets a fresh one and the references
-     * between rows are rewritten to match, which lets a backup be restored
-     * into another account or onto another server without colliding.
+     * มีเฉพาะตารางที่ปรากฏในไฟล์จึงจะถูกแทนที่ backup เก่าที่ยังไม่มีฟีเจอร์
+     * ใหม่จะไม่แตะข้อมูลฟีเจอร์นั้น id จากไฟล์จะไม่ถูกนำมาใช้ แต่สร้าง id
+     * ใหม่และเขียน reference ใหม่ เพื่อให้ย้ายไปบัญชี/เซิร์ฟเวอร์อื่นได้
+     * โดยไม่ชนกัน
      *
-     * Everything in $data is untrusted: keys are matched against real
-     * columns, values must be scalars, and a reference is only honoured when
-     * it points at a row this same import created.
+     * daily_todos และ quick_items จาก backup เก่าจะถูกแปลงเป็น tasks
      *
-     * @throws InvalidArgumentException with a message fit to show the user
+     * @param int $userId รหัสผู้ใช้ปลายทาง
+     * @param array<string, mixed> $data ข้อมูล backup
+     * @return array<string, int> จำนวนแถวที่นำเข้าแยกตามตาราง
+     * @throws InvalidArgumentException พร้อมข้อความที่แสดงให้ผู้ใช้เข้าใจ
      */
     public static function import(int $userId, array $data): array
     {
@@ -122,13 +131,24 @@ final class AccountData
             throw new InvalidArgumentException('ไฟล์นี้มาจาก DayFlow เวอร์ชันใหม่กว่า กรุณาอัปเดตระบบก่อนนำเข้า');
         }
 
+        // จำไว้ว่าไฟล์ต้นฉบับมีส่วน tasks จริงหรือไม่ ถ้าไม่มี
+        // ต้องไม่ลบงานเดิมของผู้ใช้ แต่ยังนำเข้าแถวที่แปลงจาก legacy ได้
+        $hadTasksSection = isset($data['tasks']) && is_array($data['tasks']);
+
+        if (array_key_exists('tasks', $data) && !is_array($data['tasks'])) {
+            throw new InvalidArgumentException('ไฟล์มีข้อมูลที่ไม่ถูกต้องในส่วน tasks');
+        }
+
+        self::convertLegacyTasks($userId, $data);
+
         $present = array_values(array_filter(
             array_keys(self::TABLES),
-            fn(string $t): bool => isset($data[$t]) && is_array($data[$t]) && self::columns($t) !== []
+            fn(string $t): bool => ($t !== 'tasks' || $hadTasksSection) && isset($data[$t]) && is_array($data[$t]) && self::columns($t) !== []
         ));
         $hasSettings = isset($data['settings']) && is_array($data['settings']);
 
-        if ($present === [] && !$hasSettings) {
+        $hasConvertedTasks = !$hadTasksSection && !empty($data['tasks']);
+        if ($present === [] && !$hasSettings && !$hasConvertedTasks) {
             throw new InvalidArgumentException('ไม่พบข้อมูล DayFlow ในไฟล์นี้');
         }
 
@@ -136,9 +156,9 @@ final class AccountData
         $conn->beginTransaction();
 
         try {
-            // Children of a replaced table go with it through ON DELETE
-            // CASCADE (blocks with notes, logs with habits and skills), and
-            // optional references are cleared by ON DELETE SET NULL.
+            // ตารางที่ถูกแทนที่จะลบผ่าน ON DELETE CASCADE
+            // (note_blocks, habit_logs, skill_logs) ส่วน reference ที่ optional
+            // จะถูกเคลียร์เป็น NULL ผ่าน ON DELETE SET NULL
             foreach ($present as $table) {
                 if (!in_array($table, self::VIA_NOTE, true)) {
                     DB::run("DELETE FROM `$table` WHERE user_id = ?", [$userId]);
@@ -151,6 +171,12 @@ final class AccountData
                 $counts[$table] = self::importTable($userId, $table, $data[$table], $idMap);
             }
 
+            // ถ้าไฟล์ไม่มีส่วน tasks ให้นำเข้าแถวที่แปลงจาก daily_todos/quick_items
+            // เพิ่มเข้าไปโดยไม่ลบงานเดิมของผู้ใช้
+            if (!$hadTasksSection && !empty($data['tasks'])) {
+                $counts['tasks'] = ($counts['tasks'] ?? 0) + self::importTable($userId, 'tasks', $data['tasks'], $idMap);
+            }
+
             if ($hasSettings) self::importSettings($userId, $data['settings']);
 
             $conn->commit();
@@ -158,6 +184,56 @@ final class AccountData
         } catch (\Throwable $e) {
             $conn->rollBack();
             throw $e;
+        }
+    }
+
+    /**
+     * แปลง daily_todos และ quick_items จาก backup เก่าให้เป็น tasks
+     *
+     * แถวที่แปลงจะถูกเพิ่มเข้าไปใน $data['tasks'] เพื่อให้ importTable นำเข้าเป็น tasks
+     * ไม่คืนจำนวนแยก เพราะจะนับซ้ำกับ tasks ที่นำเข้าจริง
+     *
+     * @param int $userId ผู้ใช้ปลายทาง
+     * @param array<string, mixed> $data ข้อมูล backup (อาจถูกแก้ไขโดยเพิ่ม tasks)
+     * @throws InvalidArgumentException เมื่อพบค่าที่ไม่ถูกต้อง
+     */
+    private static function convertLegacyTasks(int $userId, array &$data): void
+    {
+        $tasks = [];
+        $map   = [
+            'daily_todos' => 'fromDailyTodo',
+            'quick_items' => 'fromQuickItem',
+        ];
+
+        foreach ($map as $source => $method) {
+            if (!isset($data[$source]) || !is_array($data[$source])) continue;
+
+            foreach ($data[$source] as $row) {
+                if (!is_array($row)) continue;
+                foreach ($row as $value) {
+                    if ($value !== null && !is_scalar($value)) {
+                        throw new InvalidArgumentException("ไฟล์มีข้อมูลที่ไม่ถูกต้องในส่วน {$source}");
+                    }
+                }
+
+                if ($source === 'daily_todos') {
+                    $date = (string)($row['todo_date'] ?? '');
+                    $parsed = DateTime::createFromFormat('Y-m-d', $date);
+                    if (!$parsed || $parsed->format('Y-m-d') !== $date) {
+                        throw new InvalidArgumentException('ไฟล์มีข้อมูลที่ไม่ถูกต้องในส่วน daily_todos');
+                    }
+                }
+
+                $row['user_id'] = $userId;
+                $task = LegacyTaskMapper::$method($row);
+                unset($task['legacy_source'], $task['legacy_id']);
+                // แถวที่แปลงไม่มี id เพื่อไม่ให้ชนกับ id ของ tasks จริงใน backup
+                $tasks[] = $task;
+            }
+        }
+
+        if ($tasks !== []) {
+            $data['tasks'] = array_merge($data['tasks'] ?? [], $tasks);
         }
     }
 
@@ -169,7 +245,18 @@ final class AccountData
         foreach ($rows as $row) {
             if (!is_array($row)) continue;
 
-            // Unknown keys are dropped, never interpolated into the SQL.
+            // คอลัมน์ legacy ของ tasks ไม่ควรนำเข้า เพราะ UNIQUE key จะชนกัน
+            if ($table === 'tasks') {
+                unset($row['legacy_source'], $row['legacy_id']);
+
+                // backup เก่าอาจไม่มี completed_at แต่มีงาน done อยู่
+                // ต้องเติม completed_at เพื่อให้งานยังคงแสดงใน inbox ตามกฎ 7 วัน
+                if (($row['status'] ?? '') === 'done' && empty($row['completed_at'])) {
+                    $row['completed_at'] = !empty($row['updated_at']) ? $row['updated_at'] : date('Y-m-d H:i:s');
+                }
+            }
+
+            // คีย์ที่ไม่รู้จะถูกทิ้ง ไม่ส่งต่อเข้า SQL
             $row = array_intersect_key($row, $columns);
             if ($row === []) continue;
             foreach ($row as $value) {
@@ -191,8 +278,7 @@ final class AccountData
             try {
                 DB::run("INSERT INTO `$table` (`$names`) VALUES ($marks)", array_values($row));
             } catch (PDOException $e) {
-                // A value the column refuses (bad date, unknown enum, a
-                // duplicate) is the file's fault, not the server's.
+                // ค่าที่คอลัมน์ปฏิเสธ (วันที่ผิด enum ซ้ำ) เป็นความผิดของไฟล์
                 throw new InvalidArgumentException("ไฟล์มีข้อมูลที่ไม่ถูกต้องในส่วน {$table}", 0, $e);
             }
 
