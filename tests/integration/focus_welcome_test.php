@@ -37,6 +37,25 @@ test('a new account is welcomed until its first task, and deleting that task doe
     assertSame(false, welcomeShown($client), 'an account that has had a task stays welcomed (EDGE-16)');
 });
 
+/** แท็กเปิดของกลุ่มย่อยในหน้าวันนี้ ตามที่ PHP ส่งมา (ก่อน JS ทำงาน) */
+function subsectionTag(string $html, string $name): string
+{
+    preg_match('~<div data-subsection="' . $name . '"[^>]*>~', $html, $m);
+    return $m[0] ?? '';
+}
+
+test('the Today page arrives already showing the welcome, so the today list never flashes first', function (TestClient $_c): void {
+    $client = focusWelcomeAccount('firstframe');
+    $page = $client->get('/')['body'];
+    assertFalse(str_contains(subsectionTag($page, 'welcome'), ' hidden'), 'a new account gets the welcome in the HTML');
+    assertTrue(str_contains(subsectionTag($page, 'today'), ' hidden'), 'and the today list starts hidden');
+
+    $client->post('/api/tasks', ['title' => 'งานแรก ' . TEST_RUN_ID, 'quadrant' => 1, 'due_date' => 'today']);
+    $page = $client->get('/')['body'];
+    assertTrue(str_contains(subsectionTag($page, 'welcome'), ' hidden'), 'after the first task the welcome starts hidden');
+    assertFalse(str_contains(subsectionTag($page, 'today'), ' hidden'), 'and the today list is there from the start');
+});
+
 test('the focus button opens the Focus page with that task chosen', function (TestClient $_c): void {
     $client = focusWelcomeAccount('focuslink');
     $task = $client->json($client->post('/api/tasks', ['title' => 'โฟกัสงานนี้ ' . TEST_RUN_ID, 'quadrant' => 1, 'due_date' => 'today']))['task'];

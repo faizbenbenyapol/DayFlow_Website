@@ -40,7 +40,7 @@
 | REQ-20 | จับคู่ชื่อผู้รับผิดชอบเดิม (ตัดช่องว่างและ NBSP หัวท้าย) | `migrate-daily-loop.php` | `project_task_assignee_test.php` | ผ่าน |
 | REQ-21 | กดโฟกัสจากงานบนหน้า "วันนี้" | `dashboard.js focusLink`, `FocusController::index`, `focus.js` | `focus_welcome_test.php`, e2e "New account", เดินหน้าจอ | ผ่าน |
 | REQ-22 | หน้า Focus เลือกงานเองได้ | dropdown เดิม + `?task=` | `focus_welcome_test.php` | ผ่าน |
-| REQ-23 | ส่วนต้อนรับผู้ใช้ใหม่ | `users.first_task_at`, summary `welcome`, `views/dashboard/index.php` | `focus_welcome_test.php`, e2e, เดินหน้าจอ | ผ่าน |
+| REQ-23 | ส่วนต้อนรับผู้ใช้ใหม่ | `users.first_task_at`, `Task::shouldWelcome()` (ใช้ทั้งตอน render หน้าและใน summary), `views/dashboard/index.php` | `focus_welcome_test.php`, e2e, เดินหน้าจอ | ผ่าน |
 | REQ-24 | สคริปต์ย้ายมี dry-run | `migrate-daily-loop.php` | รันบน :8080 | ผ่าน |
 | REQ-25 | ย้ายแบบทั้งหมดหรือไม่เลย + รายงาน | transaction ในสคริปต์ | `migrate_daily_loop_test.php` | ผ่าน |
 | REQ-26 | ตารางเดิมไม่ถูกลบ + มี rollback (CR-1) | `--rollback` | `migrate_daily_loop_test.php` | ผ่าน |
@@ -144,7 +144,6 @@
 
 - ไม่ทำรอบนี้: ดูหัวข้อ 10 ของไฟล์รีไควร์เมนต์ (จัดเมนูใหม่, สรุปท้ายสัปดาห์, จดตอนออฟไลน์, อัปเดตสดข้ามแท็บ ฯลฯ)
 - iOS ไม่รองรับ `interactive-widget` ช่องจดอาจถูกคีย์บอร์ดบังบน iPhone
-- บัญชีใหม่อาจเห็นโครงกลุ่ม "วันนี้" แวบหนึ่งก่อนสลับเป็นการ์ดต้อนรับ เพราะรู้ว่าต้องต้อนรับหลังโหลด summary แล้ว *(เดา reviewer ยังไม่ได้วัด)*
 - ถ้าอัปโหลดโค้ดก่อนรัน migration 032 การสร้างงานจะได้ 500 ทั้งที่งานถูกบันทึกแล้ว จึงต้องทำตามลำดับในหัวข้อ 5 *(อนุมาน)*
 - งานโปรเจกต์ไม่มีปุ่มโฟกัส เพราะ `focus_sessions.task_id` ผูกได้แค่ตาราง `tasks`
 - บัญชีที่มีอยู่ก่อน deploy ไม่เห็นการ์ดต้อนรับเลย แม้ไม่เคยมีงาน (ผู้ใช้เลือก)
@@ -211,3 +210,4 @@ e3723a5 feat(today): start focus from a task, welcome accounts that never had on
 | 1.0 | 2026-11-20 | ส่งมอบครบ PR 1–3 |
 | 1.1 | 2026-11-20 | Planner ใช้วันของเซิร์ฟเวอร์, เปลี่ยนโปรเจกต์แล้วล้าง `?project=` (commit `fix(planner): ...` ใน #9) e2e 309 checks ผ่าน |
 | 1.2 | 2026-11-20 | คีย์ลัด N ไม่ติดปุ่ม b ของแป้น Dvorak (แป้นไทยยังใช้ได้), จับคู่ชื่อผู้รับผิดชอบตัด NBSP ด้วย |
+| 1.3 | 2026-11-20 | การ์ดต้อนรับมากับ HTML เลย วัดแล้วเดิมบัญชีใหม่เห็นกลุ่ม "วันนี้" ก่อน ~64 ms (เครื่องเร็ว) ถึง ~380 ms (CPU 4x, latency 300 ms) หลังแก้เฟรมแรกเป็นการ์ดต้อนรับและไม่สลับอีก |

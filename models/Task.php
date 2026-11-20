@@ -179,6 +179,22 @@ class Task
     }
 
     /**
+     * บัญชีนี้ควรเห็นการ์ดต้อนรับไหม (REQ-23): ไม่เคยมีงานเลย
+     * first_task_at จำไว้แม้ลบงานแรกทิ้ง (EDGE-16) ส่วน NOT EXISTS กันบัญชีที่มีงานอยู่แล้วแต่ first_task_at ยังว่าง
+     * เช่นงานที่สคริปต์ย้ายคัดลอกมาให้ ใช้ทั้งตอน render หน้าวันนี้และใน summary เพื่อให้สองทางตอบตรงกัน
+     *
+     * @return bool true เมื่อควรต้อนรับ
+     */
+    public static function shouldWelcome(int $userId): bool
+    {
+        return (bool)DB::run(
+            'SELECT u.first_task_at IS NULL AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.user_id = u.id)
+             FROM users u WHERE u.id = ?',
+            [$userId]
+        )->fetchColumn();
+    }
+
+    /**
      * อัปเดตงาน โดย quadrant เป็น 0 หรือ null จะเก็บเป็น NULL (inbox)
      *
      * ถ้าเปลี่ยน due_date ให้ไปต่อท้ายวันใหม่ โดย day_position ต้องอยู่ก่อน due_date

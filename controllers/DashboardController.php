@@ -52,6 +52,8 @@ class DashboardController
 
         $userId = Auth::userId();
         $layout  = DashboardLayout::getForUser($userId);
+        // ตัดสินการ์ดต้อนรับตั้งแต่ render หน้า ไม่ให้บัญชีใหม่เห็นกลุ่ม "วันนี้" แวบหนึ่งก่อน summary มาถึง
+        $welcome = Task::shouldWelcome($userId);
 
         require ROOT . '/views/layout/header.php';
         require ROOT . '/views/dashboard/index.php';
@@ -108,13 +110,7 @@ class DashboardController
                 [$userId, $userId, $userId, $userId, $userId]
             )->fetchAll(), $warnings, []);
 
-            // บัญชีที่ไม่เคยมีงานเลยเห็นส่วนต้อนรับ (REQ-23) first_task_at จำไว้แม้ลบงานแรกทิ้ง (EDGE-16)
-            // NOT EXISTS กันบัญชีที่มีงานอยู่แล้วแต่ first_task_at ยังว่าง เช่นงานที่สคริปต์ย้ายคัดลอกมาให้
-            $welcome = (bool)$this->safeModule('tasks', fn() => DB::run(
-                'SELECT u.first_task_at IS NULL AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.user_id = u.id)
-                 FROM users u WHERE u.id = ?',
-                [$userId]
-            )->fetchColumn(), $warnings, false);
+            $welcome = (bool)$this->safeModule('tasks', fn() => Task::shouldWelcome($userId), $warnings, false);
 
             $payload['tasks'] = [
                 'overdue'          => $overdueCount,
