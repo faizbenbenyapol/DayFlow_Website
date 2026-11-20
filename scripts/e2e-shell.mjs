@@ -795,7 +795,7 @@ async function main() {
         check(!(await tab.eval(`!!document.querySelector('#appFlags [data-place="life"]')`)), 'a place with every page hidden loses its tab');
         check(await tab.eval(`document.querySelectorAll('#appFlags .flag').length`) === 4, 'the other tabs stay');
         // Put the choice back.
-        const everyMenu = ['tasks', 'projects', 'planner', 'habits', 'focus', 'skills', 'exercise', 'food-notes', 'finance', 'subscriptions', 'stocks', 'notes', 'quick-notes', 'bookmarks', 'files', 'transfer', 'file-tools', 'ai', 'calculator'];
+        const everyMenu = ['tasks', 'projects', 'planner', 'habits', 'focus', 'skills', 'exercise', 'food-notes', 'finance', 'subscriptions', 'stocks', 'notes', 'bookmarks', 'files', 'transfer', 'file-tools', 'ai', 'calculator'];
         await api(tab, '/api/settings/menus', { method: 'POST', body: JSON.stringify({ menus: everyMenu, order: everyMenu }) });
 
         await click(tab, '.settings-tab[data-tab="app-shares"]');

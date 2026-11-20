@@ -24,6 +24,16 @@ test('a saved order cannot inject or repeat menus', function (): void {
     assertSame(count(AppMenus::KEYS), count($order));
 });
 
+test('a saved order or hidden list from before "ยังไม่จัด" left the menus still works', function (): void {
+    $order = AppMenus::ordered(['quick-notes', 'stocks']);
+    assertSame('stocks', $order[0]);
+    assertNotContains('quick-notes', $order);
+
+    $shown = array_column(array_merge(...array_column(AppMenus::grouped($order, ['quick-notes']), 'items')), 'key');
+    assertNotContains('quick-notes', $shown);
+    assertContains('notes', $shown, 'the rest of the vault stays');
+});
+
 test('anything that is not a list falls back to the default order', function (): void {
     assertSame(AppMenus::KEYS, AppMenus::ordered(null));
     assertSame(AppMenus::KEYS, AppMenus::ordered('tasks'));
@@ -70,7 +80,7 @@ test('a path belongs to the menu it is or sits under, and to that menu\'s place'
     assertSame('today', AppMenus::menuForPath('/'));
     assertSame('finance', AppMenus::menuForPath('/finance'));
     assertSame('notes', AppMenus::menuForPath('/notes/12'), 'a page under a menu belongs to it');
-    assertSame('quick-notes', AppMenus::menuForPath('/quick-notes'), 'not mistaken for /notes');
+    assertSame(null, AppMenus::menuForPath('/quick-notes'), 'not a menu any more, and not mistaken for /notes');
     assertSame(null, AppMenus::menuForPath('/settings'));
 
     assertSame('money', AppMenus::groupForPath('/subscriptions'));
