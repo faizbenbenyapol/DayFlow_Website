@@ -762,7 +762,8 @@ async function main() {
         await sleep(300);
         check(await tab.eval(`document.querySelector('.settings-tab[aria-selected="true"]').dataset.tab`) === 'profile', 'it opens on the profile topic');
         check(await tab.eval(`document.querySelectorAll('.settings-pane:not([hidden])').length`) === 1, 'only one pane is shown');
-        check(await tab.eval(`document.querySelectorAll('.settings-tab').length`) === 14, 'every topic is listed');
+        // ทุก pane มีแท็บของตัวเอง เทียบกันเอง ไม่ใช้ตัวเลขตายตัว เพิ่มหัวข้อแล้วไม่ต้องตามแก้
+        check(await tab.eval(`document.querySelectorAll('.settings-tab').length === document.querySelectorAll('.settings-pane').length && document.querySelectorAll('.settings-tab').length >= 15`), 'every topic is listed');
         await click(tab, '.settings-tab[data-tab="categories"]');
         await sleep(600);
         check(await tab.eval(`document.getElementById('tab-categories').hidden`) === false, 'a topic opens its pane');

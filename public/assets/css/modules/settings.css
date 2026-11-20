@@ -835,3 +835,83 @@ fieldset.form-group {
         border-bottom: 0;
     }
 }
+
+/* ---------------------------------------------------------------
+   เกี่ยวกับแอป: เวอร์ชัน ติดตั้งแอป และข้อความอัปเดต (REQ-13–15)
+--------------------------------------------------------------- */
+.about-version {
+    margin: 0 0 var(--space-5);
+}
+
+.install-box {
+    max-width: 520px;
+    margin-bottom: var(--space-6);
+}
+
+.install-steps,
+.release ul {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+.install-steps li + li,
+.release li + li {
+    margin-top: 4px;
+}
+
+/* base.css ล้าง list-style ของทุก list ไว้ ขั้นตอนติดตั้งต้องทำตามลำดับจึงมีเลข รายการอัปเดตมีจุด */
+.install-steps {
+    list-style: decimal;
+}
+
+.release ul {
+    list-style: disc;
+}
+
+.release-list {
+    max-width: 640px;
+    border-top: 1px solid var(--rule-strong);
+}
+
+.release {
+    border-bottom: 1px solid var(--rule);
+}
+
+.release[open] ul {
+    margin-bottom: var(--space-4);
+}
+
+/* แถวหัวของแต่ละเวอร์ชันกดเปิดปิดได้ display: flex ทำให้ลูกศรเดิมของเบราว์เซอร์หาย จึงวาดเอง */
+.release summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px var(--space-3);
+    min-height: 44px;
+    padding: var(--space-3) 0;
+    cursor: pointer;
+    list-style: none;
+}
+
+.release summary::before {
+    content: "▸";
+    color: var(--pencil);
+}
+
+.release[open] summary::before {
+    content: "▾";
+}
+
+.release-version {
+    font-family: var(--font-num);
+    font-weight: 600;
+}
+
+.release-title {
+    flex: 1;
+}
+
+.release time {
+    font-size: 0.8125rem;
+    color: var(--pencil);
+}

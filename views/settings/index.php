@@ -52,22 +52,27 @@ $topics = [
         'data'   => 'สำรองและนำเข้า',
         'danger' => 'ลบบัญชี',
     ],
+    'แอป' => [
+        'about' => 'เกี่ยวกับแอป',
+    ],
 ];
+// เวอร์ชันและข้อความอัปเดต ใหม่สุดอยู่บนสุด ตัวแรกคือเวอร์ชันปัจจุบัน (REQ-13)
+$releases = require ROOT . '/config/releases.php';
 
 $hiddenMenus = !empty($settings['hidden_menus']) ? json_decode($settings['hidden_menus'], true) : [];
 if (!is_array($hiddenMenus)) $hiddenMenus = [];
 $menuOrder = AppMenus::ordered(json_decode($settings['menu_order'] ?? 'null', true));
-?>
-<div class="page-head">
-    <div>
-        <h1>ตั้งค่า</h1>
-        <p class="sub">บัญชี หน้าตา เมนู การเชื่อมต่อ และข้อมูลของคุณ</p>
 // ชื่อหมวดและหมวดของเมนูที่ผู้ใช้ตั้งเอง (REQ-9, REQ-10)
 $settingsLayout = AppMenus::layout(json_decode($settings['menu_layout'] ?? 'null', true));
 $groupNotes = [
     'today' => 'วันนี้ และ สรุปผล อยู่หมวดนี้เสมอ',
     'tools' => 'หมวดนี้ไม่มีแท็บด้านบน เปิดได้จากปุ่ม ทั้งหมด หรือ Ctrl+K',
 ];
+?>
+<div class="page-head">
+    <div>
+        <h1>ตั้งค่า</h1>
+        <p class="sub">บัญชี หน้าตา เมนู การเชื่อมต่อ และข้อมูลของคุณ</p>
     </div>
 </div>
 
@@ -343,20 +348,20 @@ $groupNotes = [
                 </div>
                 <?php endforeach; ?>
             </div>
+            <p class="menu-empty"<?= $keys ? ' hidden' : '' ?>>ยังไม่มีเมนูในหมวดนี้</p>
         </fieldset>
         <?php endforeach; ?>
     </div>
 
     <p class="form-error" id="menuError" role="alert" hidden></p>
-            <p class="menu-empty"<?= $keys ? ' hidden' : '' ?>>ยังไม่มีเมนูในหมวดนี้</p>
 
     <div class="settings-actions">
+        <button class="btn btn-ghost" type="button" id="btnResetMenus">คืนค่าเริ่มต้น</button>
         <button class="btn btn-primary" type="button" id="btnSaveMenus">บันทึกเมนู</button>
     </div>
 </section>
 
 <!-- TODAY PAGE -->
-        <button class="btn btn-ghost" type="button" id="btnResetMenus">คืนค่าเริ่มต้น</button>
 <section id="tab-dashboard-config" class="settings-pane" role="tabpanel" aria-labelledby="tabbtn-dashboard-config" hidden>
     <h2>หน้าวันนี้</h2>
     <p class="form-hint">เลือกส่วนที่จะแสดงในหน้าวันนี้ แล้วลากที่จับ ⋮⋮ เพื่อเรียงลำดับ ลำดับมีผลภายในพื้นที่เดียวกัน คือฝั่งซ้าย ฝั่งขวา และแถบด้านล่าง</p>
@@ -651,6 +656,51 @@ window.dashboardDefaults = <?= jsonForScript(DashboardLayout::defaults()) ?>;
         <input type="password" class="form-control" id="delPassword" autocomplete="current-password">
     </div>
     <button class="btn btn-danger" type="button" id="btnDeleteAccount" disabled>ลบบัญชีถาวร</button>
+</section>
+
+<!-- ABOUT: เวอร์ชัน ติดตั้งแอป และข้อความอัปเดต (REQ-13–15) -->
+<section id="tab-about" class="settings-pane" role="tabpanel" aria-labelledby="tabbtn-about" hidden>
+    <h2>เกี่ยวกับแอป</h2>
+    <p class="about-version">DayFlow เวอร์ชัน <strong><?= h($releases[0]['version']) ?></strong></p>
+
+    <h3 class="subhead">ติดตั้งแอป</h3>
+    <!-- settings-install.js เลือกแสดงหนึ่งแบบตามเบราว์เซอร์ ไม่มี JS ก็เห็นแบบแรก -->
+    <div class="install-box" id="installBox">
+        <p data-install="unsupported">เบราว์เซอร์นี้ยังไม่เสนอให้ติดตั้ง ลองเปิด DayFlow ด้วย Chrome หรือ Edge ถ้าติดตั้งไว้แล้ว เปิดจากไอคอนของแอปได้เลย</p>
+        <div data-install="prompt" hidden>
+            <p>ติดตั้ง DayFlow ลงเครื่อง เปิดจากไอคอนได้เหมือนแอปทั่วไป ไม่มีแถบของเบราว์เซอร์</p>
+            <button class="btn btn-primary" type="button" id="btnInstallApp">ติดตั้ง DayFlow</button>
+        </div>
+        <div data-install="ios" hidden>
+            <p>บน iPhone และ iPad ติดตั้งผ่าน Safari:</p>
+            <ol class="install-steps">
+                <li>กดปุ่มแชร์ของ Safari รูปสี่เหลี่ยมมีลูกศรชี้ขึ้น</li>
+                <li>เลื่อนลงแล้วเลือก "เพิ่มไปยังหน้าจอโฮม"</li>
+                <li>กด "เพิ่ม" ไอคอน DayFlow จะอยู่บนหน้าจอโฮม</li>
+            </ol>
+        </div>
+        <p data-install="installed" hidden>ติดตั้งแล้ว เปิด DayFlow จากไอคอนบนเครื่องได้เลย</p>
+    </div>
+
+    <h3 class="subhead">มีอะไรใหม่</h3>
+    <div class="release-list">
+        <?php foreach ($releases as $i => $release): ?>
+        <details class="release"<?= $i === 0 ? ' open' : '' ?>>
+            <summary>
+                <span class="release-version"><?= h($release['version']) ?></span>
+                <span class="release-title"><?= h($release['title']) ?></span>
+                <?php if ($release['date'] !== null): ?>
+                <time datetime="<?= h($release['date']) ?>"><?= h(thaiDate($release['date'])) ?></time>
+                <?php endif; ?>
+            </summary>
+            <ul>
+                <?php foreach ($release['changes'] as $change): ?>
+                <li><?= h($change) ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </details>
+        <?php endforeach; ?>
+    </div>
 </section>
 
 </div><!-- /.settings-panes -->
