@@ -272,12 +272,18 @@ async function main() {
         await tab.eval(`document.querySelector('#editTaskModal [data-close-modal]').click()`);
 
         console.log('Planner');
-        // A browser clock on another day than the server: UTC+14 is a day ahead from 10:00 UTC, UTC-11 a day behind until 11:00 UTC.
-        await tab.send('Emulation.setTimezoneOverride', { timezoneId: new Date().getUTCHours() >= 10 ? 'Pacific/Kiritimati' : 'Pacific/Pago_Pago' });
-        await tab.goto(BASE + '/planner');
-        await tab.settle();
-        const plannerDay = await tab.eval(`({ server: document.documentElement.dataset.today, local: new Date().getDate(),
-            today: document.querySelector('.calendar-cell.today .calendar-day-number')?.textContent, sheet: document.getElementById('dayNum').textContent })`);
+        // A browser clock on another day than the server. UTC+14 and UTC-11 are 25 hours apart, so they are
+        // never on the same date and the server's day matches at most one of them, whatever its time zone.
+        // Choosing by the UTC hour assumed a UTC server and failed on Bangkok time from midnight to 7am.
+        let plannerDay;
+        for (const timezoneId of ['Pacific/Kiritimati', 'Pacific/Pago_Pago']) {
+            await tab.send('Emulation.setTimezoneOverride', { timezoneId });
+            await tab.goto(BASE + '/planner');
+            await tab.settle();
+            plannerDay = await tab.eval(`({ server: document.documentElement.dataset.today, local: new Date().getDate(),
+                today: document.querySelector('.calendar-cell.today .calendar-day-number')?.textContent, sheet: document.getElementById('dayNum').textContent })`);
+            if (plannerDay.local !== Number(plannerDay.server.slice(8))) break;
+        }
         check(plannerDay.local !== Number(plannerDay.server.slice(8)), 'the browser clock is on another day than the server', JSON.stringify(plannerDay));
         check(plannerDay.today === String(Number(plannerDay.server.slice(8))), 'the grid marks the server\'s today', JSON.stringify(plannerDay));
         check(plannerDay.sheet === plannerDay.today, 'and the day sheet opens on it', JSON.stringify(plannerDay));
