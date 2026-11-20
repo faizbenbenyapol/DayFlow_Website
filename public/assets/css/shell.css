@@ -699,3 +699,80 @@ dialog.menu-sheet[open] {
     margin: 4px 0 0;
     color: var(--stamp-red);
 }
+
+/* Quick add: day chips */
+.qa-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.qa-chips label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 14px;
+    border: 1.5px solid var(--edge);
+    border-radius: 999px;
+    background: var(--paper);
+    cursor: pointer;
+}
+
+.qa-chips input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.qa-chips input:checked + span {
+    border-color: var(--butter-2);
+    background: var(--butter-2);
+    font-weight: 700;
+}
+
+.qa-chips input:focus-visible + span {
+    outline: 2px solid var(--place-2);
+    outline-offset: 2px;
+    border-radius: 999px;
+}
+
+.qa-details {
+    margin-top: 8px;
+}
+
+.qa-details summary {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    color: var(--pencil);
+    cursor: pointer;
+    user-select: none;
+}
+
+.qa-details[open] summary {
+    margin-bottom: 8px;
+}
+
+.qa-hint {
+    margin: 8px 0 0;
+    font-size: 0.875rem;
+    color: var(--pencil);
+}
+
+.form-status {
+    margin: 12px 0 0;
+    padding: 8px 12px;
+    border-radius: var(--r-control);
+    font-size: 0.9375rem;
+}
+
+.form-status.is-success {
+    background: var(--mint);
+    color: var(--ink);
+}
+
+.form-status.is-error {
+    background: var(--rose);
+    color: var(--ink);
+}

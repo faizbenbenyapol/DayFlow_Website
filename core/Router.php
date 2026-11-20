@@ -78,6 +78,7 @@ class Router
         $this->add('PUT',    '/api/tasks/{id}',    'TaskController', 'apiUpdate',  true);
         $this->add('DELETE', '/api/tasks/{id}',    'TaskController', 'apiDelete',  true);
         $this->add('POST',   '/api/tasks/reorder', 'TaskController', 'apiReorder', true);
+        $this->add('POST',   '/api/tasks/overdue', 'TaskController', 'apiOverdueBulk', true);
 
         // --- API: Notes ---
         $this->add('GET',    '/api/notes',                       'NoteController', 'apiList',         true);

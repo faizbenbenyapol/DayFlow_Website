@@ -87,6 +87,143 @@
 }
 
 /* ---------------------------------------------------------------
+   Overdue section (rose tone)
+--------------------------------------------------------------- */
+.tasks-stack {
+    display: flex;
+    flex-direction: column;
+}
+
+.tasks-stack .sec.overdue {
+    background: linear-gradient(var(--paper), var(--paper)) padding-box;
+}
+
+.tasks-stack .sec.overdue .sec-head h2 {
+    color: var(--stamp-red);
+}
+
+.bulk-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    margin: var(--space-2) 0 var(--space-3);
+    padding: var(--space-3) var(--space-3);
+    background: var(--rose);
+    border-radius: var(--r-control);
+    font-size: 0.9375rem;
+}
+
+.bulk-label {
+    font-weight: 600;
+    color: var(--ink);
+}
+
+.bulk-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.bulk-actions .btn {
+    min-height: 32px;
+    padding: 2px 10px;
+    font-size: 0.875rem;
+}
+
+/* ---------------------------------------------------------------
+   Overdue per-row menu
+--------------------------------------------------------------- */
+.overdue-row {
+    position: relative;
+}
+
+.overdue-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% - 4px);
+    z-index: 10;
+    min-width: 170px;
+    margin: 0;
+    padding: 4px;
+    list-style: none;
+    background: var(--paper);
+    border: 1.5px solid var(--edge);
+    border-radius: var(--r-control);
+    box-shadow: var(--lift-2);
+}
+
+.overdue-menu li + li {
+    border-top: 1px solid var(--rule);
+}
+
+.overdue-menu-action {
+    display: block;
+    width: 100%;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.9375rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.overdue-menu-action:hover,
+.overdue-menu-action:focus-visible {
+    background: var(--paper-sunk);
+    outline: none;
+}
+
+.overdue-menu-action.text-danger {
+    color: var(--stamp-red);
+}
+
+.overdue-extra {
+    display: none;
+}
+
+.more-overdue {
+    margin-top: var(--space-2);
+}
+
+.late-date {
+    color: var(--stamp-red);
+    font-weight: 600;
+}
+
+/* ---------------------------------------------------------------
+   My project tasks
+--------------------------------------------------------------- */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
+.project-chip {
+    background: var(--sky);
+    border: 1px solid var(--sky-2);
+    color: var(--ink);
+}
+
+.readonly {
+    padding: 1px 6px;
+    border: 1px dashed var(--rule-strong);
+    border-radius: 4px;
+    color: var(--pencil);
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------
    Rows specific to this page
 --------------------------------------------------------------- */
 .today .ruled-row.past {
