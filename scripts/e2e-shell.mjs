@@ -970,7 +970,8 @@ async function main() {
             check(await anon.eval(`document.querySelector('.share-topbar').textContent.includes('อ่านอย่างเดียว')`), 'under a bar that says it is read-only');
             check(await anon.eval(`document.querySelector('.share-topbar-link[aria-current="page"]')?.textContent`) === 'งาน', 'and marks the page that is open');
             check(await anon.eval(`!document.getElementById('appFlags')`), 'with no index tabs');
-            check(await anon.eval(`Math.round(document.querySelector('.share-topbar').getBoundingClientRect().width) === window.innerWidth`), 'the bar runs across the whole top');
+            // เทียบกับ body ไม่ใช่ innerWidth: html จองที่แถบเลื่อนไว้เสมอ (scrollbar-gutter) แถบเต็มหน้าจึงหยุดตรงนั้น
+            check(await anon.eval(`Math.round(document.querySelector('.share-topbar').getBoundingClientRect().width) === Math.round(document.body.getBoundingClientRect().width)`), 'the bar runs across the whole top');
             await anon.goto(BASE + '/exit-share');
 
             // ---------- sign in ----------
