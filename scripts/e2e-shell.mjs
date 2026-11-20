@@ -262,6 +262,16 @@ async function main() {
         await tab.eval(`document.querySelector('#editTaskModal [data-close-modal]').click()`);
 
         console.log('Planner');
+        // A browser clock on another day than the server: UTC+14 is a day ahead from 10:00 UTC, UTC-11 a day behind until 11:00 UTC.
+        await tab.send('Emulation.setTimezoneOverride', { timezoneId: new Date().getUTCHours() >= 10 ? 'Pacific/Kiritimati' : 'Pacific/Pago_Pago' });
+        await tab.goto(BASE + '/planner');
+        await tab.settle();
+        const plannerDay = await tab.eval(`({ server: document.documentElement.dataset.today, local: new Date().getDate(),
+            today: document.querySelector('.calendar-cell.today .calendar-day-number')?.textContent, sheet: document.getElementById('dayNum').textContent })`);
+        check(plannerDay.local !== Number(plannerDay.server.slice(8)), 'the browser clock is on another day than the server', JSON.stringify(plannerDay));
+        check(plannerDay.today === String(Number(plannerDay.server.slice(8))), 'the grid marks the server\'s today', JSON.stringify(plannerDay));
+        check(plannerDay.sheet === plannerDay.today, 'and the day sheet opens on it', JSON.stringify(plannerDay));
+        await tab.send('Emulation.setTimezoneOverride', { timezoneId: process.env.E2E_TZ || 'UTC' });
         await tab.goto(BASE + '/planner');
         await tab.settle();
         check(await tab.eval(`document.querySelectorAll('.calendar-cell').length`) >= 35, 'the month grid is drawn');
@@ -831,6 +841,14 @@ async function main() {
             await sleep(1500);
             check(await tab.eval(`document.getElementById('activeProjectTitle').textContent.trim()`) === name, `?project= opens "${name}"`);
         }
+        check(await tab.eval(`location.search`) === `?project=${second.body?.id}`, 'the URL keeps ?project= while that project is open');
+        // Opening another project drops the stale ?project=, so a reload stays on the one in view.
+        await click(tab, `.proj-row[data-args="[${newProject?.id}]"]`);
+        await sleep(1500);
+        check(await tab.eval(`location.search`) === '', 'opening another project clears ?project= from the URL', await tab.eval(`location.href`));
+        // Back on the newer project, where the steps below expect to start.
+        await tab.goto(`${BASE}/projects?project=${second.body?.id}`);
+        await sleep(1500);
 
         await click(tab, '[data-act="toggleQuickAddForm"][data-args=\'["To Do"]\']');
         await sleep(200);
