@@ -181,6 +181,16 @@ async function main() {
         check(await tab.eval(`document.getElementById('quickSheet').open`), 'Thai-layout N key opens the quick-add sheet');
         await tab.eval(`document.getElementById('quickSheet').close()`);
 
+        // Dvorak: the physical N key types b, which is not the shortcut; the key that types n (physical L) is.
+        for (const [typed, code, opens] of [['b', 'KeyN', false], ['n', 'KeyL', true]]) {
+            await sleep(200);
+            await tab.send('Input.dispatchKeyEvent', { type: 'keyDown', key: typed, code });
+            await tab.send('Input.dispatchKeyEvent', { type: 'keyUp', key: typed, code });
+            await sleep(400);
+            check(await tab.eval(`document.getElementById('quickSheet').open`) === opens, `Dvorak "${typed}" on ${code} ${opens ? 'opens' : 'does not open'} the quick-add sheet`);
+            await tab.eval(`document.getElementById('quickSheet').close()`);
+        }
+
         // A task: tick it, check the server, put it back.
         const firstTask = await tab.eval(`document.querySelector('.task-tick').closest('[data-task]').dataset.task`);
         await tab.eval(`document.querySelector('.task-tick').click()`);

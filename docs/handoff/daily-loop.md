@@ -33,11 +33,11 @@
 | REQ-13 | งานโปรเจกต์ที่มอบให้ฉัน | summary `my_project_items` | `dashboard_test.php` | ผ่าน |
 | REQ-14 | งานโปรเจกต์กดเสร็จ/เปิดโปรเจกต์ | `dashboard.js`, `projects.js ?project=` | e2e `?project=` | ผ่าน |
 | REQ-15 | กำหนดการและนิสัยยังเหมือนเดิม | หน้า "วันนี้" | `dashboard_test.php`, เดินหน้าจอ | ผ่าน |
-| REQ-16 | จดงานได้ทุกหน้า + คีย์ N | `public/assets/js/shell.js`, `views/layout/header.php` | e2e (3 หน้า, แป้นไทย) | ผ่าน |
+| REQ-16 | จดงานได้ทุกหน้า + คีย์ N | `public/assets/js/shell.js`, `views/layout/header.php` | e2e (3 หน้า, แป้นไทย, Dvorak) | ผ่าน |
 | REQ-17 | ชิปวัน ไม่ระบุ/วันนี้/พรุ่งนี้ | `shell.js`, `TaskController` รับ `today`/`tomorrow` | `task_inbox_test.php`, e2e | ผ่าน |
 | REQ-18 | ใช้ได้บนมือถือ | `shell.css` | e2e 375px | ผ่านแบบมีเงื่อนไข: คีย์บอร์ดบน iPhone *ยังไม่ได้ทดสอบ* |
 | REQ-19 | เลือกผู้รับผิดชอบจากสมาชิก | `ProjectTaskController`, `projects-board.js` | `project_task_assignee_test.php` | ผ่าน |
-| REQ-20 | จับคู่ชื่อผู้รับผิดชอบเดิม | `migrate-daily-loop.php` | `project_task_assignee_test.php` | ผ่านแบบมีเงื่อนไข: ไม่ตัด NBSP |
+| REQ-20 | จับคู่ชื่อผู้รับผิดชอบเดิม (ตัดช่องว่างและ NBSP หัวท้าย) | `migrate-daily-loop.php` | `project_task_assignee_test.php` | ผ่าน |
 | REQ-21 | กดโฟกัสจากงานบนหน้า "วันนี้" | `dashboard.js focusLink`, `FocusController::index`, `focus.js` | `focus_welcome_test.php`, e2e "New account", เดินหน้าจอ | ผ่าน |
 | REQ-22 | หน้า Focus เลือกงานเองได้ | dropdown เดิม + `?task=` | `focus_welcome_test.php` | ผ่าน |
 | REQ-23 | ส่วนต้อนรับผู้ใช้ใหม่ | `users.first_task_at`, summary `welcome`, `views/dashboard/index.php` | `focus_welcome_test.php`, e2e, เดินหน้าจอ | ผ่าน |
@@ -148,7 +148,6 @@
 - ถ้าอัปโหลดโค้ดก่อนรัน migration 032 การสร้างงานจะได้ 500 ทั้งที่งานถูกบันทึกแล้ว จึงต้องทำตามลำดับในหัวข้อ 5 *(อนุมาน)*
 - งานโปรเจกต์ไม่มีปุ่มโฟกัส เพราะ `focus_sessions.task_id` ผูกได้แค่ตาราง `tasks`
 - บัญชีที่มีอยู่ก่อน deploy ไม่เห็นการ์ดต้อนรับเลย แม้ไม่เคยมีงาน (ผู้ใช้เลือก)
-- แป้น Dvorak ปุ่ม b เปิดช่องจด, จับคู่ชื่อไม่ตัด NBSP
 - "วันนี้" ของทุกหน้า (รวม Planner) คือวันของเซิร์ฟเวอร์ตอนโหลดหน้า เปิดหน้าทิ้งไว้ข้ามเที่ยงคืนต้องรีเฟรชถึงจะเลื่อนวัน
 - #7 (subtasks) กับ #8 แก้ `models/Task.php` และ `tasks.js` ทั้งคู่ ตัวที่ merge ทีหลังต้องแก้ conflict
 
@@ -211,3 +210,4 @@ e3723a5 feat(today): start focus from a task, welcome accounts that never had on
 | --- | --- | --- |
 | 1.0 | 2026-11-20 | ส่งมอบครบ PR 1–3 |
 | 1.1 | 2026-11-20 | Planner ใช้วันของเซิร์ฟเวอร์, เปลี่ยนโปรเจกต์แล้วล้าง `?project=` (commit `fix(planner): ...` ใน #9) e2e 309 checks ผ่าน |
+| 1.2 | 2026-11-20 | คีย์ลัด N ไม่ติดปุ่ม b ของแป้น Dvorak (แป้นไทยยังใช้ได้), จับคู่ชื่อผู้รับผิดชอบตัด NBSP ด้วย |
