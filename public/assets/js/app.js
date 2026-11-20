@@ -348,6 +348,9 @@ function chartTheme() {
         paper: token('--paper'),
         income: token('--ledger-green'),
         expense: token('--stamp-red'),
+        // แท่งของกราฟการเงิน แยกจาก income/expense ที่กราฟหุ้นใช้ระบายกำไร/ขาดทุน
+        chartIncome: token('--chart-income'),
+        chartExpense: token('--chart-expense'),
         font: token('--font'),
     };
 }

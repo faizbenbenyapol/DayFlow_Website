@@ -80,11 +80,15 @@ class FinanceController
         Response::json(Finance::getMonthlySummary($userId, $month));
     }
 
+    /**
+     * ข้อมูลกราฟปีทั้งสามมุมมองใน request เดียว: รายเดือน (chart), รายจ่ายตามหมวด (by_category)
+     * และรายจ่ายก้อนใหญ่สุด (top_expenses) ของปี ?year= (ค่าเริ่มต้นคือปีนี้ตามเวลาเซิร์ฟเวอร์)
+     */
     public function apiChart(): void
     {
         $userId = Auth::userId();
         $year   = (int)Request::query('year', (int)date('Y'));
-        Response::json(['chart' => Finance::getYearlyChart($userId, $year)]);
+        Response::json(['chart' => Finance::getYearlyChart($userId, $year)] + Finance::getYearBreakdown($userId, $year));
     }
 
     public function apiCategoriesList(): void
