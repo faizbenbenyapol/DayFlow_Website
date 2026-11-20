@@ -19,6 +19,8 @@
 // =====================================================
 
 require_once ROOT . '/models/LegacyTaskMapper.php';
+// scripts/demo-reset.php ไม่มี autoloader และนำเข้าผ่านคลาสนี้ (Task::rememberHadTask)
+require_once ROOT . '/models/Task.php';
 
 final class AccountData
 {
@@ -178,6 +180,7 @@ final class AccountData
             }
 
             if ($hasSettings) self::importSettings($userId, $data['settings']);
+            if (($counts['tasks'] ?? 0) > 0) Task::rememberHadTask($userId);
 
             $conn->commit();
             return $counts;

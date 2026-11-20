@@ -383,6 +383,51 @@ test('migration respects Thai tone marks and only links exact names', function (
     }
 });
 
+test('migration links a legacy name carrying a non-breaking space, and skips one that is only that space', function (TestClient $_c): void {
+    $run = 'nbsp_' . TEST_RUN_ID;
+    $nbsp = "\u{00A0}";
+
+    DB::run(
+        "INSERT INTO users (username, email, password_hash, display_name) VALUES (?, ?, ?, ?)",
+        ['nbsp_owner_' . $run, 'nbsp_owner_' . $run . '@example.test', 'notused', 'Owner']
+    );
+    $ownerId = (int)DB::conn()->lastInsertId();
+    DB::run(
+        "INSERT INTO users (username, email, password_hash, display_name) VALUES (?, ?, ?, ?)",
+        ['nbsp_somying_' . $run, 'nbsp_somying_' . $run . '@example.test', 'notused', 'สมหญิง']
+    );
+    $somyingId = (int)DB::conn()->lastInsertId();
+
+    DB::run('INSERT INTO projects (user_id, name, status, priority) VALUES (?, ?, ?, ?)', [$ownerId, 'NBSP project ' . $run, 'Planning', 'Medium']);
+    $projectId = (int)DB::conn()->lastInsertId();
+    DB::run('INSERT INTO project_members (project_id, user_id, role) VALUES (?, ?, ?)', [$projectId, $somyingId, 'Editor']);
+
+    // ชื่อที่คัดลอกจากเว็บ มี NBSP ติดหัวท้าย
+    DB::run('INSERT INTO project_tasks (project_id, user_id, title, status, assignee) VALUES (?, ?, ?, ?, ?)',
+        [$projectId, $ownerId, 'NBSP task', 'To Do', $nbsp . 'สมหญิง' . $nbsp]);
+    $nbspTaskId = (int)DB::conn()->lastInsertId();
+    DB::run('INSERT INTO project_tasks (project_id, user_id, title, status, assignee) VALUES (?, ?, ?, ?, ?)',
+        [$projectId, $ownerId, 'Blank task', 'To Do', $nbsp]);
+    $blankTaskId = (int)DB::conn()->lastInsertId();
+
+    try {
+        exec('php ' . ROOT . '/scripts/migrate-daily-loop.php 2>&1', $dryOut, $dryCode);
+        assertSame(0, $dryCode, 'dry-run should succeed: ' . implode("\n", $dryOut));
+
+        exec('php ' . ROOT . '/scripts/migrate-daily-loop.php --apply 2>&1', $applyOut, $applyCode);
+        assertSame(0, $applyCode, 'apply should succeed: ' . implode("\n", $applyOut));
+
+        $linked = DB::run('SELECT assignee_user_id FROM project_tasks WHERE id = ?', [$nbspTaskId])->fetchColumn();
+        assertSame($somyingId, (int)$linked, 'a name wrapped in NBSP matches the member');
+        $blank = DB::run('SELECT assignee_user_id FROM project_tasks WHERE id = ?', [$blankTaskId])->fetchColumn();
+        assertSame(null, $blank, 'an assignee that is only NBSP links to nobody');
+    } finally {
+        DB::run('DELETE FROM project_tasks WHERE project_id = ?', [$projectId]);
+        DB::run('DELETE FROM projects WHERE id = ?', [$projectId]);
+        DB::run('DELETE FROM users WHERE id IN (?, ?)', [$ownerId, $somyingId]);
+    }
+});
+
 test('migration treats a guest name seen only in project_chats as a guest', function (TestClient $_c): void {
     $run = 'chatguest_' . TEST_RUN_ID;
 

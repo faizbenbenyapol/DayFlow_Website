@@ -113,6 +113,7 @@ class Task
      *
      * รองรับ quadrant เป็น null (inbox) และรับตำแหน่งที่ส่งมาล่วงหน้าได้
      * ถ้าไม่ได้ระบุ day_position และมี due_date งานจะไปต่อท้ายวันนั้น
+     * ผลข้างเคียง: งานแรกของบัญชีตั้ง users.first_task_at (ปิดส่วนต้อนรับถาวร)
      *
      * @param int $userId รหัสผู้ใช้
      * @param array<string, mixed> $data ข้อมูลงาน
@@ -158,7 +159,39 @@ class Task
                 $dayPos,
             ]
         );
-        return (int)DB::conn()->lastInsertId();
+        $taskId = (int)DB::conn()->lastInsertId();
+        self::rememberHadTask($userId);
+        return $taskId;
+    }
+
+    /**
+     * จำว่าบัญชีนี้เคยมีงานแล้ว ส่วนต้อนรับบนหน้าวันนี้จะไม่กลับมาแม้ลบงานทิ้งหมด (EDGE-16)
+     * เรียกจากทุกทางที่ใส่งานลงตาราง tasks: create() และการนำเข้าไฟล์สำรอง
+     * ผลข้างเคียง: ตั้ง users.first_task_at ครั้งแรกครั้งเดียว ไม่แตะ updated_at
+     * เพราะคอลัมน์ ON UPDATE จะเปลี่ยนเอง และนี่ไม่ใช่การแก้บัญชีของผู้ใช้
+     */
+    public static function rememberHadTask(int $userId): void
+    {
+        DB::run(
+            'UPDATE users SET first_task_at = NOW(), updated_at = updated_at WHERE id = ? AND first_task_at IS NULL',
+            [$userId]
+        );
+    }
+
+    /**
+     * บัญชีนี้ควรเห็นการ์ดต้อนรับไหม (REQ-23): ไม่เคยมีงานเลย
+     * first_task_at จำไว้แม้ลบงานแรกทิ้ง (EDGE-16) ส่วน NOT EXISTS กันบัญชีที่มีงานอยู่แล้วแต่ first_task_at ยังว่าง
+     * เช่นงานที่สคริปต์ย้ายคัดลอกมาให้ ใช้ทั้งตอน render หน้าวันนี้และใน summary เพื่อให้สองทางตอบตรงกัน
+     *
+     * @return bool true เมื่อควรต้อนรับ
+     */
+    public static function shouldWelcome(int $userId): bool
+    {
+        return (bool)DB::run(
+            'SELECT u.first_task_at IS NULL AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.user_id = u.id)
+             FROM users u WHERE u.id = ?',
+            [$userId]
+        )->fetchColumn();
     }
 
     /**
