@@ -4,6 +4,8 @@
 //
 //   php tests/run.php                      unit tests only
 //   php tests/run.php http://localhost:80  unit + integration tests
+//   TEST_ONLY=transfer,abuse php tests/run.php http://localhost
+//                                          เฉพาะชุดที่ระบุ (ชื่อไฟล์ไม่มี _test.php)
 //
 // Integration suites drive the app over HTTP with a real session, so they need
 // a running instance pointed at a throwaway database.
@@ -40,9 +42,12 @@ define('TEST_BASE_URL', (string)$baseUrl);
 define('TEST_RUN_ID', substr(bin2hex(random_bytes(4)), 0, 8));
 
 $suites = [];
+// TEST_ONLY รันเฉพาะบางชุดตอนแก้ส่วนเดียว ชุดเต็มยังต้องรันก่อนส่งงาน
+$onlySuites = array_filter(explode(',', (string)getenv('TEST_ONLY')));
 foreach (['unit', 'integration'] as $kind) {
     if ($kind === 'integration' && TEST_BASE_URL === '') continue;
     foreach (glob(__DIR__ . '/' . $kind . '/*_test.php') ?: [] as $file) {
+        if ($onlySuites !== [] && !in_array(basename($file, '_test.php'), $onlySuites, true)) continue;
         $suites[] = [$kind, basename($file, '_test.php'), $file];
     }
 }
