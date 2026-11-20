@@ -88,6 +88,54 @@ final class TestClient
     }
 
     /**
+     * ส่งไฟล์ผ่าน API ส่งไฟล์ครบทุกขั้นแบบที่หน้าส่งไฟล์ทำ: start → ส่งทีละชิ้น → finish
+     * @param array<string, string> $files ชื่อไฟล์ → เนื้อไฟล์ (ว่างได้ ถ้าส่งแค่ข้อความ)
+     * @return array คำตอบของ finish (หรือของ start เมื่อไม่มีไฟล์) พร้อม 'status' ของคำขอสุดท้าย
+     */
+    public function transfer(array $files, string $message = '', int $expiryMinutes = 5): array
+    {
+        $declared = [];
+        foreach ($files as $name => $bytes) $declared[] = ['name' => $name, 'size' => strlen($bytes)];
+        $start = $this->post('/api/transfer/start', ['files' => $declared, 'message' => $message, 'expiry_minutes' => $expiryMinutes]);
+        $started = $this->json($start) + ['status' => $start['status']];
+        if ($start['status'] !== 201 || $files === [] ) return $started;
+
+        $chunk = (int)$started['chunk_bytes'];
+        foreach (array_values($files) as $index => $bytes) {
+            for ($offset = 0; $offset < strlen($bytes); $offset += $chunk) {
+                $sent = $this->postRaw("/api/transfer/{$started['id']}/chunk?file={$index}&offset={$offset}", substr($bytes, $offset, $chunk));
+                if ($sent['status'] !== 200) return $this->json($sent) + ['status' => $sent['status']];
+            }
+        }
+        $finish = $this->post("/api/transfer/{$started['id']}/finish", []);
+        return $this->json($finish) + ['status' => $finish['status']];
+    }
+
+    /**
+     * ส่งข้อมูลดิบ (ไม่ใช่ JSON หรือฟอร์ม) แบบที่หน้าส่งไฟล์ส่งชิ้นของไฟล์ พร้อม CSRF token
+     * @return array{status: int, body: string, headers: string}
+     */
+    public function postRaw(string $path, string $bytes): array
+    {
+        $ch = curl_init($this->baseUrl . $path);
+        curl_setopt_array($ch, [
+            CURLOPT_CUSTOMREQUEST  => 'POST',
+            CURLOPT_POSTFIELDS     => $bytes,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HEADER         => true,
+            CURLOPT_COOKIEJAR      => $this->cookieJar,
+            CURLOPT_COOKIEFILE     => $this->cookieJar,
+            CURLOPT_HTTPHEADER     => array_merge(['Accept: application/json', 'Content-Type: application/octet-stream', 'X-CSRF-Token: ' . $this->csrf], $this->headers),
+            CURLOPT_TIMEOUT        => 60,
+        ]);
+        $raw = (string)curl_exec($ch);
+        $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+        $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        return ['status' => $status, 'body' => substr($raw, $headerSize), 'headers' => substr($raw, 0, $headerSize)];
+    }
+
+    /**
      * Posts a file the way a browser form would, so the endpoint sees a real
      * $_FILES entry rather than a JSON blob.
      */

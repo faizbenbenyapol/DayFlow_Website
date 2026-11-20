@@ -178,11 +178,15 @@ class Router
 
         // --- Page & API: File Transfer ---
         $this->add('GET',    '/transfer',                    'FileTransferController', 'index',      true);
-        $this->add('POST',   '/api/transfer/send',           'FileTransferController', 'apiSend',    true);
+        $this->add('POST',   '/api/transfer/start',          'FileTransferController', 'apiStart',   true);
+        $this->add('POST',   '/api/transfer/{id}/chunk',     'FileTransferController', 'apiChunk',   true);
+        $this->add('POST',   '/api/transfer/{id}/finish',    'FileTransferController', 'apiFinish',  true);
         $this->add('GET',    '/api/transfer',                'FileTransferController', 'apiList',    true);
         $this->add('DELETE', '/api/transfer/{id}',           'FileTransferController', 'apiDelete',  true);
         $this->add('POST',   '/api/transfer/receive',        'FileTransferController', 'apiReceive', false);
+        $this->add('GET',    '/transfer/receive',            'FileTransferController', 'receivePage', false);
         $this->add('GET',    '/transfer/download/{token}',   'FileTransferController', 'download',   false);
+        $this->add('GET',    '/transfer/download/{token}/{part}', 'FileTransferController', 'downloadPart', false);
 
         // --- API: Food Notes ---
         $this->add('GET',    '/api/food-notes',      'FoodNoteController', 'apiList',   true);
@@ -447,7 +451,7 @@ class Router
         '#^/api/settings(/|$)#',
         '#^/api/files(/|$)#',
         '#^/api/(shares|app-shares)(/|$)#',
-        '#^/api/transfer/send$#',
+        '#^/api/transfer/(start|\d+/(chunk|finish))$#',
         '#^/api/stocks/(screenshots|keys)(/|$)#',
         '#^/api/ai/keys(/|$)#',
         '#^/api/push(/|$)#',

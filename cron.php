@@ -15,6 +15,7 @@ require_once ROOT . '/models/User.php';
 require_once ROOT . '/models/AccountData.php';
 require_once ROOT . '/core/DemoReset.php';
 require_once ROOT . '/models/PushSubscription.php';
+require_once ROOT . '/models/FileTransfer.php';
 
 // Security check: production is CLI-only. The web endpoint is intentionally
 // disabled because this job sends private Telegram notifications.
@@ -23,6 +24,10 @@ if (!$isCli) {
     http_response_code(403);
     die("Cron is CLI-only.\n");
 }
+
+// ลบการส่งไฟล์ที่หมดอายุและที่อัปโหลดค้าง พร้อมไฟล์บนดิสก์ (เฟส 3 REQ-19, EDGE-7)
+// ทำก่อนการแจ้งเตือน ซึ่งอาจจบสคริปต์ก่อนถึงท้ายไฟล์
+echo 'File transfers removed: ' . FileTransfer::cleanup() . "\n";
 
 // --- Helpers ---
 // Declared up here rather than at the bottom: these are conditional

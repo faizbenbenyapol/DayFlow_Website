@@ -706,7 +706,8 @@ async function main() {
         await tab.goto(BASE + '/transfer');
         await tab.settle();
         check(await tab.eval(`document.querySelector('[data-panel="send"]').hidden`) === false, 'it opens on the send tab');
-        check(await tab.eval(`document.getElementById('sendDrop').textContent.includes('MB')`), 'the real size limit is shown');
+        check(await tab.eval(`document.getElementById('sendDrop').textContent.includes('10 GB') && document.querySelector('.tf-panels').dataset.maxBytes === String(10 * 1024 ** 3)`), 'the real size limit is shown');
+        check(await tab.eval(`document.getElementById('btnSend').disabled`), 'nothing chosen and no message: nothing to send');
         await click(tab, '#tfTabs [data-tab="receive"]');
         await sleep(200);
         check(await tab.eval(`document.getElementById('btnReceive').disabled`), 'the receive button waits for six digits');
