@@ -93,6 +93,13 @@ function dryRun(): void
     echo "  empty titles: {$quick['empty_title']}\n";
     echo "  full text in description: {$quick['in_description']}\n";
     echo "  distinct users: {$quick['users']}\n";
+
+    $assignees = projectTaskAssigneeCounts();
+    echo "\nProject task assignees\n";
+    echo "  matched: {$assignees['matched']}\n";
+    echo "  ambiguous: {$assignees['ambiguous']}\n";
+    echo "  guest: {$assignees['guest']}\n";
+    echo "  unmatched: {$assignees['unmatched']}\n";
 }
 
 /**
@@ -161,10 +168,13 @@ function apply(): void
         $daily = copiedCounts('daily_todos', 'daily_todo');
         $quick = copiedCounts('quick_items', 'quick_item');
 
+        $linked = linkProjectTaskAssignees();
+
         $db->commit();
 
         echo reportLine('daily_todo', $daily['copied'], $daily['total']) . "\n";
         echo reportLine('quick_item', $quick['copied'], $quick['total']) . "\n";
+        echo "Linked project task assignees: {$linked}\n";
     } catch (Throwable $e) {
         $db->rollBack();
         fwrite(STDERR, "Apply failed: " . $e->getMessage() . "\n");
@@ -306,6 +316,114 @@ function insertCopyLogBatch(string $legacySource, array $rows): void
 }
 
 /**
+ * สร้าง derived table ของ guest_name ที่ปรากฏในโปรเจคนั้น (จาก task/chat/activity)
+ *
+ * @return string SQL ของ derived table มีคอลัมน์ project_id, guest_name
+ */
+function guestNamesSql(): string
+{
+    return "SELECT DISTINCT project_id, LOWER(TRIM(guest_name)) AS guest_name
+        FROM (
+            SELECT project_id, guest_name COLLATE utf8mb4_bin AS guest_name FROM project_tasks
+            UNION ALL
+            SELECT project_id, guest_name COLLATE utf8mb4_bin AS guest_name FROM project_chats
+            UNION ALL
+            SELECT project_id, guest_name COLLATE utf8mb4_bin AS guest_name FROM project_activities
+        ) g
+        WHERE guest_name IS NOT NULL AND TRIM(guest_name) <> ''";
+}
+
+/**
+ * สร้าง derived table ที่จับคู่ assignee ข้อความกับสมาชิกโปรเจคแบบ one-to-many
+ *
+ * @return string SQL ของ derived table มีคอลัมน์ id, user_id
+ */
+function matchedProjectTasksSql(): string
+{
+    $membersSql = '(
+        SELECT p.id AS project_id, u.id AS user_id, u.display_name, u.username
+        FROM projects p JOIN users u ON p.user_id = u.id
+        UNION ALL
+        SELECT pm.project_id, u.id, u.display_name, u.username
+        FROM project_members pm JOIN users u ON pm.user_id = u.id
+    )';
+
+    $guestSql = guestNamesSql();
+
+    return "SELECT t.id, mem.user_id
+        FROM project_tasks t
+        JOIN {$membersSql} mem ON mem.project_id = t.project_id
+        WHERE t.assignee_user_id IS NULL
+          AND TRIM(t.assignee) <> ''
+          AND (
+              LOWER(TRIM(t.assignee)) COLLATE utf8mb4_bin = LOWER(TRIM(mem.display_name)) COLLATE utf8mb4_bin
+              OR LOWER(TRIM(t.assignee)) COLLATE utf8mb4_bin = LOWER(TRIM(mem.username)) COLLATE utf8mb4_bin
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM ({$guestSql}) g
+              WHERE g.project_id = t.project_id
+                AND g.guest_name COLLATE utf8mb4_bin = LOWER(TRIM(t.assignee)) COLLATE utf8mb4_bin
+          )";
+}
+
+/**
+ * นับจำนวนงานโปรเจคที่ยังผูก assignee จากข้อความ และแยกสถานะการจับคู่
+ *
+ * @return array<string, int> จำนวน matched, ambiguous, guest, unmatched
+ */
+function projectTaskAssigneeCounts(): array
+{
+    $matchedSql = matchedProjectTasksSql();
+    $guestSql = guestNamesSql();
+
+    $sql = "SELECT
+        SUM(CASE WHEN gn.project_id IS NOT NULL THEN 1 ELSE 0 END) AS guest,
+        SUM(CASE WHEN gn.project_id IS NULL AND m.match_count = 1 THEN 1 ELSE 0 END) AS matched,
+        SUM(CASE WHEN gn.project_id IS NULL AND m.match_count > 1 THEN 1 ELSE 0 END) AS ambiguous,
+        SUM(CASE WHEN gn.project_id IS NULL AND m.match_count IS NULL THEN 1 ELSE 0 END) AS unmatched
+    FROM project_tasks pt
+    LEFT JOIN (
+        SELECT id, COUNT(DISTINCT user_id) AS match_count
+        FROM ({$matchedSql}) mm
+        GROUP BY id
+    ) m ON m.id = pt.id
+    LEFT JOIN ({$guestSql}) gn
+        ON gn.project_id = pt.project_id
+        AND gn.guest_name COLLATE utf8mb4_bin = LOWER(TRIM(pt.assignee)) COLLATE utf8mb4_bin
+    WHERE pt.assignee_user_id IS NULL AND TRIM(pt.assignee) <> ''";
+
+    $row = DB::run($sql)->fetch() ?: [];
+
+    return [
+        'matched'   => (int)($row['matched'] ?? 0),
+        'ambiguous' => (int)($row['ambiguous'] ?? 0),
+        'guest'     => (int)($row['guest'] ?? 0),
+        'unmatched' => (int)($row['unmatched'] ?? 0),
+    ];
+}
+
+/**
+ * จับคู่ assignee ข้อความของงานโปรเจคกับสมาชิกโปรเจค แล้วบันทึก assignee_user_id
+ *
+ * @return int จำนวนงานที่ถูกผูก
+ */
+function linkProjectTaskAssignees(): int
+{
+    $matchedSql = matchedProjectTasksSql();
+
+    $sql = "UPDATE project_tasks pt
+    JOIN (
+        SELECT id, MAX(user_id) AS user_id
+        FROM ({$matchedSql}) mm
+        GROUP BY id
+        HAVING COUNT(DISTINCT user_id) = 1
+    ) matched ON matched.id = pt.id
+    SET pt.assignee_user_id = matched.user_id";
+
+    return DB::run($sql)->rowCount();
+}
+
+/**
  * ย้อนกลับการย้ายข้อมูล โดยลบ tasks ที่มี legacy_source, ลบบันทึกใน legacy_task_copies
  * และปรับ quadrant เป็น 2 ถ้าไม่มี --yes จะแสดงจำนวนแล้วหยุด
  *
@@ -335,6 +453,7 @@ function rollback(bool $confirmed): void
         echo "Deleted copied tasks: {$deleted}\n";
         echo "Deleted copy-log rows: {$logDeleted}\n";
         echo "Set NULL quadrant to 2: {$updated}\n";
+        echo "Project task assignee links are left as-is; the old app ignores the column.\n";
         echo "Warning: edits made to copied tasks are lost.\n";
         echo "Warning: tasks created after the move stay in Tasks (inbox ones moved to quadrant 2) and do not appear in the old Planner.\n";
     } catch (Throwable $e) {

@@ -7,13 +7,19 @@ class ProjectTask
 {
     /**
      * ดึงข้อมูลงานทั้งหมดในโครงการ จัดกลุ่มและเรียงตามตำแหน่งการลากวาง (สำหรับผู้ใช้ร่วมทีมทุกคน รวมถึงแขกสาธารณะ)
+     *
+     * แถวที่ได้มี assignee_name = ชื่อที่แสดงของผู้ใช้ที่ผูกไว้ หรือ username ถ้าไม่มีชื่อที่แสดง
+     * หรือข้อความ assignee เดิมถ้ายังไม่ได้ผูกบัญชี
      */
     public static function getByProject(int $projectId): array
     {
         return DB::run(
-            'SELECT pt.*, COALESCE(u.display_name, pt.guest_name) AS creator_name 
+            'SELECT pt.*,
+                    COALESCE(NULLIF(u.display_name, \'\'), u.username, pt.guest_name) AS creator_name,
+                    COALESCE(NULLIF(au.display_name, \'\'), au.username, pt.assignee) AS assignee_name
              FROM project_tasks pt
              LEFT JOIN users u ON pt.user_id = u.id
+             LEFT JOIN users au ON pt.assignee_user_id = au.id
              WHERE pt.project_id = ?
              ORDER BY pt.position ASC, pt.id ASC',
             [$projectId]
@@ -33,6 +39,9 @@ class ProjectTask
 
     /**
      * สร้างงานใหม่ในโครงการ (รองรับผู้ใช้ทั่วไป และ Guest)
+     *
+     * ถ้ามี assignee_user_id จะบันทึกผู้ใช้ที่ผูกไว้และล้างข้อความ assignee เดิม
+     * ถ้าไม่มีจะเก็บข้อความ assignee ตามพฤติกรรมเดิมของ client เก่า
      */
     public static function create(int $userId, int $projectId, array $data): int
     {
@@ -46,10 +55,12 @@ class ProjectTask
 
         $insertUserId = ($userId > 0) ? $userId : null;
         $guestName = !empty($_SESSION['guest_name']) ? $_SESSION['guest_name'] : null;
+        $assigneeUserId = !empty($data['assignee_user_id']) ? (int)$data['assignee_user_id'] : null;
+        $assignee = ($assigneeUserId !== null) ? null : (!empty($data['assignee']) ? $data['assignee'] : null);
 
         DB::run(
-            'INSERT INTO project_tasks (project_id, user_id, guest_name, title, status, priority, due_date, category, assignee, position, checklist)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO project_tasks (project_id, user_id, guest_name, title, status, priority, due_date, category, assignee_user_id, assignee, position, checklist)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 $projectId,
                 $insertUserId,
@@ -59,7 +70,8 @@ class ProjectTask
                 $data['priority'] ?? 'Medium',
                 !empty($data['due_date']) ? $data['due_date'] : null,
                 !empty($data['category']) ? $data['category'] : null,
-                !empty($data['assignee']) ? $data['assignee'] : null,
+                $assigneeUserId,
+                $assignee,
                 $maxPos + 1,
                 !empty($data['checklist']) ? json_encode($data['checklist'], JSON_UNESCAPED_UNICODE) : null
             ]
@@ -69,17 +81,20 @@ class ProjectTask
 
     /**
      * อัปเดตงาน
+     *
+     * รองรับทั้ง assignee_user_id ใหม่และ assignee ข้อความเดิม
+     * assignee_user_id ที่ว่าง/ศูนย์/null หมายถึงยังไม่ระบุ และจะล้าง assignee ข้อความด้วย
      */
     public static function update(int $id, array $data): bool
     {
         $fields = [];
         $params = [];
 
-        $allowed = ['title', 'status', 'priority', 'due_date', 'category', 'assignee', 'position', 'checklist'];
+        $allowed = ['title', 'status', 'priority', 'due_date', 'category', 'assignee_user_id', 'assignee', 'position', 'checklist'];
         foreach ($allowed as $field) {
             if (array_key_exists($field, $data)) {
                 $fields[] = "`$field` = ?";
-                if ($field === 'due_date' && empty($data[$field])) {
+                if (($field === 'due_date' || $field === 'assignee_user_id' || $field === 'assignee') && empty($data[$field])) {
                     $params[] = null;
                 } elseif ($field === 'checklist') {
                     $params[] = is_array($data[$field]) ? json_encode($data[$field], JSON_UNESCAPED_UNICODE) : $data[$field];

@@ -88,12 +88,31 @@ class ProjectMember
 
     /**
      * ลบสมาชิกออกจากโครงการ
+     *
+     * งานโปรเจคใดที่มอบหมายให้สมาชิกคนนี้จะถูกปลดผู้รับผิดชอบในการเรียกเดียวกัน
      */
     public static function removeMember(int $projectId, int $userId): bool
     {
-        return DB::run(
-            'DELETE FROM project_members WHERE project_id = ? AND user_id = ?',
-            [$projectId, $userId]
-        )->rowCount() > 0;
+        $db = DB::conn();
+        $db->beginTransaction();
+
+        try {
+            DB::run(
+                'UPDATE project_tasks SET assignee_user_id = NULL, assignee = NULL WHERE project_id = ? AND assignee_user_id = ?',
+                [$projectId, $userId]
+            );
+
+            $deleted = DB::run(
+                'DELETE FROM project_members WHERE project_id = ? AND user_id = ?',
+                [$projectId, $userId]
+            )->rowCount();
+
+            $db->commit();
+            return $deleted > 0;
+        } catch (Throwable $e) {
+            $db->rollBack();
+            error_log('removeMember failed: ' . $e->getMessage());
+            return false;
+        }
     }
 }

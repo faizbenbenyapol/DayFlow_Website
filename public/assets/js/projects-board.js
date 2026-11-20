@@ -61,7 +61,7 @@ function renderKanbanCardItem(task) {
         + '<span class="kcard-priority">' + escHtml(PRIORITY_LABEL[priority] || priority) + '</span>'
         + (task.category ? '<span class="tag kcard-tag">' + escHtml(task.category) + '</span>' : '')
         + taskChecklist(task) + taskDue(task)
-        + (task.assignee ? '<span class="kcard-who" title="ผู้รับผิดชอบ: ' + escHtml(task.assignee) + '">' + escHtml(task.assignee) + '</span>' : '')
+        + (task.assignee_name ? '<span class="kcard-who" title="ผู้รับผิดชอบ: ' + escHtml(task.assignee_name) + '">' + escHtml(task.assignee_name) + '</span>' : '')
         + '</div>'
         + (viewer ? '' : '<div class="kcard-actions">'
             + '<button type="button" class="icon-btn sm" data-act="openEditTask" data-args="[' + task.id + ']" aria-label="แก้ไขงาน: ' + title + '"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button>'
@@ -157,12 +157,20 @@ async function submitQuickAdd(status) {
 
 /* ── A task and its checklist ── */
 /** The people a task can go to: everyone on the team, and whoever it already names. */
-function fillAssignees(current) {
+function fillAssignees(task) {
     const select = document.getElementById('editTaskAssignee');
-    const names = projectMembers.map(m => m.display_name || m.username).filter(Boolean);
-    if (current && !names.includes(current)) names.push(current);
-    select.innerHTML = '<option value="">ยังไม่ระบุ</option>' + names.map(n => '<option value="' + escHtml(n) + '">' + escHtml(n) + '</option>').join('');
-    select.value = current || '';
+    const currentUserId = task && task.assignee_user_id ? String(task.assignee_user_id) : '';
+    const currentText = task && task.assignee ? task.assignee : '';
+
+    let options = '<option value="">ยังไม่ระบุ</option>'
+        + projectMembers.map(m => '<option value="' + escHtml(String(m.id)) + '">' + escHtml(m.display_name || m.username) + '</option>').join('');
+
+    if (currentText && !currentUserId) {
+        options += '<option value="legacy">' + escHtml(currentText) + ' (ข้อความเดิม)</option>';
+    }
+
+    select.innerHTML = options;
+    select.value = currentUserId || (currentText ? 'legacy' : '');
 }
 
 function openEditTask(id) {
@@ -174,7 +182,7 @@ function openEditTask(id) {
     document.getElementById('editTaskStatus').value = task.status;
     document.getElementById('editTaskPriority').value = task.priority;
     document.getElementById('editTaskCategory').value = task.category || '';
-    fillAssignees(task.assignee || '');
+    fillAssignees(task);
     document.getElementById('editTaskDue').value = task.due_date || '';
     formErrorLine('taskError', '');
 
@@ -263,6 +271,14 @@ async function submitEditTask(e) {
     const title = document.getElementById('editTaskTitle').value.trim();
     if (!title) { formErrorLine('taskError', 'ตั้งชื่องานก่อน'); document.getElementById('editTaskTitle').focus(); return; }
 
+    const assigneeSelect = document.getElementById('editTaskAssignee');
+    const assigneeValue = assigneeSelect.value;
+    const assigneePayload = assigneeValue === 'legacy'
+        ? {}
+        : assigneeValue === ''
+            ? { assignee_user_id: null }
+            : { assignee_user_id: parseInt(assigneeValue, 10) };
+
     try {
         await apiFetch(BASE_URL + '/api/projects/tasks/' + id, {
             method: 'PUT',
@@ -271,9 +287,9 @@ async function submitEditTask(e) {
                 status: document.getElementById('editTaskStatus').value,
                 priority: document.getElementById('editTaskPriority').value,
                 category: document.getElementById('editTaskCategory').value.trim(),
-                assignee: document.getElementById('editTaskAssignee').value,
                 due_date: document.getElementById('editTaskDue').value,
                 checklist: currentChecklist,
+                ...assigneePayload,
             })
         });
         closeModal('editTaskModal');
