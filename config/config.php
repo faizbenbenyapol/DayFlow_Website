@@ -64,6 +64,16 @@ define('TIMEZONE', envValue('TIMEZONE', 'Asia/Bangkok'));
 // --- Google Sign-In ---
 define('GOOGLE_CLIENT_ID', envValue('GOOGLE_CLIENT_ID', ''));
 
+// --- Google Drive (เฟส 4, docs/guides/google-drive-setup.md) ---
+// client ID/secret ว่าง = ปิดความสามารถนี้ เมนูไฟล์เก็บบนเซิร์ฟเวอร์อย่างเดียว (REQ-23)
+// ที่อยู่ของ Google มีค่าเริ่มต้นเป็นของจริง ชุดทดสอบ (docker-compose.override.yml) ชี้ไป Google ปลอม
+define('GOOGLE_DRIVE_CLIENT_ID', envValue('GOOGLE_DRIVE_CLIENT_ID', ''));
+define('GOOGLE_DRIVE_CLIENT_SECRET', envValue('GOOGLE_DRIVE_CLIENT_SECRET', ''));
+define('GOOGLE_AUTH_URL', envValue('GOOGLE_AUTH_URL', 'https://accounts.google.com/o/oauth2/v2/auth'));
+define('GOOGLE_TOKEN_URL', envValue('GOOGLE_TOKEN_URL', 'https://oauth2.googleapis.com/token'));
+define('GOOGLE_REVOKE_URL', envValue('GOOGLE_REVOKE_URL', 'https://oauth2.googleapis.com/revoke'));
+define('GOOGLE_API_URL', rtrim(envValue('GOOGLE_API_URL', 'https://www.googleapis.com'), '/'));
+
 // --- Web Push (VAPID) ---
 // Generate once with: php scripts/generate-vapid-keys.php
 // Leaving these empty simply disables browser notifications.

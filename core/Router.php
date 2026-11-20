@@ -149,6 +149,14 @@ class Router
         $this->add('GET',    '/api/files/{id}/download',    'FileController', 'apiDownload',    true);
         $this->add('GET',    '/api/files/folders',          'FileController', 'apiFoldersList', true);
 
+        // --- Google Drive (เฟส 4) ---
+        $this->add('GET',    '/settings/drive/connect',     'DriveController', 'connect',       true);
+        $this->add('GET',    '/settings/drive/callback',    'DriveController', 'callback',      true);
+        $this->add('GET',    '/api/drive',                  'DriveController', 'apiStatus',     true);
+        $this->add('POST',   '/api/drive/migrate',          'DriveController', 'apiMigrate',    true);
+        $this->add('POST',   '/api/drive/resume',           'DriveController', 'apiResume',     true);
+        $this->add('POST',   '/api/drive/disconnect',       'DriveController', 'apiDisconnect', true);
+
         // --- Share Links (public, no auth) ---
         $this->add('GET', '/share/{token}',                     'ShareController', 'viewShare',      false);
         $this->add('GET', '/share/{token}/download/{fileId}',   'ShareController', 'publicDownload', false);
@@ -450,6 +458,7 @@ class Router
     private const DEMO_RESTRICTED = [
         '#^/api/settings(/|$)#',
         '#^/api/files(/|$)#',
+        '#^/(api|settings)/drive(/|$)#',
         '#^/api/(shares|app-shares)(/|$)#',
         '#^/api/transfer/(start|\d+/(chunk|finish))$#',
         '#^/api/stocks/(screenshots|keys)(/|$)#',

@@ -29,6 +29,12 @@ parameters:
         - DB_USER
         - DB_PASS
         - GOOGLE_CLIENT_ID
+        - GOOGLE_DRIVE_CLIENT_ID
+        - GOOGLE_DRIVE_CLIENT_SECRET
+        - GOOGLE_AUTH_URL
+        - GOOGLE_TOKEN_URL
+        - GOOGLE_REVOKE_URL
+        - GOOGLE_API_URL
         - VAPID_PUBLIC_KEY
         - VAPID_PRIVATE_KEY
         - VAPID_SUBJECT

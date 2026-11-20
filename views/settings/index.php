@@ -43,6 +43,7 @@ $topics = [
     'การเชื่อมต่อ' => [
         'stock-api' => 'API หุ้นและ AI',
         'telegram'  => 'แจ้งเตือน',
+        'drive'     => 'Google Drive',
     ],
     'การแชร์' => [
         'app-shares' => 'แชร์เมนู',
@@ -473,6 +474,47 @@ window.dashboardDefaults = <?= jsonForScript(DashboardLayout::defaults()) ?>;
             <li>Moonshot Kimi (<a href="https://platform.moonshot.cn/" target="_blank" rel="noopener">platform.moonshot.cn</a>)</li>
             <li>OpenRouter (<a href="https://openrouter.ai/" target="_blank" rel="noopener">openrouter.ai</a>) รวมโมเดลหลายค่ายใน API เดียว</li>
         </ul>
+    </div>
+</section>
+
+<!-- GOOGLE DRIVE (เฟส 4 REQ-20, REQ-22) settings-drive.js เลือกแสดงหนึ่งแบบตามสถานะจาก /api/drive -->
+<section id="tab-drive" class="settings-pane" role="tabpanel" aria-labelledby="tabbtn-drive" hidden>
+    <h2>Google Drive</h2>
+    <p class="form-hint">เก็บไฟล์ของเมนูไฟล์ไว้ในโฟลเดอร์ "DayFlow" ใน Google Drive ของคุณ แล้วจัดการทุกอย่างจากเมนูไฟล์ได้เหมือนเดิม DayFlow เห็นเฉพาะไฟล์ที่มันสร้างเอง ไม่เห็นไฟล์อื่นใน Drive ของคุณ</p>
+    <p class="alert" id="driveFlash" role="status" hidden></p>
+
+    <div id="driveBox" aria-busy="true">
+        <p data-drive="off" hidden>เจ้าของระบบยังไม่ได้เปิดใช้ Google Drive ไฟล์ของคุณเก็บบนเซิร์ฟเวอร์ตามปกติ</p>
+
+        <div data-drive="none" hidden>
+            <p id="driveNoneNote">เชื่อมแล้ว ไฟล์ที่มีอยู่จะย้ายขึ้น Drive ให้เอง และไฟล์ใหม่จะไปเก็บใน Drive</p>
+            <a class="btn btn-primary" href="<?= h(APP_URL) ?>/settings/drive/connect">เชื่อมบัญชี Google</a>
+        </div>
+
+        <div data-drive="revoked" hidden>
+            <p class="alert alert-danger">การเชื่อม Google Drive หลุด กดเชื่อมใหม่ แล้วไฟล์ที่อยู่ใน Drive จะเปิดได้อีกครั้ง</p>
+            <a class="btn btn-primary" href="<?= h(APP_URL) ?>/settings/drive/connect">เชื่อมใหม่</a>
+        </div>
+
+        <div data-drive="on" hidden>
+            <dl class="drive-facts">
+                <dt>บัญชี</dt><dd id="driveEmail"></dd>
+                <dt>โฟลเดอร์</dt><dd id="driveFolder"></dd>
+            </dl>
+            <div class="drive-progress" id="driveProgress" hidden>
+                <p id="driveProgressLabel" aria-live="polite"></p>
+                <div class="progress" role="progressbar" aria-labelledby="driveProgressLabel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="driveProgressBar">
+                    <div class="progress-bar" id="driveProgressFill"></div>
+                </div>
+            </div>
+            <div class="alert alert-warning" id="driveFull" hidden>
+                Google Drive เต็ม ไฟล์ที่ยังไม่ขึ้นยังอยู่บนเซิร์ฟเวอร์ครบ เพิ่มพื้นที่ใน Drive แล้วกดลองต่อ
+                <button type="button" class="btn btn-sm" id="btnDriveResume">ลองต่อ</button>
+            </div>
+            <div class="settings-actions">
+                <button type="button" class="btn btn-ghost" id="btnDriveDisconnect">ยกเลิกการเชื่อม</button>
+            </div>
+        </div>
     </div>
 </section>
 
