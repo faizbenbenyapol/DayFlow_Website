@@ -22,6 +22,10 @@ const THAI_MONTHS = ['มกราคม', 'กุมภาพันธ์', '�
     'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
 
 document.addEventListener('DOMContentLoaded', async function () {
+    const params = new URLSearchParams(window.location.search);
+    const projectParam = params.get('project');
+    if (projectParam && /^\d+$/.test(projectParam)) activeProjectId = parseInt(projectParam, 10);
+
     await loadProjects();
     initSortable();
     renderCalendar();

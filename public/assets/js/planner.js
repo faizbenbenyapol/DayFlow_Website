@@ -27,6 +27,13 @@ document.addEventListener('DOMContentLoaded', async function () {
     loadDayPanel(selectedDate, false);
 });
 
+// จดงานจากช่อง quick-add ที่หน้าอื่น: โหลด to-do ของวันที่เลือกถ้าเป็นงาน
+document.addEventListener('dayflow:added', function (event) {
+    if (event.detail?.kind === 'task') {
+        loadTodos(selectedDate);
+    }
+});
+
 /* --- Colour choice in the dialog --- */
 function setEventColor(hex) {
     document.getElementById('eventColor').value = hex;

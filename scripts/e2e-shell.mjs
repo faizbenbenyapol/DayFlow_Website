@@ -52,7 +52,7 @@ const api = (tab, path, options = {}) => tab.eval(`(async () => {
 
 async function main() {
     const { cdp, stop } = await launch();
-    const made = { tasks: [], items: [], finance: [], todos: [], events: [], subs: [], stocks: [], bookmarks: [], foods: [], workouts: [], skills: [], notes: [], files: [], appShares: [], projects: [], focus: [] };
+    const made = { tasks: [], finance: [], todos: [], events: [], subs: [], stocks: [], bookmarks: [], foods: [], workouts: [], skills: [], notes: [], files: [], appShares: [], projects: [], focus: [] };
     let tab;
 
     try {
@@ -92,13 +92,13 @@ async function main() {
 
         await click(tab, '#quickSubmit');
         await sleep(300);
-        check(await tab.eval(`!document.getElementById('quickError').hidden`), 'an empty title shows an error');
+        check(await tab.eval(`document.getElementById('quickStatus').textContent === 'พิมพ์งานก่อน'`), 'an empty title shows an error');
         check(await tab.eval(`document.getElementById('quickSheet').open`), 'and the sheet stays open');
 
         await fill(tab, '#qaTaskTitle', `ทดสอบ ${STAMP}`);
         await click(tab, '#quickSubmit');
         await sleep(900);
-        check(await tab.eval(`!document.getElementById('quickSheet').open`), 'a title sends and closes the sheet');
+        check(await tab.eval(`document.getElementById('quickSheet').open`), 'a title sends and the sheet stays open');
 
         let list = await api(tab, '/api/tasks');
         // Tasks come back grouped by quadrant.
@@ -106,24 +106,38 @@ async function main() {
         check(!!task, 'the task reached the server');
         if (task) made.tasks.push(task.id);
 
-        // ---------- a quick note ----------
+        // ---------- capture from any page (task tab) ----------
         await tab.goto(BASE + '/bookmarks'); // a page that does not reload itself
         await tab.settle();
         await tab.eval(`window.openQuickAdd('note')`);
         await sleep(200);
-        check(await tab.eval(`document.getElementById('qaPane-note').hidden`) === false, 'openQuickAdd("note") shows the note tab');
-        await fill(tab, '#qaNoteContent', `จดทดสอบ ${STAMP}`);
-        check((await tab.eval(`document.getElementById('qaNoteCount').textContent`)).startsWith(String(`จดทดสอบ ${STAMP}`.length)), 'the counter follows the text');
-        await click(tab, '#quickSubmit');
+        check(await tab.eval(`document.getElementById('qaPane-task').hidden`) === false, 'openQuickAdd("note") now opens the task tab');
+        await fill(tab, '#qaTaskTitle', `จดจากหน้าอื่น ${STAMP}`);
+        await key(tab, 'Enter');
         await sleep(800);
-        list = await api(tab, '/api/quick-items');
-        const note = (list.body.items || []).find(i => (i.content || '').includes(STAMP));
-        check(!!note, 'the quick note reached the server');
-        if (note) made.items.push(note.id);
+        check(await tab.eval(`document.getElementById('quickSheet').open`), 'Enter keeps the sheet open');
+        check(await tab.eval(`document.activeElement.id`) === 'qaTaskTitle', 'the cursor stays in the input');
+        check(await tab.eval(`document.getElementById('qaTaskTitle').value`) === '', 'the input is cleared');
+        check(await tab.eval(`document.getElementById('quickStatus').textContent.includes('บันทึก')`), 'a success status is shown');
+        list = await api(tab, '/api/tasks');
+        const captured = Object.values(list.body.quadrants || {}).flat().find(t => t.title === `จดจากหน้าอื่น ${STAMP}`);
+        check(!!captured && captured.quadrant === null, 'the task lands in the inbox by default');
+        if (captured) made.tasks.push(captured.id);
+
+        // Today chip sets the due date.
+        await click(tab, 'input[name="qa_when"][value="today"]');
+        await fill(tab, '#qaTaskTitle', `จดวันนี้ ${STAMP}`);
+        await key(tab, 'Enter');
+        await sleep(800);
+        const serverToday = await tab.eval('document.documentElement.dataset.today');
+        const todayCaptured = Object.values((await api(tab, '/api/tasks')).body.quadrants || {}).flat().find(t => t.title === `จดวันนี้ ${STAMP}`);
+        check(!!todayCaptured && todayCaptured.due_date === serverToday, 'today chip sets due date to server today');
+        if (todayCaptured) made.tasks.push(todayCaptured.id);
 
         // ---------- an expense ----------
         await tab.eval(`window.openQuickAdd('money')`);
         await sleep(600);
+        check(await tab.eval(`document.querySelector('#quickSheet [role="tab"][aria-selected="true"]').dataset.kind`) === 'money', 'openQuickAdd("money") opens the money tab');
         check(await tab.eval(`document.getElementById('quickSubmit').textContent`) === 'บันทึกรายจ่าย', 'the button names what it does');
         await click(tab, 'input[name="type"][value="income"]');
         check(await tab.eval(`document.getElementById('quickSubmit').textContent`) === 'บันทึกรายรับ', 'switching to income renames it');
@@ -131,7 +145,7 @@ async function main() {
         await fill(tab, '#qaAmount', 'abc');
         await click(tab, '#quickSubmit');
         await sleep(300);
-        check(await tab.eval(`!document.getElementById('quickError').hidden`), 'a non-number amount is refused');
+        check(await tab.eval(`!document.getElementById('quickStatus').hidden`), 'a non-number amount is refused');
         await fill(tab, '#qaAmount', '123.45');
         await fill(tab, '#qaDescription', `ทดสอบ ${STAMP}`);
         await click(tab, '#quickSubmit');
@@ -157,6 +171,15 @@ async function main() {
         check(!(await tab.eval(`document.getElementById('todayTally').textContent`)).includes('undefined'), 'the summary line has no gaps');
         check(await tab.eval(`!!document.getElementById('todayError')`) === false, 'there is no error banner');
         check(await tab.eval(`document.querySelectorAll('.task-tick').length`) >= 1, 'tasks are listed');
+
+        // Thai keyboard layout: the same physical N key produces 'ื'.
+        await tab.eval(`document.getElementById('quickSheet')?.close()`);
+        await sleep(200);
+        await tab.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ื', code: 'KeyN' });
+        await tab.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ื', code: 'KeyN' });
+        await sleep(400);
+        check(await tab.eval(`document.getElementById('quickSheet').open`), 'Thai-layout N key opens the quick-add sheet');
+        await tab.eval(`document.getElementById('quickSheet').close()`);
 
         // A task: tick it, check the server, put it back.
         const firstTask = await tab.eval(`document.querySelector('.task-tick').closest('[data-task]').dataset.task`);
@@ -371,14 +394,16 @@ async function main() {
         check(await tab.eval(`document.getElementById('monthLabel').textContent`) === monthBefore, '"กลับมาเดือนนี้" returns');
 
         await click(tab, 'input[name="qaType"][value="income"]');
+        await sleep(200);
+        check(await tab.eval(`document.getElementById('qaSubmit').textContent`) === 'บันทึกรายรับ', 'switching to income renames the finance button');
         await fill(tab, '#finAmount', '123.45');
         await fill(tab, '#qaDesc', `รับทดสอบ ${STAMP}`);
         await click(tab, '#qaSubmit');
-        await sleep(900);
+        await sleep(1200);
         check(await tab.eval(`document.getElementById('transactionList').textContent.includes(${JSON.stringify(`รับทดสอบ ${STAMP}`)})`), 'an entry added on the line appears in the list');
         const monthList = await api(tab, '/api/finance?month=' + new Date().toISOString().slice(0, 7));
-        const money = (monthList.body.transactions || []).find(t => (t.description || '').includes(STAMP));
-        check(!!money && money.type === 'income', 'it reached the server as income');
+        const money = (monthList.body.transactions || []).find(t => (t.description || '') === `รับทดสอบ ${STAMP}`);
+        check(!!money && money.type === 'income', 'it reached the server as income', JSON.stringify(money));
         if (money) made.finance.push(money.id);
 
         await click(tab, '#typeFilter [data-type="expense"]');
@@ -797,6 +822,16 @@ async function main() {
         check(!!newProject, 'it reached the server');
         if (newProject) made.projects.push(newProject.id);
 
+        // ?project=<id> opens that board, not the first project in the list (the Today page's ↗ links here).
+        const second = await api(tab, '/api/projects', { method: 'POST', body: JSON.stringify({ name: `อีกโปรเจค ${STAMP}` }) });
+        if (second.body?.id) made.projects.push(second.body.id);
+        // The older project first: the list is newest-first, so only that one would fall back to the wrong board.
+        for (const [id, name] of [[newProject?.id, `โปรเจค ${STAMP}`], [second.body?.id, `อีกโปรเจค ${STAMP}`]]) {
+            await tab.goto(`${BASE}/projects?project=${id}`);
+            await sleep(1500);
+            check(await tab.eval(`document.getElementById('activeProjectTitle').textContent.trim()`) === name, `?project= opens "${name}"`);
+        }
+
         await click(tab, '[data-act="toggleQuickAddForm"][data-args=\'["To Do"]\']');
         await sleep(200);
         check(await tab.eval(`document.activeElement.id`) === 'quickadd-todo-input', 'adding a task puts the cursor in its field');
@@ -1011,7 +1046,6 @@ async function main() {
         if (tab) {
             await tab.goto(BASE + '/bookmarks').catch(() => {});
             for (const id of made.tasks) await api(tab, `/api/tasks/${id}`, { method: 'DELETE' }).catch(() => {});
-            for (const id of made.items) await api(tab, `/api/quick-items/${id}`, { method: 'DELETE' }).catch(() => {});
             for (const id of made.finance) await api(tab, `/api/finance/${id}`, { method: 'DELETE' }).catch(() => {});
             for (const id of made.todos) await api(tab, `/api/planner/todos/${id}`, { method: 'DELETE' }).catch(() => {});
             for (const id of made.subs) await api(tab, `/api/subscriptions/${id}`, { method: 'DELETE' }).catch(() => {});

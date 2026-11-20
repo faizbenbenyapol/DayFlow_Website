@@ -245,6 +245,28 @@ function setFormErrors(form, errors) {
 /* =====================================================
    Date Utilities
 ===================================================== */
+/** วันที่ของเซิร์ฟเวอร์ในรูปแบบ YYYY-MM-DD อ่านจาก <html data-today> */
+function serverToday() {
+    return document.documentElement.dataset.today || '';
+}
+
+/** คำนวณวันพรุ่งนี้จากวันของเซิร์ฟเวอร์ โดยใช้ UTC เพื่อไม่ผิดเพราะเขตเวลา */
+function serverTomorrow() {
+    const [y, m, d] = serverToday().split('-').map(Number);
+    const date = new Date(Date.UTC(y, m - 1, d + 1));
+    return date.getUTCFullYear() + '-' + String(date.getUTCMonth() + 1).padStart(2, '0') + '-' + String(date.getUTCDate()).padStart(2, '0');
+}
+
+/** จำนวนวันจากวันนี้ของเซิร์ฟเวอร์ถึงวันที่ระบุ */
+function serverDaysUntil(dateStr) {
+    if (!dateStr) return null;
+    const today = parseServerDate(serverToday());
+    today.setHours(0, 0, 0, 0);
+    const target = parseServerDate(dateStr);
+    target.setHours(0, 0, 0, 0);
+    return Math.round((target - today) / 86400000);
+}
+
 /**
  * A date or datetime from the server, as the visitor's own wall clock.
  *
@@ -371,7 +393,7 @@ function onThemeChange(callback) {
     const doCommands = typeof window.openQuickAdd === 'function' || document.getElementById('quickSheet')
         ? [
             { title: 'เพิ่มงาน', url: '#', type: 'ทำ', action: () => window.openQuickAdd('task') },
-            { title: 'จดด่วน', url: '#', type: 'ทำ', action: () => window.openQuickAdd('note') },
+            { title: 'จดไว้', url: '#', type: 'ทำ', action: () => window.openQuickAdd('task') },
             { title: 'บันทึกรายรับรายจ่าย', url: '#', type: 'ทำ', action: () => window.openQuickAdd('money') },
         ]
         : [];

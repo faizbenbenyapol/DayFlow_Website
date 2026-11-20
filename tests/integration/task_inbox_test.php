@@ -91,6 +91,22 @@ test('GET /quick-notes redirects to /tasks#inbox', function (TestClient $client)
     );
 });
 
+test('creating and updating a task accepts today and tomorrow keywords resolved by the server', function (TestClient $client): void {
+    $tag = 'today-keyword-' . TEST_RUN_ID;
+    $created = $client->json($client->post('/api/tasks', [
+        'title'    => $tag,
+        'quadrant' => 1,
+        'due_date' => 'today',
+    ]));
+    $id = (int)($created['task']['id'] ?? 0);
+    assertTrue($id > 0, 'task should be created');
+    assertSame(date('Y-m-d'), $created['task']['due_date'], 'today keyword resolves to server date');
+
+    $tomorrow = date('Y-m-d', strtotime('+1 day'));
+    $updated = $client->json($client->request('PUT', '/api/tasks/' . $id, ['due_date' => 'tomorrow']));
+    assertSame($tomorrow, $updated['task']['due_date'], 'tomorrow keyword resolves to server date + 1');
+});
+
 test('search results from tasks link to /tasks#task-<id> while notes stay unchanged', function (TestClient $client): void {
     $tag = 'inbox-search-' . TEST_RUN_ID;
     $created = $client->json($client->post('/api/tasks', ['title' => $tag, 'quadrant' => 0]));
