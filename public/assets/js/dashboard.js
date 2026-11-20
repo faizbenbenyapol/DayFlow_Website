@@ -124,6 +124,15 @@
         if (el) el.hidden = hide;
     }
 
+    /**
+     * ลิงก์ ▶ ไปหน้าโฟกัสที่เลือกงานนี้ไว้ (REQ-21)
+     * มีเฉพาะงานส่วนตัว เพราะประวัติโฟกัสผูกได้แค่ตาราง tasks ไม่ใช่งานโปรเจกต์
+     */
+    function focusLink(task) {
+        return `<a class="icon-btn sm" href="${BASE_URL}/focus?task=${Number(task.id)}" aria-label="โฟกัส: ${esc(task.title)}">`
+            + '<svg class="icon" aria-hidden="true"><use href="#i-focus"/></svg></a>';
+    }
+
     /** สร้างเมนูปุ่ม ⋯ ของแถวงานค้าง */
     function overdueMenu(taskId) {
         const items = [
@@ -144,6 +153,7 @@
         return row(
             `<input type="checkbox" class="task-tick" aria-label="เสร็จแล้ว: ${esc(task.title)}">`
             + `<span class="grow"><span class="title"><span class="done-mark">${esc(task.title)}</span></span><span class="meta">${overdueMeta(task.due_date, task.repeat_rule)}</span></span>`
+            + focusLink(task)
             + `<button type="button" class="icon-btn sm overdue-menu-btn" aria-label="จัดการงาน: ${esc(task.title)}" data-act="openOverdueMenu" data-task-id="${Number(task.id)}">⋯</button>`
             + overdueMenu(task.id),
             ` data-task="${Number(task.id)}"`,
@@ -192,7 +202,8 @@
         }
         let rowsHtml = list(items.map(t => row(
             `<input type="checkbox" class="task-tick" aria-label="เสร็จแล้ว: ${esc(t.title)}">`
-            + `<span class="grow"><span class="title"><span class="done-mark">${esc(t.title)}</span></span>${QUADRANT[t.quadrant] ? `<span class="meta">${QUADRANT[t.quadrant]}</span>` : ''}</span>`,
+            + `<span class="grow"><span class="title"><span class="done-mark">${esc(t.title)}</span></span>${QUADRANT[t.quadrant] ? `<span class="meta">${QUADRANT[t.quadrant]}</span>` : ''}</span>`
+            + focusLink(t),
             ` data-task="${Number(t.id)}"`
         )));
         if (total > items.length) {
@@ -234,7 +245,10 @@
         }));
     }
 
-    /** วาดส่วนงานทั้งหมด พร้อมรักษาสถานะ "แสดงอีก" ของงานค้าง */
+    /**
+     * วาดส่วนงานทั้งหมด พร้อมรักษาสถานะ "แสดงอีก" ของงานค้าง
+     * บัญชีที่ไม่เคยมีงาน (data.welcome) เห็นส่วนต้อนรับแทนกลุ่ม "วันนี้" ที่ยังว่าง (REQ-23)
+     */
     function renderTasks(data, keepOverdueExpanded = false) {
         const overdueCount = data?.overdue || 0;
         const todayCount = data?.due_today || 0;
@@ -242,11 +256,13 @@
         const todayItems = data?.today_items || [];
         const projectItems = data?.my_project_items || [];
         const hasAnything = overdueCount > 0 || todayCount > 0 || projectItems.length > 0;
+        const welcome = !!data?.welcome;
 
+        setSubHidden('welcome', !welcome);
         setSubHidden('overdue', overdueCount === 0);
-        setSubHidden('today', false);
+        setSubHidden('today', welcome);
         setSubHidden('my-project', projectItems.length === 0);
-        setSubHidden('empty', hasAnything);
+        setSubHidden('empty', hasAnything || welcome);
 
         renderOverdue(overdueItems, overdueCount, keepOverdueExpanded);
         renderToday(todayItems, todayCount);
@@ -826,9 +842,10 @@
         if (event.target.matches('.habit-tick')) tickHabit(event.target);
     });
 
-    // ช่อง "+ เพิ่มงานวันนี้" ส่ง due_date = 'today' ให้เซิร์ฟเวอร์ตัดสินวันที่จริง
-    const addInput = document.getElementById('todayAddTask');
-    if (addInput) {
+    // ช่อง "+ เพิ่มงานวันนี้" และช่องจดงานแรกในส่วนต้อนรับ ส่ง due_date = 'today' ให้เซิร์ฟเวอร์ตัดสินวันที่จริง
+    ['todayAddTask', 'welcomeAddTask'].forEach(inputId => {
+        const addInput = document.getElementById(inputId);
+        if (!addInput) return;
         addInput.addEventListener('keydown', async event => {
             if (event.key !== 'Enter') return;
             event.preventDefault();
@@ -848,10 +865,11 @@
                 toast(error.message || 'เพิ่มงานไม่สำเร็จ ลองอีกครั้ง', 'danger');
             } finally {
                 addInput.disabled = false;
-                addInput.focus();
+                // งานแรกปิดส่วนต้อนรับไปแล้ว ให้โฟกัสต่อที่ช่องของกลุ่ม "วันนี้" ที่เพิ่งโผล่
+                (addInput.closest('[hidden]') ? document.getElementById('todayAddTask') : addInput)?.focus();
             }
         });
-    }
+    });
 
     // A task, note or expense added from the quick-add sheet: refresh in place.
     document.addEventListener('dayflow:added', event => {

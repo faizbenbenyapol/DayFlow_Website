@@ -66,7 +66,7 @@ class DashboardController
         $payload = [];
 
         // Tasks: ค้าง, วันนี้, และงานโปรเจกต์ที่มอบให้ฉัน
-        // ใช้ 5 คำสั่งคงที่ ไม่ขยายตามจำนวนงานหรือโปรเจกต์
+        // ใช้ 6 คำสั่งคงที่ ไม่ขยายตามจำนวนงานหรือโปรเจกต์
         if (isset($need['tasks'])) {
             $overdueCount = (int)$this->safeModule('tasks', fn() => DB::run(
                 'SELECT COUNT(*) FROM tasks
@@ -108,12 +108,21 @@ class DashboardController
                 [$userId, $userId, $userId, $userId, $userId]
             )->fetchAll(), $warnings, []);
 
+            // บัญชีที่ไม่เคยมีงานเลยเห็นส่วนต้อนรับ (REQ-23) first_task_at จำไว้แม้ลบงานแรกทิ้ง (EDGE-16)
+            // NOT EXISTS กันบัญชีที่มีงานอยู่แล้วแต่ first_task_at ยังว่าง เช่นงานที่สคริปต์ย้ายคัดลอกมาให้
+            $welcome = (bool)$this->safeModule('tasks', fn() => DB::run(
+                'SELECT u.first_task_at IS NULL AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.user_id = u.id)
+                 FROM users u WHERE u.id = ?',
+                [$userId]
+            )->fetchColumn(), $warnings, false);
+
             $payload['tasks'] = [
                 'overdue'          => $overdueCount,
                 'due_today'        => $dueToday,
                 'overdue_items'    => $overdueItems,
                 'today_items'      => $todayItems,
                 'my_project_items' => $myProjectItems,
+                'welcome'          => $welcome,
             ];
         }
 

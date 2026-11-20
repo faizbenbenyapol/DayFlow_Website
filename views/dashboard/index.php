@@ -69,6 +69,22 @@ $renderSection = function (string $key) use ($sectionDef, $skeleton, $sectionTon
         // หน้าวันนี้: งานแบ่งเป็น 3 กลุ่มย่อยซ้อนกันใต้ layout key เดียว
         ?>
         <section class="tasks-stack" data-section="tasks" aria-label="งาน">
+            <?php // บัญชีที่ไม่เคยมีงาน (REQ-23): dashboard.js เปิดเมื่อ summary บอก welcome งานแรกปิดถาวร ?>
+            <div data-subsection="welcome" class="sec tint welcome" style="--sec-bg: var(--mint)" hidden>
+                <h2>ยินดีต้อนรับสู่ DayFlow</h2>
+                <p class="welcome-lead">เริ่มจากจดงานแรก แล้วที่เหลือจะตามมาเอง</p>
+                <ol class="welcome-steps">
+                    <li>จดงานแรกในช่องด้านล่าง</li>
+                    <li>นึกงานได้จากหน้าไหน กด N หรือปุ่ม + แล้วจดได้ทันที</li>
+                    <li>กดปุ่มโฟกัสที่งานเพื่อเริ่มจับเวลา</li>
+                </ol>
+                <label class="add-row">
+                    <span class="plus" aria-hidden="true">+</span>
+                    <span class="sr-only">จดงานแรก</span>
+                    <input type="text" id="welcomeAddTask" maxlength="200" autocomplete="off" placeholder="งานแรกของคุณ เช่น จ่ายค่าไฟ">
+                </label>
+            </div>
+
             <div data-subsection="overdue" class="sec taped overdue" style="--sec-c: var(--rose-2); --sec-c2: var(--rose); --sec-bg: var(--rose)" hidden>
                 <div class="sec-head">
                     <h2>ค้าง<span class="count" data-count></span></h2>

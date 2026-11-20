@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const selectFocusTask = document.getElementById('selectFocusTask');
     const inputFocusTitle = document.getElementById('inputFocusTitle');
+    const timerTask = document.getElementById('timerTask');
     const logsEl = document.getElementById('focusLogs');
 
     const STORE = 'dayflow.focus';
@@ -49,6 +50,11 @@ document.addEventListener('DOMContentLoaded', function () {
     btnStartStop.addEventListener('click', () => (isRunning() ? pauseTimer() : startTimer()));
     btnResetTimer.addEventListener('click', () => switchMode(currentMode));
     btnSkipTimer.addEventListener('click', skipTimer);
+    selectFocusTask.addEventListener('change', () => {
+        showSelectedTask();
+        if (isRunning()) remember(); // เปลี่ยนงานกลางรอบ: รอบนี้เป็นของงานใหม่
+    });
+    showSelectedTask();
 
     // A new length takes effect at once, unless a timer is in the middle of running.
     [inputWorkDuration, inputShortBreak, inputLongBreak].forEach(input => {
@@ -57,6 +63,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Back from another tab: the interval may have been starved, so look at the clock.
     document.addEventListener('visibilitychange', () => { if (!document.hidden && isRunning()) tick(); });
+
+    /** ชื่องานที่เลือกใน dropdown ว่างเมื่อเลือก "ไม่ระบุงาน" */
+    function selectedTaskTitle() {
+        return selectFocusTask.value ? selectFocusTask.selectedOptions[0].textContent : '';
+    }
+
+    /** แสดงชื่องานที่เลือกใต้ "พร้อมโฟกัส" ทั้งตอนเปิดจากปุ่ม ▶ (?task=) และตอนเปลี่ยนเอง */
+    function showSelectedTask() {
+        timerTask.textContent = selectedTaskTitle();
+        timerTask.hidden = timerTask.textContent === '';
+    }
 
     function getModeDuration(mode) {
         const minutes = parseInt({ work: inputWorkDuration, short_break: inputShortBreak, long_break: inputLongBreak }[mode].value, 10);
@@ -121,7 +138,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /* ---------- survive a reload ---------- */
     function remember() {
-        try { localStorage.setItem(STORE, JSON.stringify({ mode: currentMode, endsAt, total: totalDurationSeconds })); } catch { /* private mode: it still runs */ }
+        // จำงานของรอบไว้ด้วย ออกไปหน้าอื่นแล้วกลับมา (หรือกดปุ่มโฟกัสของงานอื่น) รอบนี้ยังเป็นของงานเดิม (REQ-21)
+        const task = { task: selectFocusTask.value, taskTitle: selectedTaskTitle() };
+        try { localStorage.setItem(STORE, JSON.stringify({ mode: currentMode, endsAt, total: totalDurationSeconds, ...task })); } catch { /* private mode: it still runs */ }
     }
 
     function forget() {
@@ -133,6 +152,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
             if (!saved || !PHASE_LABEL[saved.mode] || saved.endsAt <= Date.now()) { forget(); return; }
             switchMode(saved.mode, false);
+            restoreTask(saved);
             totalDurationSeconds = saved.total;
             secondsRemaining = Math.round((saved.endsAt - Date.now()) / 1000);
             startTimer();
@@ -140,6 +160,19 @@ document.addEventListener('DOMContentLoaded', function () {
             remember();
             tick();
         } catch { forget(); }
+    }
+
+    /**
+     * คืนงานของรอบที่กำลังเดินให้ dropdown
+     * งานที่ถูกลบไประหว่างนั้นไม่อยู่ในรายการแล้ว: รอบนี้ไม่ผูกงาน แต่ใช้ชื่องานเดิมเป็นหัวข้อ (EDGE-13)
+     * @param {{task?: string, taskTitle?: string}} saved ค่าที่ remember() เก็บไว้ (เวอร์ชันเก่าไม่มี task)
+     */
+    function restoreTask(saved) {
+        if (typeof saved.task !== 'string') return;
+        const stillOpen = [...selectFocusTask.options].some(option => option.value === saved.task);
+        selectFocusTask.value = stillOpen ? saved.task : '';
+        if (!stillOpen && saved.task !== '' && inputFocusTitle.value === '') inputFocusTitle.value = saved.taskTitle || '';
+        showSelectedTask();
     }
 
     function skipTimer() {
@@ -161,6 +194,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         type: currentMode,
                         duration_min: Math.floor(totalDurationSeconds / 60),
                         task_id: taskId ? parseInt(taskId, 10) : null,
+                        // ถ้างานถูกลบระหว่างจับเวลา เซิร์ฟเวอร์ใช้ชื่อนี้เป็นหัวข้อของรอบ (EDGE-13)
+                        task_title: selectedTaskTitle(),
                         title: inputFocusTitle.value.trim()
                     })
                 });
