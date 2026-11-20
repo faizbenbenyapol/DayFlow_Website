@@ -91,6 +91,60 @@ test('a path belongs to the menu it is or sits under, and to that menu\'s place'
     }
 });
 
+test('a place can be renamed, and a blank, spaced-out or too-long name means the default', function (): void {
+    $layout = AppMenus::layout(['names' => [
+        'life' => '  สุขภาพ ', 'work' => "\u{00A0} ", 'money' => str_repeat('ก', 31), 'vault' => str_repeat('ข', 30), 'nowhere' => 'x',
+    ]]);
+
+    assertSame('สุขภาพ', AppMenus::groupName('life', $layout), 'trimmed');
+    assertSame('งาน', AppMenus::groupName('work', $layout), 'a non-breaking space alone is blank');
+    assertSame('เงิน', AppMenus::groupName('money', $layout), 'over 30 characters is not kept');
+    assertSame(str_repeat('ข', 30), AppMenus::groupName('vault', $layout), '30 is fine');
+    assertFalse(isset($layout['names']['nowhere']), 'an unknown place is dropped');
+
+    $labels = array_column(AppMenus::grouped(AppMenus::KEYS, [], $layout), 'label', 'key');
+    assertSame('สุขภาพ', $labels['life'], 'the rail, tabs and sheet all read the new name');
+});
+
+test('a name the user types is checked before it is saved', function (): void {
+    assertSame(null, AppMenus::nameError(['life' => str_repeat('ก', 30), 'work' => '']));
+    assertTrue(is_string(AppMenus::nameError(['life' => str_repeat('ก', 31)])), 'over 30 is refused, not cut');
+    assertTrue(is_string(AppMenus::nameError(['life' => ['not', 'text']])));
+});
+
+test('a menu moved to another place sits there and takes its pastel', function (): void {
+    $layout = AppMenus::layout(['groups' => ['stocks' => 'vault', 'habits' => 'today']]);
+
+    assertSame('vault', AppMenus::groupOf('stocks', $layout));
+    assertSame('vault', AppMenus::groupForPath('/stocks', $layout), 'the page takes the pastel of its new place');
+    assertSame('money', AppMenus::groupForPath('/stocks'), 'without a layout, the default');
+
+    $groups = array_column(AppMenus::grouped(AppMenus::KEYS, [], $layout), 'items', 'key');
+    assertContains('stocks', array_column($groups['vault'], 'key'));
+    assertNotContains('stocks', array_column($groups['money'], 'key'));
+    assertSame(['today', 'review', 'habits'], array_column($groups['today'], 'key'), 'Today and Review stay first in their place');
+});
+
+test('Today and Review cannot move, and a move to or of something unknown is skipped', function (): void {
+    $layout = AppMenus::layout(['groups' => [
+        'today' => 'work', 'review' => 'life', 'stocks' => 'nowhere', 'gone-menu' => 'vault', 'notes' => 'vault',
+    ]]);
+
+    assertSame([], $layout['groups'], 'fixed, unknown target, unknown menu, and a move to where it already is');
+    assertSame('today', AppMenus::groupForPath('/review', $layout));
+});
+
+test('a place emptied by moving its menus away leaves the rail and tabs', function (): void {
+    $layout = AppMenus::layout(['groups' => ['finance' => 'vault', 'subscriptions' => 'vault', 'stocks' => 'vault']]);
+    assertNotContains('money', array_column(AppMenus::grouped(AppMenus::KEYS, [], $layout), 'key'));
+});
+
+test('anything that is not a layout reads as the default layout', function (): void {
+    foreach ([null, 'x', 3, ['names' => 'x', 'groups' => null]] as $junk) {
+        assertSame(['names' => [], 'groups' => []], AppMenus::layout($junk));
+    }
+});
+
 test('the mobile tab bar offers two visible menus and never repeats one', function (): void {
     assertSame(['tasks', 'finance'], AppMenus::mobileTabs(null, []), 'the defaults');
     assertSame(['notes', 'habits'], AppMenus::mobileTabs(['notes', 'habits'], []), 'a saved choice');

@@ -62,6 +62,12 @@ $menuOrder = AppMenus::ordered(json_decode($settings['menu_order'] ?? 'null', tr
     <div>
         <h1>ตั้งค่า</h1>
         <p class="sub">บัญชี หน้าตา เมนู การเชื่อมต่อ และข้อมูลของคุณ</p>
+// ชื่อหมวดและหมวดของเมนูที่ผู้ใช้ตั้งเอง (REQ-9, REQ-10)
+$settingsLayout = AppMenus::layout(json_decode($settings['menu_layout'] ?? 'null', true));
+$groupNotes = [
+    'today' => 'วันนี้ และ สรุปผล อยู่หมวดนี้เสมอ',
+    'tools' => 'หมวดนี้ไม่มีแท็บด้านบน เปิดได้จากปุ่ม ทั้งหมด หรือ Ctrl+K',
+];
     </div>
 </div>
 
@@ -301,21 +307,40 @@ $menuOrder = AppMenus::ordered(json_decode($settings['menu_order'] ?? 'null', tr
 <!-- MENUS -->
 <section id="tab-menus" class="settings-pane" role="tabpanel" aria-labelledby="tabbtn-menus" hidden>
     <h2>เมนู</h2>
-    <p class="form-hint">ติ๊กเมนูที่ต้องการให้แสดง ลากที่จับ ⋮⋮ หรือกดลูกศรเพื่อเรียงลำดับ ลำดับมีผลภายในกลุ่มเดียวกัน เมนูแรกของแต่ละกลุ่มคือหน้าที่แถบคั่นสีพาไป เมนูที่ไม่ติ๊กจะถูกซ่อนจากแท็บและหน้าอื่น ถ้าซ่อนทุกเมนูในกลุ่ม แถบคั่นของกลุ่มนั้นก็จะหายไปด้วย</p>
+    <p class="form-hint">ติ๊กเมนูที่ต้องการให้แสดง ลากที่จับ ⋮⋮ หรือกดลูกศรเพื่อเรียงลำดับในหมวด เลือกหมวดท้ายแถวเพื่อย้ายเมนูไปหมวดอื่น เมนูแรกของแต่ละหมวดคือหน้าที่แท็บของหมวดพาไป หมวดที่ไม่มีเมนูแสดงอยู่เลยจะไม่มีแท็บ</p>
 
-    <div id="menuVisibilityList" data-menu-order="<?= h(json_encode($menuOrder, JSON_UNESCAPED_UNICODE)) ?>">
-        <?php foreach (AppMenus::GROUPS as $groupKey => $heading):
-            if ($groupKey === 'today') continue;
-            $keys = array_values(array_filter($menuOrder, fn(string $k): bool => AppMenus::MENUS[$k]['group'] === $groupKey));
-            if (!$keys) continue; ?>
-        <fieldset class="menu-group">
-            <legend><?= h($heading) ?></legend>
+    <div class="menu-search">
+        <label class="sr-only" for="menuSearch">ค้นหาเมนู</label>
+        <input type="search" class="form-control" id="menuSearch" placeholder="ค้นหาเมนู เช่น หุ้น" autocomplete="off">
+    </div>
+    <p class="form-hint" id="menuSearchEmpty" role="status" hidden></p>
+
+    <div id="menuVisibilityList">
+        <?php foreach (AppMenus::GROUPS as $groupKey => $defaultName):
+            $keys = array_values(array_filter($menuOrder, fn(string $k): bool => AppMenus::groupOf($k, $settingsLayout) === $groupKey)); ?>
+        <fieldset class="menu-group" data-group="<?= h($groupKey) ?>">
+            <legend class="sr-only"><?= h(AppMenus::groupName($groupKey, $settingsLayout)) ?></legend>
+            <div class="menu-group-head">
+                <label for="groupName-<?= h($groupKey) ?>">ชื่อหมวด</label>
+                <input type="text" class="form-control menu-group-name" id="groupName-<?= h($groupKey) ?>" data-group="<?= h($groupKey) ?>"
+                       value="<?= h($settingsLayout['names'][$groupKey] ?? '') ?>" placeholder="<?= h($defaultName) ?>" maxlength="<?= AppMenus::MAX_NAME_CHARS ?>">
+            </div>
+            <?php if (isset($groupNotes[$groupKey])): ?>
+            <p class="menu-group-note"><?= h($groupNotes[$groupKey]) ?></p>
+            <?php endif; ?>
             <div class="menu-order-list" data-group="<?= h($groupKey) ?>">
                 <?php foreach ($keys as $menu): ?>
-                <label class="menu-order-item settings-check" data-menu-key="<?= h($menu) ?>">
-                    <input type="checkbox" name="visible_menus[]" value="<?= h($menu) ?>" <?= in_array($menu, $hiddenMenus, true) ? '' : 'checked' ?>>
-                    <span><?= h(AppMenus::label($menu)) ?></span>
-                </label>
+                <div class="menu-order-item" data-menu-key="<?= h($menu) ?>">
+                    <label class="settings-check menu-show">
+                        <input type="checkbox" name="visible_menus[]" value="<?= h($menu) ?>" <?= in_array($menu, $hiddenMenus, true) ? '' : 'checked' ?>>
+                        <span class="menu-name"><?= h(AppMenus::label($menu)) ?></span>
+                    </label>
+                    <select class="form-control menu-group-select" aria-label="หมวดของ <?= h(AppMenus::label($menu)) ?>">
+                        <?php foreach (array_keys(AppMenus::GROUPS) as $target): ?>
+                        <option value="<?= h($target) ?>"<?= $target === $groupKey ? ' selected' : '' ?>><?= h(AppMenus::groupName($target, $settingsLayout)) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
                 <?php endforeach; ?>
             </div>
         </fieldset>
@@ -323,6 +348,7 @@ $menuOrder = AppMenus::ordered(json_decode($settings['menu_order'] ?? 'null', tr
     </div>
 
     <p class="form-error" id="menuError" role="alert" hidden></p>
+            <p class="menu-empty"<?= $keys ? ' hidden' : '' ?>>ยังไม่มีเมนูในหมวดนี้</p>
 
     <div class="settings-actions">
         <button class="btn btn-primary" type="button" id="btnSaveMenus">บันทึกเมนู</button>
@@ -330,6 +356,7 @@ $menuOrder = AppMenus::ordered(json_decode($settings['menu_order'] ?? 'null', tr
 </section>
 
 <!-- TODAY PAGE -->
+        <button class="btn btn-ghost" type="button" id="btnResetMenus">คืนค่าเริ่มต้น</button>
 <section id="tab-dashboard-config" class="settings-pane" role="tabpanel" aria-labelledby="tabbtn-dashboard-config" hidden>
     <h2>หน้าวันนี้</h2>
     <p class="form-hint">เลือกส่วนที่จะแสดงในหน้าวันนี้ แล้วลากที่จับ ⋮⋮ เพื่อเรียงลำดับ ลำดับมีผลภายในพื้นที่เดียวกัน คือฝั่งซ้าย ฝั่งขวา และแถบด้านล่าง</p>

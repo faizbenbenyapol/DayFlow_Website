@@ -683,16 +683,43 @@ fieldset.form-group {
 /* ---------------------------------------------------------------
    Menus and the Today page
 --------------------------------------------------------------- */
+.menu-search {
+    max-width: 360px;
+    margin-top: var(--space-4);
+}
+
 .menu-group {
     margin: var(--space-4) 0 0;
     padding: 0;
     border: 0;
 }
 
-.menu-group legend {
-    padding: 0 0 4px;
+/* ชื่อหมวดคือหัวของหมวดเอง: ช่องว่างแสดงชื่อตั้งต้นเป็น placeholder */
+.menu-group-head {
+    display: grid;
+    gap: 4px;
+    max-width: 360px;
+    margin-bottom: var(--space-2);
+}
+
+.menu-group-head label,
+.menu-group-note,
+.menu-empty {
     font-size: 0.8125rem;
     color: var(--pencil);
+}
+
+.menu-group-name {
+    font-weight: 600;
+}
+
+.menu-group-note,
+.menu-empty {
+    margin: 0 0 var(--space-2);
+}
+
+.menu-empty {
+    padding-top: var(--space-2);
 }
 
 .menu-order-list,
@@ -706,8 +733,25 @@ fieldset.form-group {
     background: var(--paper);
 }
 
-.menu-order-item > span:not(.menu-drag-handle):not(.menu-order-actions) {
+.menu-order-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+}
+
+.menu-show {
     flex: 1;
+    min-width: 0;
+}
+
+/* กว้างเท่ากันทุกแถว คอลัมน์หมวดจะได้ตรงกัน ไม่ว่าแถวนั้นเลือกหมวดชื่อสั้นหรือยาว */
+.menu-group-select {
+    flex: none;
+    width: 7.5rem;
+    min-height: 36px;
+    padding-top: 2px;
+    padding-bottom: 2px;
 }
 
 .menu-drag-handle,
