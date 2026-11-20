@@ -5,6 +5,9 @@
 
 class Finance
 {
+    /** ชื่อที่แสดงแทนหมวดของรายการที่ไม่มีหมวด ใช้ทั้งสรุปรายเดือนและกราฟปี */
+    private const UNCATEGORISED = 'ไม่ระบุหมวด';
+
     /**
      * Builds the shared WHERE clause for a filtered transaction list, so the
      * listing and its count can never drift apart.
@@ -133,7 +136,7 @@ class Finance
              WHERE f.user_id = ? AND f.type = "expense" AND f.txn_date >= ? AND f.txn_date < ?
              GROUP BY f.category_id, name
              ORDER BY amount DESC, name ASC',
-            ['ไม่ระบุหมวด', $userId, $monthStart, $monthEnd]
+            [self::UNCATEGORISED, $userId, $monthStart, $monthEnd]
         )->fetchAll();
 
         return [
@@ -169,6 +172,54 @@ class Finance
             ];
         }
         return $chart;
+    }
+
+    /** จำนวนรายจ่ายก้อนใหญ่ที่กราฟปีแสดง (REQ-6) */
+    private const TOP_EXPENSES = 10;
+
+    /**
+     * รายจ่ายทั้งปีแยกสองมุม ให้กราฟสลับมุมมองได้โดยไม่ต้องยิง request เพิ่ม
+     *
+     * @return array{
+     *   by_category: list<array{name: string, amount: float}>,
+     *   top_expenses: list<array{amount: float, txn_date: string, description: string, category: string}>
+     * } by_category เรียงมากไปน้อย (รายการไม่มีหมวดรวมเป็น "ไม่ระบุหมวด") ผลรวมเท่ารายจ่ายทั้งปี
+     *   top_expenses คือรายการเดี่ยวที่ใหญ่สุดไม่เกิน 10 รายการ เท่ากันให้รายการใหม่กว่าขึ้นก่อน
+     *   ปีที่ไม่มีรายจ่ายได้ list ว่างทั้งคู่ อ่านอย่างเดียว ไม่เขียน DB
+     */
+    public static function getYearBreakdown(int $userId, int $year): array
+    {
+        [$yearStart, $yearEnd] = yearBounds($year);
+
+        $byCategory = DB::run(
+            'SELECT COALESCE(c.name, ?) AS name, SUM(f.amount) AS amount
+             FROM finances f
+             LEFT JOIN finance_categories c ON c.id = f.category_id AND c.user_id = f.user_id
+             WHERE f.user_id = ? AND f.type = "expense" AND f.txn_date >= ? AND f.txn_date < ?
+             GROUP BY f.category_id, name
+             ORDER BY amount DESC, name ASC',
+            [self::UNCATEGORISED, $userId, $yearStart, $yearEnd]
+        )->fetchAll();
+
+        $top = DB::run(
+            'SELECT f.amount, f.txn_date, COALESCE(f.description, "") AS description, COALESCE(c.name, ?) AS category
+             FROM finances f
+             LEFT JOIN finance_categories c ON c.id = f.category_id AND c.user_id = f.user_id
+             WHERE f.user_id = ? AND f.type = "expense" AND f.txn_date >= ? AND f.txn_date < ?
+             ORDER BY f.amount DESC, f.txn_date DESC, f.id DESC
+             LIMIT ' . self::TOP_EXPENSES,
+            [self::UNCATEGORISED, $userId, $yearStart, $yearEnd]
+        )->fetchAll();
+
+        return [
+            'by_category'  => array_map(fn(array $r): array => ['name' => $r['name'], 'amount' => (float)$r['amount']], $byCategory),
+            'top_expenses' => array_map(fn(array $r): array => [
+                'amount'      => (float)$r['amount'],
+                'txn_date'    => $r['txn_date'],
+                'description' => $r['description'],
+                'category'    => $r['category'],
+            ], $top),
+        ];
     }
 }
 

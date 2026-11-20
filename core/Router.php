@@ -149,6 +149,14 @@ class Router
         $this->add('GET',    '/api/files/{id}/download',    'FileController', 'apiDownload',    true);
         $this->add('GET',    '/api/files/folders',          'FileController', 'apiFoldersList', true);
 
+        // --- Google Drive (เฟส 4) ---
+        $this->add('GET',    '/settings/drive/connect',     'DriveController', 'connect',       true);
+        $this->add('GET',    '/settings/drive/callback',    'DriveController', 'callback',      true);
+        $this->add('GET',    '/api/drive',                  'DriveController', 'apiStatus',     true);
+        $this->add('POST',   '/api/drive/migrate',          'DriveController', 'apiMigrate',    true);
+        $this->add('POST',   '/api/drive/resume',           'DriveController', 'apiResume',     true);
+        $this->add('POST',   '/api/drive/disconnect',       'DriveController', 'apiDisconnect', true);
+
         // --- Share Links (public, no auth) ---
         $this->add('GET', '/share/{token}',                     'ShareController', 'viewShare',      false);
         $this->add('GET', '/share/{token}/download/{fileId}',   'ShareController', 'publicDownload', false);
@@ -178,11 +186,15 @@ class Router
 
         // --- Page & API: File Transfer ---
         $this->add('GET',    '/transfer',                    'FileTransferController', 'index',      true);
-        $this->add('POST',   '/api/transfer/send',           'FileTransferController', 'apiSend',    true);
+        $this->add('POST',   '/api/transfer/start',          'FileTransferController', 'apiStart',   true);
+        $this->add('POST',   '/api/transfer/{id}/chunk',     'FileTransferController', 'apiChunk',   true);
+        $this->add('POST',   '/api/transfer/{id}/finish',    'FileTransferController', 'apiFinish',  true);
         $this->add('GET',    '/api/transfer',                'FileTransferController', 'apiList',    true);
         $this->add('DELETE', '/api/transfer/{id}',           'FileTransferController', 'apiDelete',  true);
         $this->add('POST',   '/api/transfer/receive',        'FileTransferController', 'apiReceive', false);
+        $this->add('GET',    '/transfer/receive',            'FileTransferController', 'receivePage', false);
         $this->add('GET',    '/transfer/download/{token}',   'FileTransferController', 'download',   false);
+        $this->add('GET',    '/transfer/download/{token}/{part}', 'FileTransferController', 'downloadPart', false);
 
         // --- API: Food Notes ---
         $this->add('GET',    '/api/food-notes',      'FoodNoteController', 'apiList',   true);
@@ -446,8 +458,9 @@ class Router
     private const DEMO_RESTRICTED = [
         '#^/api/settings(/|$)#',
         '#^/api/files(/|$)#',
+        '#^/(api|settings)/drive(/|$)#',
         '#^/api/(shares|app-shares)(/|$)#',
-        '#^/api/transfer/send$#',
+        '#^/api/transfer/(start|\d+/(chunk|finish))$#',
         '#^/api/stocks/(screenshots|keys)(/|$)#',
         '#^/api/ai/keys(/|$)#',
         '#^/api/push(/|$)#',

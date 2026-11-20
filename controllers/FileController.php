@@ -4,9 +4,27 @@
 // =====================================================
 
 require_once ROOT . '/models/File.php';
+require_once ROOT . '/core/FileStore.php';
 
 class FileController
 {
+    /**
+     * ตอบ error ของ Google Drive เป็นภาษาไทยที่บอกว่าทำอะไรต่อ (ไม่ใช่ข้อความดิบของ Google) แล้วจบคำขอ
+     * สิทธิ์หลุดถูกบันทึกให้เมนูไฟล์ขึ้นแถบ "เชื่อมใหม่" (EDGE-11)
+     */
+    private function driveFailed(FileStore $store, DriveError $error): never
+    {
+        $store->noteFailure($error);
+        Response::json(['error' => match ($error->kind) {
+            DriveError::AUTH      => $store->isDisconnected()
+                ? 'ไฟล์นี้อยู่ใน Google Drive ที่ยกเลิกการเชื่อมแล้ว เชื่อมบัญชีเดิมในหน้าตั้งค่าก่อน'
+                : 'การเชื่อม Google Drive หลุด กดเชื่อมใหม่ในหน้าตั้งค่า',
+            DriveError::QUOTA     => 'Google Drive เต็ม ลบไฟล์ใน Drive หรือเพิ่มพื้นที่ก่อน',
+            DriveError::NOT_FOUND => 'ไฟล์นี้ถูกลบจาก Google Drive แล้ว',
+            default               => 'ติดต่อ Google Drive ไม่ได้ตอนนี้ ลองอีกครั้ง',
+        }, 'drive' => $error->kind], $error->kind === DriveError::OTHER ? 502 : 409);
+    }
+
     private function validateName(mixed $name, string $kind = 'ไฟล์'): string
     {
         $name = trim(basename((string)$name));
@@ -57,8 +75,12 @@ class FileController
 
         $files       = FileModel::listFolder($userId, $parentId);
         $breadcrumbs = $parentId ? FileModel::getBreadcrumbs($parentId, $userId) : [];
+        $link        = DriveLink::find($userId);
 
-        Response::json(['files' => $files, 'breadcrumbs' => $breadcrumbs]);
+        Response::json(['files' => $files, 'breadcrumbs' => $breadcrumbs, 'drive' => [
+            'state'  => $link['state'] ?? 'none',
+            'usable' => DriveLink::isUsable($link),
+        ]]);
     }
 
     public function apiFolder(): void
@@ -72,7 +94,12 @@ class FileController
 
         $name = $this->validateName($name, 'โฟลเดอร์');
         $this->validateParent($userId, $parentId);
-        $id = FileModel::createFolder($userId, $name, $parentId);
+        $store = FileStore::forUser($userId);
+        try {
+            $id = $store->createFolder($name, $parentId);
+        } catch (DriveError $e) {
+            $this->driveFailed($store, $e);
+        }
         Response::json(['ok' => true, 'id' => $id], 201);
     }
 
@@ -124,23 +151,15 @@ class FileController
             Response::json(['error' => 'นามสกุลไฟล์นี้ไม่อนุญาต'], 422);
         }
 
-        // Store with UUID filename
-        $storageName = uuid4() . ($ext ? '.' . $ext : '');
-        $subDir      = $userId . '/' . date('Y-m');
-        $fullDir     = UPLOAD_DIR . $subDir;
-
-        if (!is_dir($fullDir)) {
-            mkdir($fullDir, 0755, true);
-        }
-
-        $fullPath    = $fullDir . '/' . $storageName;
-        $relPath     = $subDir  . '/' . $storageName;
-
-        if (!move_uploaded_file($file['tmp_name'], $fullPath)) {
+        // เก็บบนเซิร์ฟเวอร์ หรือใน Google Drive ของผู้ใช้ถ้าเชื่อมอยู่ (REQ-21, REQ-23)
+        $store = FileStore::forUser($userId);
+        try {
+            $id = $store->upload($file['tmp_name'], $origName, $mimeType, (int)$file['size'], $parentId);
+        } catch (DriveError $e) {
+            $this->driveFailed($store, $e);
+        } catch (RuntimeException) {
             Response::json(['error' => 'บันทึกไฟล์ไม่สำเร็จ'], 500);
         }
-
-        $id = FileModel::createFile($userId, $origName, $mimeType, $relPath, $file['size'], $parentId);
         Response::json(['ok' => true, 'id' => $id], 201);
     }
 
@@ -156,7 +175,12 @@ class FileController
         $file = FileModel::getById($fileId, $userId);
         if (!$file) Response::json(['error' => 'ไม่พบไฟล์'], 404);
 
-        FileModel::rename($fileId, $userId, $newName);
+        $store = FileStore::forUser($userId);
+        try {
+            $store->rename($file, $newName);
+        } catch (DriveError $e) {
+            $this->driveFailed($store, $e);
+        }
         Response::json(['ok' => true]);
     }
 
@@ -171,8 +195,13 @@ class FileController
         $file = FileModel::getById($fileId, $userId);
         if (!$file) Response::json(['error' => 'ไม่พบไฟล์'], 404);
 
-        $ok = FileModel::move($fileId, $userId, $newParentId);
-        if (!$ok) Response::json(['error' => 'ไม่สามารถย้ายได้ (ตรวจสอบ loop ของโฟลเดอร์)'], 422);
+        $store = FileStore::forUser($userId);
+        try {
+            $ok = $store->move($file, $newParentId);
+        } catch (DriveError $e) {
+            $this->driveFailed($store, $e);
+        }
+        if (!$ok) Response::json(['error' => 'ย้ายโฟลเดอร์ไปไว้ในตัวเองหรือโฟลเดอร์ย่อยของมันไม่ได้'], 422);
 
         Response::json(['ok' => true]);
     }
@@ -185,7 +214,12 @@ class FileController
         $file = FileModel::getById($fileId, $userId);
         if (!$file) Response::json(['error' => 'ไม่พบไฟล์'], 404);
 
-        FileModel::delete($fileId, $userId);
+        $store = FileStore::forUser($userId);
+        try {
+            $store->delete($file);
+        } catch (DriveError $e) {
+            $this->driveFailed($store, $e);
+        }
         Response::json(['ok' => true]);
     }
 
@@ -195,26 +229,16 @@ class FileController
         $fileId = (int)$id;
 
         $file = FileModel::getById($fileId, $userId);
-        if (!$file || $file['type'] !== 'file' || !$file['file_path']) {
+        if (!$file || $file['type'] !== 'file' || (!$file['file_path'] && !$file['drive_id'])) {
             Response::abort(404, 'ไม่พบไฟล์');
         }
 
-        $rootPath = realpath(UPLOAD_DIR);
-        $fullPath = realpath(UPLOAD_DIR . $file['file_path']);
-        if (!$rootPath || !$fullPath || !is_file($fullPath)
-            || strncmp($fullPath, $rootPath . DIRECTORY_SEPARATOR, strlen($rootPath . DIRECTORY_SEPARATOR)) !== 0) {
-            Response::abort(404, 'ไม่พบไฟล์บนเซิร์ฟเวอร์');
-        }
-
-        // Stream file
-        header('Content-Type: ' . ($file['mime_type'] ?: 'application/octet-stream'));
-        header('Content-Disposition: ' . contentDisposition((string)$file['name']));
-        header('Content-Length: ' . filesize($fullPath));
-        header('X-Content-Type-Options: nosniff');
-        header('Cache-Control: no-store');
-
-        readfile($fullPath);
-        exit;
+        FileStore::send($file, [
+            'Content-Type: ' . ($file['mime_type'] ?: 'application/octet-stream'),
+            'Content-Disposition: ' . contentDisposition((string)$file['name']),
+            'X-Content-Type-Options: nosniff',
+            'Cache-Control: no-store',
+        ]);
     }
 
     public function apiFoldersList(): void

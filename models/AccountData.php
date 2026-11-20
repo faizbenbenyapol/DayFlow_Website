@@ -67,9 +67,9 @@ final class AccountData
     private const UUID_IDS = ['skills', 'skill_logs'];
 
     /** user_settings columns a backup may carry. Telegram credentials are not among them. */
-    private const SETTINGS = ['theme', 'day_color', 'desk', 'language', 'timezone', 'telegram_notify_events', 'hidden_menus', 'menu_order', 'mobile_tabs'];
+    private const SETTINGS = ['theme', 'day_color', 'desk', 'language', 'timezone', 'telegram_notify_events', 'hidden_menus', 'menu_order', 'mobile_tabs', 'menu_layout'];
 
-    private const JSON_SETTINGS = ['telegram_notify_events', 'hidden_menus', 'menu_order', 'mobile_tabs'];
+    private const JSON_SETTINGS = ['telegram_notify_events', 'hidden_menus', 'menu_order', 'mobile_tabs', 'menu_layout'];
 
     /**
      * ส่งออกข้อมูลผู้ใช้เป็นไฟล์ JSON ที่ย้ายไปบัญชีอื่นได้

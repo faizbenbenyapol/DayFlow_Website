@@ -194,6 +194,19 @@ class User
         );
     }
 
+    /**
+     * บันทึกการจัดเมนู (ชื่อหมวด หมวดของเมนู) ของผู้ใช้ สร้างแถว user_settings ถ้ายังไม่มี
+     * @param string|null $menuLayout JSON ที่ผ่าน AppMenus::layout() แล้ว หรือ null = กลับค่าตั้งต้น
+     */
+    public static function updateMenuLayout(int $userId, ?string $menuLayout): void
+    {
+        DB::run(
+            'INSERT INTO user_settings (user_id, menu_layout) VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE menu_layout = VALUES(menu_layout)',
+            [$userId, $menuLayout]
+        );
+    }
+
     /** The two places in the phone's bottom bar, as a JSON list of menu keys (or NULL for the defaults). */
     public static function updateMobileTabs(int $userId, ?string $mobileTabs): void
     {

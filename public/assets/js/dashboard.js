@@ -620,7 +620,6 @@
                 body: JSON.stringify({ status: done ? 'done' : 'open' }),
             });
             item.classList.toggle('done', done);
-            toast(done ? 'ทำงานเสร็จแล้ว' : 'เปิดงานกลับมาแล้ว');
             reloadSoon(2500);
         } catch (error) {
             box.checked = !done;
@@ -641,7 +640,6 @@
                 method: 'PUT',
                 body: JSON.stringify({ status: done ? 'Done' : previousStatus }),
             });
-            toast(done ? 'ทำงานโปรเจกต์เสร็จแล้ว' : 'เปิดงานโปรเจกต์กลับมาแล้ว');
             reloadSoon(2500);
         } catch (error) {
             box.checked = !done;
@@ -657,7 +655,6 @@
         box.disabled = true;
         try {
             await apiFetch(`${BASE_URL}/api/habits/${item.dataset.habit}/toggle`, { method: 'POST', body: '{}' });
-            toast(done ? 'ติ๊กนิสัยแล้ว' : 'ยกเลิกการติ๊กแล้ว');
             reloadSoon(300); // the streak changes, and only the server knows by how much
         } catch (error) {
             box.checked = !done;

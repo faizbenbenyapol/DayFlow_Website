@@ -2,15 +2,14 @@
 // =====================================================
 // views/transfer/index.php — send a file to another device
 //
-// Pick files, get a six-digit code (and a QR code); the other device types the
-// code and downloads. A transfer lasts ten minutes. assets/js/transfer.js runs
-// it from /api/transfer/*.
+// เลือกไฟล์หรือพิมพ์ข้อความ เลือกเวลาหมดอายุ แล้วได้รหัส 6 หลักกับ QR อีกเครื่องใส่รหัส
+// ที่ /transfer/receive (ไม่ต้องมีบัญชี) assets/js/transfer.js อัปโหลดทีละชิ้นผ่าน /api/transfer/*
 // =====================================================
 ?>
 <div class="page-head">
     <div>
         <h1>ส่งไฟล์</h1>
-        <p class="sub">ส่งไฟล์ข้ามอุปกรณ์ด้วยรหัส 6 หลัก ใช้ได้ 10 นาทีแล้วไฟล์จะถูกลบ</p>
+        <p class="sub">ส่งไฟล์ ข้อความ หรือลิงก์ข้ามอุปกรณ์ด้วยรหัส 6 หลัก หมดเวลาแล้วลบเอง</p>
     </div>
 </div>
 
@@ -20,7 +19,7 @@
     <button type="button" class="tab" role="tab" aria-selected="false" data-tab="history">ประวัติ</button>
 </div>
 
-<div class="tf-panels" data-max-bytes="<?= (int)MAX_UPLOAD_BYTES ?>" data-max-label="<?= h(formatBytes(MAX_UPLOAD_BYTES)) ?>">
+<div class="tf-panels" data-max-bytes="<?= (int)FileTransfer::MAX_TOTAL_BYTES ?>" data-max-message="<?= FileTransfer::MAX_MESSAGE_CHARS ?>">
 
 <!-- Send -->
 <section class="tf-panel" data-panel="send">
@@ -28,17 +27,42 @@
         <button type="button" class="tf-drop" id="sendDrop">
             <svg class="icon" aria-hidden="true"><use href="#i-transfer"/></svg>
             <span class="tf-drop-text">ลากไฟล์มาวางที่นี่ หรือกดเพื่อเลือกไฟล์</span>
-            <span class="tf-drop-hint">ทุกประเภทไฟล์ ไม่เกิน <?= h(formatBytes(MAX_UPLOAD_BYTES)) ?> ต่อไฟล์</span>
+            <span class="tf-drop-hint">ทุกประเภทไฟล์ กี่ไฟล์ก็ได้ รวมไม่เกิน 10 GB</span>
         </button>
         <input type="file" id="sendInput" multiple hidden aria-label="เลือกไฟล์ที่จะส่ง">
 
         <div id="sendFileList" aria-live="polite"></div>
 
-        <div class="tf-actions" id="sendActions" hidden>
-            <button class="btn btn-primary" type="button" id="btnSend">ส่งไฟล์และรับรหัส</button>
-            <span class="tf-expiry">รหัสหมดอายุใน 10 นาที</span>
+        <div class="form-group tf-message-field">
+            <label class="form-label" for="sendMessage">ข้อความหรือลิงก์ <span class="form-hint">ไม่บังคับ</span></label>
+            <textarea class="form-control" id="sendMessage" rows="3" maxlength="<?= FileTransfer::MAX_MESSAGE_CHARS ?>" placeholder="เช่น ลิงก์ หรือรายละเอียดที่อยากให้ผู้รับอ่าน"></textarea>
+        </div>
+
+        <fieldset class="form-group tf-expiry-field">
+            <legend class="form-label" id="sendExpiryLabel">หมดอายุหลังส่งเสร็จ</legend>
+            <div class="seg-pair" role="radiogroup" aria-labelledby="sendExpiryLabel">
+                <?php foreach (FileTransfer::EXPIRY_CHOICES as $i => $minutes): ?>
+                <label><input type="radio" name="sendExpiry" value="<?= $minutes ?>"<?= $i === 0 ? ' checked' : '' ?>><span><?= $minutes ?> นาที</span></label>
+                <?php endforeach; ?>
+            </div>
+        </fieldset>
+
+        <div class="tf-actions">
+            <button class="btn btn-primary" type="button" id="btnSend" disabled>ส่งและรับรหัส</button>
         </div>
         <p class="form-error" id="sendError" role="alert" hidden></p>
+    </div>
+
+    <!-- ระหว่างอัปโหลด: ไฟล์ใหญ่ใช้เวลานาน จึงบอกความคืบหน้าและยกเลิกได้ (REQ-17) -->
+    <div id="sendProgress" class="tf-progress" hidden>
+        <p class="tf-progress-label" id="sendProgressLabel" aria-live="polite">กำลังเตรียมส่ง…</p>
+        <div class="progress" role="progressbar" aria-labelledby="sendProgressLabel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="sendProgressBar">
+            <div class="progress-bar" id="sendProgressFill"></div>
+        </div>
+        <p class="tf-files-summary" id="sendProgressNote"></p>
+        <div class="tf-actions">
+            <button class="btn" type="button" id="btnAbortSend">ยกเลิกการส่ง</button>
+        </div>
     </div>
 
     <div id="sendStep2" hidden>
@@ -60,6 +84,7 @@
         </section>
 
         <p class="tf-files-summary" id="codeFilesSummary"></p>
+        <p class="tf-files-summary">ผู้รับที่ไม่มีบัญชี ใส่รหัสได้ที่ <a href="<?= h(APP_URL) ?>/transfer/receive"><?= h(preg_replace('#^https?://#', '', APP_URL)) ?>/transfer/receive</a></p>
 
         <div class="tf-actions">
             <button class="btn" type="button" id="btnNewTransfer">ส่งไฟล์ชุดใหม่</button>
@@ -78,13 +103,6 @@
         <button class="btn btn-primary" type="submit" id="btnReceive" disabled>ค้นหาไฟล์</button>
         <p class="form-error" id="receiveError" role="alert" hidden></p>
     </form>
-
-    <div class="tf-result" id="receiveResult" hidden>
-        <h2>พบไฟล์</h2>
-        <ul class="ruled-list" id="receiveFiles"></ul>
-        <p class="tf-files-summary" id="receiveMeta"></p>
-        <a class="btn btn-primary" id="receiveDownloadBtn" href="#" target="_blank" rel="noopener">ดาวน์โหลดทั้งหมด</a>
-    </div>
 </section>
 
 <!-- History -->

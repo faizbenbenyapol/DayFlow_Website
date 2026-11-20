@@ -5,6 +5,7 @@
 
 require_once ROOT . '/models/File.php';
 require_once ROOT . '/models/FileShare.php';
+require_once ROOT . '/core/FileStore.php';
 
 class ShareController
 {
@@ -56,16 +57,14 @@ class ShareController
             Response::abort(403, 'ไม่มีสิทธิ์ดาวน์โหลด');
         }
 
-        $file     = self::fileInShare($share, (int)$fileId);
-        $fullPath = UPLOAD_DIR . $file['file_path'];
-
-        header('Content-Type: ' . ($file['mime_type'] ?: 'application/octet-stream'));
-        header('Content-Disposition: ' . contentDisposition((string)$file['name']));
-        header('Content-Length: ' . filesize($fullPath));
-        header('X-Content-Type-Options: nosniff');
-        header('Cache-Control: no-store');
-        readfile($fullPath);
-        exit;
+        // ไฟล์ที่ย้ายขึ้น Google Drive แล้วก็เปิดจากลิงก์เดิมได้ (EDGE-14) FileStore อ่านตามที่ไฟล์อยู่จริง
+        $file = self::fileInShare($share, (int)$fileId);
+        FileStore::send($file, [
+            'Content-Type: ' . ($file['mime_type'] ?: 'application/octet-stream'),
+            'Content-Disposition: ' . contentDisposition((string)$file['name']),
+            'X-Content-Type-Options: nosniff',
+            'Cache-Control: no-store',
+        ]);
     }
 
     // ------------------------------------------------------------------ //
@@ -85,15 +84,13 @@ class ShareController
             Response::abort(403, 'ไฟล์นี้เปิดดูเป็นรูปไม่ได้');
         }
 
-        $fullPath = UPLOAD_DIR . $file['file_path'];
-        header('Content-Type: ' . $file['mime_type']);
-        header('Content-Disposition: inline');
-        header('Content-Length: ' . filesize($fullPath));
-        header('X-Content-Type-Options: nosniff');
-        header("Content-Security-Policy: default-src 'none'; sandbox");
-        header('Cache-Control: no-store');
-        readfile($fullPath);
-        exit;
+        FileStore::send($file, [
+            'Content-Type: ' . $file['mime_type'],
+            'Content-Disposition: inline',
+            'X-Content-Type-Options: nosniff',
+            "Content-Security-Policy: default-src 'none'; sandbox",
+            'Cache-Control: no-store',
+        ]);
     }
 
     /**
@@ -134,9 +131,9 @@ class ShareController
             Response::abort(403, 'ไม่มีสิทธิ์ดาวน์โหลด');
         }
 
-        $fullPath = UPLOAD_DIR . $file['file_path'];
-        if (!$file['file_path'] || !file_exists($fullPath)) {
-            Response::abort(404, 'ไม่พบไฟล์บนเซิร์ฟเวอร์');
+        // ไฟล์อยู่บนเซิร์ฟเวอร์หรือใน Google Drive ก็ได้ FileStore::send ตรวจว่าเปิดได้จริงตอนส่ง
+        if (!$file['file_path'] && !$file['drive_id']) {
+            Response::abort(404, 'ไม่พบไฟล์');
         }
 
         return $file;

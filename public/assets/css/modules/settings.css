@@ -683,16 +683,43 @@ fieldset.form-group {
 /* ---------------------------------------------------------------
    Menus and the Today page
 --------------------------------------------------------------- */
+.menu-search {
+    max-width: 360px;
+    margin-top: var(--space-4);
+}
+
 .menu-group {
     margin: var(--space-4) 0 0;
     padding: 0;
     border: 0;
 }
 
-.menu-group legend {
-    padding: 0 0 4px;
+/* ชื่อหมวดคือหัวของหมวดเอง: ช่องว่างแสดงชื่อตั้งต้นเป็น placeholder */
+.menu-group-head {
+    display: grid;
+    gap: 4px;
+    max-width: 360px;
+    margin-bottom: var(--space-2);
+}
+
+.menu-group-head label,
+.menu-group-note,
+.menu-empty {
     font-size: 0.8125rem;
     color: var(--pencil);
+}
+
+.menu-group-name {
+    font-weight: 600;
+}
+
+.menu-group-note,
+.menu-empty {
+    margin: 0 0 var(--space-2);
+}
+
+.menu-empty {
+    padding-top: var(--space-2);
 }
 
 .menu-order-list,
@@ -706,8 +733,25 @@ fieldset.form-group {
     background: var(--paper);
 }
 
-.menu-order-item > span:not(.menu-drag-handle):not(.menu-order-actions) {
+.menu-order-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+}
+
+.menu-show {
     flex: 1;
+    min-width: 0;
+}
+
+/* กว้างเท่ากันทุกแถว คอลัมน์หมวดจะได้ตรงกัน ไม่ว่าแถวนั้นเลือกหมวดชื่อสั้นหรือยาว */
+.menu-group-select {
+    flex: none;
+    width: 7.5rem;
+    min-height: 36px;
+    padding-top: 2px;
+    padding-bottom: 2px;
 }
 
 .menu-drag-handle,
@@ -790,4 +834,112 @@ fieldset.form-group {
         padding-bottom: 0;
         border-bottom: 0;
     }
+}
+
+/* ---------------------------------------------------------------
+   เกี่ยวกับแอป: เวอร์ชัน ติดตั้งแอป และข้อความอัปเดต (REQ-13–15)
+--------------------------------------------------------------- */
+.about-version {
+    margin: 0 0 var(--space-5);
+}
+
+.install-box {
+    max-width: 520px;
+    margin-bottom: var(--space-6);
+}
+
+.install-steps,
+.release ul {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+.install-steps li + li,
+.release li + li {
+    margin-top: 4px;
+}
+
+/* base.css ล้าง list-style ของทุก list ไว้ ขั้นตอนติดตั้งต้องทำตามลำดับจึงมีเลข รายการอัปเดตมีจุด */
+.install-steps {
+    list-style: decimal;
+}
+
+.release ul {
+    list-style: disc;
+}
+
+.release-list {
+    max-width: 640px;
+    border-top: 1px solid var(--rule-strong);
+}
+
+.release {
+    border-bottom: 1px solid var(--rule);
+}
+
+.release[open] ul {
+    margin-bottom: var(--space-4);
+}
+
+/* แถวหัวของแต่ละเวอร์ชันกดเปิดปิดได้ display: flex ทำให้ลูกศรเดิมของเบราว์เซอร์หาย จึงวาดเอง */
+.release summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px var(--space-3);
+    min-height: 44px;
+    padding: var(--space-3) 0;
+    cursor: pointer;
+    list-style: none;
+}
+
+.release summary::before {
+    content: "▸";
+    color: var(--pencil);
+}
+
+.release[open] summary::before {
+    content: "▾";
+}
+
+.release-version {
+    font-family: var(--font-num);
+    font-weight: 600;
+}
+
+.release-title {
+    flex: 1;
+}
+
+.release time {
+    font-size: 0.8125rem;
+    color: var(--pencil);
+}
+
+/* ---------------------------------------------------------------
+   Google Drive (เฟส 4)
+--------------------------------------------------------------- */
+.drive-facts {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: var(--space-2) var(--space-4);
+    margin: 0 0 var(--space-4);
+}
+
+.drive-facts dt {
+    color: var(--pencil);
+}
+
+.drive-facts dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.drive-progress {
+    max-width: 520px;
+    margin-bottom: var(--space-4);
+}
+
+.drive-progress p {
+    margin: 0 0 var(--space-2);
 }
