@@ -15,6 +15,12 @@ function habitIso(date) {
     return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
 }
 
+/** วันนี้ตามเซิร์ฟเวอร์ (serverToday) เป็น Date เที่ยงคืนเวลาเครื่อง ไม่ใช้ new Date() เพราะเครื่องผู้ใช้อาจอยู่คนละวันกับเซิร์ฟเวอร์ */
+function habitToday() {
+    const [y, m, d] = serverToday().split('-').map(Number);
+    return new Date(y, m - 1, d);
+}
+
 /** The Sunday on or before a date. */
 function weekStartOf(date) {
     const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -57,7 +63,7 @@ function renderWeekLabel(days) {
     document.getElementById('weekLabel').textContent =
         a + ' – ' + last.getDate() + ' ' + HABIT_MONTHS[last.getMonth()] + ' ' + (last.getFullYear() + 543);
 
-    const current = habitIso(weekStartOf(new Date())) === habitIso(first);
+    const current = habitIso(weekStartOf(habitToday())) === habitIso(first);
     document.getElementById('weekToday').hidden = current;
 }
 
@@ -65,7 +71,7 @@ function renderHabits() {
     const grid = document.getElementById('habitsGrid');
     const items = habitsState.items;
     const days = weekDays();
-    const today = habitIso(new Date());
+    const today = serverToday();
     renderWeekLabel(days);
 
     const doneToday = items.filter(h => Number(h.completed_today) === 1).length;
@@ -216,9 +222,9 @@ function moveWeek(days) {
 document.getElementById('weekPrev')?.addEventListener('click', () => moveWeek(-7));
 document.getElementById('weekNext')?.addEventListener('click', () => moveWeek(7));
 document.getElementById('weekToday')?.addEventListener('click', () => {
-    habitsState.weekStart = weekStartOf(new Date());
+    habitsState.weekStart = weekStartOf(habitToday());
     loadHabits();
 });
 
-habitsState.weekStart = weekStartOf(new Date());
+habitsState.weekStart = weekStartOf(habitToday());
 loadHabits();

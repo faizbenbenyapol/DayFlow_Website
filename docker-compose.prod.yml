@@ -14,6 +14,9 @@ services:
       APP_KEY: ${APP_KEY:?Set APP_KEY in the production .env}
       CRON_TOKEN: ${CRON_TOKEN:?Set CRON_TOKEN in the production .env}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?Set GOOGLE_CLIENT_ID in the production .env}
+      # Google Drive (docs/guides/google-drive-setup.md) ว่าง = ปิดความสามารถ ไฟล์อยู่บนเซิร์ฟเวอร์ตามเดิม
+      GOOGLE_DRIVE_CLIENT_ID: ${GOOGLE_DRIVE_CLIENT_ID:-}
+      GOOGLE_DRIVE_CLIENT_SECRET: ${GOOGLE_DRIVE_CLIENT_SECRET:-}
       DB_HOST: db
       DB_NAME: ${MARIADB_DATABASE:?Set MARIADB_DATABASE in the production .env}
       DB_USER: ${MARIADB_USER:?Set MARIADB_USER in the production .env}
@@ -55,6 +58,9 @@ services:
       APP_ENV: production
       APP_KEY: ${APP_KEY:?Set APP_KEY in the production .env}
       CRON_TOKEN: ${CRON_TOKEN:?Set CRON_TOKEN in the production .env}
+      # cron ย้ายไฟล์เดิมขึ้น Google Drive ต่อเมื่อผู้ใช้ปิดหน้าตั้งค่าไปก่อน
+      GOOGLE_DRIVE_CLIENT_ID: ${GOOGLE_DRIVE_CLIENT_ID:-}
+      GOOGLE_DRIVE_CLIENT_SECRET: ${GOOGLE_DRIVE_CLIENT_SECRET:-}
       DB_HOST: db
       DB_NAME: ${MARIADB_DATABASE:?Set MARIADB_DATABASE in the production .env}
       DB_USER: ${MARIADB_USER:?Set DB_USER in the production .env}

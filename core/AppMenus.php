@@ -19,7 +19,7 @@ final class AppMenus
         'tasks', 'projects', 'planner',
         'habits', 'focus', 'skills', 'exercise', 'food-notes',
         'finance', 'subscriptions', 'stocks',
-        'notes', 'quick-notes', 'bookmarks', 'files', 'transfer',
+        'notes', 'bookmarks', 'files', 'transfer',
         'file-tools', 'ai', 'calculator',
     ];
 
@@ -62,7 +62,6 @@ final class AppMenus
         'subscriptions' => ['group' => 'money', 'label' => 'รายจ่ายประจำ',    'path' => '/subscriptions'],
         'stocks'        => ['group' => 'money', 'label' => 'หุ้น',            'path' => '/stocks'],
         'notes'         => ['group' => 'vault', 'label' => 'โน้ต',            'path' => '/notes'],
-        'quick-notes'   => ['group' => 'vault', 'label' => 'ยังไม่จัด',       'path' => '/quick-notes'],
         'bookmarks'     => ['group' => 'vault', 'label' => 'ลิงก์',           'path' => '/bookmarks'],
         'files'         => ['group' => 'vault', 'label' => 'ไฟล์',            'path' => '/files'],
         'transfer'      => ['group' => 'vault', 'label' => 'ส่งไฟล์',         'path' => '/transfer'],
@@ -71,15 +70,99 @@ final class AppMenus
         'calculator'    => ['group' => 'tools', 'label' => 'เครื่องคิดเลข',   'path' => '/calculator'],
     ];
 
+    /** ชื่อหมวดที่ผู้ใช้ตั้งเองยาวได้ไม่เกินนี้ (EDGE-4) */
+    public const MAX_NAME_CHARS = 30;
+
+    /** การจัดเมนูตั้งต้น: ไม่เปลี่ยนชื่อหมวด ไม่ย้ายเมนู ใช้เมื่อไม่มีค่าผู้ใช้ เช่นหน้าที่เปิดผ่านลิงก์แชร์ */
+    public const NO_LAYOUT = ['names' => [], 'groups' => []];
+
     /**
-     * The group a request path belongs to: the menu whose path it is or sits
-     * under. Pages outside every menu (settings, a note editor reached by its
-     * own path) fall back to tools, whose pastel is the neutral lilac.
+     * อ่านการจัดเมนูที่ผู้ใช้บันทึก (user_settings.menu_layout) ให้เหลือเฉพาะค่าที่ใช้ได้
+     * ตรวจทุกครั้งที่อ่าน ไม่ใช่แค่ตอนบันทึก เพราะค่ามาจากไฟล์สำรองที่นำเข้าได้ด้วย
+     *
+     * @param mixed $saved ค่าที่ json_decode แล้ว รูปแบบ {"names": {...}, "groups": {...}}
+     * @return array{names: array<string, string>, groups: array<string, string>}
+     *   names = หมวด → ชื่อที่ตั้งเอง (ตัดช่องว่างแล้ว ไม่ว่าง ไม่เกิน 30 ตัว ไม่ซ้ำชื่อตั้งต้น)
+     *   groups = เมนู → หมวดที่ย้ายไป (เฉพาะเมนูที่ย้ายได้และย้ายไปหมวดอื่นจริง)
+     *   คีย์ที่ไม่รู้จัก เช่นเมนูที่เอาออกจากแอปไปแล้ว (EDGE-5) ถูกข้ามเงียบ ๆ
      */
-    public static function groupForPath(string $path): string
+    public static function layout(mixed $saved): array
+    {
+        $names = [];
+        foreach (self::layoutPart($saved, 'names') as $group => $name) {
+            if (!is_string($group) || !isset(self::GROUPS[$group]) || !is_string($name)) continue;
+            $name = self::cleanName($name);
+            if ($name === '' || mb_strlen($name) > self::MAX_NAME_CHARS || $name === self::GROUPS[$group]) continue;
+            $names[$group] = $name;
+        }
+
+        // วันนี้กับสรุปผลไม่อยู่ใน KEYS จึงย้ายไม่ได้ตาม REQ-10 โดยไม่ต้องเช็กแยก
+        $groups = [];
+        foreach (self::layoutPart($saved, 'groups') as $menu => $group) {
+            if (!in_array($menu, self::KEYS, true) || !is_string($group) || !isset(self::GROUPS[$group])) continue;
+            if ($group !== self::MENUS[$menu]['group']) $groups[$menu] = $group;
+        }
+
+        return ['names' => $names, 'groups' => $groups];
+    }
+
+    /**
+     * ตรวจชื่อหมวดที่ผู้ใช้พิมพ์ก่อนบันทึก (EDGE-4) ช่องว่างได้ (= กลับชื่อเดิม)
+     * แต่ยาวเกินต้องบอกผู้ใช้ ไม่ตัดให้เงียบ ๆ
+     *
+     * @return string|null ข้อความ error ภาษาไทย หรือ null ถ้าใช้ได้ทั้งหมด
+     */
+    public static function nameError(mixed $names): ?string
+    {
+        if (!is_array($names)) return 'รูปแบบชื่อหมวดไม่ถูกต้อง';
+        foreach ($names as $name) {
+            if (!is_string($name)) return 'รูปแบบชื่อหมวดไม่ถูกต้อง';
+            if (mb_strlen(self::cleanName($name)) > self::MAX_NAME_CHARS) {
+                return 'ชื่อหมวดยาวได้ไม่เกิน ' . self::MAX_NAME_CHARS . ' ตัวอักษร ลองตั้งให้สั้นลง';
+            }
+        }
+        return null;
+    }
+
+    /** ส่วน names หรือ groups ของค่าที่บันทึก ถ้าไม่ใช่ array คืน [] */
+    private static function layoutPart(mixed $saved, string $part): array
+    {
+        return is_array($saved) && is_array($saved[$part] ?? null) ? $saved[$part] : [];
+    }
+
+    /** ตัดช่องว่างหัวท้าย นับ NBSP ที่วางมาจากที่อื่นเป็นช่องว่างด้วย (trim ของ PHP ไม่ตัด NBSP) */
+    private static function cleanName(string $name): string
+    {
+        return trim(str_replace("\u{00A0}", ' ', $name));
+    }
+
+    /**
+     * หมวดที่เมนูอยู่: หมวดที่ผู้ใช้ย้ายไป หรือหมวดตั้งต้น
+     * @param array{names: array<string, string>, groups: array<string, string>} $layout จาก layout()
+     */
+    public static function groupOf(string $key, array $layout = self::NO_LAYOUT): string
+    {
+        return $layout['groups'][$key] ?? self::MENUS[$key]['group'];
+    }
+
+    /**
+     * ชื่อหมวดที่แสดงบนแท็บ แถบข้าง และหน้าทั้งหมด: ชื่อที่ผู้ใช้ตั้ง หรือชื่อตั้งต้น
+     * @param array{names: array<string, string>, groups: array<string, string>} $layout จาก layout()
+     */
+    public static function groupName(string $group, array $layout = self::NO_LAYOUT): string
+    {
+        return $layout['names'][$group] ?? self::GROUPS[$group];
+    }
+
+    /**
+     * หมวดของหน้าที่เปิด (เลือกสีพาสเทลของหน้า) ตามหมวดที่ผู้ใช้ย้ายเมนูไป
+     * หน้าที่ไม่ได้อยู่ใต้เมนูไหน (ตั้งค่า, ตัวแก้โน้ตที่เปิดจาก path ของมันเอง) ได้ tools ซึ่งเป็นสีม่วงกลาง ๆ
+     * @param array{names: array<string, string>, groups: array<string, string>} $layout จาก layout()
+     */
+    public static function groupForPath(string $path, array $layout = self::NO_LAYOUT): string
     {
         $key = self::menuForPath($path);
-        return $key !== null ? self::MENUS[$key]['group'] : 'tools';
+        return $key !== null ? self::groupOf($key, $layout) : 'tools';
     }
 
     /** The menu a request path is, or sits under; null for a page outside every menu. */
@@ -113,33 +196,33 @@ final class AppMenus
     }
 
     /**
-     * What the rail shows: the groups that have something to show, each with
-     * its entries. Groups stay where they are; a saved order only changes the
-     * sequence inside a group, because a menu that jumped between groups
-     * would no longer sit under its heading.
+     * สิ่งที่แถบข้าง แท็บบน และหน้าทั้งหมดแสดง: หมวดที่มีเมนูเหลือ พร้อมเมนูของมัน
+     * หมวดเรียงตามค่าตั้งต้นเสมอ ลำดับที่บันทึกมีผลแค่ภายในหมวด หมวดที่ไม่เหลือเมนูไม่ถูกคืนมา (REQ-11)
      *
-     * @param list<string> $order  a saved order, as returned by ordered()
-     * @param list<string> $hidden menus the user turned off
+     * @param list<string> $order  ลำดับที่บันทึก จาก ordered()
+     * @param list<string> $hidden เมนูที่ผู้ใช้ปิด
+     * @param array{names: array<string, string>, groups: array<string, string>} $layout จาก layout()
      * @return list<array{key: string, label: string, items: list<array{key: string, label: string, path: string}>}>
      */
-    public static function grouped(array $order, array $hidden): array
+    public static function grouped(array $order, array $hidden, array $layout = self::NO_LAYOUT): array
     {
         $position = array_flip($order);
+        $isHidden = array_flip($hidden);
+
+        // แจกเมนูเข้าหมวดรอบเดียว ตามหมวดที่ผู้ใช้ย้ายไป
+        $itemsByGroup = [];
+        foreach (self::MENUS as $key => $menu) {
+            if (isset($isHidden[$key])) continue;
+            $itemsByGroup[self::groupOf($key, $layout)][] = ['key' => $key, 'label' => $menu['label'], 'path' => $menu['path']];
+        }
+
         $groups = [];
-
-        foreach (self::GROUPS as $groupKey => $heading) {
-            $items = [];
-            foreach (self::MENUS as $key => $menu) {
-                if ($menu['group'] !== $groupKey) continue;
-                if (in_array($key, $hidden, true)) continue;
-                $items[] = ['key' => $key, 'label' => $menu['label'], 'path' => $menu['path']];
-            }
-            // Today and Review keep their fixed place (they are not in $order).
+        foreach (array_keys(self::GROUPS) as $groupKey) {
+            $items = $itemsByGroup[$groupKey] ?? [];
+            if ($items === []) continue;
+            // วันนี้และสรุปผลไม่อยู่ใน $order ได้ -1 จึงอยู่หน้าสุดของหมวดเสมอ
             usort($items, fn(array $a, array $b): int => ($position[$a['key']] ?? -1) <=> ($position[$b['key']] ?? -1));
-
-            if ($items !== []) {
-                $groups[] = ['key' => $groupKey, 'label' => $heading, 'items' => $items];
-            }
+            $groups[] = ['key' => $groupKey, 'label' => self::groupName($groupKey, $layout), 'items' => $items];
         }
 
         return $groups;

@@ -43,6 +43,7 @@ $topics = [
     'การเชื่อมต่อ' => [
         'stock-api' => 'API หุ้นและ AI',
         'telegram'  => 'แจ้งเตือน',
+        'drive'     => 'Google Drive',
     ],
     'การแชร์' => [
         'app-shares' => 'แชร์เมนู',
@@ -52,11 +53,22 @@ $topics = [
         'data'   => 'สำรองและนำเข้า',
         'danger' => 'ลบบัญชี',
     ],
+    'แอป' => [
+        'about' => 'เกี่ยวกับแอป',
+    ],
 ];
+// เวอร์ชันและข้อความอัปเดต ใหม่สุดอยู่บนสุด ตัวแรกคือเวอร์ชันปัจจุบัน (REQ-13)
+$releases = require ROOT . '/config/releases.php';
 
 $hiddenMenus = !empty($settings['hidden_menus']) ? json_decode($settings['hidden_menus'], true) : [];
 if (!is_array($hiddenMenus)) $hiddenMenus = [];
 $menuOrder = AppMenus::ordered(json_decode($settings['menu_order'] ?? 'null', true));
+// ชื่อหมวดและหมวดของเมนูที่ผู้ใช้ตั้งเอง (REQ-9, REQ-10)
+$settingsLayout = AppMenus::layout(json_decode($settings['menu_layout'] ?? 'null', true));
+$groupNotes = [
+    'today' => 'วันนี้ และ สรุปผล อยู่หมวดนี้เสมอ',
+    'tools' => 'หมวดนี้ไม่มีแท็บด้านบน เปิดได้จากปุ่ม ทั้งหมด หรือ Ctrl+K',
+];
 ?>
 <div class="page-head">
     <div>
@@ -301,23 +313,43 @@ $menuOrder = AppMenus::ordered(json_decode($settings['menu_order'] ?? 'null', tr
 <!-- MENUS -->
 <section id="tab-menus" class="settings-pane" role="tabpanel" aria-labelledby="tabbtn-menus" hidden>
     <h2>เมนู</h2>
-    <p class="form-hint">ติ๊กเมนูที่ต้องการให้แสดง ลากที่จับ ⋮⋮ หรือกดลูกศรเพื่อเรียงลำดับ ลำดับมีผลภายในกลุ่มเดียวกัน เมนูแรกของแต่ละกลุ่มคือหน้าที่แถบคั่นสีพาไป เมนูที่ไม่ติ๊กจะถูกซ่อนจากแท็บและหน้าอื่น ถ้าซ่อนทุกเมนูในกลุ่ม แถบคั่นของกลุ่มนั้นก็จะหายไปด้วย</p>
+    <p class="form-hint">ติ๊กเมนูที่ต้องการให้แสดง ลากที่จับ ⋮⋮ หรือกดลูกศรเพื่อเรียงลำดับในหมวด เลือกหมวดท้ายแถวเพื่อย้ายเมนูไปหมวดอื่น เมนูแรกของแต่ละหมวดคือหน้าที่แท็บของหมวดพาไป หมวดที่ไม่มีเมนูแสดงอยู่เลยจะไม่มีแท็บ</p>
 
-    <div id="menuVisibilityList" data-menu-order="<?= h(json_encode($menuOrder, JSON_UNESCAPED_UNICODE)) ?>">
-        <?php foreach (AppMenus::GROUPS as $groupKey => $heading):
-            if ($groupKey === 'today') continue;
-            $keys = array_values(array_filter($menuOrder, fn(string $k): bool => AppMenus::MENUS[$k]['group'] === $groupKey));
-            if (!$keys) continue; ?>
-        <fieldset class="menu-group">
-            <legend><?= h($heading) ?></legend>
+    <div class="menu-search">
+        <label class="sr-only" for="menuSearch">ค้นหาเมนู</label>
+        <input type="search" class="form-control" id="menuSearch" placeholder="ค้นหาเมนู เช่น หุ้น" autocomplete="off">
+    </div>
+    <p class="form-hint" id="menuSearchEmpty" role="status" hidden></p>
+
+    <div id="menuVisibilityList">
+        <?php foreach (AppMenus::GROUPS as $groupKey => $defaultName):
+            $keys = array_values(array_filter($menuOrder, fn(string $k): bool => AppMenus::groupOf($k, $settingsLayout) === $groupKey)); ?>
+        <fieldset class="menu-group" data-group="<?= h($groupKey) ?>">
+            <legend class="sr-only"><?= h(AppMenus::groupName($groupKey, $settingsLayout)) ?></legend>
+            <div class="menu-group-head">
+                <label for="groupName-<?= h($groupKey) ?>">ชื่อหมวด</label>
+                <input type="text" class="form-control menu-group-name" id="groupName-<?= h($groupKey) ?>" data-group="<?= h($groupKey) ?>"
+                       value="<?= h($settingsLayout['names'][$groupKey] ?? '') ?>" placeholder="<?= h($defaultName) ?>" maxlength="<?= AppMenus::MAX_NAME_CHARS ?>">
+            </div>
+            <?php if (isset($groupNotes[$groupKey])): ?>
+            <p class="menu-group-note"><?= h($groupNotes[$groupKey]) ?></p>
+            <?php endif; ?>
             <div class="menu-order-list" data-group="<?= h($groupKey) ?>">
                 <?php foreach ($keys as $menu): ?>
-                <label class="menu-order-item settings-check" data-menu-key="<?= h($menu) ?>">
-                    <input type="checkbox" name="visible_menus[]" value="<?= h($menu) ?>" <?= in_array($menu, $hiddenMenus, true) ? '' : 'checked' ?>>
-                    <span><?= h(AppMenus::label($menu)) ?></span>
-                </label>
+                <div class="menu-order-item" data-menu-key="<?= h($menu) ?>">
+                    <label class="settings-check menu-show">
+                        <input type="checkbox" name="visible_menus[]" value="<?= h($menu) ?>" <?= in_array($menu, $hiddenMenus, true) ? '' : 'checked' ?>>
+                        <span class="menu-name"><?= h(AppMenus::label($menu)) ?></span>
+                    </label>
+                    <select class="form-control menu-group-select" aria-label="หมวดของ <?= h(AppMenus::label($menu)) ?>">
+                        <?php foreach (array_keys(AppMenus::GROUPS) as $target): ?>
+                        <option value="<?= h($target) ?>"<?= $target === $groupKey ? ' selected' : '' ?>><?= h(AppMenus::groupName($target, $settingsLayout)) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
                 <?php endforeach; ?>
             </div>
+            <p class="menu-empty"<?= $keys ? ' hidden' : '' ?>>ยังไม่มีเมนูในหมวดนี้</p>
         </fieldset>
         <?php endforeach; ?>
     </div>
@@ -325,6 +357,7 @@ $menuOrder = AppMenus::ordered(json_decode($settings['menu_order'] ?? 'null', tr
     <p class="form-error" id="menuError" role="alert" hidden></p>
 
     <div class="settings-actions">
+        <button class="btn btn-ghost" type="button" id="btnResetMenus">คืนค่าเริ่มต้น</button>
         <button class="btn btn-primary" type="button" id="btnSaveMenus">บันทึกเมนู</button>
     </div>
 </section>
@@ -441,6 +474,47 @@ window.dashboardDefaults = <?= jsonForScript(DashboardLayout::defaults()) ?>;
             <li>Moonshot Kimi (<a href="https://platform.moonshot.cn/" target="_blank" rel="noopener">platform.moonshot.cn</a>)</li>
             <li>OpenRouter (<a href="https://openrouter.ai/" target="_blank" rel="noopener">openrouter.ai</a>) รวมโมเดลหลายค่ายใน API เดียว</li>
         </ul>
+    </div>
+</section>
+
+<!-- GOOGLE DRIVE (เฟส 4 REQ-20, REQ-22) settings-drive.js เลือกแสดงหนึ่งแบบตามสถานะจาก /api/drive -->
+<section id="tab-drive" class="settings-pane" role="tabpanel" aria-labelledby="tabbtn-drive" hidden>
+    <h2>Google Drive</h2>
+    <p class="form-hint">เก็บไฟล์ของเมนูไฟล์ไว้ในโฟลเดอร์ "DayFlow" ใน Google Drive ของคุณ แล้วจัดการทุกอย่างจากเมนูไฟล์ได้เหมือนเดิม DayFlow เห็นเฉพาะไฟล์ที่มันสร้างเอง ไม่เห็นไฟล์อื่นใน Drive ของคุณ</p>
+    <p class="alert" id="driveFlash" role="status" hidden></p>
+
+    <div id="driveBox" aria-busy="true">
+        <p data-drive="off" hidden>เจ้าของระบบยังไม่ได้เปิดใช้ Google Drive ไฟล์ของคุณเก็บบนเซิร์ฟเวอร์ตามปกติ</p>
+
+        <div data-drive="none" hidden>
+            <p id="driveNoneNote">เชื่อมแล้ว ไฟล์ที่มีอยู่จะย้ายขึ้น Drive ให้เอง และไฟล์ใหม่จะไปเก็บใน Drive</p>
+            <a class="btn btn-primary" href="<?= h(APP_URL) ?>/settings/drive/connect">เชื่อมบัญชี Google</a>
+        </div>
+
+        <div data-drive="revoked" hidden>
+            <p class="alert alert-danger">การเชื่อม Google Drive หลุด กดเชื่อมใหม่ แล้วไฟล์ที่อยู่ใน Drive จะเปิดได้อีกครั้ง</p>
+            <a class="btn btn-primary" href="<?= h(APP_URL) ?>/settings/drive/connect">เชื่อมใหม่</a>
+        </div>
+
+        <div data-drive="on" hidden>
+            <dl class="drive-facts">
+                <dt>บัญชี</dt><dd id="driveEmail"></dd>
+                <dt>โฟลเดอร์</dt><dd id="driveFolder"></dd>
+            </dl>
+            <div class="drive-progress" id="driveProgress" hidden>
+                <p id="driveProgressLabel" aria-live="polite"></p>
+                <div class="progress" role="progressbar" aria-labelledby="driveProgressLabel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="driveProgressBar">
+                    <div class="progress-bar" id="driveProgressFill"></div>
+                </div>
+            </div>
+            <div class="alert alert-warning" id="driveFull" hidden>
+                Google Drive เต็ม ไฟล์ที่ยังไม่ขึ้นยังอยู่บนเซิร์ฟเวอร์ครบ เพิ่มพื้นที่ใน Drive แล้วกดลองต่อ
+                <button type="button" class="btn btn-sm" id="btnDriveResume">ลองต่อ</button>
+            </div>
+            <div class="settings-actions">
+                <button type="button" class="btn btn-ghost" id="btnDriveDisconnect">ยกเลิกการเชื่อม</button>
+            </div>
+        </div>
     </div>
 </section>
 
@@ -624,6 +698,51 @@ window.dashboardDefaults = <?= jsonForScript(DashboardLayout::defaults()) ?>;
         <input type="password" class="form-control" id="delPassword" autocomplete="current-password">
     </div>
     <button class="btn btn-danger" type="button" id="btnDeleteAccount" disabled>ลบบัญชีถาวร</button>
+</section>
+
+<!-- ABOUT: เวอร์ชัน ติดตั้งแอป และข้อความอัปเดต (REQ-13–15) -->
+<section id="tab-about" class="settings-pane" role="tabpanel" aria-labelledby="tabbtn-about" hidden>
+    <h2>เกี่ยวกับแอป</h2>
+    <p class="about-version">DayFlow เวอร์ชัน <strong><?= h($releases[0]['version']) ?></strong></p>
+
+    <h3 class="subhead">ติดตั้งแอป</h3>
+    <!-- settings-install.js เลือกแสดงหนึ่งแบบตามเบราว์เซอร์ ไม่มี JS ก็เห็นแบบแรก -->
+    <div class="install-box" id="installBox">
+        <p data-install="unsupported">เบราว์เซอร์นี้ยังไม่เสนอให้ติดตั้ง ลองเปิด DayFlow ด้วย Chrome หรือ Edge ถ้าติดตั้งไว้แล้ว เปิดจากไอคอนของแอปได้เลย</p>
+        <div data-install="prompt" hidden>
+            <p>ติดตั้ง DayFlow ลงเครื่อง เปิดจากไอคอนได้เหมือนแอปทั่วไป ไม่มีแถบของเบราว์เซอร์</p>
+            <button class="btn btn-primary" type="button" id="btnInstallApp">ติดตั้ง DayFlow</button>
+        </div>
+        <div data-install="ios" hidden>
+            <p>บน iPhone และ iPad ติดตั้งผ่าน Safari:</p>
+            <ol class="install-steps">
+                <li>กดปุ่มแชร์ของ Safari รูปสี่เหลี่ยมมีลูกศรชี้ขึ้น</li>
+                <li>เลื่อนลงแล้วเลือก "เพิ่มไปยังหน้าจอโฮม"</li>
+                <li>กด "เพิ่ม" ไอคอน DayFlow จะอยู่บนหน้าจอโฮม</li>
+            </ol>
+        </div>
+        <p data-install="installed" hidden>ติดตั้งแล้ว เปิด DayFlow จากไอคอนบนเครื่องได้เลย</p>
+    </div>
+
+    <h3 class="subhead">มีอะไรใหม่</h3>
+    <div class="release-list">
+        <?php foreach ($releases as $i => $release): ?>
+        <details class="release"<?= $i === 0 ? ' open' : '' ?>>
+            <summary>
+                <span class="release-version"><?= h($release['version']) ?></span>
+                <span class="release-title"><?= h($release['title']) ?></span>
+                <?php if ($release['date'] !== null): ?>
+                <time datetime="<?= h($release['date']) ?>"><?= h(thaiDate($release['date'])) ?></time>
+                <?php endif; ?>
+            </summary>
+            <ul>
+                <?php foreach ($release['changes'] as $change): ?>
+                <li><?= h($change) ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </details>
+        <?php endforeach; ?>
+    </div>
 </section>
 
 </div><!-- /.settings-panes -->

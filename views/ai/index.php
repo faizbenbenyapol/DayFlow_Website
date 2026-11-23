@@ -4,8 +4,13 @@
 //
 // A topic goes in; a short-video script, a title and hashtags come out, and
 // optionally a video. Keys for the AI services are saved on a second tab and the
-// earlier results on a third. assets/js/ai.js runs it from /api/ai/*.
+// earlier results on a third. When a chat key is stored, a first tab lets the
+// user ask the AI to change tasks, habits and finance. assets/js/ai.js and
+// assets/js/ai-chat.js run it from /api/ai/*.
 // =====================================================
+
+// ไม่มีคีย์เลย: เสนอทุกเจ้าตามเดิม ให้ผู้ใช้ไปตั้งคีย์ก่อน
+$textProviders = $chatProviders ?: array_intersect_key(LlmClient::LABELS, array_flip(LlmClient::PROVIDERS));
 ?>
 <div class="page-head">
     <div>
@@ -15,13 +20,44 @@
 </div>
 
 <div class="tabs ai-tabs" role="tablist" aria-label="ส่วนของผู้ช่วย AI">
-    <button type="button" class="tab ai-tab" role="tab" aria-selected="true" data-tab="generate">สร้างคอนเทนต์</button>
+    <?php if ($hasChatKey): ?>
+    <button type="button" class="tab ai-tab" role="tab" aria-selected="true" data-tab="chat">สั่งงาน</button>
+    <?php endif; ?>
+    <button type="button" class="tab ai-tab" role="tab" aria-selected="<?= $hasChatKey ? 'false' : 'true' ?>" data-tab="generate">สร้างคอนเทนต์</button>
     <button type="button" class="tab ai-tab" role="tab" aria-selected="false" data-tab="keys">ตั้งค่า API Key</button>
     <button type="button" class="tab ai-tab" role="tab" aria-selected="false" data-tab="history">ประวัติ</button>
 </div>
 
+<?php if ($hasChatKey): ?>
+<!-- ============ TAB: CHAT (สั่งงาน) ============ -->
+<div id="ai-pane-chat" class="ai-pane">
+    <div class="card">
+        <div class="card-header ai-chat-toolbar">
+            <div class="ai-chat-pick">
+                <label class="form-label" for="aiChatProvider">ใช้ AI ของ</label>
+                <select class="form-control" id="aiChatProvider">
+                    <?php foreach ($chatProviders as $provider => $label): ?>
+                    <option value="<?= h($provider) ?>"><?= h($label) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" id="btnChatNew">เริ่มคุยใหม่</button>
+        </div>
+        <div class="card-body">
+            <div class="ai-chat-log" id="aiChatLog" role="log" aria-live="polite"></div>
+            <div class="ai-chat-compose">
+                <label class="sr-only" for="aiChatInput">พิมพ์คำสั่งให้ AI</label>
+                <textarea class="form-control" id="aiChatInput" rows="2" maxlength="2000"
+                          placeholder="พิมพ์สิ่งที่อยากให้ช่วย เช่น เพิ่มงานพรุ่งนี้ 9 โมง"></textarea>
+                <button type="button" class="btn btn-primary" id="btnChatSend">ส่ง</button>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 <!-- ============ TAB: GENERATE ============ -->
-<div id="ai-pane-generate" class="ai-pane">
+<div id="ai-pane-generate" class="ai-pane"<?= $hasChatKey ? ' hidden' : '' ?>>
     <div class="card mb-6">
         <div class="card-header"><span class="card-title">1. ใส่หัวข้อ / คีย์เวิร์ด</span></div>
         <div class="card-body">
@@ -76,11 +112,9 @@
                     <div class="form-group">
                         <label class="form-label" for="aiTextProvider">ผู้ให้บริการ AI เขียนสคริปต์</label>
                         <select class="form-control" id="aiTextProvider">
-                            <option value="openai">OpenAI (GPT-4o-mini)</option>
-                            <option value="gemini">Google Gemini</option>
-                            <option value="anthropic">Anthropic Claude</option>
-                            <option value="kimi">Moonshot Kimi</option>
-                            <option value="openrouter">OpenRouter.ai</option>
+                            <?php foreach ($textProviders as $provider => $label): ?>
+                            <option value="<?= h($provider) ?>"><?= h($label) ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                 </div>
@@ -173,6 +207,14 @@
                 <li><strong>Anthropic Claude</strong> (gen สคริปต์): <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com/settings/keys</a></li>
                 <li><strong>Moonshot Kimi AI</strong> (gen สคริปต์): <a href="https://platform.moonshot.cn/" target="_blank" rel="noopener">platform.moonshot.cn</a></li>
                 <li><strong>OpenRouter.ai</strong> (gen สคริปต์): <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a></li>
+                <li><strong>DeepSeek</strong>: <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">platform.deepseek.com/api_keys</a></li>
+                <li><strong>Mistral</strong>: <a href="https://console.mistral.ai/api-keys" target="_blank" rel="noopener">console.mistral.ai/api-keys</a></li>
+                <li><strong>Groq</strong>: <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a></li>
+                <li><strong>xAI Grok</strong>: <a href="https://console.x.ai" target="_blank" rel="noopener">console.x.ai</a></li>
+                <li><strong>Together AI</strong>: <a href="https://api.together.ai/settings/api-keys" target="_blank" rel="noopener">api.together.ai/settings/api-keys</a></li>
+                <li><strong>Qwen (Alibaba)</strong>: <a href="https://modelstudio.console.alibabacloud.com" target="_blank" rel="noopener">modelstudio.console.alibabacloud.com</a></li>
+                <li><strong>OpenAI-compatible (URL เอง)</strong>: ใช้กับบริการที่เปิด API แบบ OpenAI ใส่ URL ของบริการนั้นให้ลงท้ายด้วย <code>/v1</code> และใส่ชื่อโมเดลที่บริการนั้นใช้</li>
+                <li><strong>Ollama</strong> ที่รันบนเซิร์ฟเวอร์เดียวกับ DayFlow: ใช้ได้เมื่อเจ้าของระบบตั้งค่า <code>AI_ALLOW_PRIVATE_URLS=true</code> ไว้แล้ว (ไม่งั้นระบบจะไม่ยอมเรียกที่อยู่ในเครือข่ายเดียวกัน)</li>
                 <li><strong>Replicate</strong> (gen วิดีโอสำหรับ Minimax, Kling, Veo-3 ฯลฯ): <a href="https://replicate.com/account/api-tokens" target="_blank" rel="noopener">replicate.com/account/api-tokens</a></li>
             </ul>
         </div>

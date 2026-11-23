@@ -97,6 +97,7 @@ async function navigate(parentId) {
         const data = await apiFetch(BASE_URL + '/api/files' + (parentId !== null ? '?parent_id=' + parentId : ''));
         currentFiles = data.files || [];
         grid.removeAttribute('aria-busy');
+        renderDriveBanner(data.drive || {}, currentFiles);
         updateTally(currentFiles);
         renderBreadcrumbs(data.breadcrumbs || []);
         renderFiles();
@@ -109,6 +110,22 @@ async function navigate(parentId) {
 }
 
 function reloadFiles() { navigate(currentParentId); }
+
+/**
+ * แถบบอกสถานะ Google Drive ที่ผู้ใช้ต้องทำอะไรต่อ (เฟส 4): สิทธิ์หลุด (EDGE-11) หรือยกเลิกการเชื่อมแล้ว
+ * แต่ในโฟลเดอร์นี้ยังมีไฟล์ที่อยู่ใน Drive ไม่มีอะไรต้องทำ แถบซ่อน
+ * @param {{state?: string}} drive สถานะจาก /api/files
+ * @param {Array<{drive_id?: string|null}>} files ไฟล์ในโฟลเดอร์ที่เปิดอยู่
+ */
+function renderDriveBanner(drive, files) {
+    const banner = document.getElementById('driveBanner');
+    const link = ' <a href="' + BASE_URL + '/settings#drive">ไปหน้าตั้งค่า</a>';
+    let message = '';
+    if (drive.state === 'revoked') message = 'การเชื่อม Google Drive หลุด กดเชื่อมใหม่ แล้วไฟล์ที่อยู่ใน Drive จะเปิดได้อีกครั้ง';
+    else if (drive.state === 'disconnected' && files.some(f => f.drive_id)) message = 'บางไฟล์อยู่ใน Google Drive ที่ยกเลิกการเชื่อมแล้ว เชื่อมบัญชีเดิมเพื่อเปิดไฟล์เหล่านั้น';
+    banner.hidden = message === '';
+    banner.innerHTML = message === '' ? '' : escHtml(message) + link;
+}
 
 function renderBreadcrumbs(crumbs) {
     const el = document.getElementById('breadcrumb');

@@ -278,14 +278,12 @@ function handleDragEnd() {
 /* --- Toggle done/open --- */
 async function toggleTask(id, isDone) {
     try {
-        const result = await apiFetch(BASE_URL + '/api/tasks/' + id, {
+        await apiFetch(BASE_URL + '/api/tasks/' + id, {
             method: 'PUT',
             body:   JSON.stringify({ status: isDone ? 'done' : 'open' })
         });
+        // ไม่มีป๊อปอัพบอกว่าสำเร็จ: งานรอบถัดไปของงานทำซ้ำขึ้นในรายการที่โหลดใหม่ให้เห็นเอง
         await loadTasks();
-        if (result && result.next_task) {
-            toast('สร้างรอบถัดไปแล้ว: ' + formatDate(result.next_task.due_date));
-        }
     } catch {
         toast('อัปเดตสถานะไม่สำเร็จ', 'danger');
         await loadTasks(); // restore

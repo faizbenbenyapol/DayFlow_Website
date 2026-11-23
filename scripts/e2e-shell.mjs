@@ -272,12 +272,18 @@ async function main() {
         await tab.eval(`document.querySelector('#editTaskModal [data-close-modal]').click()`);
 
         console.log('Planner');
-        // A browser clock on another day than the server: UTC+14 is a day ahead from 10:00 UTC, UTC-11 a day behind until 11:00 UTC.
-        await tab.send('Emulation.setTimezoneOverride', { timezoneId: new Date().getUTCHours() >= 10 ? 'Pacific/Kiritimati' : 'Pacific/Pago_Pago' });
-        await tab.goto(BASE + '/planner');
-        await tab.settle();
-        const plannerDay = await tab.eval(`({ server: document.documentElement.dataset.today, local: new Date().getDate(),
-            today: document.querySelector('.calendar-cell.today .calendar-day-number')?.textContent, sheet: document.getElementById('dayNum').textContent })`);
+        // A browser clock on another day than the server. UTC+14 and UTC-11 are 25 hours apart, so they are
+        // never on the same date and the server's day matches at most one of them, whatever its time zone.
+        // Choosing by the UTC hour assumed a UTC server and failed on Bangkok time from midnight to 7am.
+        let plannerDay;
+        for (const timezoneId of ['Pacific/Kiritimati', 'Pacific/Pago_Pago']) {
+            await tab.send('Emulation.setTimezoneOverride', { timezoneId });
+            await tab.goto(BASE + '/planner');
+            await tab.settle();
+            plannerDay = await tab.eval(`({ server: document.documentElement.dataset.today, local: new Date().getDate(),
+                today: document.querySelector('.calendar-cell.today .calendar-day-number')?.textContent, sheet: document.getElementById('dayNum').textContent })`);
+            if (plannerDay.local !== Number(plannerDay.server.slice(8))) break;
+        }
         check(plannerDay.local !== Number(plannerDay.server.slice(8)), 'the browser clock is on another day than the server', JSON.stringify(plannerDay));
         check(plannerDay.today === String(Number(plannerDay.server.slice(8))), 'the grid marks the server\'s today', JSON.stringify(plannerDay));
         check(plannerDay.sheet === plannerDay.today, 'and the day sheet opens on it', JSON.stringify(plannerDay));
@@ -706,7 +712,8 @@ async function main() {
         await tab.goto(BASE + '/transfer');
         await tab.settle();
         check(await tab.eval(`document.querySelector('[data-panel="send"]').hidden`) === false, 'it opens on the send tab');
-        check(await tab.eval(`document.getElementById('sendDrop').textContent.includes('MB')`), 'the real size limit is shown');
+        check(await tab.eval(`document.getElementById('sendDrop').textContent.includes('10 GB') && document.querySelector('.tf-panels').dataset.maxBytes === String(10 * 1024 ** 3)`), 'the real size limit is shown');
+        check(await tab.eval(`document.getElementById('btnSend').disabled`), 'nothing chosen and no message: nothing to send');
         await click(tab, '#tfTabs [data-tab="receive"]');
         await sleep(200);
         check(await tab.eval(`document.getElementById('btnReceive').disabled`), 'the receive button waits for six digits');
@@ -762,7 +769,8 @@ async function main() {
         await sleep(300);
         check(await tab.eval(`document.querySelector('.settings-tab[aria-selected="true"]').dataset.tab`) === 'profile', 'it opens on the profile topic');
         check(await tab.eval(`document.querySelectorAll('.settings-pane:not([hidden])').length`) === 1, 'only one pane is shown');
-        check(await tab.eval(`document.querySelectorAll('.settings-tab').length`) === 14, 'every topic is listed');
+        // ทุก pane มีแท็บของตัวเอง เทียบกันเอง ไม่ใช้ตัวเลขตายตัว เพิ่มหัวข้อแล้วไม่ต้องตามแก้
+        check(await tab.eval(`document.querySelectorAll('.settings-tab').length === document.querySelectorAll('.settings-pane').length && document.querySelectorAll('.settings-tab').length >= 15`), 'every topic is listed');
         await click(tab, '.settings-tab[data-tab="categories"]');
         await sleep(600);
         check(await tab.eval(`document.getElementById('tab-categories').hidden`) === false, 'a topic opens its pane');
@@ -795,7 +803,7 @@ async function main() {
         check(!(await tab.eval(`!!document.querySelector('#appFlags [data-place="life"]')`)), 'a place with every page hidden loses its tab');
         check(await tab.eval(`document.querySelectorAll('#appFlags .flag').length`) === 4, 'the other tabs stay');
         // Put the choice back.
-        const everyMenu = ['tasks', 'projects', 'planner', 'habits', 'focus', 'skills', 'exercise', 'food-notes', 'finance', 'subscriptions', 'stocks', 'notes', 'quick-notes', 'bookmarks', 'files', 'transfer', 'file-tools', 'ai', 'calculator'];
+        const everyMenu = ['tasks', 'projects', 'planner', 'habits', 'focus', 'skills', 'exercise', 'food-notes', 'finance', 'subscriptions', 'stocks', 'notes', 'bookmarks', 'files', 'transfer', 'file-tools', 'ai', 'calculator'];
         await api(tab, '/api/settings/menus', { method: 'POST', body: JSON.stringify({ menus: everyMenu, order: everyMenu }) });
 
         await click(tab, '.settings-tab[data-tab="app-shares"]');
@@ -970,7 +978,8 @@ async function main() {
             check(await anon.eval(`document.querySelector('.share-topbar').textContent.includes('อ่านอย่างเดียว')`), 'under a bar that says it is read-only');
             check(await anon.eval(`document.querySelector('.share-topbar-link[aria-current="page"]')?.textContent`) === 'งาน', 'and marks the page that is open');
             check(await anon.eval(`!document.getElementById('appFlags')`), 'with no index tabs');
-            check(await anon.eval(`Math.round(document.querySelector('.share-topbar').getBoundingClientRect().width) === window.innerWidth`), 'the bar runs across the whole top');
+            // เทียบกับ body ไม่ใช่ innerWidth: html จองที่แถบเลื่อนไว้เสมอ (scrollbar-gutter) แถบเต็มหน้าจึงหยุดตรงนั้น
+            check(await anon.eval(`Math.round(document.querySelector('.share-topbar').getBoundingClientRect().width) === Math.round(document.body.getBoundingClientRect().width)`), 'the bar runs across the whole top');
             await anon.goto(BASE + '/exit-share');
 
             // ---------- sign in ----------

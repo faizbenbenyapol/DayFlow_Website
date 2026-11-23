@@ -4,18 +4,14 @@
 (function () {
     'use strict';
 
-    const PROVIDER_LABEL = {
-        openai: 'OpenAI',
-        gemini: 'Google Gemini',
-        anthropic: 'Anthropic Claude',
-        replicate: 'Replicate (Video)',
-        kimi: 'Moonshot Kimi',
-        openrouter: 'OpenRouter.ai'
-    };
     const DRAFT_KEY = 'ai_draft_v1';
     const FORM_IDS = ['aiKeyword', 'aiPlatform', 'aiStyle', 'aiLanguage', 'aiDuration', 'aiTextProvider', 'aiExtra'];
 
     // ---------- Tabs ----------
+    /**
+     * ผูกแท็บกับ pane และจำแท็บที่เลือกไว้ใน localStorage
+     * เริ่มที่ "สั่งงาน" เมื่อมีแท็บนั้น ไม่งั้นเริ่มที่ "สร้างคอนเทนต์"
+     */
     function initTabs() {
         const tabs = Array.from(document.querySelectorAll('.ai-tab'));
         const panes = document.querySelectorAll('.ai-pane');
@@ -40,9 +36,11 @@
                 select(tabs[(i + step + tabs.length) % tabs.length], true);
             });
         });
-        let saved = 'generate';
-        try { saved = localStorage.getItem('ai_tab') || 'generate'; } catch (_) { /* first tab */ }
-        select(tabs.find(t => t.dataset.tab === saved) || tabs[0]);
+        let saved = '';
+        try { saved = localStorage.getItem('ai_tab') || ''; } catch (_) { /* first tab */ }
+        // แท็บ "สั่งงาน" เป็นค่าเริ่มต้นเมื่อมีคีย์ ไม่มีก็กลับไปสร้างคอนเทนต์
+        const fallback = tabs.some(t => t.dataset.tab === 'chat') ? 'chat' : 'generate';
+        select(tabs.find(t => t.dataset.tab === saved) || tabs.find(t => t.dataset.tab === fallback) || tabs[0]);
     }
 
     // ---------- Draft autosave ----------
@@ -78,6 +76,11 @@
     }
 
     // ---------- Keys ----------
+    /**
+     * วาดรายการคีย์จาก API และผูกปุ่มบันทึก/ทดสอบ/ลบ
+     * เจ้าที่คุยได้มีช่องโมเดล, custom มีช่อง URL และโมเดลบังคับ, replicate ไม่มีช่องเพิ่ม
+     * ผลข้างเคียง: เขียนทับ #aiKeysList และเติมตัวเลือก #aiTextProvider
+     */
     async function loadKeys() {
         const box = document.getElementById('aiKeysList');
         box.innerHTML = '<div class="ai-note">กำลังโหลด...</div>';
@@ -85,6 +88,20 @@
             const data = await apiFetch(BASE_URL + '/api/ai/keys');
             const providers = data.providers || ['openai', 'gemini', 'anthropic', 'replicate'];
             const existing = data.keys || {};
+            const labels = data.labels || {};
+            const chatProviders = data.chat_providers || [];
+            const defaults = data.default_models || {};
+            const labelOf = p => labels[p] || p;
+
+            /** ช่องกรอกเพิ่มเติมของแถว พร้อม label และ aria-label */
+            const field = (prov, text, name, value, placeholder, required) => `
+                <div class="ai-key-field">
+                    <label class="form-label" for="aiKey_${name}_${prov}">${escHtml(text)}</label>
+                    <input type="text" class="form-control" id="aiKey_${name}_${prov}"
+                           data-${name}="${escHtml(prov)}" value="${escHtml(value)}"
+                           placeholder="${escHtml(placeholder)}"${required ? ' required' : ''}
+                           aria-label="${escHtml(text)} ของ ${escHtml(labelOf(prov))}">
+                </div>`;
 
             box.innerHTML = '';
             providers.forEach(p => {
@@ -92,34 +109,62 @@
                 row.className = 'ai-key-row';
                 row.dataset.provider = p;
                 const cur = existing[p];
+                const extra = [];
+                if (p === 'custom') {
+                    extra.push(field(p, 'URL', 'base', (cur && cur.base_url) || '', 'https://example.com/v1'));
+                    extra.push(field(p, 'ชื่อโมเดล (จำเป็น)', 'model', (cur && cur.model) || '', 'เช่น llama3.2', true));
+                }
+                if (chatProviders.includes(p) && p !== 'custom') {
+                    const hint = defaults[p] ? 'ค่าเริ่มต้น: ' + defaults[p] : 'เช่น llama3.2';
+                    extra.push(field(p, 'ชื่อโมเดล', 'model', (cur && cur.model) || '', hint));
+                }
                 row.innerHTML = `
                     <div class="ai-key-head">
-                        <strong>${PROVIDER_LABEL[p] || p}</strong>
+                        <strong>${escHtml(labelOf(p))}</strong>
                         ${cur ? `<span class="badge badge-success">บันทึกแล้ว</span>` : `<span class="badge">ยังไม่ได้ตั้ง</span>`}
                     </div>
                     <div class="ai-key-body">
-                        <input type="password" class="form-control" autocomplete="off" aria-label="API Key ของ ${PROVIDER_LABEL[p] || p}" placeholder="${cur ? cur.masked : 'sk-... / AIza... / r8_...'}" data-prov="${p}">
-                        <button class="btn btn-primary btn-sm" data-save="${p}">บันทึก</button>
-                        <button class="btn btn-ghost btn-sm" data-test="${p}">ทดสอบ</button>
-                        ${cur ? `<button class="btn btn-ghost btn-sm" data-del="${p}">ลบ</button>` : ''}
+                        <input type="password" class="form-control" autocomplete="off" aria-label="API Key ของ ${escHtml(labelOf(p))}" placeholder="${cur ? escHtml(cur.masked) : 'sk-... / AIza... / r8_...'}" data-prov="${escHtml(p)}">
+                        ${extra.join('')}
+                        <button class="btn btn-primary btn-sm" data-save="${escHtml(p)}">บันทึก</button>
+                        <button class="btn btn-ghost btn-sm" data-test="${escHtml(p)}">ทดสอบ</button>
+                        ${cur ? `<button class="btn btn-ghost btn-sm" data-del="${escHtml(p)}">ลบ</button>` : ''}
                     </div>
-                    <div class="ai-key-msg" data-msg="${p}"></div>
+                    <div class="ai-key-msg" data-msg="${escHtml(p)}"></div>
                 `;
                 box.appendChild(row);
             });
 
+            /** ค่าช่อง URL/โมเดลของแถว (ช่องที่ไม่มี = '') */
+            const fieldValue = (row, name) => {
+                const el = row.querySelector('input[data-' + name + ']');
+                return el ? el.value.trim() : '';
+            };
+
             box.querySelectorAll('[data-save]').forEach(btn => {
                 btn.addEventListener('click', async () => {
                     const prov = btn.dataset.save;
-                    const input = box.querySelector(`input[data-prov="${prov}"]`);
-                    const val = input.value.trim();
-                    if (!val) return toast('กรุณากรอก API key', 'error');
+                    const row = box.querySelector(`.ai-key-row[data-provider="${prov}"]`);
+                    const val = row.querySelector('input[data-prov]').value.trim();
+                    const cur = existing[prov];
+                    if (!val && !(cur && cur.set)) return toast('กรุณากรอก API key', 'error');
+
+                    const body = { provider: prov, api_key: val };
+                    body.model = fieldValue(row, 'model');
+                    body.base_url = fieldValue(row, 'base');
+                    if (!val) body.keep_key = true;
+
                     try {
                         await apiFetch(BASE_URL + '/api/ai/keys', {
                             method: 'POST',
-                            body: JSON.stringify({ provider: prov, api_key: val })
+                            body: JSON.stringify(body)
                         });
-                        toast('บันทึก ' + PROVIDER_LABEL[prov] + ' สำเร็จ');
+                        toast('บันทึก ' + labelOf(prov) + ' สำเร็จ');
+                        // หน้าโหลดมาก่อนมีคีย์: ต้องโหลดใหม่ให้แท็บ "สั่งงาน" ขึ้น
+                        if (!document.querySelector('.ai-tab[data-tab="chat"]') && chatProviders.includes(prov)) {
+                            location.reload();
+                            return;
+                        }
                         loadKeys();
                     } catch (e) { toast(e.message, 'error'); }
                 });
@@ -127,15 +172,18 @@
             box.querySelectorAll('[data-test]').forEach(btn => {
                 btn.addEventListener('click', async () => {
                     const prov = btn.dataset.test;
-                    const input = box.querySelector(`input[data-prov="${prov}"]`);
+                    const row = box.querySelector(`.ai-key-row[data-provider="${prov}"]`);
                     const msgEl = box.querySelector(`[data-msg="${prov}"]`);
-                    const apiKey = input.value.trim(); // empty → use stored
+                    const body = { provider: prov, api_key: row.querySelector('input[data-prov]').value.trim() };
+                    body.model = fieldValue(row, 'model');
+                    body.base_url = fieldValue(row, 'base');
+
                     msgEl.innerHTML = '<span class="ai-note">กำลังทดสอบ…</span>';
                     btn.disabled = true;
                     try {
                         const r = await apiFetch(BASE_URL + '/api/ai/keys/test', {
                             method: 'POST',
-                            body: JSON.stringify({ provider: prov, api_key: apiKey })
+                            body: JSON.stringify(body)
                         });
                         msgEl.innerHTML = '<span class="ai-ok">ใช้งานได้ · ' + escHtml(r.message || 'ผ่านการทดสอบ') + '</span>';
                     } catch (e) {
@@ -148,7 +196,7 @@
             box.querySelectorAll('[data-del]').forEach(btn => {
                 btn.addEventListener('click', async () => {
                     const prov = btn.dataset.del;
-                    if (!await confirmAction('ลบ API key ของ ' + PROVIDER_LABEL[prov] + '?', 'ลบ')) return;
+                    if (!await confirmAction('ลบ API key ของ ' + labelOf(prov) + '?', 'ลบ')) return;
                     try {
                         await apiFetch(BASE_URL + '/api/ai/keys/' + prov, { method: 'DELETE' });
                         toast('ลบแล้ว');
@@ -156,9 +204,34 @@
                     } catch (e) { toast(e.message, 'error'); }
                 });
             });
+
+            fillTextProvider(data);
         } catch (e) {
             box.innerHTML = '<div class="alert alert-danger" role="alert">' + escHtml(e.message) + '</div>';
         }
+    }
+
+    /**
+     * เติมตัวเลือก #aiTextProvider จากผู้ให้บริการที่คุยได้
+     * เหลือเฉพาะเจ้าที่มีคีย์ ถ้าไม่มีคีย์เลยใช้ทุกเจ้า และคงค่าที่เลือกไว้เดิม
+     */
+    function fillTextProvider(data) {
+        const sel = document.getElementById('aiTextProvider');
+        if (!sel) return;
+        const chat = data.chat_providers || [];
+        const labels = data.labels || {};
+        const keys = data.keys || {};
+        const withKey = chat.filter(p => keys[p] && keys[p].set);
+        const use = withKey.length ? withKey : chat;
+        const current = sel.value;
+        sel.textContent = '';
+        use.forEach(p => {
+            const option = document.createElement('option');
+            option.value = p;
+            option.textContent = labels[p] || p;
+            sel.appendChild(option);
+        });
+        if (use.includes(current)) sel.value = current;
     }
 
     // ---------- Script Generation ----------

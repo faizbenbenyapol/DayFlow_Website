@@ -154,6 +154,42 @@ test('the yearly chart always has twelve months and puts money in the right one'
     assertSame(0.0, (float)$chart[0]['expense'], 'the next year must not leak into January');
 });
 
+test('the year chart also says where the year\'s expenses went and which were the biggest', function (TestClient $_c): void {
+    $client = financeClient('yearparts');
+    $food = $client->json($client->post('/api/finance/categories', ['name' => 'อาหารปี ' . TEST_RUN_ID, 'type' => 'expense']));
+    $fare = $client->json($client->post('/api/finance/categories', ['name' => 'เดินทางปี ' . TEST_RUN_ID, 'type' => 'expense']));
+    $foodId = (int)($food['id'] ?? 0);
+    $fareId = (int)($fare['id'] ?? 0);
+
+    addTxn($client, 'expense', 120, '2024-03-02', ['category_id' => $foodId]);
+    addTxn($client, 'expense', 80, '2024-07-03', ['category_id' => $foodId]);
+    addTxn($client, 'expense', 500, '2024-05-04', ['category_id' => $fareId, 'description' => 'ตั๋วเครื่องบิน']);
+    addTxn($client, 'expense', 30, '2024-12-31');
+    for ($i = 1; $i <= 8; $i++) addTxn($client, 'expense', $i, '2024-08-0' . $i);   // the small ones that fall off the top ten
+    addTxn($client, 'income', 9999, '2024-06-06', ['category_id' => $foodId]);     // income is not an expense
+    addTxn($client, 'expense', 700, '2025-01-01', ['category_id' => $fareId]);     // the next year
+    addTxn($client, 'expense', 900, '2023-12-31', ['category_id' => $fareId]);     // the year before
+
+    $data = $client->json($client->get('/api/finance/chart?year=2024'));
+
+    $byCategory = $data['by_category'];
+    assertSame(['เดินทางปี ' . TEST_RUN_ID, 'อาหารปี ' . TEST_RUN_ID, 'ไม่ระบุหมวด'], array_column($byCategory, 'name'), 'biggest first');
+    assertSame([500.0, 200.0, 66.0], array_map('floatval', array_column($byCategory, 'amount')));
+    $monthsExpense = array_sum(array_column($data['chart'], 'expense'));
+    assertSame((float)$monthsExpense, (float)array_sum(array_column($byCategory, 'amount')), 'the parts make the year\'s expense');
+
+    $top = $data['top_expenses'];
+    assertSame([500.0, 120.0, 80.0, 30.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0], array_map('floatval', array_column($top, 'amount')), 'ten biggest, biggest first');
+    assertSame('ตั๋วเครื่องบิน', $top[0]['description']);
+    assertSame('เดินทางปี ' . TEST_RUN_ID, $top[0]['category']);
+    assertSame('2024-05-04', $top[0]['txn_date']);
+    assertSame('ไม่ระบุหมวด', $top[3]['category']);
+
+    $empty = $client->json(financeClient('yearempty')->get('/api/finance/chart?year=2024'));
+    assertSame([], $empty['by_category'], 'another account sees none of it');
+    assertSame([], $empty['top_expenses']);
+});
+
 test('a malformed month falls back to the current month instead of failing', function (TestClient $_c): void {
     $client = financeClient('badmonth');
     foreach (['2026-13', 'abc', "2026-01'; DROP TABLE finances;--"] as $bad) {

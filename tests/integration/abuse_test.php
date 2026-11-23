@@ -74,9 +74,7 @@ test('the demo account cannot mint public links or store files', function (TestC
     assertSame(403, $visitor->post('/api/shares', ['file_id' => 1])['status'], 'file share');
     assertSame(403, $visitor->post('/api/files/folder', ['name' => 'x'])['status'], 'folder');
     assertSame(403, $visitor->upload('/api/files/upload', 'file', 'x.txt', 'x')['status'], 'upload');
-    assertSame(403, $visitor->uploadMany('/api/transfer/send', 'files', [
-        ['name' => 'x.txt', 'contents' => 'x', 'type' => 'text/plain'],
-    ])['status'], 'transfer');
+    assertSame(403, $visitor->post('/api/transfer/start', ['files' => [['name' => 'x.txt', 'size' => 1]], 'message' => '', 'expiry_minutes' => 5])['status'], 'transfer');
 });
 
 test('the demo account cannot change its settings or keys', function (TestClient $_c): void {

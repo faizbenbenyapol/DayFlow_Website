@@ -29,6 +29,11 @@
     --ledger-green: #1A6B47;   /* income, done, profit; dark enough for a mint card */
     --caution:      #8A5800;   /* due today, nearly out of budget */
     --highlighter:  #FFEFB0;   /* a search hit, a row that just changed */
+    /* แท่งรายรับ/รายจ่ายในกราฟการเงิน ใช้ค่าเดียวทั้งสองธีม: ผ่านตัวตรวจ palette (ความสว่าง
+       ความอิ่มสี contrast ≥ 3:1 และแยกได้เมื่อตาบอดสี) ทั้งบนพื้นขาวและพื้นมืด #1F2422
+       พาสเทล -2 ของธีมจางเกิน (contrast 1.6:1) สีความหมายด้านบนเข้มจนอ่านเป็นเทา */
+    --chart-income:  #2F8F6C;
+    --chart-expense: #D2584E;
 
     /* Pastels, two strengths each. 1 = a tab or a tinted card, 2 = the
        highlighter under a heading, the top edge of a card, an underline. */

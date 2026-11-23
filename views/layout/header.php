@@ -67,9 +67,14 @@ $themeAttr = $theme === 'auto' ? 'light' : $theme;
 $dayKey = strtolower(date('D'));
 $dayColor = Auth::appearance()['day_color'] ? 'on' : 'off';
 
-// The place the page belongs to picks its pastel: the open index tab, the
-// highlighter under the heading, the top edge of its cards (tokens.css).
-$placeKey = AppMenus::groupForPath(Request::path());
+// ค่าเมนูของเจ้าของบัญชีโหลดครั้งเดียว ใช้ทั้งสีของหน้าและแถบเมนูด้านล่าง
+// หน้าที่เปิดผ่านลิงก์แชร์หรือเป็นแขกใช้การจัดเมนูตั้งต้น
+$navSettings = ($isReadOnly || $isGuest || empty($_SESSION['user_id'])) ? [] : User::getSettings(Auth::userId());
+$menuLayout = AppMenus::layout(json_decode($navSettings['menu_layout'] ?? 'null', true));
+
+// หมวดของหน้าเลือกสีพาสเทล: แท็บที่เปิด แถบไฮไลต์ใต้หัวข้อ ขอบบนของการ์ด (tokens.css)
+// เมนูที่ผู้ใช้ย้ายหมวดได้สีของหมวดใหม่ (REQ-10)
+$placeKey = AppMenus::groupForPath(Request::path(), $menuLayout);
 
 // The pastel the page sits on, chosen in Settings (tokens.css, [data-desk]).
 $desk = Auth::appearance()['desk'];
@@ -176,10 +181,9 @@ $chromeColors = ['light' => User::DESKS[$desk][0], 'dark' => User::DESKS[$desk][
 <?php else: ?>
 <?php
 // What the index tabs, the sub-tabs and the "all menus" sheet show, worked out once.
-$navSettings = User::getSettings(Auth::userId());
 $navHidden = json_decode($navSettings['hidden_menus'] ?? 'null', true);
 $navHidden = is_array($navHidden) ? $navHidden : [];
-$navGroups = AppMenus::grouped(AppMenus::ordered(json_decode($navSettings['menu_order'] ?? 'null', true)), $navHidden);
+$navGroups = AppMenus::grouped(AppMenus::ordered(json_decode($navSettings['menu_order'] ?? 'null', true)), $navHidden, $menuLayout);
 $navByGroup = array_column($navGroups, null, 'key');
 $navName = (string)($user['display_name'] ?? $user['username'] ?? '');
 // The sub-tabs of the place being shown, when it has more than one page to
@@ -201,7 +205,7 @@ require ROOT . '/views/partials/icons.php';
             ?>
             <a class="flag" data-place="<?= h($place) ?>" href="<?= h(APP_URL . $first['path']) ?>"<?= $place === $placeKey ? ' aria-current="page"' : '' ?>>
                 <svg class="icon" aria-hidden="true"><use href="#i-<?= h(AppMenus::PLACE_ICONS[$place]) ?>"/></svg>
-                <span><?= h(AppMenus::GROUPS[$place]) ?></span>
+                <span><?= h(AppMenus::groupName($place, $menuLayout)) ?></span>
             </a>
             <?php endforeach; ?>
         </nav>
@@ -352,7 +356,7 @@ require ROOT . '/views/partials/icons.php';
 
     <main class="app-main" id="appMain">
         <?php if (count($subItems) > 1): ?>
-        <nav class="subnav" aria-label="<?= h(AppMenus::GROUPS[$placeKey]) ?>">
+        <nav class="subnav" aria-label="<?= h(AppMenus::groupName($placeKey, $menuLayout)) ?>">
             <?php foreach ($subItems as $item): ?>
             <a class="subnav-link" href="<?= h(APP_URL . $item['path']) ?>"<?= isActive($item['path']) !== '' ? ' aria-current="page"' : '' ?>><?= h($item['label']) ?></a>
             <?php endforeach; ?>

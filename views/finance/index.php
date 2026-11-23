@@ -100,6 +100,11 @@ $readOnly = Auth::isReadOnly();
     <div class="sec-head">
         <h2 id="chartTitle">รายรับกับรายจ่ายตลอดปี</h2>
         <div class="chart-controls">
+            <div class="seg-pair" role="group" aria-label="มุมมองกราฟ" id="chartViewToggle">
+                <button type="button" data-chart-view="months" aria-pressed="true" data-act="changeChartView" data-args="[&quot;months&quot;]">รายเดือน</button>
+                <button type="button" data-chart-view="categories" aria-pressed="false" data-act="changeChartView" data-args="[&quot;categories&quot;]">ตามหมวด</button>
+                <button type="button" data-chart-view="top" aria-pressed="false" data-act="changeChartView" data-args="[&quot;top&quot;]">ก้อนใหญ่สุด</button>
+            </div>
             <div class="seg-pair" role="group" aria-label="แบบกราฟ" id="chartTypeToggle">
                 <button type="button" data-chart-type="bar" aria-pressed="true" data-act="changeChartType" data-args="[&quot;bar&quot;]">แท่ง</button>
                 <button type="button" data-chart-type="line" aria-pressed="false" data-act="changeChartType" data-args="[&quot;line&quot;]">เส้น</button>
@@ -114,7 +119,10 @@ $readOnly = Auth::isReadOnly();
     </div>
     <div class="chart-wrap">
         <canvas id="financeChart" role="img" aria-label="กราฟรายรับและรายจ่ายรายเดือนตลอดปี"></canvas>
+        <p class="chart-empty" id="chartEmpty" hidden></p>
     </div>
+    <!-- ตัวเลขชุดเดียวกับกราฟ สำหรับโปรแกรมอ่านหน้าจอ (canvas อ่านออกเสียงไม่ได้) finance.js เติมให้ -->
+    <table class="sr-only" id="chartTable"></table>
 </section>
 
 <script nonce="<?= h(Security::nonce()) ?>">

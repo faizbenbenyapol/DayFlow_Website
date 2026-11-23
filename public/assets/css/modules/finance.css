@@ -191,6 +191,8 @@
 --------------------------------------------------------------- */
 .chart-controls {
     display: flex;
+    flex-wrap: wrap;               /* มุมมอง 3 ปุ่ม + แท่ง/เส้น + ปี ไม่พอในบรรทัดเดียวบนมือถือ */
+    justify-content: flex-end;
     align-items: center;
     gap: var(--space-3);
 }
@@ -206,6 +208,17 @@
     position: relative;
     height: 300px;
     padding-top: var(--space-3);
+}
+
+/* ปีหรือมุมมองที่ไม่มีตัวเลข: กินพื้นที่เท่ากราฟ หน้าจึงไม่กระโดดเมื่อสลับปี */
+.chart-empty {
+    display: grid;
+    place-items: center;
+    height: 100%;
+    margin: 0;
+    border: 1px dashed var(--rule-strong);
+    border-radius: var(--r-card);
+    color: var(--pencil);
 }
 
 .export-toggle {

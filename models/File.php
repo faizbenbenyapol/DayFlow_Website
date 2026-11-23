@@ -13,14 +13,14 @@ class FileModel
     {
         if ($parentId === null) {
             $stmt = DB::run(
-                'SELECT id, name, type, mime_type, file_size, file_path, parent_id, created_at
+                'SELECT id, name, type, mime_type, file_size, file_path, drive_id, parent_id, created_at
                  FROM files WHERE user_id = ? AND parent_id IS NULL
                  ORDER BY type DESC, name ASC',
                 [$userId]
             );
         } else {
             $stmt = DB::run(
-                'SELECT id, name, type, mime_type, file_size, file_path, parent_id, created_at
+                'SELECT id, name, type, mime_type, file_size, file_path, drive_id, parent_id, created_at
                  FROM files WHERE user_id = ? AND parent_id = ?
                  ORDER BY type DESC, name ASC',
                 [$userId, $parentId]
@@ -58,7 +58,7 @@ class FileModel
     public static function listFolderPublic(int $folderId): array
     {
         return DB::run(
-            'SELECT id, name, type, mime_type, file_size, file_path, parent_id, created_at
+            'SELECT id, name, type, mime_type, file_size, file_path, drive_id, parent_id, created_at
              FROM files WHERE parent_id = ?
              ORDER BY type DESC, name ASC',
             [$folderId]
@@ -69,21 +69,25 @@ class FileModel
     // Writes
     // ------------------------------------------------------------------ //
 
-    public static function createFolder(int $userId, string $name, ?int $parentId): int
+    /** เพิ่มโฟลเดอร์ในสารบัญ @param string|null $driveId id ใน Google Drive ถ้าสร้างใน Drive แล้ว */
+    public static function createFolder(int $userId, string $name, ?int $parentId, ?string $driveId = null): int
     {
         DB::run(
-            'INSERT INTO files (user_id, parent_id, name, type) VALUES (?, ?, ?, "folder")',
-            [$userId, $parentId, $name]
+            'INSERT INTO files (user_id, parent_id, name, type, drive_id) VALUES (?, ?, ?, "folder", ?)',
+            [$userId, $parentId, $name, $driveId]
         );
         return (int)DB::conn()->lastInsertId();
     }
 
-    public static function createFile(int $userId, string $name, string $mimeType, string $filePath, int $fileSize, ?int $parentId): int
+    /**
+     * เพิ่มไฟล์ในสารบัญ ไฟล์อยู่ที่ใดที่หนึ่ง: $filePath (บนเซิร์ฟเวอร์) หรือ $driveId (ใน Google Drive)
+     */
+    public static function createFile(int $userId, string $name, string $mimeType, ?string $filePath, int $fileSize, ?int $parentId, ?string $driveId = null): int
     {
         DB::run(
-            'INSERT INTO files (user_id, parent_id, name, type, mime_type, file_path, file_size)
-             VALUES (?, ?, ?, "file", ?, ?, ?)',
-            [$userId, $parentId, $name, $mimeType, $filePath, $fileSize]
+            'INSERT INTO files (user_id, parent_id, name, type, mime_type, file_path, drive_id, file_size)
+             VALUES (?, ?, ?, "file", ?, ?, ?, ?)',
+            [$userId, $parentId, $name, $mimeType, $filePath, $driveId, $fileSize]
         );
         return (int)DB::conn()->lastInsertId();
     }
@@ -96,18 +100,16 @@ class FileModel
         )->rowCount() > 0;
     }
 
-    /**
-     * Move a file/folder to another parent (null = root)
-     */
+    /** ย้ายไปไว้ใต้ $newParentId จะทำให้โฟลเดอร์อยู่ในตัวเองหรือในลูกของมันไหม */
+    public static function wouldCreateCycle(int $id, int $userId, ?int $newParentId): bool
+    {
+        return $newParentId !== null && ($id === $newParentId || in_array($id, self::getAncestorIds($newParentId, $userId), true));
+    }
+
+    /** ย้ายไฟล์หรือโฟลเดอร์ไปโฟลเดอร์อื่น (null = ราก) @return bool false เมื่อเกิดวงวน */
     public static function move(int $id, int $userId, ?int $newParentId): bool
     {
-        // Prevent moving a folder into itself or its own descendant
-        if ($newParentId !== null) {
-            $ancestors = self::getAncestorIds($newParentId, $userId);
-            if (in_array($id, $ancestors, true) || $id === $newParentId) {
-                return false; // would create a cycle
-            }
-        }
+        if (self::wouldCreateCycle($id, $userId, $newParentId)) return false;
         return DB::run(
             'UPDATE files SET parent_id = ? WHERE id = ? AND user_id = ?',
             [$newParentId, $id, $userId]
@@ -134,6 +136,15 @@ class FileModel
 
         DB::run('DELETE FROM files WHERE id = ? AND user_id = ?', [$id, $userId]);
         return true;
+    }
+
+    /**
+     * บันทึกว่าแถวนี้อยู่ใน Google Drive แล้ว ไฟล์ล้าง file_path ด้วย (ผู้เรียกลบไฟล์บนดิสก์เอง หลังบันทึกแล้ว)
+     * ไม่ใช่การแก้ของผู้ใช้ จึงไม่มีเวลาแก้ไขให้เปลี่ยน
+     */
+    public static function setDriveId(int $id, string $driveId): void
+    {
+        DB::run('UPDATE files SET drive_id = ?, file_path = NULL WHERE id = ?', [$driveId, $id]);
     }
 
     // ------------------------------------------------------------------ //

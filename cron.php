@@ -15,6 +15,8 @@ require_once ROOT . '/models/User.php';
 require_once ROOT . '/models/AccountData.php';
 require_once ROOT . '/core/DemoReset.php';
 require_once ROOT . '/models/PushSubscription.php';
+require_once ROOT . '/models/FileTransfer.php';
+require_once ROOT . '/core/DriveMigration.php';
 
 // Security check: production is CLI-only. The web endpoint is intentionally
 // disabled because this job sends private Telegram notifications.
@@ -23,6 +25,14 @@ if (!$isCli) {
     http_response_code(403);
     die("Cron is CLI-only.\n");
 }
+
+// ลบการส่งไฟล์ที่หมดอายุและที่อัปโหลดค้าง พร้อมไฟล์บนดิสก์ (เฟส 3 REQ-19, EDGE-7)
+// ทำก่อนการแจ้งเตือน ซึ่งอาจจบสคริปต์ก่อนถึงท้ายไฟล์
+echo 'File transfers removed: ' . FileTransfer::cleanup() . "\n";
+
+// ย้ายไฟล์เดิมขึ้น Google Drive ต่อให้คนที่ปิดหน้าตั้งค่าไปก่อนย้ายครบ (เฟส 4 EDGE-13)
+// รวมทุกคนไม่เกิน 2 นาทีต่อรอบ ไม่ให้รอบของ cron ยาวเกิน 5 นาทีที่ตั้งไว้ คนที่ไม่ทันได้ต่อรอบหน้า
+if (DriveClient::isConfigured()) DriveMigration::runAll(120);
 
 // --- Helpers ---
 // Declared up here rather than at the bottom: these are conditional

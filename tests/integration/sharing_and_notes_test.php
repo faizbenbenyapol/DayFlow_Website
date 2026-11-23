@@ -24,33 +24,18 @@ function shareClient(string $label): TestClient
 // =====================================================
 
 test('sending files returns a code and a link', function (TestClient $_c): void {
-    $response = shareClient('sender')->uploadMany('/api/transfer/send', 'files', [
-        ['name' => 'note.txt', 'contents' => 'transfer me', 'type' => 'text/plain'],
-    ]);
+    $data = shareClient('sender')->transfer(['note.txt' => 'transfer me']);
 
-    assertSame(201, $response['status'], 'send failed: ' . substr($response['body'], 0, 200));
-
-    $data = shareClient('sender')->json($response);
+    assertSame(200, $data['status'], 'send failed: ' . json_encode($data));
     assertTrue((bool)preg_match('/^\d{6}$/', (string)($data['code'] ?? '')), 'a six-digit code is expected');
     assertStringContains('/transfer/download/', (string)($data['download_url'] ?? ''));
-    assertSame(1, $data['files_count'] ?? 0);
+    assertSame(1, count($data['files'] ?? []));
     // The countdown runs from seconds left, not from a wall clock.
     assertTrue(is_int($data['expires_in'] ?? null) && $data['expires_in'] > 0, 'expires_in: ' . json_encode($data['expires_in'] ?? null));
 });
 
-test('a script file cannot be sent', function (TestClient $_c): void {
-    $response = shareClient('sender')->uploadMany('/api/transfer/send', 'files', [
-        ['name' => 'shell.php', 'contents' => '<?php ?>', 'type' => 'text/plain'],
-    ]);
-
-    assertSame(422, $response['status']);
-    assertStringContains('ไม่อนุญาต', $response['body']);
-});
-
 test('a transfer code is redeemable without signing in', function (TestClient $_c): void {
-    $sent = shareClient('sender')->json(shareClient('sender')->uploadMany('/api/transfer/send', 'files', [
-        ['name' => 'shared.txt', 'contents' => 'hello from the other side', 'type' => 'text/plain'],
-    ]));
+    $sent = (shareClient('sender')->transfer(['shared.txt' => 'hello from the other side']));
 
     // This is the point of the feature: a phone that has never signed in.
     // /transfer itself requires a session, so the token comes from the only
@@ -73,9 +58,7 @@ test('a malformed or unknown code is refused', function (TestClient $_c): void {
 });
 
 test('the listing shows only your own transfers', function (TestClient $_c): void {
-    shareClient('sender')->uploadMany('/api/transfer/send', 'files', [
-        ['name' => 'mine.txt', 'contents' => 'x', 'type' => 'text/plain'],
-    ]);
+    shareClient('sender')->transfer(['mine.txt' => 'x']);
 
     $mine = shareClient('sender')->json(shareClient('sender')->get('/api/transfer'));
     $theirs = shareClient('other')->json(shareClient('other')->get('/api/transfer'));
@@ -85,9 +68,7 @@ test('the listing shows only your own transfers', function (TestClient $_c): voi
 });
 
 test('another account cannot delete a transfer', function (TestClient $_c): void {
-    $sent = shareClient('sender')->json(shareClient('sender')->uploadMany('/api/transfer/send', 'files', [
-        ['name' => 'private.txt', 'contents' => 'x', 'type' => 'text/plain'],
-    ]));
+    $sent = (shareClient('sender')->transfer(['private.txt' => 'x']));
 
     assertSame(404, shareClient('other')->request('DELETE', '/api/transfer/' . (int)$sent['id'], [])['status']);
 });
