@@ -35,6 +35,14 @@
     color: var(--pencil);
 }
 
+/* ชื่องานที่เลือกไว้ ใต้ "พร้อมโฟกัส" (REQ-21) */
+.timer-task {
+    margin-top: var(--space-1);
+    font-weight: 500;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+}
+
 .timer-countdown {
     font: 500 clamp(4.5rem, 13vw, 8rem)/1.05 var(--font-mono);
     letter-spacing: 0;

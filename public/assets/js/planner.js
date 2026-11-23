@@ -10,21 +10,23 @@ const THAI_DAYS_FULL = ['อาทิตย์','จันทร์','อัง�
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 const DEFAULT_EVENT_COLOR = '#3b82f6';
 
-let currentYear  = new Date().getFullYear();
-let currentMonth = new Date().getMonth() + 1; // 1-based
-let selectedDate = localToday();
+// "วันนี้" ใช้วันของเซิร์ฟเวอร์เหมือนหน้าอื่น เครื่องผู้ใช้ที่นาฬิกาอยู่คนละวันจะได้ไม่เห็นวันไม่ตรงกัน
+let selectedDate = serverToday();
+let currentYear  = Number(selectedDate.slice(0, 4));
+let currentMonth = Number(selectedDate.slice(5, 7)); // 1-based
 let monthEvents  = [];
-
-/** Today as YYYY-MM-DD in the visitor's own time zone (toISOString would give UTC's date). */
-function localToday() {
-    const now = new Date();
-    return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-}
 
 document.addEventListener('DOMContentLoaded', async function () {
     initColorSelector();
     await loadMonth(currentYear, currentMonth);
     loadDayPanel(selectedDate, false);
+});
+
+// จดงานจากช่อง quick-add ที่หน้าอื่น: โหลด to-do ของวันที่เลือกถ้าเป็นงาน
+document.addEventListener('dayflow:added', function (event) {
+    if (event.detail?.kind === 'task') {
+        loadTodos(selectedDate);
+    }
 });
 
 /* --- Colour choice in the dialog --- */
@@ -90,7 +92,7 @@ function renderCalendar(year, month) {
     const firstDay = new Date(year, month - 1, 1).getDay(); // 0=Sun
     const daysInMonth = new Date(year, month, 0).getDate();
     const prevDays = new Date(year, month - 1, 0).getDate();
-    const today = localToday();
+    const today = serverToday();
 
     let dayCount = 1;
     let nextCount = 1;

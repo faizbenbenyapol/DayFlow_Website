@@ -88,16 +88,20 @@ function renderSkillsProgress(progress) {
     progress.forEach(p => { seconds[p.skill_id] = parseInt(p.total_seconds, 10) || 0; });
 
     container.innerHTML = '<ul class="ruled-list">' + skills.map(s => {
-        const hours = (seconds[s.id] || 0) / 3600;
+        const secondsDone = seconds[s.id] || 0;
+        const hours = secondsDone / 3600;
         const target = parseInt(s.target_hours, 10) || 10000;
         const percent = Math.min(100, hours / target * 100);
+        // ตัวเลขที่แสดงปัดลงเป็นจำนวนเต็ม (99.6 → 99 ไม่ขึ้น 100 จนครบจริง) คิดจากวินาทีที่เป็นจำนวนเต็ม
+        // เพราะ 29 / 100 * 100 ในทศนิยมของ JS ได้ 28.999… แล้วปัดลงเหลือ 28
+        const percentShown = Math.min(100, Math.floor(secondsDone * 100 / (target * 3600)));
         const name = escHtml(s.name);
         return '<li class="sk-goal" style="--skill:' + cssColor(s.color, '#5E6673') + '">'
             + '<div class="sk-goal-head"><span class="sk-goal-name">' + name + '</span>'
             + '<button type="button" class="icon-btn sm" data-act="editSkill" data-args="' + escHtml(JSON.stringify([s.id])) + '" aria-label="แก้ไข: ' + name + '"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button>'
             + '<button type="button" class="icon-btn sm" data-act="deleteSkill" data-args="' + escHtml(JSON.stringify([s.id])) + '" aria-label="ลบ: ' + name + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button></div>'
-            + '<div class="progress sk-bar" role="img" aria-label="' + name + ' ทำได้ ' + percent.toFixed(2) + ' เปอร์เซ็นต์ของเป้าหมาย"><div class="progress-bar" style="--v:' + percent + '%"></div></div>'
-            + '<p class="sk-goal-meta">' + hours.toFixed(1) + ' ชม. จาก ' + target.toLocaleString('th-TH') + ' ชม. (' + percent.toFixed(2) + '%)'
+            + '<div class="progress sk-bar" role="img" aria-label="' + name + ' ทำได้ ' + percentShown + ' เปอร์เซ็นต์ของเป้าหมาย"><div class="progress-bar" style="--v:' + percent + '%"></div></div>'
+            + '<p class="sk-goal-meta">' + hours.toFixed(1) + ' ชม. จาก ' + target.toLocaleString('th-TH') + ' ชม. (' + percentShown + '%)'
             + (hours >= target ? ' · ถึงเป้าแล้ว' : '') + '</p></li>';
     }).join('') + '</ul>';
 }

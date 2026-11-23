@@ -67,6 +67,11 @@ class ProjectTaskController
             'checklist' => Request::list('checklist')
         ];
 
+        $json = Request::json();
+        if (array_key_exists('assignee_user_id', $json)) {
+            $data = self::applyAssigneeUserId($projectId, $data, $json['assignee_user_id']);
+        }
+
         $taskId = ProjectTask::create($userId, $projectId, $data);
         ProjectActivity::log($projectId, $userId, 'เพิ่มงานย่อยใหม่: "' . $title . '"');
 
@@ -106,6 +111,18 @@ class ProjectTaskController
                 } elseif ($task[$field] != $val) {
                     $changes[] = "$field เปลี่ยนเป็น '$val'";
                 }
+            }
+        }
+
+        $json = Request::json();
+        if (array_key_exists('assignee_user_id', $json)) {
+            $data = self::applyAssigneeUserId($task['project_id'], $data, $json['assignee_user_id']);
+
+            $oldUserId = isset($task['assignee_user_id']) ? (int)$task['assignee_user_id'] : null;
+            $newUserId = isset($data['assignee_user_id']) ? (int)$data['assignee_user_id'] : null;
+            $newName = self::assigneeName($newUserId, null) ?? 'ไม่ระบุ';
+            if ($oldUserId !== $newUserId) {
+                $changes[] = 'ผู้รับผิดชอบ เปลี่ยนเป็น \'' . $newName . '\'';
             }
         }
 
@@ -194,5 +211,52 @@ class ProjectTaskController
         ProjectActivity::log($projectId, $userId, 'จัดตำแหน่งลำดับบอร์ดคัมบังใหม่');
 
         Response::json(['ok' => true]);
+    }
+
+    /**
+     * แปลง assignee_user_id ที่ส่งมาเป็นข้อมูลพร้อมบันทึก
+     *
+     * @param int $projectId รหัสโปรเจค
+     * @param array<string, mixed> $data ข้อมูลงานที่จะส่งต่อไปยัง model
+     * @param mixed $rawAssigneeUserId ค่าที่ส่งมาจาก client (null, '', 0 หรือ user id)
+     * @return array<string, mixed> ข้อมูลงานที่อัปเดตแล้ว
+     */
+    private static function applyAssigneeUserId(int $projectId, array $data, mixed $rawAssigneeUserId): array
+    {
+        $assigneeUserId = (int)$rawAssigneeUserId;
+        if ($assigneeUserId <= 0) {
+            $data['assignee_user_id'] = null;
+            $data['assignee'] = null;
+            return $data;
+        }
+
+        if (ProjectMember::getRole($projectId, $assigneeUserId) === null) {
+            Response::json(['error' => 'ผู้รับผิดชอบที่เลือกไม่ใช่สมาชิกของโปรเจคนี้'], 422);
+        }
+
+        $data['assignee_user_id'] = $assigneeUserId;
+        $data['assignee'] = null;
+        return $data;
+    }
+
+    /**
+     * หาชื่อที่แสดงสำหรับ activity log
+     *
+     * @param int|null $userId รหัสผู้ใช้ที่ผูกไว้
+     * @param string|null $fallback ข้อความสำรองถ้ายังไม่ได้ผูกบัญชี
+     * @return string|null ชื่อที่แสดง หรือ null ถ้าไม่มีข้อมูล
+     */
+    private static function assigneeName(?int $userId, ?string $fallback): ?string
+    {
+        if ($userId === null || $userId <= 0) {
+            return $fallback;
+        }
+        $user = User::findById($userId);
+        if (!$user) {
+            return $fallback;
+        }
+        return $user['display_name'] !== '' && $user['display_name'] !== null
+            ? $user['display_name']
+            : $user['username'];
     }
 }

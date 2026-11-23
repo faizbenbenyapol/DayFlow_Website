@@ -34,18 +34,17 @@ document.addEventListener('click', event => {
 });
 
 /* ---------------------------------------------------
-   Quick add: a task, a quick note or a money entry, from any page
---------------------------------------------------- */
+   Quick add: a task or a money entry, from any page.
+   The old "note" tab is merged into the task tab: it lands in the inbox.
+   --------------------------------------------------- */
 (function initQuickAdd() {
     const sheet = document.getElementById('quickSheet');
     const form = document.getElementById('quickForm');
     if (!sheet || !form) return; // share mode and the login page have no frame
 
     const tabs = Array.from(sheet.querySelectorAll('[role="tab"]'));
-    const errorLine = document.getElementById('quickError');
+    const statusLine = document.getElementById('quickStatus');
     const submit = document.getElementById('quickSubmit');
-    const noteBox = document.getElementById('qaNoteContent');
-    const noteCount = document.getElementById('qaNoteCount');
     const category = document.getElementById('qaCategory');
     // form.title would be the form's own title attribute, not the field of that name.
     const field = form.elements;
@@ -54,25 +53,20 @@ document.addEventListener('click', event => {
     let categories = null; // fetched the first time money is opened
     let busy = false;
 
-    /** Today as YYYY-MM-DD in the visitor's own time zone (toISOString would give UTC's date). */
-    function localToday() {
-        const now = new Date();
-        return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-    }
-
     function moneyType() {
         return form.querySelector('input[name="type"]:checked')?.value === 'income' ? 'income' : 'expense';
     }
 
     function submitLabel() {
         if (kind === 'task') return 'เพิ่มงาน';
-        if (kind === 'note') return 'จดไว้';
         return moneyType() === 'income' ? 'บันทึกรายรับ' : 'บันทึกรายจ่าย';
     }
 
-    function showError(message) {
-        errorLine.textContent = message;
-        errorLine.hidden = message === '';
+    function showStatus(message, type) {
+        statusLine.textContent = message;
+        statusLine.hidden = message === '';
+        statusLine.className = 'form-status' + (type ? ' is-' + type : '');
+        statusLine.setAttribute('role', type === 'error' ? 'alert' : 'status');
     }
 
     function select(next) {
@@ -84,7 +78,7 @@ document.addEventListener('click', event => {
             document.getElementById(tab.getAttribute('aria-controls')).hidden = !on;
         });
         submit.textContent = submitLabel();
-        showError('');
+        showStatus('');
         if (next === 'money') loadCategories();
     }
 
@@ -116,20 +110,19 @@ document.addEventListener('click', event => {
 
     function reset() {
         form.reset();
-        form.querySelector('#qaTaskDue').value = localToday();
-        form.querySelector('#qaMoneyDate').value = localToday();
-        noteCount.textContent = '0 / 500';
-        showError('');
+        form.querySelector('#qaMoneyDate').value = serverToday();
+        showStatus('');
     }
 
     function focusFirst() {
         const pane = document.getElementById('qaPane-' + kind);
-        pane.querySelector('input:not([type="radio"]), textarea')?.focus();
+        pane.querySelector('input:not([type="radio"]), textarea, select')?.focus();
     }
 
     window.openQuickAdd = function (requested) {
-        // The tab bar button passes the click's element; only a real kind counts.
-        const wanted = ['task', 'note', 'money'].includes(requested) ? requested : kind;
+        // 'note' แบบเก่าให้เปิดแท็บงาน 'money' เปิดแท็บเงิน ค่าเริ่มต้นเป็นงาน
+        const wanted = requested === 'money' ? 'money'
+            : (['task', 'note'].includes(requested) ? 'task' : kind);
         if (!sheet.open) {
             reset();
             sheet.showModal();
@@ -144,28 +137,40 @@ document.addEventListener('click', event => {
         return window.location.pathname.slice(base.length).replace(/\/$/, '') || '/';
     }
 
-    const REFRESH_ON = { task: ['/', '/tasks'], note: ['/', '/tasks'], money: ['/', '/finance'] };
+    const REFRESH_ON = { task: ['/', '/tasks'], money: ['/', '/finance'] };
+
+    /** อ่านค่าวันที่ที่จะบันทึก: วันที่ในรายละเอียดชนะชิปวัน ชิปส่ง today/tomorrow ให้เซิร์ฟเวอร์ตัดสิน */
+    function taskDueDate() {
+        const detailDate = String(field.due_date.value || '').trim();
+        if (detailDate) return detailDate;
+        const when = form.querySelector('input[name="qa_when"]:checked')?.value;
+        if (when === 'today') return 'today';
+        if (when === 'tomorrow') return 'tomorrow';
+        return '';
+    }
+
+    /** ชื่อที่แสดงของวันที่ที่เลือก สำหรับบรรทัดสถานะ */
+    function taskDateLabel(dueDate) {
+        if (dueDate === 'today' || dueDate === serverToday()) return 'วันนี้';
+        if (dueDate === 'tomorrow' || dueDate === serverTomorrow()) return 'พรุ่งนี้';
+        if (!dueDate) return 'ยังไม่จัด';
+        return dueDate;
+    }
 
     async function send() {
         if (kind === 'task') {
             const title = field.title.value.trim();
-            if (title === '') throw new Error('ใส่ชื่องานก่อน');
+            if (title === '') throw new Error('พิมพ์งานก่อน');
+            const dueDate = taskDueDate();
             await apiFetch(BASE_URL + '/api/tasks', {
                 method: 'POST',
                 body: JSON.stringify({
                     title,
                     quadrant: Number(field.quadrant.value),
-                    due_date: field.due_date.value,
+                    due_date: dueDate,
                 }),
             });
-            return 'เพิ่มงานแล้ว';
-        }
-
-        if (kind === 'note') {
-            const content = noteBox.value.trim();
-            if (content === '') throw new Error('พิมพ์ข้อความก่อน');
-            await apiFetch(BASE_URL + '/api/quick-items', { method: 'POST', body: JSON.stringify({ content }) });
-            return 'จดไว้แล้ว';
+            return { title, label: taskDateLabel(dueDate), kind: 'task' };
         }
 
         const amount = Number(String(field.amount.value).replace(/,/g, ''));
@@ -178,10 +183,10 @@ document.addEventListener('click', event => {
                 amount,
                 category_id: Number(field.category_id.value),
                 description: field.description.value.trim(),
-                txn_date: field.txn_date.value || localToday(),
+                txn_date: field.txn_date.value || serverToday(),
             }),
         });
-        return type === 'income' ? 'บันทึกรายรับแล้ว' : 'บันทึกรายจ่ายแล้ว';
+        return { title: type === 'income' ? 'รายรับ' : 'รายจ่าย', label: '', kind: 'money', moneyType: type };
     }
 
     form.addEventListener('submit', async event => {
@@ -189,25 +194,47 @@ document.addEventListener('click', event => {
         if (busy) return;
         busy = true;
         submit.disabled = true;
-        showError('');
+        showStatus('');
 
         const sentKind = kind;
         try {
-            const message = await send();
-            sheet.close();
-            toast(message);
-
-            // A page that shows this kind of thing can update itself by
-            // cancelling the event; otherwise the page reloads to show it.
-            const handled = !document.dispatchEvent(new CustomEvent('dayflow:added', { detail: { kind: sentKind }, cancelable: true }));
-            if (!handled && REFRESH_ON[sentKind].includes(currentPath())) setTimeout(() => window.location.reload(), 600);
+            const result = await send();
+            if (sentKind === 'task') {
+                field.title.value = '';
+                showStatus('✓ บันทึก "' + result.title + '" ลง "' + result.label + '" แล้ว', 'success');
+                document.dispatchEvent(new CustomEvent('dayflow:added', { detail: { kind: sentKind }, cancelable: true }));
+                focusFirst();
+            } else {
+                sheet.close();
+                toast(result.moneyType === 'income' ? 'บันทึกรายรับแล้ว' : 'บันทึกรายจ่ายแล้ว');
+                // A page that shows this kind of thing can update itself by
+                // cancelling the event; otherwise the page reloads to show it.
+                const handled = !document.dispatchEvent(new CustomEvent('dayflow:added', { detail: { kind: sentKind }, cancelable: true }));
+                if (!handled && REFRESH_ON[sentKind].includes(currentPath())) setTimeout(() => window.location.reload(), 600);
+            }
         } catch (error) {
-            showError(error.message || 'เพิ่มไม่สำเร็จ ลองอีกครั้ง');
+            if (sentKind === 'task' && error.message === 'พิมพ์งานก่อน') {
+                showStatus(error.message, 'error');
+            } else {
+                showStatus('บันทึกไม่ได้ ตรวจการเชื่อมต่อแล้วกด Enter อีกครั้ง', 'error');
+            }
+            focusFirst();
         } finally {
             busy = false;
             submit.disabled = false;
         }
     });
+
+    // กด Enter ในช่องชื่องานบันทึกทันที โดยไม่ต้องรอปุ่ม submit
+    const titleInput = document.getElementById('qaTaskTitle');
+    if (titleInput) {
+        titleInput.addEventListener('keydown', event => {
+            if (event.key === 'Enter' && !busy) {
+                event.preventDefault();
+                form.requestSubmit();
+            }
+        });
+    }
 
     // Tabs: click or arrow keys, as a tab list should behave.
     tabs.forEach((tab, index) => {
@@ -226,8 +253,32 @@ document.addEventListener('click', event => {
         submit.textContent = submitLabel();
         fillCategories();
     }));
+})();
 
-    noteBox.addEventListener('input', () => { noteCount.textContent = noteBox.value.length + ' / 500'; });
+/* ---------------------------------------------------
+   Keyboard shortcut: N opens the task sheet anywhere
+   --------------------------------------------------- */
+(function initQuickAddShortcut() {
+    // ปุ่มที่พิมพ์ n ได้ หรือปุ่มตำแหน่ง N เมื่อแป้นไม่ใช่อักษรละติน (เช่นแป้นไทยที่ได้ ื)
+    // แป้นละตินแบบอื่นอย่าง Dvorak ปุ่มตำแหน่ง N พิมพ์ b จึงไม่นับ
+    const isN = event => event.key === 'n' || event.key === 'N'
+        || (event.code === 'KeyN' && !/^[a-z]$/i.test(event.key));
+
+    const allowed = event => {
+        if (!isN(event)) return false;
+        if (event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return false;
+        const active = document.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT' || active.isContentEditable)) return false;
+        if (document.querySelector('dialog[open]')) return false;
+        // ไม่เปิดช่องจดทับ modal ของแอปที่กำลังแสดง
+        return !document.querySelector('.modal-backdrop.active');
+    };
+
+    document.addEventListener('keydown', event => {
+        if (!allowed(event)) return;
+        event.preventDefault();
+        if (typeof window.openQuickAdd === 'function') window.openQuickAdd('task');
+    });
 })();
 
 /* ---------------------------------------------------

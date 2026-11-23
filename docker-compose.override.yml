@@ -1,0 +1,57 @@
+# =====================================================
+# docker-compose.override.yml — ของที่ใช้แค่ในชุดทดสอบบนเครื่อง
+#
+# Docker โหลดไฟล์นี้เองเมื่อรัน `docker compose ...` โดยไม่ระบุ -f (ชุดทดสอบที่ localhost:8080)
+# production ระบุ -f docker-compose.yml -f docker-compose.prod.yml เอง ไฟล์นี้จึงไม่ถูกโหลด
+# Google ปลอมและ URL ของมันจึงไม่มีทางหลุดไป production (เคยหลุดตอนอยู่ใน docker-compose.yml)
+# =====================================================
+
+services:
+  app:
+    environment:
+      # Google Drive (เฟส 4) ชี้ไป Google ปลอม ไม่ใช่ความลับจริง
+      # หน้าขออนุญาตเปิดในเบราว์เซอร์ จึงใช้ localhost ส่วน token และ API แอปเรียกจากในคอนเทนเนอร์
+      # ทดสอบกับ Google จริง: export GOOGLE_DRIVE_CLIENT_ID/SECRET ของจริง แล้วตั้ง 4 URL เป็นค่าว่าง
+      #   (docs/guides/google-drive-setup.md หัวข้อทดสอบบนเครื่อง)
+      GOOGLE_DRIVE_CLIENT_ID: ${GOOGLE_DRIVE_CLIENT_ID:-fake-client-id}
+      GOOGLE_DRIVE_CLIENT_SECRET: ${GOOGLE_DRIVE_CLIENT_SECRET:-fake-client-secret}
+      GOOGLE_AUTH_URL: ${GOOGLE_AUTH_URL-http://localhost:8090/auth}
+      GOOGLE_TOKEN_URL: ${GOOGLE_TOKEN_URL-http://fake-google:8090/token}
+      GOOGLE_REVOKE_URL: ${GOOGLE_REVOKE_URL-http://fake-google:8090/revoke}
+      GOOGLE_API_URL: ${GOOGLE_API_URL-http://fake-google:8090}
+      # AI ปลอม (ด้านล่าง) อยู่ในเครือข่ายภายในของ Docker ผู้ใช้ที่กำหนด URL เองจึงต้องชี้ที่อยู่ภายในได้
+      # production ไม่โหลดไฟล์นี้ ค่าเริ่มต้นยังบล็อกที่อยู่ภายใน (กัน SSRF)
+      AI_ALLOW_PRIVATE_URLS: "true"
+
+  cron:
+    environment:
+      GOOGLE_DRIVE_CLIENT_ID: ${GOOGLE_DRIVE_CLIENT_ID:-fake-client-id}
+      GOOGLE_DRIVE_CLIENT_SECRET: ${GOOGLE_DRIVE_CLIENT_SECRET:-fake-client-secret}
+      GOOGLE_TOKEN_URL: ${GOOGLE_TOKEN_URL-http://fake-google:8090/token}
+      GOOGLE_API_URL: ${GOOGLE_API_URL-http://fake-google:8090}
+
+  # Google ปลอมสำหรับทดสอบ Drive (tests/fake-google/router.php)
+  fake-google:
+    build: .
+    container_name: dayflow-fake-google
+    ports:
+      - "8090:8090"
+    volumes:
+      - .:/var/www/html
+      # php -S ใช้ OPcache แบบ production (ไม่ตรวจว่าไฟล์เปลี่ยน) แก้ router แล้วจะไม่มีผลจนรีสตาร์ท
+      - ./docker/php.dev.ini:/usr/local/etc/php/conf.d/zz-dayflow-dev.ini:ro
+    entrypoint: ["php", "-S", "0.0.0.0:8090", "/var/www/html/tests/fake-google/router.php"]
+    restart: unless-stopped
+
+  # AI ปลอมสำหรับทดสอบผู้ให้บริการ (tests/fake-llm/router.php) — ห้ามใช้ใน production
+  fake-llm:
+    build: .
+    container_name: dayflow-fake-llm
+    ports:
+      - "8091:8091"
+    volumes:
+      - .:/var/www/html
+      # php -S ใช้ OPcache แบบ production (ไม่ตรวจว่าไฟล์เปลี่ยน) แก้ router แล้วจะไม่มีผลจนรีสตาร์ท
+      - ./docker/php.dev.ini:/usr/local/etc/php/conf.d/zz-dayflow-dev.ini:ro
+    entrypoint: ["php", "-S", "0.0.0.0:8091", "/var/www/html/tests/fake-llm/router.php"]
+    restart: unless-stopped

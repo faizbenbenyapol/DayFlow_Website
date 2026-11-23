@@ -10,7 +10,8 @@
 let transactions = [];
 let editingTxnId = null;
 let financeChart = null;
-let chartData = [];
+let chartYear = { months: [], byCategory: [], top: [] }; // ข้อมูลกราฟของปีที่เลือก จาก /api/finance/chart
+let chartView = 'months';      // 'months', 'categories' หรือ 'top'
 let currentChartType = 'bar'; // 'bar' or 'line'
 let currentMonth = thisMonth(); // YYYY-MM
 let typeFilter = '';            // '', 'income' or 'expense'
@@ -270,78 +271,231 @@ function clearTransactionFilters() {
 
 /* ---------- the year chart ---------- */
 
+/** หมวดที่มีแท่งของตัวเองในมุมมองตามหมวด ที่เหลือรวมเป็นแท่ง "หมวดอื่น" ให้อ่านออกเมื่อมีหลายสิบหมวด */
+const MAX_CATEGORY_BARS = 9;
+/** ป้ายของแท่งแนวนอนยาวเกินนี้ (นับตัวอักษรที่ตาเห็น) ถูกตัดด้วย … ชื่อเต็มอยู่ใน tooltip และตาราง */
+const MAX_BAR_LABEL_CHARS = 18;
+/** ความมนของปลายแท่ง (px) ฝั่งที่ติดแกนยังเหลี่ยม แท่งจะได้ยืนบนเส้นฐาน */
+const BAR_RADIUS = 6;
+
+/** หัวข้อและคำอธิบาย canvas ของแต่ละมุมมอง (REQ-6) */
+const CHART_VIEWS = {
+    months:     { title: 'รายรับกับรายจ่ายตลอดปี',  label: 'กราฟรายรับและรายจ่ายรายเดือนตลอดปี' },
+    categories: { title: 'รายจ่ายตามหมวดทั้งปี',    label: 'กราฟรายจ่ายทั้งปีแยกตามหมวด เรียงจากมากไปน้อย' },
+    top:        { title: 'รายจ่ายก้อนใหญ่สุดของปี', label: 'กราฟรายจ่ายก้อนใหญ่สุด 10 อันดับของปี' },
+};
+
+const graphemes = new Intl.Segmenter('th', { granularity: 'grapheme' });
+
+/**
+ * โหลดข้อมูลทั้งสามมุมมองของปีที่เลือกใน request เดียว แล้ววาดมุมมองที่เปิดอยู่
+ * @param {string|number} year ปี ค.ศ. จากช่องเลือกปี
+ * โหลดไม่ได้ก็ปล่อยกราฟเดิมไว้ เพราะหน้านี้ใช้งานได้ครบโดยไม่มีกราฟ
+ */
 async function loadChart(year) {
     if (typeof Chart === 'undefined') return;
     try {
         const data = await apiFetch(BASE_URL + '/api/finance/chart?year=' + year);
-        chartData = data.chart || [];
+        chartYear = { months: data.chart || [], byCategory: data.by_category || [], top: data.top_expenses || [] };
         drawChart();
-    } catch { /* the page is complete without the chart */ }
+    } catch { /* ไม่มีกราฟ หน้านี้ก็ยังใช้ได้ครบ */ }
 }
 
+/**
+ * แปลงข้อมูลของปีเป็นแถวของมุมมองที่เลือก ใช้ทั้งวาดกราฟและเติมตาราง
+ * @returns {{label: string, income?: number, expense: number, note?: string}[]}
+ *   months 12 แถวเสมอ · categories มากไปน้อย ไม่เกิน 10 แถว · top ไม่เกิน 10 แถว
+ */
+function chartRows() {
+    if (chartView === 'categories') {
+        const all = chartYear.byCategory;
+        // เกินหนึ่งหมวดจึงรวม: แท่ง "หมวดอื่นอีก 1 หมวด" บอกน้อยกว่าชื่อหมวดนั้นเอง
+        const ownBars = all.length <= MAX_CATEGORY_BARS + 1 ? all : all.slice(0, MAX_CATEGORY_BARS);
+        const rows = ownBars.map(c => ({ label: c.name, expense: c.amount }));
+        const rest = all.slice(ownBars.length);
+        if (rest.length) rows.push({ label: 'หมวดอื่นอีก ' + rest.length + ' หมวด', expense: rest.reduce((sum, c) => sum + c.amount, 0) });
+        return rows;
+    }
+    if (chartView === 'top') {
+        return chartYear.top.map(t => ({ label: t.description || t.category, expense: t.amount, note: dayHeading(t.txn_date) + ' · ' + t.category }));
+    }
+    return chartYear.months.map(m => ({ label: THAI_MONTHS_SHORT[m.month - 1], income: m.income, expense: m.expense }));
+}
+
+/**
+ * วาดมุมมองที่เลือกใหม่ทั้งหมด เรียกเมื่อโหลดปี สลับมุมมองหรือแบบกราฟ และเมื่อธีมเปลี่ยน
+ * แก้หัวข้อ aria-label ปุ่มแท่ง/เส้น ข้อความตอนไม่มีข้อมูล และตารางสำหรับโปรแกรมอ่านหน้าจอไปด้วย
+ */
 function drawChart() {
     const canvas = document.getElementById('financeChart');
     if (!canvas || typeof Chart === 'undefined') return;
-    if (financeChart) financeChart.destroy();
+    if (financeChart) { financeChart.destroy(); financeChart = null; }
+
+    const view = CHART_VIEWS[chartView];
+    const rows = chartRows();
+    document.getElementById('chartTitle').textContent = view.title;
+    canvas.setAttribute('aria-label', view.label);
+    document.getElementById('chartTypeToggle').hidden = chartView !== 'months';
+    fillChartTable(view.title, rows);
+
+    // ไม่มีตัวเลขให้วาด: บอกเป็นข้อความแทนแกนเปล่า 0–1 (REQ-7)
+    const hasNumbers = rows.some(r => r.expense > 0 || r.income > 0);
+    const yearIsEmpty = chartYear.months.every(m => !m.income && !m.expense);
+    const empty = document.getElementById('chartEmpty');
+    canvas.hidden = !hasNumbers;
+    empty.hidden = hasNumbers;
+    empty.textContent = yearIsEmpty ? 'ยังไม่มีรายการในปีนี้' : 'ยังไม่มีรายจ่ายในปีนี้';
+    if (!hasNumbers) return;
 
     const theme = chartTheme();
+    financeChart = new Chart(canvas, chartView === 'months' ? monthsChartConfig(rows, theme) : rankingChartConfig(rows, theme));
+}
+
+/** กราฟรายรับคู่รายจ่ายรายเดือน แบบแท่งหรือเส้น มี legend เพราะมีสองชุดข้อมูล ชี้เดือนไหนเห็นทั้งสองค่า */
+function monthsChartConfig(rows, theme) {
     const line = currentChartType === 'line';
-    const dataset = (label, values, color) => ({
+    const series = (label, key, color) => ({
         label,
-        data: values,
+        data: rows.map(r => r[key]),
         backgroundColor: line ? withAlpha(color, 0.12) : color,
         borderColor: color,
         borderWidth: line ? 2 : 0,
-        tension: 0.3,
+        borderRadius: line ? 0 : BAR_RADIUS,
+        borderSkipped: 'start',
+        tension: 0.35,
         fill: line,
-        borderRadius: 0,
-        pointRadius: line ? 3 : 0,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        pointBackgroundColor: color,
     });
-
-    financeChart = new Chart(canvas, {
+    return {
         type: currentChartType,
         data: {
-            labels: chartData.map(c => THAI_MONTHS_SHORT[c.month - 1]),
-            datasets: [
-                dataset('รายรับ', chartData.map(c => c.income), theme.income),
-                dataset('รายจ่าย', chartData.map(c => c.expense), theme.expense),
-            ],
+            labels: rows.map(r => r.label),
+            datasets: [series('รายรับ', 'income', theme.chartIncome), series('รายจ่าย', 'expense', theme.chartExpense)],
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             animation: chartAnimation(),
+            interaction: { mode: 'index', intersect: false },
+            // barPercentage < 1 เว้นช่องระหว่างแท่งรับกับแท่งจ่ายของเดือนเดียวกัน
+            datasets: { bar: { categoryPercentage: 0.7, barPercentage: 0.88, maxBarThickness: 22 } },
             plugins: {
                 legend: {
                     position: 'top',
                     align: 'end',
-                    labels: { usePointStyle: false, boxWidth: 12, boxHeight: 12, padding: 16, font: { family: theme.font, size: 13 }, color: theme.ink },
+                    labels: { usePointStyle: true, pointStyle: 'rectRounded', boxWidth: 10, boxHeight: 10, padding: 16, font: { family: theme.font, size: 13 }, color: theme.ink },
                 },
-                tooltip: {
-                    padding: 10,
-                    cornerRadius: 6,
-                    backgroundColor: theme.ink,
-                    titleColor: theme.paper,
-                    bodyColor: theme.paper,
-                    titleFont: { family: theme.font, size: 13, weight: '500' },
-                    bodyFont: { family: theme.font, size: 13 },
-                    callbacks: { label: ctx => ' ' + ctx.dataset.label + ': ' + formatMoney(ctx.parsed.y) + ' บาท' },
-                },
+                tooltip: chartTooltip(theme, { label: ctx => ' ' + ctx.dataset.label + ' ' + formatMoney(ctx.parsed.y) + ' บาท' }),
             },
-            scales: {
-                x: { ticks: { font: { family: theme.font, size: 12 }, color: theme.pencil, maxRotation: 0, autoSkip: true }, grid: { display: false }, border: { color: theme.pencil } },
-                y: { ticks: { font: { family: theme.font, size: 12 }, color: theme.pencil, callback: v => Number(v).toLocaleString('th-TH') }, grid: { color: theme.rule }, border: { display: false } },
-            },
+            scales: { x: labelAxis(theme, { maxRotation: 0, autoSkip: true }), y: moneyAxis(theme) },
         },
+    };
+}
+
+/** แท่งแนวนอนชุดเดียว เรียงมากไปน้อย ไม่มี legend เพราะหัวข้อบอกแล้วว่าเป็นรายจ่าย */
+function rankingChartConfig(rows, theme) {
+    return {
+        type: 'bar',
+        data: {
+            labels: rows.map(r => shortLabel(r.label)),
+            datasets: [{ label: 'รายจ่าย', data: rows.map(r => r.expense), backgroundColor: theme.chartExpense, borderRadius: BAR_RADIUS, borderSkipped: 'start', maxBarThickness: 18 }],
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: chartAnimation(),
+            plugins: {
+                legend: { display: false },
+                tooltip: chartTooltip(theme, {
+                    title: items => rows[items[0].dataIndex].label,
+                    label: ctx => ' ' + formatMoney(ctx.parsed.x) + ' บาท',
+                    footer: items => rows[items[0].dataIndex].note || '',
+                }),
+            },
+            scales: { x: moneyAxis(theme), y: labelAxis(theme, { autoSkip: false }) },
+        },
+    };
+}
+
+/** ตัดป้ายที่ยาวเกิน MAX_BAR_LABEL_CHARS ทีละตัวอักษรที่ตาเห็น สระและวรรณยุกต์ไทยจึงไม่หลุดจากพยัญชนะ */
+function shortLabel(text) {
+    const chars = Array.from(graphemes.segment(text), g => g.segment);
+    return chars.length > MAX_BAR_LABEL_CHARS ? chars.slice(0, MAX_BAR_LABEL_CHARS - 1).join('') + '…' : text;
+}
+
+/** กล่อง tooltip สีกระดาษขอบบาง เข้ากับการ์ดของหน้า แทนกล่องดำของ Chart.js */
+function chartTooltip(theme, callbacks) {
+    return {
+        padding: 12,
+        cornerRadius: 10,
+        boxPadding: 4,
+        usePointStyle: true,
+        backgroundColor: theme.paper,
+        borderColor: theme.rule,
+        borderWidth: 1,
+        titleColor: theme.ink,
+        bodyColor: theme.ink,
+        footerColor: theme.pencil,
+        titleFont: { family: theme.font, size: 13, weight: '600' },
+        bodyFont: { family: theme.font, size: 13 },
+        footerFont: { family: theme.font, size: 12, weight: '400' },
+        callbacks,
+    };
+}
+
+/** แกนจำนวนเงิน เริ่มที่ 0 เส้น grid ประบางสีเส้นบรรทัดของธีม ไม่มีเส้นขอบแกน */
+function moneyAxis(theme) {
+    return {
+        beginAtZero: true,
+        ticks: { font: { family: theme.font, size: 12 }, color: theme.pencil, callback: v => Number(v).toLocaleString('th-TH') },
+        grid: { color: theme.rule },
+        border: { display: false, dash: [3, 4] },
+    };
+}
+
+/** แกนป้าย (เดือน หมวด หรือรายการ) ไม่มี grid ขอบแกนสีเส้นบรรทัด */
+function labelAxis(theme, ticks) {
+    return {
+        ticks: { font: { family: theme.font, size: 12 }, color: theme.pencil, ...ticks },
+        grid: { display: false },
+        border: { color: theme.rule },
+    };
+}
+
+/** เติมตาราง sr-only ด้วยตัวเลขชุดเดียวกับกราฟ ให้โปรแกรมอ่านหน้าจออ่านได้ (canvas อ่านไม่ได้) */
+function fillChartTable(title, rows) {
+    const table = document.getElementById('chartTable');
+    if (!table) return;
+    const withIncome = chartView === 'months';
+    const head = '<tr><th scope="col">รายการ</th>' + (withIncome ? '<th scope="col">รายรับ (บาท)</th>' : '') + '<th scope="col">รายจ่าย (บาท)</th></tr>';
+    const body = rows.map(r => '<tr><th scope="row">' + escHtml(r.note ? r.label + ' (' + r.note + ')' : r.label) + '</th>'
+        + (withIncome ? '<td>' + formatMoney(r.income) + '</td>' : '') + '<td>' + formatMoney(r.expense) + '</td></tr>').join('');
+    table.innerHTML = '<caption>' + escHtml(title) + '</caption>' + head + body;
+}
+
+/** ตั้ง aria-pressed ให้ปุ่มเดียวในกลุ่มที่ค่าตรงกัน (ปุ่มแบบเลือกได้ทีละอัน) */
+function markPressed(groupId, dataKey, value) {
+    document.querySelectorAll('#' + groupId + ' button').forEach(btn => {
+        btn.setAttribute('aria-pressed', btn.dataset[dataKey] === value ? 'true' : 'false');
     });
 }
 
+/** สลับมุมมอง รายเดือน / ตามหมวด / ก้อนใหญ่สุด จากข้อมูลที่โหลดไว้แล้ว ไม่ยิง request ใหม่ */
+function changeChartView(view) {
+    if (chartView === view || !CHART_VIEWS[view]) return;
+    chartView = view;
+    markPressed('chartViewToggle', 'chartView', view);
+    drawChart();
+}
+
+/** สลับกราฟรายเดือนระหว่างแท่งกับเส้น */
 function changeChartType(type) {
     if (currentChartType === type) return;
     currentChartType = type;
-    document.querySelectorAll('#chartTypeToggle button').forEach(btn => {
-        btn.setAttribute('aria-pressed', btn.dataset.chartType === type ? 'true' : 'false');
-    });
+    markPressed('chartTypeToggle', 'chartType', type);
     drawChart();
 }
 

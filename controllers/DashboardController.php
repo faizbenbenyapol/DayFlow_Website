@@ -52,6 +52,8 @@ class DashboardController
 
         $userId = Auth::userId();
         $layout  = DashboardLayout::getForUser($userId);
+        // ตัดสินการ์ดต้อนรับตั้งแต่ render หน้า ไม่ให้บัญชีใหม่เห็นกลุ่ม "วันนี้" แวบหนึ่งก่อน summary มาถึง
+        $welcome = Task::shouldWelcome($userId);
 
         require ROOT . '/views/layout/header.php';
         require ROOT . '/views/dashboard/index.php';
@@ -65,37 +67,26 @@ class DashboardController
         $need = array_flip($this->requestedModules());
         $payload = [];
 
-        // Tasks: upcoming and overdue
+        // Tasks: ค้าง, วันนี้, และงานโปรเจกต์ที่มอบให้ฉัน
+        // ใช้ 6 คำสั่งคงที่ ไม่ขยายตามจำนวนงานหรือโปรเจกต์
         if (isset($need['tasks'])) {
-            $tasks = $this->safeModule('tasks', fn() => DB::run(
-                'SELECT id, title, due_date, status, quadrant
-                 FROM tasks
-                 WHERE user_id = ? AND status = "open"
-                   AND due_date IS NOT NULL
-                   AND due_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)
-                 ORDER BY due_date ASC
-                 LIMIT 5',
-                [$userId]
-            )->fetchAll(), $warnings, []);
-
             $overdueCount = (int)$this->safeModule('tasks', fn() => DB::run(
                 'SELECT COUNT(*) FROM tasks
                  WHERE user_id = ? AND status = "open" AND due_date < CURDATE()',
                 [$userId]
             )->fetchColumn(), $warnings, 0);
 
-            // What the Today page lists: everything overdue, and everything due today.
             $overdueItems = $this->safeModule('tasks', fn() => DB::run(
-                'SELECT id, title, due_date, quadrant FROM tasks
+                'SELECT id, title, due_date, repeat_rule FROM tasks
                  WHERE user_id = ? AND status = "open" AND due_date < CURDATE()
-                 ORDER BY due_date ASC, id ASC LIMIT 20',
+                 ORDER BY due_date ASC, id ASC LIMIT 100',
                 [$userId]
             )->fetchAll(), $warnings, []);
 
             $todayItems = $this->safeModule('tasks', fn() => DB::run(
                 'SELECT id, title, due_date, quadrant FROM tasks
                  WHERE user_id = ? AND status = "open" AND due_date = CURDATE()
-                 ORDER BY quadrant ASC, position ASC, id ASC LIMIT 20',
+                 ORDER BY day_position ASC, id ASC LIMIT 100',
                 [$userId]
             )->fetchAll(), $warnings, []);
 
@@ -105,12 +96,29 @@ class DashboardController
                 [$userId]
             )->fetchColumn(), $warnings, 0);
 
+            $myProjectItems = $this->safeModule('tasks', fn() => DB::run(
+                'SELECT pt.id, pt.title, pt.due_date, pt.status, pt.project_id, p.name AS project_name,
+                        CASE WHEN p.user_id = ? OR pm.role IN ("Owner", "Editor") THEN 1 ELSE 0 END AS can_edit
+                 FROM project_tasks pt
+                 JOIN projects p ON p.id = pt.project_id
+                 LEFT JOIN project_members pm ON pm.project_id = pt.project_id AND pm.user_id = ?
+                 WHERE pt.assignee_user_id = ?
+                   AND pt.status <> "Done"
+                   AND pt.due_date <= CURDATE()
+                   AND (p.user_id = ? OR pm.user_id = ?)
+                 ORDER BY pt.due_date ASC, pt.id ASC',
+                [$userId, $userId, $userId, $userId, $userId]
+            )->fetchAll(), $warnings, []);
+
+            $welcome = (bool)$this->safeModule('tasks', fn() => Task::shouldWelcome($userId), $warnings, false);
+
             $payload['tasks'] = [
-                'overdue'       => $overdueCount,
-                'due_today'     => $dueToday,
-                'items'         => $tasks,
-                'overdue_items' => $overdueItems,
-                'today_items'   => $todayItems,
+                'overdue'          => $overdueCount,
+                'due_today'        => $dueToday,
+                'overdue_items'    => $overdueItems,
+                'today_items'      => $todayItems,
+                'my_project_items' => $myProjectItems,
+                'welcome'          => $welcome,
             ];
         }
 
@@ -314,6 +322,8 @@ class DashboardController
                 // the page can tell how long ago they were without knowing
                 // the server's time zone.
                 'server_time'  => date('Y-m-d H:i:s'),
+                // วันที่ของเซิร์ฟเวอร์สำหรับเปรียบเทียบกับ data-today ที่หน้า render ไว้
+                'today'        => date('Y-m-d'),
                 'partial'  => !empty($warnings),
                 'warnings' => array_values(array_unique($warnings)),
                 'modules'  => array_keys($need),

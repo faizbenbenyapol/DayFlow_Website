@@ -19,6 +19,8 @@
 // =====================================================
 
 require_once ROOT . '/models/LegacyTaskMapper.php';
+// scripts/demo-reset.php ไม่มี autoloader และนำเข้าผ่านคลาสนี้ (Task::rememberHadTask)
+require_once ROOT . '/models/Task.php';
 
 final class AccountData
 {
@@ -66,9 +68,9 @@ final class AccountData
     private const UUID_IDS = ['skills', 'skill_logs'];
 
     /** user_settings columns a backup may carry. Telegram credentials are not among them. */
-    private const SETTINGS = ['theme', 'day_color', 'desk', 'language', 'timezone', 'telegram_notify_events', 'hidden_menus', 'menu_order', 'mobile_tabs'];
+    private const SETTINGS = ['theme', 'day_color', 'desk', 'language', 'timezone', 'telegram_notify_events', 'hidden_menus', 'menu_order', 'mobile_tabs', 'menu_layout'];
 
-    private const JSON_SETTINGS = ['telegram_notify_events', 'hidden_menus', 'menu_order', 'mobile_tabs'];
+    private const JSON_SETTINGS = ['telegram_notify_events', 'hidden_menus', 'menu_order', 'mobile_tabs', 'menu_layout'];
 
     /**
      * ส่งออกข้อมูลผู้ใช้เป็นไฟล์ JSON ที่ย้ายไปบัญชีอื่นได้
@@ -179,6 +181,7 @@ final class AccountData
             }
 
             if ($hasSettings) self::importSettings($userId, $data['settings']);
+            if (($counts['tasks'] ?? 0) > 0) Task::rememberHadTask($userId);
 
             $conn->commit();
             return $counts;

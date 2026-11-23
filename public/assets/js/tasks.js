@@ -24,6 +24,13 @@ document.addEventListener('DOMContentLoaded', async function () {
     initTaskDialogExtras();
 });
 
+// จดงานจากช่อง quick-add ที่หน้าอื่น: โหลดรายการใหม่ถ้าเป็นงาน
+document.addEventListener('dayflow:added', function (event) {
+    if (event.detail?.kind === 'task') {
+        loadTasks();
+    }
+});
+
 // ถ้ากำลังอยู่บนหน้า /tasks แล้วคลิกผลค้นหา เบราว์เซอร์เปลี่ยนแค่ hash ไม่โหลดหน้าใหม่ จึงต้องโหลดงานเอง
 window.addEventListener('hashchange', function () {
     if (!/^#task-\d+$/.test(location.hash) && location.hash !== '#inbox') return;
@@ -321,14 +328,12 @@ function handleDragEnd() {
 /* --- Toggle done/open --- */
 async function toggleTask(id, isDone) {
     try {
-        const result = await apiFetch(BASE_URL + '/api/tasks/' + id, {
+        await apiFetch(BASE_URL + '/api/tasks/' + id, {
             method: 'PUT',
             body:   JSON.stringify({ status: isDone ? 'done' : 'open' })
         });
+        // ไม่มีป๊อปอัพบอกว่าสำเร็จ: งานรอบถัดไปของงานทำซ้ำขึ้นในรายการที่โหลดใหม่ให้เห็นเอง
         await loadTasks();
-        if (result && result.next_task) {
-            toast('สร้างรอบถัดไปแล้ว: ' + formatDate(result.next_task.due_date));
-        }
     } catch {
         toast('อัปเดตสถานะไม่สำเร็จ', 'danger');
         await loadTasks(); // restore

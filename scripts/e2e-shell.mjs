@@ -52,7 +52,7 @@ const api = (tab, path, options = {}) => tab.eval(`(async () => {
 
 async function main() {
     const { cdp, stop } = await launch();
-    const made = { tasks: [], items: [], finance: [], todos: [], events: [], subs: [], stocks: [], bookmarks: [], foods: [], workouts: [], skills: [], notes: [], files: [], appShares: [], projects: [], focus: [] };
+    const made = { tasks: [], finance: [], todos: [], events: [], subs: [], stocks: [], bookmarks: [], foods: [], workouts: [], skills: [], notes: [], files: [], appShares: [], projects: [], focus: [] };
     let tab;
 
     try {
@@ -92,13 +92,13 @@ async function main() {
 
         await click(tab, '#quickSubmit');
         await sleep(300);
-        check(await tab.eval(`!document.getElementById('quickError').hidden`), 'an empty title shows an error');
+        check(await tab.eval(`document.getElementById('quickStatus').textContent === 'พิมพ์งานก่อน'`), 'an empty title shows an error');
         check(await tab.eval(`document.getElementById('quickSheet').open`), 'and the sheet stays open');
 
         await fill(tab, '#qaTaskTitle', `ทดสอบ ${STAMP}`);
         await click(tab, '#quickSubmit');
         await sleep(900);
-        check(await tab.eval(`!document.getElementById('quickSheet').open`), 'a title sends and closes the sheet');
+        check(await tab.eval(`document.getElementById('quickSheet').open`), 'a title sends and the sheet stays open');
 
         let list = await api(tab, '/api/tasks');
         // Tasks come back grouped by quadrant.
@@ -106,24 +106,38 @@ async function main() {
         check(!!task, 'the task reached the server');
         if (task) made.tasks.push(task.id);
 
-        // ---------- a quick note ----------
+        // ---------- capture from any page (task tab) ----------
         await tab.goto(BASE + '/bookmarks'); // a page that does not reload itself
         await tab.settle();
         await tab.eval(`window.openQuickAdd('note')`);
         await sleep(200);
-        check(await tab.eval(`document.getElementById('qaPane-note').hidden`) === false, 'openQuickAdd("note") shows the note tab');
-        await fill(tab, '#qaNoteContent', `จดทดสอบ ${STAMP}`);
-        check((await tab.eval(`document.getElementById('qaNoteCount').textContent`)).startsWith(String(`จดทดสอบ ${STAMP}`.length)), 'the counter follows the text');
-        await click(tab, '#quickSubmit');
+        check(await tab.eval(`document.getElementById('qaPane-task').hidden`) === false, 'openQuickAdd("note") now opens the task tab');
+        await fill(tab, '#qaTaskTitle', `จดจากหน้าอื่น ${STAMP}`);
+        await key(tab, 'Enter');
         await sleep(800);
-        list = await api(tab, '/api/quick-items');
-        const note = (list.body.items || []).find(i => (i.content || '').includes(STAMP));
-        check(!!note, 'the quick note reached the server');
-        if (note) made.items.push(note.id);
+        check(await tab.eval(`document.getElementById('quickSheet').open`), 'Enter keeps the sheet open');
+        check(await tab.eval(`document.activeElement.id`) === 'qaTaskTitle', 'the cursor stays in the input');
+        check(await tab.eval(`document.getElementById('qaTaskTitle').value`) === '', 'the input is cleared');
+        check(await tab.eval(`document.getElementById('quickStatus').textContent.includes('บันทึก')`), 'a success status is shown');
+        list = await api(tab, '/api/tasks');
+        const captured = Object.values(list.body.quadrants || {}).flat().find(t => t.title === `จดจากหน้าอื่น ${STAMP}`);
+        check(!!captured && captured.quadrant === null, 'the task lands in the inbox by default');
+        if (captured) made.tasks.push(captured.id);
+
+        // Today chip sets the due date.
+        await click(tab, 'input[name="qa_when"][value="today"]');
+        await fill(tab, '#qaTaskTitle', `จดวันนี้ ${STAMP}`);
+        await key(tab, 'Enter');
+        await sleep(800);
+        const serverToday = await tab.eval('document.documentElement.dataset.today');
+        const todayCaptured = Object.values((await api(tab, '/api/tasks')).body.quadrants || {}).flat().find(t => t.title === `จดวันนี้ ${STAMP}`);
+        check(!!todayCaptured && todayCaptured.due_date === serverToday, 'today chip sets due date to server today');
+        if (todayCaptured) made.tasks.push(todayCaptured.id);
 
         // ---------- an expense ----------
         await tab.eval(`window.openQuickAdd('money')`);
         await sleep(600);
+        check(await tab.eval(`document.querySelector('#quickSheet [role="tab"][aria-selected="true"]').dataset.kind`) === 'money', 'openQuickAdd("money") opens the money tab');
         check(await tab.eval(`document.getElementById('quickSubmit').textContent`) === 'บันทึกรายจ่าย', 'the button names what it does');
         await click(tab, 'input[name="type"][value="income"]');
         check(await tab.eval(`document.getElementById('quickSubmit').textContent`) === 'บันทึกรายรับ', 'switching to income renames it');
@@ -131,7 +145,7 @@ async function main() {
         await fill(tab, '#qaAmount', 'abc');
         await click(tab, '#quickSubmit');
         await sleep(300);
-        check(await tab.eval(`!document.getElementById('quickError').hidden`), 'a non-number amount is refused');
+        check(await tab.eval(`!document.getElementById('quickStatus').hidden`), 'a non-number amount is refused');
         await fill(tab, '#qaAmount', '123.45');
         await fill(tab, '#qaDescription', `ทดสอบ ${STAMP}`);
         await click(tab, '#quickSubmit');
@@ -157,6 +171,25 @@ async function main() {
         check(!(await tab.eval(`document.getElementById('todayTally').textContent`)).includes('undefined'), 'the summary line has no gaps');
         check(await tab.eval(`!!document.getElementById('todayError')`) === false, 'there is no error banner');
         check(await tab.eval(`document.querySelectorAll('.task-tick').length`) >= 1, 'tasks are listed');
+
+        // Thai keyboard layout: the same physical N key produces 'ื'.
+        await tab.eval(`document.getElementById('quickSheet')?.close()`);
+        await sleep(200);
+        await tab.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ื', code: 'KeyN' });
+        await tab.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ื', code: 'KeyN' });
+        await sleep(400);
+        check(await tab.eval(`document.getElementById('quickSheet').open`), 'Thai-layout N key opens the quick-add sheet');
+        await tab.eval(`document.getElementById('quickSheet').close()`);
+
+        // Dvorak: the physical N key types b, which is not the shortcut; the key that types n (physical L) is.
+        for (const [typed, code, opens] of [['b', 'KeyN', false], ['n', 'KeyL', true]]) {
+            await sleep(200);
+            await tab.send('Input.dispatchKeyEvent', { type: 'keyDown', key: typed, code });
+            await tab.send('Input.dispatchKeyEvent', { type: 'keyUp', key: typed, code });
+            await sleep(400);
+            check(await tab.eval(`document.getElementById('quickSheet').open`) === opens, `Dvorak "${typed}" on ${code} ${opens ? 'opens' : 'does not open'} the quick-add sheet`);
+            await tab.eval(`document.getElementById('quickSheet').close()`);
+        }
 
         // A task: tick it, check the server, put it back.
         const firstTask = await tab.eval(`document.querySelector('.task-tick').closest('[data-task]').dataset.task`);
@@ -239,6 +272,22 @@ async function main() {
         await tab.eval(`document.querySelector('#editTaskModal [data-close-modal]').click()`);
 
         console.log('Planner');
+        // A browser clock on another day than the server. UTC+14 and UTC-11 are 25 hours apart, so they are
+        // never on the same date and the server's day matches at most one of them, whatever its time zone.
+        // Choosing by the UTC hour assumed a UTC server and failed on Bangkok time from midnight to 7am.
+        let plannerDay;
+        for (const timezoneId of ['Pacific/Kiritimati', 'Pacific/Pago_Pago']) {
+            await tab.send('Emulation.setTimezoneOverride', { timezoneId });
+            await tab.goto(BASE + '/planner');
+            await tab.settle();
+            plannerDay = await tab.eval(`({ server: document.documentElement.dataset.today, local: new Date().getDate(),
+                today: document.querySelector('.calendar-cell.today .calendar-day-number')?.textContent, sheet: document.getElementById('dayNum').textContent })`);
+            if (plannerDay.local !== Number(plannerDay.server.slice(8))) break;
+        }
+        check(plannerDay.local !== Number(plannerDay.server.slice(8)), 'the browser clock is on another day than the server', JSON.stringify(plannerDay));
+        check(plannerDay.today === String(Number(plannerDay.server.slice(8))), 'the grid marks the server\'s today', JSON.stringify(plannerDay));
+        check(plannerDay.sheet === plannerDay.today, 'and the day sheet opens on it', JSON.stringify(plannerDay));
+        await tab.send('Emulation.setTimezoneOverride', { timezoneId: process.env.E2E_TZ || 'UTC' });
         await tab.goto(BASE + '/planner');
         await tab.settle();
         check(await tab.eval(`document.querySelectorAll('.calendar-cell').length`) >= 35, 'the month grid is drawn');
@@ -371,14 +420,16 @@ async function main() {
         check(await tab.eval(`document.getElementById('monthLabel').textContent`) === monthBefore, '"กลับมาเดือนนี้" returns');
 
         await click(tab, 'input[name="qaType"][value="income"]');
+        await sleep(200);
+        check(await tab.eval(`document.getElementById('qaSubmit').textContent`) === 'บันทึกรายรับ', 'switching to income renames the finance button');
         await fill(tab, '#finAmount', '123.45');
         await fill(tab, '#qaDesc', `รับทดสอบ ${STAMP}`);
         await click(tab, '#qaSubmit');
-        await sleep(900);
+        await sleep(1200);
         check(await tab.eval(`document.getElementById('transactionList').textContent.includes(${JSON.stringify(`รับทดสอบ ${STAMP}`)})`), 'an entry added on the line appears in the list');
         const monthList = await api(tab, '/api/finance?month=' + new Date().toISOString().slice(0, 7));
-        const money = (monthList.body.transactions || []).find(t => (t.description || '').includes(STAMP));
-        check(!!money && money.type === 'income', 'it reached the server as income');
+        const money = (monthList.body.transactions || []).find(t => (t.description || '') === `รับทดสอบ ${STAMP}`);
+        check(!!money && money.type === 'income', 'it reached the server as income', JSON.stringify(money));
         if (money) made.finance.push(money.id);
 
         await click(tab, '#typeFilter [data-type="expense"]');
@@ -661,7 +712,8 @@ async function main() {
         await tab.goto(BASE + '/transfer');
         await tab.settle();
         check(await tab.eval(`document.querySelector('[data-panel="send"]').hidden`) === false, 'it opens on the send tab');
-        check(await tab.eval(`document.getElementById('sendDrop').textContent.includes('MB')`), 'the real size limit is shown');
+        check(await tab.eval(`document.getElementById('sendDrop').textContent.includes('10 GB') && document.querySelector('.tf-panels').dataset.maxBytes === String(10 * 1024 ** 3)`), 'the real size limit is shown');
+        check(await tab.eval(`document.getElementById('btnSend').disabled`), 'nothing chosen and no message: nothing to send');
         await click(tab, '#tfTabs [data-tab="receive"]');
         await sleep(200);
         check(await tab.eval(`document.getElementById('btnReceive').disabled`), 'the receive button waits for six digits');
@@ -717,7 +769,8 @@ async function main() {
         await sleep(300);
         check(await tab.eval(`document.querySelector('.settings-tab[aria-selected="true"]').dataset.tab`) === 'profile', 'it opens on the profile topic');
         check(await tab.eval(`document.querySelectorAll('.settings-pane:not([hidden])').length`) === 1, 'only one pane is shown');
-        check(await tab.eval(`document.querySelectorAll('.settings-tab').length`) === 14, 'every topic is listed');
+        // ทุก pane มีแท็บของตัวเอง เทียบกันเอง ไม่ใช้ตัวเลขตายตัว เพิ่มหัวข้อแล้วไม่ต้องตามแก้
+        check(await tab.eval(`document.querySelectorAll('.settings-tab').length === document.querySelectorAll('.settings-pane').length && document.querySelectorAll('.settings-tab').length >= 15`), 'every topic is listed');
         await click(tab, '.settings-tab[data-tab="categories"]');
         await sleep(600);
         check(await tab.eval(`document.getElementById('tab-categories').hidden`) === false, 'a topic opens its pane');
@@ -750,7 +803,7 @@ async function main() {
         check(!(await tab.eval(`!!document.querySelector('#appFlags [data-place="life"]')`)), 'a place with every page hidden loses its tab');
         check(await tab.eval(`document.querySelectorAll('#appFlags .flag').length`) === 4, 'the other tabs stay');
         // Put the choice back.
-        const everyMenu = ['tasks', 'projects', 'planner', 'habits', 'focus', 'skills', 'exercise', 'food-notes', 'finance', 'subscriptions', 'stocks', 'notes', 'quick-notes', 'bookmarks', 'files', 'transfer', 'file-tools', 'ai', 'calculator'];
+        const everyMenu = ['tasks', 'projects', 'planner', 'habits', 'focus', 'skills', 'exercise', 'food-notes', 'finance', 'subscriptions', 'stocks', 'notes', 'bookmarks', 'files', 'transfer', 'file-tools', 'ai', 'calculator'];
         await api(tab, '/api/settings/menus', { method: 'POST', body: JSON.stringify({ menus: everyMenu, order: everyMenu }) });
 
         await click(tab, '.settings-tab[data-tab="app-shares"]');
@@ -796,6 +849,24 @@ async function main() {
         const newProject = (projectList.body.projects || []).find(p => p.name.includes(STAMP));
         check(!!newProject, 'it reached the server');
         if (newProject) made.projects.push(newProject.id);
+
+        // ?project=<id> opens that board, not the first project in the list (the Today page's ↗ links here).
+        const second = await api(tab, '/api/projects', { method: 'POST', body: JSON.stringify({ name: `อีกโปรเจค ${STAMP}` }) });
+        if (second.body?.id) made.projects.push(second.body.id);
+        // The older project first: the list is newest-first, so only that one would fall back to the wrong board.
+        for (const [id, name] of [[newProject?.id, `โปรเจค ${STAMP}`], [second.body?.id, `อีกโปรเจค ${STAMP}`]]) {
+            await tab.goto(`${BASE}/projects?project=${id}`);
+            await sleep(1500);
+            check(await tab.eval(`document.getElementById('activeProjectTitle').textContent.trim()`) === name, `?project= opens "${name}"`);
+        }
+        check(await tab.eval(`location.search`) === `?project=${second.body?.id}`, 'the URL keeps ?project= while that project is open');
+        // Opening another project drops the stale ?project=, so a reload stays on the one in view.
+        await click(tab, `.proj-row[data-args="[${newProject?.id}]"]`);
+        await sleep(1500);
+        check(await tab.eval(`location.search`) === '', 'opening another project clears ?project= from the URL', await tab.eval(`location.href`));
+        // Back on the newer project, where the steps below expect to start.
+        await tab.goto(`${BASE}/projects?project=${second.body?.id}`);
+        await sleep(1500);
 
         await click(tab, '[data-act="toggleQuickAddForm"][data-args=\'["To Do"]\']');
         await sleep(200);
@@ -907,7 +978,8 @@ async function main() {
             check(await anon.eval(`document.querySelector('.share-topbar').textContent.includes('อ่านอย่างเดียว')`), 'under a bar that says it is read-only');
             check(await anon.eval(`document.querySelector('.share-topbar-link[aria-current="page"]')?.textContent`) === 'งาน', 'and marks the page that is open');
             check(await anon.eval(`!document.getElementById('appFlags')`), 'with no index tabs');
-            check(await anon.eval(`Math.round(document.querySelector('.share-topbar').getBoundingClientRect().width) === window.innerWidth`), 'the bar runs across the whole top');
+            // เทียบกับ body ไม่ใช่ innerWidth: html จองที่แถบเลื่อนไว้เสมอ (scrollbar-gutter) แถบเต็มหน้าจึงหยุดตรงนั้น
+            check(await anon.eval(`Math.round(document.querySelector('.share-topbar').getBoundingClientRect().width) === Math.round(document.body.getBoundingClientRect().width)`), 'the bar runs across the whole top');
             await anon.goto(BASE + '/exit-share');
 
             // ---------- sign in ----------
@@ -984,6 +1056,96 @@ async function main() {
             await cdp.send('Target.disposeBrowserContext', { browserContextId }).catch(() => {});
         }
 
+        // ---------- a new account: the welcome, then focus from a task (REQ-21, 23, EDGE-16) ----------
+        console.log('New account');
+        const fresh = await cdp.send('Target.createBrowserContext');
+        const freshTarget = await cdp.send('Target.createTarget', { url: 'about:blank', browserContextId: fresh.browserContextId });
+        const freshSession = (await cdp.send('Target.attachToTarget', { targetId: freshTarget.targetId, flatten: true })).sessionId;
+        await cdp.send('Page.enable', {}, freshSession);
+        await cdp.send('Runtime.enable', {}, freshSession);
+        const newbie = new Tab(cdp, freshSession);
+        await newbie.send('Emulation.setTimezoneOverride', { timezoneId: process.env.E2E_TZ || 'UTC' });
+        await newbie.viewport({ width: 1366, height: 900, mobile: false });
+        const newbiePassword = 'Newbie-' + STAMP + '-9x';
+        const welcomeOn = `!document.querySelector('[data-subsection="welcome"]').hidden`;
+
+        try {
+            await newbie.goto(BASE + '/login');
+            await click(newbie, '#tabRegister');
+            await fill(newbie, '#regDisplayName', 'มือใหม่');
+            await fill(newbie, '#regUsername', 'newbie' + STAMP.replace(/\W/g, ''));
+            await fill(newbie, '#regEmail', 'newbie-' + STAMP + '@example.test');
+            await fill(newbie, '#regPassword', newbiePassword);
+            await fill(newbie, '#regConfirm', newbiePassword);
+            await click(newbie, '#registerBtn');
+            await sleep(2500);
+            await newbie.settle();
+            check(await newbie.eval(`location.pathname`) === '/', 'a new account lands on today');
+            check(await newbie.eval(welcomeOn), 'and is welcomed');
+            check(await newbie.eval(`document.querySelectorAll('.welcome-steps li').length`) === 3, 'with three steps, no more');
+            check(await newbie.eval(`document.querySelector('[data-subsection="today"]').hidden && document.querySelector('[data-subsection="empty"]').hidden`), 'instead of an empty list');
+
+            const firstTitle = `งานแรก ${STAMP}`;
+            await fill(newbie, '#welcomeAddTask', firstTitle);
+            await newbie.eval(`document.getElementById('welcomeAddTask').focus()`);
+            await key(newbie, 'Enter');
+            await sleep(1500);
+            check(!(await newbie.eval(welcomeOn)), 'the first task ends the welcome');
+            check(await newbie.eval(`document.querySelector('[data-subsection="today"]').textContent.includes(${JSON.stringify(firstTitle)})`), 'and it is on today at once');
+            check(await newbie.eval(`document.activeElement.id`) === 'todayAddTask', 'the cursor moves on to today\'s add line');
+
+            const firstId = Number(await newbie.eval(`document.querySelector('[data-subsection="today"] [data-task]')?.dataset.task`));
+            check(await newbie.eval(`document.querySelector('[data-task="${firstId}"] a[href$="/focus?task=${firstId}"]')?.getAttribute('aria-label')`) === `โฟกัส: ${firstTitle}`, 'the task has a focus button named for it');
+            await click(newbie, `[data-task="${firstId}"] a[href$="/focus?task=${firstId}"]`);
+            await sleep(1500);
+            await newbie.settle();
+            check(await newbie.eval(`location.pathname + location.search`) === `/focus?task=${firstId}`, 'it opens Focus');
+            check(Number(await newbie.eval(`document.getElementById('selectFocusTask').value`)) === firstId, 'with that task chosen');
+            check(await newbie.eval(`!document.getElementById('timerTask').hidden && document.getElementById('timerTask').textContent`) === firstTitle, 'and its name on the timer');
+
+            // A round that ends in a moment: the page resumes a running timer from storage, as after a reload.
+            await newbie.eval(`localStorage.setItem('dayflow.focus', JSON.stringify({ mode: 'work', endsAt: Date.now() + 1500, total: 60 }))`);
+            await newbie.goto(`${BASE}/focus?task=${firstId}`);
+            await sleep(3500);
+            const round = (await api(newbie, '/api/focus')).body.sessions?.[0];
+            check(Number(round?.task_id) === firstId && round?.task_title === firstTitle, 'the finished round is tied to the task', JSON.stringify(round));
+
+            const late = (await api(newbie, '/api/tasks', { method: 'POST', body: JSON.stringify({ title: `ค้าง ${STAMP}`, quadrant: 1, due_date: '2020-01-01' }) })).body.task;
+            await newbie.goto(BASE + '/');
+            await newbie.settle();
+            await sleep(800);
+            check(await newbie.eval(`!!document.querySelector('[data-subsection="overdue"] [data-task="${late?.id}"] a[href$="/focus?task=${late?.id}"]')`), 'an overdue task has the focus button too');
+
+            // A running round belongs to the task it started on, wherever Focus is reopened from.
+            await newbie.goto(`${BASE}/focus?task=${firstId}`);
+            await newbie.settle();
+            await click(newbie, '#btnStartStop');
+            await sleep(500);
+            await newbie.goto(BASE + '/focus');
+            await newbie.settle();
+            check(Number(await newbie.eval(`document.getElementById('selectFocusTask').value`)) === firstId, 'a running round keeps its task when Focus is opened from the menu');
+            await newbie.goto(`${BASE}/focus?task=${late?.id}`);
+            await newbie.settle();
+            check(Number(await newbie.eval(`document.getElementById('selectFocusTask').value`)) === firstId, 'and when another task\'s focus button is pressed mid-round');
+
+            // Its task deleted before the page came back: the round ends under the old name, tied to nothing.
+            await newbie.eval(`localStorage.setItem('dayflow.focus', JSON.stringify({ mode: 'work', endsAt: Date.now() + 1500, total: 60, task: '999999999', taskTitle: 'ลบไปแล้ว ${STAMP}' }))`);
+            await newbie.goto(BASE + '/focus');
+            await sleep(3500);
+            const orphan = (await api(newbie, '/api/focus')).body.sessions?.[0];
+            check(orphan?.task_id === null && orphan?.title === `ลบไปแล้ว ${STAMP}`, 'a round whose task is gone keeps the task\'s name', JSON.stringify(orphan));
+
+            await api(newbie, `/api/tasks/${firstId}`, { method: 'DELETE' });
+            await api(newbie, `/api/tasks/${late?.id}`, { method: 'DELETE' });
+            await newbie.goto(BASE + '/');
+            await newbie.settle();
+            await sleep(800);
+            check(!(await newbie.eval(welcomeOn)), 'deleting the first task does not bring the welcome back');
+        } finally {
+            await api(newbie, '/api/settings/delete', { method: 'POST', body: JSON.stringify({ password: newbiePassword, confirm_text: 'DELETE' }) }).catch(() => {});
+            await cdp.send('Target.disposeBrowserContext', { browserContextId: fresh.browserContextId }).catch(() => {});
+        }
+
         // ---------- phone ----------
         console.log('Phone');
         await tab.viewport({ width: 390, height: 844, mobile: true });
@@ -1011,7 +1173,6 @@ async function main() {
         if (tab) {
             await tab.goto(BASE + '/bookmarks').catch(() => {});
             for (const id of made.tasks) await api(tab, `/api/tasks/${id}`, { method: 'DELETE' }).catch(() => {});
-            for (const id of made.items) await api(tab, `/api/quick-items/${id}`, { method: 'DELETE' }).catch(() => {});
             for (const id of made.finance) await api(tab, `/api/finance/${id}`, { method: 'DELETE' }).catch(() => {});
             for (const id of made.todos) await api(tab, `/api/planner/todos/${id}`, { method: 'DELETE' }).catch(() => {});
             for (const id of made.subs) await api(tab, `/api/subscriptions/${id}`, { method: 'DELETE' }).catch(() => {});

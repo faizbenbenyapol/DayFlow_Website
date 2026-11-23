@@ -178,6 +178,19 @@ class SettingsController
             $tabsJson = json_encode($tabs);
         }
 
+        // ชื่อหมวดและหมวดของเมนู (REQ-9, REQ-10) ไม่ส่งมาคือคงค่าเดิม ส่ง {} คือกลับค่าตั้งต้น
+        // ชื่อที่ยาวเกินทำให้ทั้งคำขอไม่ถูกบันทึก ผู้ใช้จะได้ไม่เสียการติ๊กกับลำดับครึ่งเดียว (EDGE-4)
+        // ใช้ list() ไม่ใช่ input(): input() ที่ default ไม่ใช่ array ทิ้งค่าที่เป็น object ไปเงียบ ๆ
+        $layoutInput = Request::list('layout');
+        $layout = null;
+        if ($layoutInput !== null) {
+            $problem = AppMenus::nameError($layoutInput['names'] ?? []);
+            if ($problem !== null) {
+                Response::json(['error' => $problem], 422);
+            }
+            $layout = AppMenus::layout($layoutInput);
+        }
+
         $json = json_encode($hiddenMenus);
         $orderJson = json_encode($normalizedOrder);
         $db = DB::conn();
@@ -186,6 +199,9 @@ class SettingsController
             User::updateHiddenMenus($userId, $json);
             User::updateMenuOrder($userId, $orderJson);
             if ($tabsJson !== null) User::updateMobileTabs($userId, $tabsJson);
+            if ($layout !== null) {
+                User::updateMenuLayout($userId, $layout === AppMenus::NO_LAYOUT ? null : json_encode($layout, JSON_UNESCAPED_UNICODE));
+            }
             $db->commit();
         } catch (Throwable $e) {
             if ($db->inTransaction()) {
@@ -194,7 +210,7 @@ class SettingsController
             Response::json(['error' => 'บันทึกการตั้งค่าเมนูไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'], 500);
         }
 
-        Response::json(['ok' => true, 'hidden_menus' => $hiddenMenus, 'menu_order' => $normalizedOrder]);
+        Response::json(['ok' => true, 'hidden_menus' => $hiddenMenus, 'menu_order' => $normalizedOrder, 'menu_layout' => $layout]);
     }
 
     public function apiTelegram(): void

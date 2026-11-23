@@ -18,6 +18,9 @@
     </div>
 </div>
 
+<!-- สถานะ Google Drive ที่ผู้ใช้ต้องทำอะไรสักอย่าง (เฟส 4 EDGE-11) files.js เติมข้อความ -->
+<p class="alert alert-warning drive-banner" id="driveBanner" role="status" hidden></p>
+
 <nav class="breadcrumb" id="breadcrumb" aria-label="ตำแหน่งโฟลเดอร์"></nav>
 
 <div class="files-tools">

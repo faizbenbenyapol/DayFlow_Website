@@ -8,11 +8,26 @@ require_once ROOT . '/models/AiGeneration.php';
 
 class AiController
 {
+    /**
+     * หน้าผู้ช่วย AI — ส่ง $hasChatKey กับรายชื่อเจ้าที่มีคีย์ให้ view
+     * เพื่อแสดงแท็บ "สั่งงาน" เฉพาะเมื่อสั่งงานได้ (REQ-25)
+     */
     public function index(): void
     {
         $pageTitle  = 'ผู้ช่วย AI';
         $pageScript = 'ai';
         $pageStyle  = 'ai';
+
+        // ผู้ใช้มีคีย์ของเจ้าที่คุยข้อความได้หรือยัง — ใช้ชุดเดียวกันทั้งตัดสินแท็บ
+        // "สั่งงาน" และเติมตัวเลือกผู้ให้บริการ (query เดียว)
+        $keys = AiKey::listForUser(Auth::userId());
+        $chatProviders = [];
+        foreach (LlmClient::PROVIDERS as $provider) {
+            if (($keys[$provider]['set'] ?? false) === true) {
+                $chatProviders[$provider] = LlmClient::LABELS[$provider];
+            }
+        }
+        $hasChatKey = $chatProviders !== [];
 
         require ROOT . '/views/layout/header.php';
         require ROOT . '/views/ai/index.php';
@@ -23,30 +38,77 @@ class AiController
     // API KEYS
     // ============================================================
 
+    /** รายการคีย์ รายชื่อผู้ให้บริการ และโมเดลเริ่มต้นของแต่ละเจ้าสำหรับวาดหน้าตั้งค่า */
     public function apiKeysList(): void
     {
         $userId = Auth::userId();
         $keys   = AiKey::listForUser($userId);
-        Response::json(['keys' => $keys, 'providers' => AiKey::PROVIDERS]);
+        $defaultModels = [];
+        foreach (LlmClient::PROVIDERS as $provider) {
+            $defaultModels[$provider] = LlmClient::defaultModel($provider);
+        }
+        Response::json([
+            'keys'           => $keys,
+            'providers'      => AiKey::PROVIDERS,
+            'chat_providers' => LlmClient::PROVIDERS,
+            'labels'         => LlmClient::LABELS,
+            'default_models' => $defaultModels,
+        ]);
     }
 
+    /**
+     * บันทึกคีย์ (คีย์ว่าง = ลบ) พร้อม URL/โมเดลของผู้ให้บริการ
+     * custom บังคับ base_url ที่ผ่าน AiEndpoint และบังคับโมเดล เจ้าอื่นคีย์ต้องยาว ≥ 10
+     * api_key ว่างพร้อม keep_key = ใช้คีย์เดิม อัปเดตแค่ URL/โมเดล
+     */
     public function apiKeysSave(): void
     {
         $userId   = Auth::userId();
-        $provider = Request::rawInput('provider', '');
+        $provider = (string)Request::rawInput('provider', '');
         $apiKey   = trim((string)Request::rawInput('api_key', ''));
+        $baseUrl  = trim((string)Request::rawInput('base_url', ''));
+        $model    = trim((string)Request::rawInput('model', ''));
+        $keepKey  = (bool)Request::rawInput('keep_key', false);
 
         if (!in_array($provider, AiKey::PROVIDERS, true)) {
             Response::json(['error' => 'ผู้ให้บริการไม่ถูกต้อง'], 422);
         }
         if ($apiKey === '') {
-            AiKey::delete($userId, $provider);
-            Response::json(['ok' => true, 'deleted' => true]);
+            if (!$keepKey) {
+                AiKey::delete($userId, $provider);
+                Response::json(['ok' => true, 'deleted' => true]);
+            }
+            $stored = AiKey::config($userId, $provider);
+            if ($stored === null) {
+                Response::json(['error' => 'กรุณากรอก API key'], 422);
+            }
+            $apiKey = $stored['key'];
         }
-        if (strlen($apiKey) < 10) {
-            Response::json(['error' => 'API key สั้นเกินไป'], 422);
+        if ($model === '' && $provider === 'custom') {
+            Response::json(['error' => 'ผู้ให้บริการ OpenAI-compatible ต้องระบุชื่อโมเดล'], 422);
         }
-        AiKey::save($userId, $provider, $apiKey);
+        if ($model !== '' && (strlen($model) > 120 || preg_match('~^[A-Za-z0-9._:/@-]+$~', $model) !== 1)) {
+            Response::json(['error' => 'ชื่อโมเดลไม่ถูกต้อง'], 422);
+        }
+        if ($provider === 'custom') {
+            if ($baseUrl === '') {
+                Response::json(['error' => 'กรุณาระบุ URL ของผู้ให้บริการ'], 422);
+            }
+            if (strlen($baseUrl) > 500) {
+                Response::json(['error' => 'URL ยาวเกินไป'], 422);
+            }
+            try {
+                AiEndpoint::pin($baseUrl, AiEndpoint::allowPrivate());
+            } catch (RuntimeException $e) {
+                Response::json(['error' => $e->getMessage()], 422);
+            }
+        } else {
+            if (strlen($apiKey) < 10) {
+                Response::json(['error' => 'API key สั้นเกินไป'], 422);
+            }
+            $baseUrl = null;
+        }
+        AiKey::save($userId, $provider, $apiKey, $baseUrl ?: null, $model ?: null);
         Response::json(['ok' => true]);
     }
 
@@ -57,73 +119,54 @@ class AiController
         Response::json(['ok' => true]);
     }
 
+    /** ตรวจคีย์ที่ส่งมาหรือที่เก็บไว้ด้วย LlmClient::ping (replicate ตรวจบัญชีเอง) */
     public function apiKeysTest(): void
     {
         $userId   = Auth::userId();
-        $provider = Request::rawInput('provider', '');
+        $provider = (string)Request::rawInput('provider', '');
         $apiKey   = trim((string)Request::rawInput('api_key', ''));
+        $baseUrl  = trim((string)Request::rawInput('base_url', ''));
+        $model    = trim((string)Request::rawInput('model', ''));
 
         if (!in_array($provider, AiKey::PROVIDERS, true)) {
             Response::json(['error' => 'ผู้ให้บริการไม่ถูกต้อง'], 422);
         }
-        // If no key passed, try the stored one
-        if ($apiKey === '') {
-            $apiKey = AiKey::get($userId, $provider);
+        // ค่าใดไม่ส่งมา ใช้ค่าที่เก็บไว้
+        $stored = AiKey::config($userId, $provider);
+        if ($stored) {
+            if ($apiKey === '')  $apiKey  = $stored['key'];
+            if ($baseUrl === '') $baseUrl = (string)($stored['base_url'] ?? '');
+            if ($model === '')   $model   = (string)($stored['model'] ?? '');
         }
         if ($apiKey === '') {
             Response::json(['error' => 'ยังไม่มี API key'], 422);
         }
 
+        $cfg = [
+            'provider' => $provider,
+            'key'      => $apiKey,
+            'base_url' => $baseUrl !== '' ? $baseUrl : null,
+            'model'    => $model !== '' ? $model : null,
+        ];
+
         try {
-            $this->pingProvider($provider, $apiKey);
+            if ($provider === 'replicate') {
+                HttpJson::request('https://api.replicate.com/v1/account', null,
+                    ['Authorization: Bearer ' . $apiKey], 'GET');
+            } else {
+                LlmClient::ping($cfg);
+            }
             Response::json(['ok' => true, 'message' => 'Key ใช้งานได้']);
         } catch (\Throwable $e) {
-            Response::json(['error' => $e->getMessage()], 400);
+            Response::json(['error' => LlmClient::explain($provider, $e)], 400);
         }
-    }
-
-    private function pingProvider(string $provider, string $key): void
-    {
-        switch ($provider) {
-            case 'openai':
-                HttpJson::request('https://api.openai.com/v1/models', null,
-                    ['Authorization: Bearer ' . $key], 'GET');
-                return;
-            case 'gemini':
-                HttpJson::request('https://generativelanguage.googleapis.com/v1beta/models?key=' . urlencode($key),
-                    null, [], 'GET');
-                return;
-            case 'anthropic':
-                // Small messages call with 1 token
-                HttpJson::request('https://api.anthropic.com/v1/messages', [
-                    'model' => 'claude-haiku-4-5-20251001',
-                    'max_tokens' => 1,
-                    'messages' => [['role' => 'user', 'content' => 'hi']],
-                ], [
-                    'x-api-key: ' . $key,
-                    'anthropic-version: 2023-06-01',
-                ]);
-                return;
-            case 'replicate':
-                HttpJson::request('https://api.replicate.com/v1/account', null,
-                    ['Authorization: Bearer ' . $key], 'GET');
-                return;
-            case 'kimi':
-                HttpJson::request('https://api.moonshot.cn/v1/models', null,
-                    ['Authorization: Bearer ' . $key], 'GET');
-                return;
-            case 'openrouter':
-                HttpJson::request('https://openrouter.ai/api/v1/models', null,
-                    ['Authorization: Bearer ' . $key], 'GET');
-                return;
-        }
-        throw new \RuntimeException('Provider ไม่รองรับ');
     }
 
     // ============================================================
     // SCRIPT GENERATION
     // ============================================================
 
+    /** สร้างสคริปต์วิดีโอสั้นด้วยผู้ให้บริการที่ผู้ใช้เลือก */
     public function apiGenerateScript(): void
     {
         $userId       = Auth::userId();
@@ -144,17 +187,17 @@ class AiController
             || $duration < 5 || $duration > 600) {
             Response::json(['error' => 'ข้อมูลสร้างสคริปต์ไม่ถูกต้อง'], 422);
         }
-        $apiKey = AiKey::get($userId, $provider);
-        if ($apiKey === '') {
+        $cfg = AiKey::config($userId, $provider);
+        if (!$cfg) {
             Response::json(['error' => 'ยังไม่ได้ตั้งค่า API key ของ ' . $provider], 422);
         }
 
         $prompt = $this->buildScriptPrompt($keyword, $platform, $style, $language, $duration, $extraPrompt);
 
         try {
-            $raw = LlmClient::complete($provider, $apiKey, $prompt);
+            $raw = LlmClient::complete($cfg, $prompt);
         } catch (\Throwable $e) {
-            Response::json(['error' => 'AI ตอบกลับผิดพลาด: ' . $e->getMessage()], 500);
+            Response::json(['error' => LlmClient::explain($provider, $e)], 500);
         }
 
         $parsed = LlmClient::extractJson($raw);
@@ -346,6 +389,7 @@ PROMPT;
         return $missing;
     }
 
+    /** สร้างใหม่เฉพาะส่วนหนึ่งของสคริปต์ (ชื่อ แฮชแท็ก ฯลฯ) เป็นตัวเลือก 3 แบบ */
     public function apiRegenerateSection(): void
     {
         $userId   = Auth::userId();
@@ -363,8 +407,8 @@ PROMPT;
         if ($keyword === '') {
             Response::json(['error' => 'ไม่มี keyword'], 422);
         }
-        $apiKey = AiKey::get($userId, $provider);
-        if ($apiKey === '') {
+        $cfg = AiKey::config($userId, $provider);
+        if (!$cfg) {
             Response::json(['error' => 'ยังไม่ได้ตั้งค่า API key'], 422);
         }
 
@@ -385,9 +429,9 @@ PROMPT;
 P;
 
         try {
-            $raw = LlmClient::complete($provider, $apiKey, $prompt);
+            $raw = LlmClient::complete($cfg, $prompt);
         } catch (\Throwable $e) {
-            Response::json(['error' => $e->getMessage()], 500);
+            Response::json(['error' => LlmClient::explain($provider, $e)], 500);
         }
         $parsed = LlmClient::extractJson($raw);
         $options = is_array($parsed['options'] ?? null) ? $parsed['options'] : null;

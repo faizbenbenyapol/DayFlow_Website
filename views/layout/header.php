@@ -67,9 +67,14 @@ $themeAttr = $theme === 'auto' ? 'light' : $theme;
 $dayKey = strtolower(date('D'));
 $dayColor = Auth::appearance()['day_color'] ? 'on' : 'off';
 
-// The place the page belongs to picks its pastel: the open index tab, the
-// highlighter under the heading, the top edge of its cards (tokens.css).
-$placeKey = AppMenus::groupForPath(Request::path());
+// ค่าเมนูของเจ้าของบัญชีโหลดครั้งเดียว ใช้ทั้งสีของหน้าและแถบเมนูด้านล่าง
+// หน้าที่เปิดผ่านลิงก์แชร์หรือเป็นแขกใช้การจัดเมนูตั้งต้น
+$navSettings = ($isReadOnly || $isGuest || empty($_SESSION['user_id'])) ? [] : User::getSettings(Auth::userId());
+$menuLayout = AppMenus::layout(json_decode($navSettings['menu_layout'] ?? 'null', true));
+
+// หมวดของหน้าเลือกสีพาสเทล: แท็บที่เปิด แถบไฮไลต์ใต้หัวข้อ ขอบบนของการ์ด (tokens.css)
+// เมนูที่ผู้ใช้ย้ายหมวดได้สีของหมวดใหม่ (REQ-10)
+$placeKey = AppMenus::groupForPath(Request::path(), $menuLayout);
 
 // The pastel the page sits on, chosen in Settings (tokens.css, [data-desk]).
 $desk = Auth::appearance()['desk'];
@@ -78,7 +83,7 @@ $desk = Auth::appearance()['desk'];
 $chromeColors = ['light' => User::DESKS[$desk][0], 'dark' => User::DESKS[$desk][1]];
 ?>
 <!DOCTYPE html>
-<html lang="th" data-theme="<?= h($themeAttr) ?>" data-theme-pref="<?= h($theme) ?>" data-day="<?= h($dayKey) ?>" data-daycolor="<?= h($dayColor) ?>" data-place="<?= h($placeKey) ?>" data-desk="<?= h($desk) ?>">
+<html lang="th" data-theme="<?= h($themeAttr) ?>" data-theme-pref="<?= h($theme) ?>" data-day="<?= h($dayKey) ?>" data-daycolor="<?= h($dayColor) ?>" data-place="<?= h($placeKey) ?>" data-desk="<?= h($desk) ?>" data-today="<?= date('Y-m-d') ?>">
 
 <head>
     <meta charset="UTF-8">
@@ -176,10 +181,9 @@ $chromeColors = ['light' => User::DESKS[$desk][0], 'dark' => User::DESKS[$desk][
 <?php else: ?>
 <?php
 // What the index tabs, the sub-tabs and the "all menus" sheet show, worked out once.
-$navSettings = User::getSettings(Auth::userId());
 $navHidden = json_decode($navSettings['hidden_menus'] ?? 'null', true);
 $navHidden = is_array($navHidden) ? $navHidden : [];
-$navGroups = AppMenus::grouped(AppMenus::ordered(json_decode($navSettings['menu_order'] ?? 'null', true)), $navHidden);
+$navGroups = AppMenus::grouped(AppMenus::ordered(json_decode($navSettings['menu_order'] ?? 'null', true)), $navHidden, $menuLayout);
 $navByGroup = array_column($navGroups, null, 'key');
 $navName = (string)($user['display_name'] ?? $user['username'] ?? '');
 // The sub-tabs of the place being shown, when it has more than one page to
@@ -201,7 +205,7 @@ require ROOT . '/views/partials/icons.php';
             ?>
             <a class="flag" data-place="<?= h($place) ?>" href="<?= h(APP_URL . $first['path']) ?>"<?= $place === $placeKey ? ' aria-current="page"' : '' ?>>
                 <svg class="icon" aria-hidden="true"><use href="#i-<?= h(AppMenus::PLACE_ICONS[$place]) ?>"/></svg>
-                <span><?= h(AppMenus::GROUPS[$place]) ?></span>
+                <span><?= h(AppMenus::groupName($place, $menuLayout)) ?></span>
             </a>
             <?php endforeach; ?>
         </nav>
@@ -223,7 +227,7 @@ require ROOT . '/views/partials/icons.php';
     </header>
 
     <!-- Phone: add from anywhere, within reach of the thumb -->
-    <button type="button" class="fab" data-act="openQuickAdd" aria-label="เพิ่มงาน จดด่วน หรือรายจ่าย">
+    <button type="button" class="fab" data-act="openQuickAdd" aria-label="เพิ่มงานหรือบันทึกรายรับรายจ่าย">
         <svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>
     </button>
 
@@ -269,7 +273,7 @@ require ROOT . '/views/partials/icons.php';
         </div>
     </dialog>
 
-    <!-- Add a task, a quick note or an expense from any page -->
+    <!-- Add a task or a money entry from any page -->
     <dialog class="sheet" id="quickSheet" aria-labelledby="quickTitle">
         <div class="sheet-head">
             <h2 id="quickTitle">เพิ่มอย่างรวดเร็ว</h2>
@@ -279,7 +283,6 @@ require ROOT . '/views/partials/icons.php';
         </div>
         <div class="seg" role="tablist" aria-label="สิ่งที่จะเพิ่ม">
             <button type="button" role="tab" id="qaTab-task" aria-selected="true" aria-controls="qaPane-task" data-kind="task">งาน</button>
-            <button type="button" role="tab" id="qaTab-note" aria-selected="false" aria-controls="qaPane-note" data-kind="note" tabindex="-1">จดด่วน</button>
             <button type="button" role="tab" id="qaTab-money" aria-selected="false" aria-controls="qaPane-money" data-kind="money" tabindex="-1">รายรับรายจ่าย</button>
         </div>
         <form id="quickForm" class="sheet-body" novalidate>
@@ -288,29 +291,29 @@ require ROOT . '/views/partials/icons.php';
                     <label class="form-label" for="qaTaskTitle">ชื่องาน</label>
                     <input class="form-control" id="qaTaskTitle" name="title" maxlength="200" autocomplete="off" placeholder="เช่น ส่งใบเสนอราคาให้คุณสมชาย">
                 </div>
-                <div class="form-row">
+                <div class="form-group qa-chips" role="radiogroup" aria-label="กำหนดวัน">
+                    <label><input type="radio" name="qa_when" value="none" checked><span>ไม่ระบุ</span></label>
+                    <label><input type="radio" name="qa_when" value="today"><span>วันนี้</span></label>
+                    <label><input type="radio" name="qa_when" value="tomorrow"><span>พรุ่งนี้</span></label>
+                </div>
+                <details class="qa-details">
+                    <summary>เพิ่มรายละเอียด</summary>
                     <div class="form-group">
-                        <label class="form-label" for="qaTaskDue">กำหนดส่ง</label>
+                        <label class="form-label" for="qaTaskDue">เลือกวัน</label>
                         <input class="form-control" type="date" id="qaTaskDue" name="due_date">
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="qaTaskQuadrant">ความสำคัญ</label>
                         <select class="form-control" id="qaTaskQuadrant" name="quadrant">
+                            <option value="0" selected>ยังไม่จัด</option>
                             <option value="1">สำคัญ + เร่งด่วน</option>
                             <option value="2">สำคัญ + ไม่เร่งด่วน</option>
                             <option value="3">ไม่สำคัญ + เร่งด่วน</option>
                             <option value="4">ไม่สำคัญ + ไม่เร่งด่วน</option>
                         </select>
                     </div>
-                </div>
-            </div>
-
-            <div id="qaPane-note" role="tabpanel" aria-labelledby="qaTab-note" hidden>
-                <div class="form-group">
-                    <label class="form-label" for="qaNoteContent">ข้อความ</label>
-                    <textarea class="form-control" id="qaNoteContent" name="content" rows="3" maxlength="500" placeholder="เช่น โทรถามราคาเปลี่ยนแบตเตอรี่รถ"></textarea>
-                    <p class="form-hint" id="qaNoteCount">0 / 500</p>
-                </div>
+                </details>
+                <p class="form-hint qa-hint">Enter บันทึกแล้วจดต่อ · Esc ปิด · "ไม่ระบุ" = เข้ากล่อง "ยังไม่จัด"</p>
             </div>
 
             <div id="qaPane-money" role="tabpanel" aria-labelledby="qaTab-money" hidden>
@@ -343,7 +346,7 @@ require ROOT . '/views/partials/icons.php';
                 </div>
             </div>
 
-            <p class="form-error" id="quickError" role="alert" hidden></p>
+            <p class="form-status" id="quickStatus" role="status" aria-live="polite" hidden></p>
             <div class="sheet-foot">
                 <button type="button" class="btn" data-act="closeSheet" data-args='["quickSheet"]'>ยกเลิก</button>
                 <button type="submit" class="btn btn-primary" id="quickSubmit">เพิ่มงาน</button>
@@ -353,7 +356,7 @@ require ROOT . '/views/partials/icons.php';
 
     <main class="app-main" id="appMain">
         <?php if (count($subItems) > 1): ?>
-        <nav class="subnav" aria-label="<?= h(AppMenus::GROUPS[$placeKey]) ?>">
+        <nav class="subnav" aria-label="<?= h(AppMenus::groupName($placeKey, $menuLayout)) ?>">
             <?php foreach ($subItems as $item): ?>
             <a class="subnav-link" href="<?= h(APP_URL . $item['path']) ?>"<?= isActive($item['path']) !== '' ? ' aria-current="page"' : '' ?>><?= h($item['label']) ?></a>
             <?php endforeach; ?>

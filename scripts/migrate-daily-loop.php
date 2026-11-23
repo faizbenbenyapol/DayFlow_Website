@@ -93,6 +93,13 @@ function dryRun(): void
     echo "  empty titles: {$quick['empty_title']}\n";
     echo "  full text in description: {$quick['in_description']}\n";
     echo "  distinct users: {$quick['users']}\n";
+
+    $assignees = projectTaskAssigneeCounts();
+    echo "\nProject task assignees\n";
+    echo "  matched: {$assignees['matched']}\n";
+    echo "  ambiguous: {$assignees['ambiguous']}\n";
+    echo "  guest: {$assignees['guest']}\n";
+    echo "  unmatched: {$assignees['unmatched']}\n";
 }
 
 /**
@@ -161,10 +168,13 @@ function apply(): void
         $daily = copiedCounts('daily_todos', 'daily_todo');
         $quick = copiedCounts('quick_items', 'quick_item');
 
+        $linked = linkProjectTaskAssignees();
+
         $db->commit();
 
         echo reportLine('daily_todo', $daily['copied'], $daily['total']) . "\n";
         echo reportLine('quick_item', $quick['copied'], $quick['total']) . "\n";
+        echo "Linked project task assignees: {$linked}\n";
     } catch (Throwable $e) {
         $db->rollBack();
         fwrite(STDERR, "Apply failed: " . $e->getMessage() . "\n");
@@ -306,6 +316,126 @@ function insertCopyLogBatch(string $legacySource, array $rows): void
 }
 
 /**
+ * นิพจน์ SQL ที่ใช้เทียบชื่อ: เปลี่ยน NBSP เป็นช่องว่าง ตัดช่องว่างหัวท้าย ทำตัวเล็ก แล้วเทียบแบบ binary
+ * TRIM ของ MariaDB ตัดแค่ช่องว่างธรรมดา ชื่อที่คัดลอกจากเว็บมักมี NBSP (U+00A0) ติดมา
+ * ส่วน utf8mb4_bin มีไว้ไม่ให้มองข้ามวรรณยุกต์ไทยแบบ utf8mb4_unicode_ci
+ *
+ * @param string $column ชื่อคอลัมน์ใน SQL เช่น t.assignee
+ * @return string นิพจน์ SQL
+ */
+function nameKeySql(string $column): string
+{
+    return "LOWER(TRIM(REPLACE({$column}, _utf8mb4 X'C2A0', ' '))) COLLATE utf8mb4_bin";
+}
+
+/**
+ * สร้าง derived table ของ guest_name ที่ปรากฏในโปรเจคนั้น (จาก task/chat/activity)
+ *
+ * @return string SQL ของ derived table มีคอลัมน์ project_id, guest_name (เป็นค่าจาก nameKeySql แล้ว)
+ */
+function guestNamesSql(): string
+{
+    $key = nameKeySql('guest_name');
+    return "SELECT DISTINCT project_id, {$key} AS guest_name
+        FROM (
+            SELECT project_id, guest_name COLLATE utf8mb4_bin AS guest_name FROM project_tasks
+            UNION ALL
+            SELECT project_id, guest_name COLLATE utf8mb4_bin AS guest_name FROM project_chats
+            UNION ALL
+            SELECT project_id, guest_name COLLATE utf8mb4_bin AS guest_name FROM project_activities
+        ) g
+        WHERE guest_name IS NOT NULL AND {$key} <> ''";
+}
+
+/**
+ * สร้าง derived table ที่จับคู่ assignee ข้อความกับสมาชิกโปรเจคแบบ one-to-many
+ *
+ * @return string SQL ของ derived table มีคอลัมน์ id, user_id
+ */
+function matchedProjectTasksSql(): string
+{
+    $membersSql = '(
+        SELECT p.id AS project_id, u.id AS user_id, u.display_name, u.username
+        FROM projects p JOIN users u ON p.user_id = u.id
+        UNION ALL
+        SELECT pm.project_id, u.id, u.display_name, u.username
+        FROM project_members pm JOIN users u ON pm.user_id = u.id
+    )';
+
+    $guestSql = guestNamesSql();
+    $assignee = nameKeySql('t.assignee');
+
+    return "SELECT t.id, mem.user_id
+        FROM project_tasks t
+        JOIN {$membersSql} mem ON mem.project_id = t.project_id
+        WHERE t.assignee_user_id IS NULL
+          AND {$assignee} <> ''
+          AND ({$assignee} = " . nameKeySql('mem.display_name') . " OR {$assignee} = " . nameKeySql('mem.username') . ")
+          AND NOT EXISTS (
+              SELECT 1 FROM ({$guestSql}) g
+              WHERE g.project_id = t.project_id AND g.guest_name = {$assignee}
+          )";
+}
+
+/**
+ * นับจำนวนงานโปรเจคที่ยังผูก assignee จากข้อความ และแยกสถานะการจับคู่
+ *
+ * @return array<string, int> จำนวน matched, ambiguous, guest, unmatched
+ */
+function projectTaskAssigneeCounts(): array
+{
+    $matchedSql = matchedProjectTasksSql();
+    $guestSql = guestNamesSql();
+    $assignee = nameKeySql('pt.assignee');
+
+    $sql = "SELECT
+        SUM(CASE WHEN gn.project_id IS NOT NULL THEN 1 ELSE 0 END) AS guest,
+        SUM(CASE WHEN gn.project_id IS NULL AND m.match_count = 1 THEN 1 ELSE 0 END) AS matched,
+        SUM(CASE WHEN gn.project_id IS NULL AND m.match_count > 1 THEN 1 ELSE 0 END) AS ambiguous,
+        SUM(CASE WHEN gn.project_id IS NULL AND m.match_count IS NULL THEN 1 ELSE 0 END) AS unmatched
+    FROM project_tasks pt
+    LEFT JOIN (
+        SELECT id, COUNT(DISTINCT user_id) AS match_count
+        FROM ({$matchedSql}) mm
+        GROUP BY id
+    ) m ON m.id = pt.id
+    LEFT JOIN ({$guestSql}) gn
+        ON gn.project_id = pt.project_id
+        AND gn.guest_name = {$assignee}
+    WHERE pt.assignee_user_id IS NULL AND {$assignee} <> ''";
+
+    $row = DB::run($sql)->fetch() ?: [];
+
+    return [
+        'matched'   => (int)($row['matched'] ?? 0),
+        'ambiguous' => (int)($row['ambiguous'] ?? 0),
+        'guest'     => (int)($row['guest'] ?? 0),
+        'unmatched' => (int)($row['unmatched'] ?? 0),
+    ];
+}
+
+/**
+ * จับคู่ assignee ข้อความของงานโปรเจคกับสมาชิกโปรเจค แล้วบันทึก assignee_user_id
+ *
+ * @return int จำนวนงานที่ถูกผูก
+ */
+function linkProjectTaskAssignees(): int
+{
+    $matchedSql = matchedProjectTasksSql();
+
+    $sql = "UPDATE project_tasks pt
+    JOIN (
+        SELECT id, MAX(user_id) AS user_id
+        FROM ({$matchedSql}) mm
+        GROUP BY id
+        HAVING COUNT(DISTINCT user_id) = 1
+    ) matched ON matched.id = pt.id
+    SET pt.assignee_user_id = matched.user_id";
+
+    return DB::run($sql)->rowCount();
+}
+
+/**
  * ย้อนกลับการย้ายข้อมูล โดยลบ tasks ที่มี legacy_source, ลบบันทึกใน legacy_task_copies
  * และปรับ quadrant เป็น 2 ถ้าไม่มี --yes จะแสดงจำนวนแล้วหยุด
  *
@@ -335,6 +465,7 @@ function rollback(bool $confirmed): void
         echo "Deleted copied tasks: {$deleted}\n";
         echo "Deleted copy-log rows: {$logDeleted}\n";
         echo "Set NULL quadrant to 2: {$updated}\n";
+        echo "Project task assignee links are left as-is; the old app ignores the column.\n";
         echo "Warning: edits made to copied tasks are lost.\n";
         echo "Warning: tasks created after the move stay in Tasks (inbox ones moved to quadrant 2) and do not appear in the old Planner.\n";
     } catch (Throwable $e) {

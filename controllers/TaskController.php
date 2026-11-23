@@ -35,9 +35,16 @@ class TaskController
             Response::json(['error' => 'สถานะงานไม่ถูกต้อง'], 422);
         }
         if (array_key_exists('due_date', $data) && $data['due_date'] !== '') {
-            $date = DateTime::createFromFormat('Y-m-d', (string)$data['due_date']);
-            if (!$date || $date->format('Y-m-d') !== $data['due_date']) {
-                Response::json(['error' => 'รูปแบบวันที่ไม่ถูกต้อง'], 422);
+            $raw = (string)$data['due_date'];
+            if ($raw === 'today') {
+                $data['due_date'] = date('Y-m-d');
+            } elseif ($raw === 'tomorrow') {
+                $data['due_date'] = date('Y-m-d', strtotime('+1 day'));
+            } else {
+                $date = DateTime::createFromFormat('Y-m-d', $raw);
+                if (!$date || $date->format('Y-m-d') !== $raw) {
+                    Response::json(['error' => 'รูปแบบวันที่ไม่ถูกต้อง'], 422);
+                }
             }
         }
         if (array_key_exists('repeat_rule', $data) && !Recurrence::isValid((string)$data['repeat_rule'])) {
@@ -226,6 +233,78 @@ class TaskController
             Response::json(['error' => 'ไม่พบรายการ'], 404);
         }
         Response::json(['ok' => true]);
+    }
+
+    /**
+     * จัดการงานค้างทั้งหมดของผู้ใช้ในครั้งเดียว
+     *
+     * รองรับ action: today | tomorrow | date | clear | delete
+     * สำหรับ today/tomorrow/date จะย้ายทุกงานไปวันนั้น แล้ววางไว้ท้ายรายการตามลำดับวันเดิม
+     * สำหรับ clear จะลบวันที่ออก สำหรับ delete จะลบถาวร
+     *
+     * @return void ส่ง JSON {ok: true, count: N}
+     */
+    public function apiOverdueBulk(): void
+    {
+        $userId = Auth::userId();
+        $payload = Request::json();
+        // ค่าที่ไม่ใช่สตริง (เช่น array จาก JSON) ถือว่าไม่ถูกต้อง ไม่แปลงชนิดให้เกิด warning
+        $action  = is_string($payload['action'] ?? null) ? $payload['action'] : '';
+
+        $allowed = ['today', 'tomorrow', 'date', 'clear', 'delete'];
+        if (!in_array($action, $allowed, true)) {
+            Response::json(['error' => 'action ไม่ถูกต้อง'], 422);
+        }
+
+        $date = null;
+        if ($action === 'today') {
+            $date = date('Y-m-d');
+        } elseif ($action === 'tomorrow') {
+            $date = date('Y-m-d', strtotime('+1 day'));
+        } elseif ($action === 'date') {
+            $date = is_string($payload['date'] ?? null) ? $payload['date'] : '';
+            $parsed = DateTime::createFromFormat('Y-m-d', $date);
+            if (!$parsed || $parsed->format('Y-m-d') !== $date) {
+                Response::json(['error' => 'รูปแบบวันที่ไม่ถูกต้อง'], 422);
+            }
+        }
+
+        if ($action === 'delete') {
+            $stmt = DB::run(
+                'DELETE FROM tasks
+                 WHERE user_id = ? AND status = "open" AND due_date < CURDATE()',
+                [$userId]
+            );
+        } elseif ($action === 'clear') {
+            $stmt = DB::run(
+                'UPDATE tasks
+                 SET due_date = NULL
+                 WHERE user_id = ? AND status = "open" AND due_date < CURDATE()',
+                [$userId]
+            );
+        } else {
+            // ย้ายทุกงานค้างไปวันเป้าหมาย โดยรักษาลำดับวันเดิมด้วย ROW_NUMBER()
+            // EDGE-12: งานทำซ้ำที่ค้างแล้วถูกเลื่อน จะเปลี่ยนแค่วันของรอบนี้
+            // เมื่อติ๊กเสร็จภายหลังระบบจะสร้างรอบถัดไปจากวันที่ถูกเลื่อนมา
+            $stmt = DB::run(
+                'UPDATE tasks t
+                 JOIN (
+                     SELECT id, ROW_NUMBER() OVER (ORDER BY due_date ASC, id ASC) AS rn
+                     FROM tasks
+                     WHERE user_id = ? AND status = "open" AND due_date < CURDATE()
+                 ) src ON t.id = src.id
+                 JOIN (
+                     SELECT COALESCE(MAX(day_position), -1) + 1 AS base
+                     FROM tasks
+                     WHERE user_id = ? AND due_date = ?
+                 ) base
+                 SET t.due_date = ?, t.day_position = base.base + src.rn - 1
+                 WHERE t.user_id = ?',
+                [$userId, $userId, $date, $date, $userId]
+            );
+        }
+
+        Response::json(['ok' => true, 'count' => $stmt->rowCount()]);
     }
 
     public function apiReorder(): void

@@ -26,21 +26,13 @@
     const tally = document.getElementById('todayTally');
     const esc = escHtml;
 
-    let loadedAt = 0;
     // Browser clock minus the server's wall clock, both read as local time.
     // Timestamps come in the server's zone; comparing them with this instead
     // of Date.now() keeps "5 นาทีที่แล้ว" right in any time zone.
     let clockGap = 0;
     let reloadTimer = null;
-    const shownDate = localToday();
 
     /* ---------- small helpers ---------- */
-
-    /** Today as YYYY-MM-DD in the visitor's own time zone. */
-    function localToday() {
-        const now = new Date();
-        return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-    }
 
     const section = key => root.querySelector(`[data-section="${key}"]`);
     const bodyOf = key => section(key)?.querySelector('[data-body]') ?? null;
@@ -67,7 +59,7 @@
     }
 
     function dayWord(dateStr) {
-        const days = daysUntil(dateStr);
+        const days = serverDaysUntil(dateStr);
         if (days === 0) return 'วันนี้';
         if (days === -1) return 'เมื่อวาน';
         if (days < 0) return Math.abs(days) + ' วันที่แล้ว';
@@ -102,41 +94,179 @@
 
     /* ---------- sections ---------- */
 
-    function taskRow(task, late) {
-        const days = daysUntil(task.due_date);
-        const side = late ? `<span class="side late">เกิน ${Math.abs(days)} วัน</span>` : '';
+    /** แปลงวันที่ YYYY-MM-DD เป็นรูปแบบสั้น เช่น "20 พ.ย." */
+    function formatShortDate(dateStr) {
+        if (!dateStr) return '';
+        const d = parseServerDate(dateStr);
+        const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        return d.getDate() + ' ' + months[d.getMonth()];
+    }
+
+    /** สร้างบรรทัดเมต้าของงานค้าง: "เลย N วัน · วันเดิม" พร้อมบอกงานทำซ้ำ */
+    function overdueMeta(dueDate, repeatRule) {
+        const days = serverDaysUntil(dueDate);
+        const lateText = days === -1 ? 'เมื่อวาน' : `เลย ${Math.abs(days)} วัน`;
+        let meta = `<span class="late-date">${lateText}</span> · ${formatShortDate(dueDate)}`;
+        if (repeatRule && repeatRule !== 'none') {
+            meta += ' · ทำซ้ำ…';
+        }
+        return meta;
+    }
+
+    const sub = key => root.querySelector(`[data-subsection="${key}"]`);
+    const bodyOfSub = key => sub(key)?.querySelector('[data-body]') ?? null;
+    function setSubCount(key, text) {
+        const el = sub(key)?.querySelector('[data-count]');
+        if (el) el.textContent = text;
+    }
+    function setSubHidden(key, hide) {
+        const el = sub(key);
+        if (el) el.hidden = hide;
+    }
+
+    /**
+     * ลิงก์ ▶ ไปหน้าโฟกัสที่เลือกงานนี้ไว้ (REQ-21)
+     * มีเฉพาะงานส่วนตัว เพราะประวัติโฟกัสผูกได้แค่ตาราง tasks ไม่ใช่งานโปรเจกต์
+     */
+    function focusLink(task) {
+        return `<a class="icon-btn sm" href="${BASE_URL}/focus?task=${Number(task.id)}" aria-label="โฟกัส: ${esc(task.title)}">`
+            + '<svg class="icon" aria-hidden="true"><use href="#i-focus"/></svg></a>';
+    }
+
+    /** สร้างเมนูปุ่ม ⋯ ของแถวงานค้าง */
+    function overdueMenu(taskId) {
+        const items = [
+            ['today', 'ทำวันนี้'],
+            ['tomorrow', 'พรุ่งนี้'],
+            ['date', 'เลือกวัน…'],
+            ['clear', 'เอาวันที่ออก'],
+            ['delete', 'ลบ'],
+        ];
+        return '<ul class="overdue-menu" hidden data-menu-for="' + Number(taskId) + '">'
+            + items.map(([action, label]) => `<li><button type="button" class="overdue-menu-action${action === 'delete' ? ' text-danger' : ''}" data-act="overdueAction" data-task-id="${Number(taskId)}" data-action="${esc(action)}">${esc(label)}</button></li>`).join('')
+            + '</ul>';
+    }
+
+    /** สร้าง HTML ของแถวงานค้าง พับแถวที่ 6 เป็นต้นไปไว้ก่อน */
+    function overdueRow(task, idx) {
+        const extraClass = idx >= 5 ? ' overdue-extra' : '';
         return row(
             `<input type="checkbox" class="task-tick" aria-label="เสร็จแล้ว: ${esc(task.title)}">`
-            + `<span class="grow"><span class="title"><span class="done-mark">${esc(task.title)}</span></span><span class="meta">${QUADRANT[task.quadrant] || ''}</span></span>`
-            + side,
-            ` data-task="${Number(task.id)}"`
+            + `<span class="grow"><span class="title"><span class="done-mark">${esc(task.title)}</span></span><span class="meta">${overdueMeta(task.due_date, task.repeat_rule)}</span></span>`
+            + focusLink(task)
+            + `<button type="button" class="icon-btn sm overdue-menu-btn" aria-label="จัดการงาน: ${esc(task.title)}" data-act="openOverdueMenu" data-task-id="${Number(task.id)}">⋯</button>`
+            + overdueMenu(task.id),
+            ` data-task="${Number(task.id)}"`,
+            'overdue-row' + extraClass
         );
     }
 
-    function renderTasks(data) {
-        const el = bodyOf('tasks');
-        if (!el) return;
+    /** วาดรายการงานค้าง: 5 แถวแรก พับที่เหลือที่โหลดมา และบอกจำนวนที่ยังไม่ได้โหลด */
+    function renderOverdue(items, total, keepExpanded = false) {
+        const body = bodyOfSub('overdue');
+        if (!body) return;
 
-        const overdue = data?.overdue_items || [];
-        const today = data?.today_items || [];
-        setCount('tasks', overdue.length + today.length > 0 ? String((data.overdue || 0) + (data.due_today || 0)) : '');
+        setSubCount('overdue', total > 0 ? `${total} งาน · เก่าสุดก่อน` : '');
+        const label = sub('overdue')?.querySelector('[data-bulk-label]');
+        if (label) {
+            label.textContent = total > 0 ? `ทั้ง ${total} งาน →` : '';
+            label.dataset.total = String(total);
+        }
 
-        if (overdue.length + today.length === 0) {
-            el.innerHTML = empty('ไม่มีงานค้างและไม่มีงานครบกำหนดวันนี้ พิมพ์งานแรกในช่องด้านล่างแล้วกด Enter');
+        if (items.length === 0) {
+            body.innerHTML = empty('ไม่มีงานค้าง');
             return;
         }
 
-        let html = '';
-        if (overdue.length) {
-            html += `<div class="subhead late">เกินกำหนด · ${data.overdue}</div>` + list(overdue.map(t => taskRow(t, true)));
-            if (data.overdue > overdue.length) {
-                html += `<p class="subhead">และอีก ${data.overdue - overdue.length} รายการ · ${link('/tasks', 'ดูทั้งหมด')}</p>`;
-            }
+        const shown = 5;
+        const expandAll = keepExpanded || items.length <= shown;
+        let rowsHtml = list(items.map((t, i) => overdueRow(t, expandAll ? 0 : i)));
+        if (items.length > shown && !keepExpanded) {
+            rowsHtml += `<button type="button" class="btn btn-link more-overdue" data-act="expandOverdue">แสดงอีก ${items.length - shown} งาน</button>`;
         }
-        if (today.length) {
-            html += `<div class="subhead">วันนี้ · ${data.due_today}</div>` + list(today.map(t => taskRow(t, false)));
+        if (total > items.length) {
+            rowsHtml += `<p class="subhead">และอีก ${total - items.length} งาน · ${link('/tasks', 'ดูทั้งหมด')}</p>`;
         }
-        el.innerHTML = html;
+        body.innerHTML = rowsHtml;
+    }
+
+    /** วาดรายการงานวันนี้ ถ้ามีมากกว่าที่โหลดมาให้บอกจำนวนที่เหลือและลิงก์ไปหน้างาน */
+    function renderToday(items, total) {
+        const body = bodyOfSub('today');
+        if (!body) return;
+        setSubCount('today', total > 0 ? String(total) : '');
+
+        if (items.length === 0) {
+            body.innerHTML = '';
+            return;
+        }
+        let rowsHtml = list(items.map(t => row(
+            `<input type="checkbox" class="task-tick" aria-label="เสร็จแล้ว: ${esc(t.title)}">`
+            + `<span class="grow"><span class="title"><span class="done-mark">${esc(t.title)}</span></span>${QUADRANT[t.quadrant] ? `<span class="meta">${QUADRANT[t.quadrant]}</span>` : ''}</span>`
+            + focusLink(t),
+            ` data-task="${Number(t.id)}"`
+        )));
+        if (total > items.length) {
+            rowsHtml += `<p class="subhead">และอีก ${total - items.length} งาน · ${link('/tasks', 'ดูทั้งหมด')}</p>`;
+        }
+        body.innerHTML = rowsHtml;
+    }
+
+    /** สร้างบรรทัดเมต้าของงานโปรเจกต์ที่มอบให้ฉัน */
+    function projectMeta(dueDate) {
+        const days = serverDaysUntil(dueDate);
+        if (days === 0) return 'วันนี้';
+        if (days < 0) return `<span class="late-date">เลย ${Math.abs(days)} วัน</span> · ${formatShortDate(dueDate)}`;
+        return formatShortDate(dueDate);
+    }
+
+    /** วาดรายการงานโปรเจกต์ที่มอบให้ผู้ใช้ปัจจุบัน */
+    function renderMyProject(items) {
+        const body = bodyOfSub('my-project');
+        if (!body) return;
+        setSubCount('my-project', items.length > 0 ? String(items.length) : '');
+
+        if (items.length === 0) {
+            body.innerHTML = '';
+            return;
+        }
+        body.innerHTML = list(items.map(t => {
+            const canEdit = !!t.can_edit;
+            const control = canEdit
+                ? `<input type="checkbox" class="project-tick" aria-label="เสร็จแล้ว: ${esc(t.title)}">`
+                : `<span class="readonly">ดูอย่างเดียว</span>`;
+            return row(
+                control
+                + `<span class="grow"><span class="title">${esc(t.title)}</span><span class="meta">${projectMeta(t.due_date)}</span></span>`
+                + `<span class="chip project-chip">${esc(t.project_name)}</span>`
+                + `<a class="icon-btn sm" href="${BASE_URL}/projects?project=${Number(t.project_id)}" aria-label="เปิดในโปรเจกต์ ${esc(t.project_name)}">↗</a>`,
+                ` data-project-task="${Number(t.id)}" data-project-task-status="${esc(t.status || '')}"`
+            );
+        }));
+    }
+
+    /**
+     * วาดส่วนงานทั้งหมด พร้อมรักษาสถานะ "แสดงอีก" ของงานค้าง
+     * บัญชีที่ไม่เคยมีงาน (data.welcome) เห็นส่วนต้อนรับแทนกลุ่ม "วันนี้" ที่ยังว่าง (REQ-23)
+     */
+    function renderTasks(data, keepOverdueExpanded = false) {
+        const overdueCount = data?.overdue || 0;
+        const todayCount = data?.due_today || 0;
+        const overdueItems = data?.overdue_items || [];
+        const todayItems = data?.today_items || [];
+        const projectItems = data?.my_project_items || [];
+        const hasAnything = overdueCount > 0 || todayCount > 0 || projectItems.length > 0;
+        const welcome = !!data?.welcome;
+
+        setSubHidden('welcome', !welcome);
+        setSubHidden('overdue', overdueCount === 0);
+        setSubHidden('today', welcome);
+        setSubHidden('my-project', projectItems.length === 0);
+        setSubHidden('empty', hasAnything || welcome);
+
+        renderOverdue(overdueItems, overdueCount, keepOverdueExpanded);
+        renderToday(todayItems, todayCount);
+        renderMyProject(projectItems);
     }
 
     function renderCalendar(data) {
@@ -375,8 +505,10 @@
 
         if (data.tasks) {
             const need = (data.tasks.overdue || 0) + (data.tasks.due_today || 0);
+            const projectCount = data.tasks.my_project_items?.length || 0;
             if (need > 0) parts.push(`ต้องทำ <b>${need}</b>`);
             if (data.tasks.overdue > 0) parts.push(`<span class="late">เกินกำหนด <b>${data.tasks.overdue}</b></span>`);
+            if (projectCount > 0) parts.push(`งานโปรเจกต์ <b>${projectCount}</b>`);
         }
         const events = data.calendar?.today_events?.length || 0;
         if (events > 0) parts.push(`นัด <b>${events}</b>`);
@@ -412,6 +544,17 @@
         root.querySelector('.page-head').insertAdjacentElement('afterend', banner);
     }
 
+    let lastRenderedJson = '';
+    // ผู้ใช้กด "แสดงอีก" แล้วหรือยัง เก็บไว้ในตัวแปรเพราะหลังวาดใหม่ปุ่มนั้นไม่อยู่ใน DOM ให้อ่านแล้ว
+    let overdueExpanded = false;
+
+    /** ตรวจว่ามี modal หรือเมนูค้างเปิดอยู่ ไม่ควรรีเรนเดอร์ทับสิ่งที่ผู้ใช้กำลังทำ */
+    function uiIsOpen() {
+        return document.getElementById('overdueDateModal')?.classList.contains('active')
+            || !!root.querySelector('.overdue-menu:not([hidden])');
+    }
+
+    /** โหลดข้อมูลหน้าวันนี้จากเซิร์ฟเวอร์ รีเรนเดอร์เฉพาะเมื่อข้อมูลเปลี่ยน */
     async function load() {
         const modules = wantedModules();
         if (modules.length === 0) {
@@ -424,7 +567,22 @@
             document.getElementById('todayError')?.remove();
             if (data.meta?.server_time) clockGap = Date.now() - parseLocal(data.meta.server_time);
 
-            renderTasks(data.tasks);
+            // ถ้าวันของเซิร์ฟเวอร์เปลี่ยน ให้รีโหลดหน้าเพื่อ render วันใหม่ทั้งหมด
+            if (data.meta?.today && data.meta.today !== serverToday()) {
+                window.location.reload();
+                return;
+            }
+
+            // เทียบเฉพาะข้อมูล meta มีเวลาของเซิร์ฟเวอร์ที่เปลี่ยนทุกวินาที ถ้ารวมไว้จะวาดใหม่ทุกครั้ง
+            const json = JSON.stringify({ ...data, meta: undefined });
+            if (json === lastRenderedJson) return;
+            if (uiIsOpen()) {
+                // รอจนกว่าผู้ใช้จะปิด dialog/menu แล้วค่อยรีเรนเดอร์
+                lastRenderedJson = '';
+                return;
+            }
+
+            renderTasks(data.tasks, overdueExpanded);
             renderCalendar(data.calendar);
             renderHabits(data.habits);
             renderFinance(data.finance);
@@ -436,7 +594,7 @@
             renderTransfer(data.transfer);
             renderTally(data);
 
-            loadedAt = Date.now();
+            lastRenderedJson = json;
             if (data.meta?.warnings?.length) toast('บางส่วนยังโหลดไม่ได้: ' + data.meta.warnings.join(', '), 'warning');
         } catch (error) {
             console.error('Today failed to load:', error);
@@ -462,9 +620,26 @@
                 body: JSON.stringify({ status: done ? 'done' : 'open' }),
             });
             item.classList.toggle('done', done);
-            toast(done ? 'ทำงานเสร็จแล้ว' : 'เปิดงานกลับมาแล้ว');
-            const left = root.querySelectorAll('.task-tick:not(:checked)').length;
-            setCount('tasks', left ? String(left) : '');
+            reloadSoon(2500);
+        } catch (error) {
+            box.checked = !done;
+            toast(error.message || 'บันทึกไม่สำเร็จ ลองอีกครั้ง', 'danger');
+        } finally {
+            box.disabled = false;
+        }
+    }
+
+    /** ติ๊กเสร็จ/เปิดกลับงานโปรเจกต์ที่มอบให้ฉัน คืนค่า status เดิมเมื่อยกเลิกติ๊ก */
+    async function tickProjectTask(box) {
+        const item = box.closest('[data-project-task]');
+        const done = box.checked;
+        const previousStatus = item.dataset.projectTaskStatus || 'To Do';
+        box.disabled = true;
+        try {
+            await apiFetch(`${BASE_URL}/api/projects/tasks/${item.dataset.projectTask}`, {
+                method: 'PUT',
+                body: JSON.stringify({ status: done ? 'Done' : previousStatus }),
+            });
             reloadSoon(2500);
         } catch (error) {
             box.checked = !done;
@@ -480,7 +655,6 @@
         box.disabled = true;
         try {
             await apiFetch(`${BASE_URL}/api/habits/${item.dataset.habit}/toggle`, { method: 'POST', body: '{}' });
-            toast(done ? 'ติ๊กนิสัยแล้ว' : 'ยกเลิกการติ๊กแล้ว');
             reloadSoon(300); // the streak changes, and only the server knows by how much
         } catch (error) {
             box.checked = !done;
@@ -490,13 +664,185 @@
         }
     }
 
+    /** ข้อความ toast สำหรับ action ทั้งกลุ่ม */
+    function actionLabel(action, count, date) {
+        if (action === 'today') return `ย้าย ${count} งานไปวันนี้แล้ว`;
+        if (action === 'tomorrow') return `ย้าย ${count} งานไปพรุ่งนี้แล้ว`;
+        if (action === 'date') return `ย้าย ${count} งานเป็นวันที่ ${formatDate(date)} แล้ว`;
+        if (action === 'clear') return `เอาวันที่ออก ${count} งานแล้ว`;
+        if (action === 'delete') return `ลบ ${count} งานแล้ว`;
+        return 'บันทึกแล้ว';
+    }
+
+    /** ย้ายงานค้างทั้งกลุ่มตาม action ที่เลือก */
+    async function moveOverdue(action, date) {
+        try {
+            const payload = { action };
+            if (action === 'date') payload.date = date;
+            const result = await apiFetch(BASE_URL + '/api/tasks/overdue', {
+                method: 'POST',
+                body: JSON.stringify(payload),
+            });
+            toast(actionLabel(action, result.count || 0, date));
+            await load();
+        } catch (error) {
+            toast(error.message || 'บันทึกไม่สำเร็จ ลองอีกครั้ง', 'danger');
+        }
+    }
+
+    /** ย้าย/ลบงานค้างทีละรายการ ส่งคำสั่ง today/tomorrow ให้เซิร์ฟเวอร์แปลงวัน */
+    async function moveTask(taskId, action, date) {
+        try {
+            if (action === 'delete') {
+                if (!await confirmAction('ลบงานนี้ถาวร ย้อนกลับไม่ได้', 'ลบ', 'ลบงานนี้?')) return;
+                await apiFetch(`${BASE_URL}/api/tasks/${taskId}`, { method: 'DELETE' });
+                toast('ลบงานแล้ว');
+            } else {
+                let dueDate = '';
+                if (action === 'today') dueDate = 'today';
+                else if (action === 'tomorrow') dueDate = 'tomorrow';
+                else if (action === 'date') dueDate = date;
+                await apiFetch(`${BASE_URL}/api/tasks/${taskId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ due_date: dueDate }),
+                });
+                toast(action === 'clear' ? 'เอาวันที่ออกแล้ว' : 'ย้ายงานแล้ว');
+            }
+            await load();
+        } catch (error) {
+            toast(error.message || 'บันทึกไม่สำเร็จ ลองอีกครั้ง', 'danger');
+        }
+    }
+
+    /* ---------- date picker ---------- */
+
+    let pendingDateCallback = null;
+
+    /** เปิด date picker สำหรับเลือกวันที่ย้ายงานค้าง */
+    function openDatePicker(callback) {
+        pendingDateCallback = callback;
+        const input = document.getElementById('overdueDateInput');
+        if (input) input.value = serverToday();
+        openModal('overdueDateModal');
+    }
+
+    /** ปิด date picker และลบ callback ที่รออยู่ */
+    function closeDateModal() {
+        pendingDateCallback = null;
+        closeModal('overdueDateModal');
+    }
+
+    /** ยืนยันวันที่จาก date picker แล้วส่งต่อให้ callback */
+    function confirmDate() {
+        const input = document.getElementById('overdueDateInput');
+        const date = input?.value || '';
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            toast('เลือกวันที่ก่อน', 'danger');
+            return;
+        }
+        if (pendingDateCallback) {
+            pendingDateCallback(date);
+        }
+        closeDateModal();
+    }
+
+    /* ---------- menus and clicks ---------- */
+
+    /** ปิดเมนูปุ่ม ⋯ ของงานค้างทั้งหมด */
+    function closeOverdueMenus() {
+        root.querySelectorAll('.overdue-menu').forEach(m => { m.hidden = true; });
+    }
+
+    /** เปิดเมนูปุ่ม ⋯ ของงานค้างรายการเดียว */
+    function openOverdueMenu(taskId) {
+        closeOverdueMenus();
+        const menu = root.querySelector(`.overdue-menu[data-menu-for="${Number(taskId)}"]`);
+        if (menu) {
+            menu.hidden = false;
+            // ให้ focus อยู่ที่เมนูแรกเพื่อใช้งานด้วยคีย์บอร์ด
+            const first = menu.querySelector('button');
+            if (first) first.focus();
+        }
+    }
+
+    root.addEventListener('click', event => {
+        const target = event.target;
+
+        if (target.matches('[data-act="overdueBulk"]')) {
+            const action = target.dataset.action;
+            if (action === 'date') {
+                openDatePicker(date => moveOverdue('date', date));
+            } else if (action === 'delete') {
+                const total = Number(sub('overdue')?.querySelector('[data-bulk-label]')?.dataset.total || 0);
+                confirmAction(
+                    `งานค้างทั้งหมด ${total} งาน จะถูกลบถาวร รวมงานที่ไม่ได้แสดงบนจอ ย้อนกลับไม่ได้`,
+                    `ลบ ${total} งาน`,
+                    `ลบงานค้างทั้ง ${total} งาน?`
+                ).then(ok => { if (ok) moveOverdue('delete'); });
+            } else {
+                moveOverdue(action);
+            }
+            return;
+        }
+
+        if (target.matches('[data-act="openOverdueMenu"]')) {
+            event.stopPropagation();
+            openOverdueMenu(target.dataset.taskId);
+            return;
+        }
+
+        if (target.matches('[data-act="overdueAction"]')) {
+            event.stopPropagation();
+            const action = target.dataset.action;
+            const taskId = target.dataset.taskId;
+            closeOverdueMenus();
+            if (action === 'date') {
+                openDatePicker(date => moveTask(taskId, 'date', date));
+            } else {
+                moveTask(taskId, action);
+            }
+            return;
+        }
+
+        if (target.matches('[data-act="expandOverdue"]')) {
+            root.querySelectorAll('.overdue-extra').forEach(el => el.classList.remove('overdue-extra'));
+            target.hidden = true;
+            overdueExpanded = true;
+            return;
+        }
+
+        if (target.matches('[data-close-modal]')) {
+            closeDateModal();
+            return;
+        }
+
+        if (target.matches('#overdueDateConfirm')) {
+            confirmDate();
+        }
+    });
+
+    document.addEventListener('click', event => {
+        if (!event.target.closest('.overdue-menu') && !event.target.closest('.overdue-menu-btn')) {
+            closeOverdueMenus();
+        }
+    });
+
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') {
+            closeOverdueMenus();
+        }
+    });
+
     root.addEventListener('change', event => {
         if (event.target.matches('.task-tick')) tickTask(event.target);
+        if (event.target.matches('.project-tick')) tickProjectTask(event.target);
         if (event.target.matches('.habit-tick')) tickHabit(event.target);
     });
 
-    const addInput = document.getElementById('todayAddTask');
-    if (addInput) {
+    // ช่อง "+ เพิ่มงานวันนี้" และช่องจดงานแรกในส่วนต้อนรับ ส่ง due_date = 'today' ให้เซิร์ฟเวอร์ตัดสินวันที่จริง
+    ['todayAddTask', 'welcomeAddTask'].forEach(inputId => {
+        const addInput = document.getElementById(inputId);
+        if (!addInput) return;
         addInput.addEventListener('keydown', async event => {
             if (event.key !== 'Enter') return;
             event.preventDefault();
@@ -507,7 +853,7 @@
             try {
                 await apiFetch(BASE_URL + '/api/tasks', {
                     method: 'POST',
-                    body: JSON.stringify({ title, quadrant: 1, due_date: localToday() }),
+                    body: JSON.stringify({ title, quadrant: 1, due_date: 'today' }),
                 });
                 addInput.value = '';
                 toast('เพิ่มงานแล้ว');
@@ -516,10 +862,11 @@
                 toast(error.message || 'เพิ่มงานไม่สำเร็จ ลองอีกครั้ง', 'danger');
             } finally {
                 addInput.disabled = false;
-                addInput.focus();
+                // งานแรกปิดส่วนต้อนรับไปแล้ว ให้โฟกัสต่อที่ช่องของกลุ่ม "วันนี้" ที่เพิ่งโผล่
+                (addInput.closest('[hidden]') ? document.getElementById('todayAddTask') : addInput)?.focus();
             }
         });
-    }
+    });
 
     // A task, note or expense added from the quick-add sheet: refresh in place.
     document.addEventListener('dayflow:added', event => {
@@ -527,13 +874,13 @@
         load();
     });
 
-    // Come back to the tab after a while, or past midnight: show the new truth.
+    // Come back to the tab after a while, or past midnight: ask the server for
+    // the current day and reload if it differs from the day the page was built.
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) return;
-        if (localToday() !== shownDate) window.location.reload();
-        else if (Date.now() - loadedAt > 5 * 60 * 1000) load();
+        load();
     });
-    setInterval(() => { if (!document.hidden && localToday() !== shownDate) window.location.reload(); }, 60000);
+    setInterval(() => { if (!document.hidden) load(); }, 60000);
 
     window.reloadToday = () => load();
     load();
