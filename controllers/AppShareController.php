@@ -37,6 +37,38 @@ class AppShareController
         Response::redirect('/' . $firstMenu . '?share=' . rawurlencode($token));
     }
 
+    /**
+     * manifest ของแอปลิงก์แชร์: ติดตั้งจากหน้าแชร์แล้วได้ไอคอน "DayFlow · <ชื่อลิงก์>"
+     * ที่เปิดกลับมาที่ /shared/<token> เสมอ แม้ cookie ถูกล้าง (token อยู่ใน start_url)
+     * id ต่างจากแอปหลัก ไอคอน DayFlow ของเจ้าของจึงอยู่คู่กันได้ไม่ทับกัน
+     * ลิงก์ไม่มีหรือหมดอายุ: ตอบ 404 (ไอคอนที่ติดตั้งไปแล้วยังเปิดเจอหน้า "ลิงก์หมดอายุ" ของ viewShared)
+     */
+    public function manifest(string $token): void
+    {
+        $share = AppShare::getByToken($token);
+        if (!$share || !AppShare::isValid($share)) {
+            Response::json(['error' => 'not found'], 404);
+        }
+
+        // เริ่มจาก manifest ของแอปหลัก แล้วเปลี่ยนเฉพาะส่วนที่ทำให้เป็นแอปของลิงก์นี้
+        $manifest = json_decode((string)file_get_contents(PUBLIC_ROOT . '/manifest.json'), true);
+        $home = APP_URL . '/shared/' . rawurlencode($token);
+        $manifest['id'] = $home;
+        $manifest['name'] = 'DayFlow · ' . $share['label'];
+        $manifest['short_name'] = $share['label'];
+        $manifest['start_url'] = $home;
+        $manifest['scope'] = APP_URL . '/';
+        // path ของไอคอนใน manifest.json เป็นแบบสัมพัทธ์ ซึ่งจะชี้ผิดที่เมื่อเสิร์ฟจาก /shared/<token>/
+        foreach ($manifest['icons'] as &$icon) {
+            $icon['src'] = APP_URL . '/' . $icon['src'];
+        }
+        unset($icon);
+
+        header('Content-Type: application/manifest+json; charset=utf-8');
+        header('Cache-Control: no-cache');
+        echo json_encode($manifest, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
     // ------------------------------------------------------------------ //
     // Public: Exit share mode
     // ------------------------------------------------------------------ //

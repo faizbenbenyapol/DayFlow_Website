@@ -191,6 +191,43 @@ test('an unknown share token shows the expired page, not the account', function 
     assertContains($guest->get('/tasks')['status'], [302, 403], 'the visitor must still have no access');
 });
 
+test('a share link installs as its own app that opens the link again', function (TestClient $_c): void {
+    $created = shareClient('owner')->json(shareClient('owner')->post('/api/app-shares', [
+        'label' => 'แอปของลิงก์ ' . TEST_RUN_ID,
+        'menus' => ['tasks'],
+    ]));
+    $token = $created['token'];
+
+    // หน้าแชร์ชี้ไปที่ manifest ของลิงก์นั้น ส่วนหน้าของเจ้าของยังใช้ manifest หลัก (REQ-10)
+    $guest = new TestClient(TEST_BASE_URL);
+    $guest->get('/shared/' . $token);
+    assertStringContains('/shared/' . $token . '/manifest.webmanifest', $guest->get('/tasks')['body']);
+    assertStringContains('/manifest.json"', shareClient('owner')->get('/tasks')['body']);
+
+    // มือถือที่ไม่มี cookie เลยก็อ่าน manifest ได้ และ token อยู่ใน start_url (REQ-8)
+    $manifest = json_decode((new TestClient(TEST_BASE_URL))->get('/shared/' . $token . '/manifest.webmanifest')['body'], true);
+    assertStringContains('/shared/' . $token, (string)$manifest['start_url']);
+    assertSame($manifest['start_url'], $manifest['id'], 'its own id, so it sits beside the owner\'s DayFlow icon');
+    assertSame('DayFlow · แอปของลิงก์ ' . TEST_RUN_ID, $manifest['name']);
+
+    assertSame(404, (new TestClient(TEST_BASE_URL))->get('/shared/' . str_repeat('f', 64) . '/manifest.webmanifest')['status']);
+});
+
+// คนดูลิงก์แชร์หุ้นเห็นแค่ยอดรวม เงินสด และรูป รายการซื้อขายกับเงินลงทุนรายครั้งไม่เปิดผ่าน API (CR-1)
+test('a share link does not hand out the trade or capital lists', function (TestClient $_c): void {
+    $created = shareClient('owner')->json(shareClient('owner')->post('/api/app-shares', [
+        'label' => 'หุ้น ' . TEST_RUN_ID,
+        'menus' => ['stocks'],
+    ]));
+
+    $guest = new TestClient(TEST_BASE_URL);
+    $guest->get('/shared/' . $created['token']);
+
+    assertSame(200, $guest->get('/api/stocks/summary')['status'], 'the totals the shared page shows still load');
+    assertSame(403, $guest->get('/api/stocks')['status'], 'trades stay private');
+    assertSame(403, $guest->get('/api/stocks/capital')['status'], 'capital rows stay private');
+});
+
 test('another account cannot delete a share link', function (TestClient $_c): void {
     shareClient('owner')->post('/api/app-shares', ['label' => 'ของฉัน ' . TEST_RUN_ID, 'menus' => ['notes']]);
     $shares = shareClient('owner')->json(shareClient('owner')->get('/api/app-shares'))['shares'] ?? [];

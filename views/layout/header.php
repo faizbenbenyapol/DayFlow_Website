@@ -108,7 +108,8 @@ $chromeColors = ['light' => User::DESKS[$desk][0], 'dark' => User::DESKS[$desk][
     <?php endif; ?>
     <meta name="robots" content="noindex, nofollow, noarchive">
     <meta name="mobile-web-app-capable" content="yes">
-    <link rel="manifest" href="<?= h(APP_URL . '/manifest.json') ?>">
+    <?php // หน้าแชร์ใช้ manifest ของลิงก์นั้น ไอคอนที่ติดตั้งจากหน้านี้จึงเปิดกลับมาที่ลิงก์แชร์ ไม่ใช่หน้าแรกของเจ้าของ ?>
+    <link rel="manifest" href="<?= h($shareToken !== '' ? $shareHomeUrl . '/manifest.webmanifest' : APP_URL . '/manifest.json') ?>">
     <!-- Without it browsers ask for /favicon.ico, which does not exist. -->
     <link rel="icon" type="image/png" href="<?= h(APP_URL . '/assets/icons/icon-192.png') ?>">
     <title><?= isset($pageTitle) ? h($pageTitle) . ' — ' : '' ?><?= h(APP_NAME) ?></title>
