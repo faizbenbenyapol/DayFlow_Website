@@ -22,11 +22,7 @@
                     method: 'POST',
                     body: JSON.stringify({ telegram_bot_token: token, telegram_chat_id: chatId, telegram_notify_events: events })
                 });
-                if (window.Swal) {
-                    Swal.fire({ icon: 'success', title: 'บันทึกการตั้งค่า Telegram แล้ว', timer: 1500, showConfirmButton: false });
-                } else {
-                    toast('บันทึกการตั้งค่า Telegram แล้ว');
-                }
+                toast('บันทึกการตั้งค่า Telegram แล้ว');
             } catch (err) { toast(err.message || 'บันทึกไม่สำเร็จ', 'danger'); }
         });
 
@@ -45,11 +41,7 @@
                     body: JSON.stringify({ telegram_bot_token: token, telegram_chat_id: chatId })
                 });
                 if (btn) btn.disabled = false;
-                if (window.Swal) {
-                    Swal.fire({ icon: 'success', title: 'ส่งข้อความสำเร็จ', text: 'ลองเช็คใน Telegram ของคุณดูครับ', confirmButtonColor: '#e05c4b' });
-                } else {
-                    toast('ส่งข้อความทดสอบสำเร็จ ลองเช็คใน Telegram ของคุณดูครับ');
-                }
+                showNotice('ส่งข้อความทดสอบแล้ว', 'เปิด Telegram แล้วดูว่ามีข้อความจาก DayFlow เข้ามาไหม');
             } catch (err) { 
                 const btn = $('#btnTestTelegram');
                 if (btn) btn.disabled = false;
@@ -68,11 +60,7 @@
                 if (btn) btn.disabled = false;
                 
                 if (data.ok) {
-                    if (window.Swal) {
-                        Swal.fire({ icon: 'success', title: 'รัน Cron สำเร็จ', text: data.output || 'ไม่พบรายการที่ต้องส่งแจ้งเตือนในขณะนี้', confirmButtonColor: '#e05c4b' });
-                    } else {
-                        alert('รัน Cron สำเร็จ!\n\n' + (data.output || 'ไม่มีรายการใหม่'));
-                    }
+                    showNotice('รัน Cron แล้ว', data.output || 'ตอนนี้ไม่มีรายการที่ต้องส่งแจ้งเตือน');
                 } else {
                     toast(data.error || 'เกิดข้อผิดพลาดในการรัน Cron', 'danger');
                 }

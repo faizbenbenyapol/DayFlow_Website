@@ -473,6 +473,28 @@
     font-weight: 500;
 }
 
+/* A figure on the right of a row is what the row is for, so it is set in
+   ink and weight rather than the pencil grey of a side note. */
+.ruled-row .side.num {
+    color: var(--ink);
+    font-size: 0.9375rem;
+    font-weight: 600;
+}
+
+/* Money in or out, wherever it sits: a ledger cell, a row, a summary. The
+   sign (+ / −) is always printed too, so the colour is never the only cue. */
+.num.in,
+.ledger .in,
+.ruled-row .side.in {
+    color: var(--ledger-green);
+}
+
+.num.out,
+.ledger .out,
+.ruled-row .side.out {
+    color: var(--stamp-red);
+}
+
 /* The accounts-ledger table: money right-aligned, a double rule closes the sum. */
 .ledger {
     width: 100%;
@@ -488,14 +510,6 @@
 .ledger td.num {
     width: 1%;
     padding-left: var(--space-4);
-}
-
-.ledger .in {
-    color: var(--ledger-green);
-}
-
-.ledger .out {
-    color: var(--stamp-red);
 }
 
 .ledger tr.total td {
@@ -1155,6 +1169,85 @@ body.modal-open {
 }
 
 /* ---------------------------------------------------------------
+   DayFlow's own dialogs (showDialog() in app.js). They ride on dialog.sheet
+   (shell.css) for the backdrop, the slide-in and the bottom sheet on a phone.
+   A ribbon bookmark hangs from the top edge and says what kind of question
+   it is: sky for an ordinary one, rose when the answer destroys something.
+--------------------------------------------------------------- */
+dialog.sheet.df-dialog {
+    width: min(440px, calc(100% - 32px));
+    border: 1.5px solid var(--edge);
+}
+
+html:has(dialog.sheet.df-dialog[open]) {
+    overflow: hidden;
+}
+
+dialog.sheet.df-dialog::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: var(--space-5);
+    width: 56px;
+    height: 12px;
+    border: 1.5px solid var(--edge);
+    border-top: 0;
+    border-radius: 0 0 6px 6px;
+    background: var(--sky-2);
+}
+
+dialog.sheet.df-dialog[data-tone="danger"]::before {
+    background: var(--rose-2);
+}
+
+.df-dialog-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: 28px var(--space-5) var(--space-5);
+}
+
+.df-dialog-title {
+    margin: 0;
+    font-family: var(--font-hand);
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.df-dialog-msg {
+    margin: 0;
+    color: var(--ink);
+    white-space: pre-line;   /* a message may carry its own line breaks */
+    overflow-wrap: anywhere;
+}
+
+.df-dialog-field .form-label {
+    display: block;
+}
+
+.df-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+}
+
+/* On a phone the sheet sits on the bottom edge: no line under it, and the two
+   buttons side by side and full width, in reach of a thumb. The breakpoint
+   matches dialog.sheet's. */
+@media (max-width: 767px) {
+    dialog.sheet.df-dialog {
+        width: 100%;
+        border-bottom: 0;
+    }
+
+    .df-dialog-actions .btn {
+        flex: 1;
+    }
+}
+
+/* ---------------------------------------------------------------
    Toasts: say what happened, in the words of the button that caused it.
 --------------------------------------------------------------- */
 .toast-container {
@@ -1170,14 +1263,25 @@ body.modal-open {
     pointer-events: none;
 }
 
+/* A pastel note with the same inked edge and 2px step as a button, and a
+   round stamp that says what kind of news it is, so the kind reads without
+   telling colours apart. --note is the paper, --stamp the ink of the mark. */
 .toast {
-    max-width: min(360px, calc(100vw - 32px));
-    padding: var(--space-3) var(--space-4);
-    background: var(--ink);
-    color: var(--paper);
+    --note: var(--sky);
+    --stamp: var(--ink);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    width: max-content;
+    max-width: min(380px, calc(100vw - 32px));
+    padding: var(--space-2) var(--space-1) var(--space-2) var(--space-3);
+    border: 1.5px solid var(--edge);
     border-radius: var(--r-control);
-    box-shadow: var(--lift-1);
+    background: var(--note);
+    box-shadow: var(--press), var(--lift-1);
+    color: var(--ink);
     font-size: 0.9375rem;
+    line-height: 1.5;
     opacity: 0;
     transform: translateY(8px);
     transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
@@ -1189,20 +1293,68 @@ body.modal-open {
     transform: none;
 }
 
-.toast.toast-danger,
-.toast.toast-error {
-    background: var(--stamp-red);
-    color: var(--paper);
+.toast-mark {
+    display: inline-grid;
+    place-content: center;
+    flex: none;
+    width: 24px;
+    height: 24px;
+    margin-top: 6px;
+    border: 1.5px solid var(--stamp);
+    border-radius: 50%;
+    color: var(--stamp);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.toast-text {
+    flex: 1;
+    padding: 6px 0;
+    overflow-wrap: anywhere;
+}
+
+.toast-close {
+    display: inline-grid;
+    place-content: center;
+    flex: none;
+    width: 44px;   /* a full-size touch target, tucked into the padding */
+    height: 44px;
+    margin: -4px 0;
+    border: 0;
+    border-radius: var(--r-control);
+    background: none;
+    color: var(--pencil);
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.toast-close:hover {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
 }
 
 .toast.toast-success {
-    background: var(--ledger-green);
-    color: var(--paper);
+    --note: var(--mint);
+    --stamp: var(--ledger-green);
+}
+
+.toast.toast-danger,
+.toast.toast-error {
+    --note: var(--rose);
+    --stamp: var(--stamp-red);
 }
 
 .toast.toast-warning {
-    background: var(--caution);
-    color: var(--paper);
+    --note: var(--butter);
+    --stamp: var(--caution);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .toast {
+        transform: none;
+    }
 }
 
 /* ---------------------------------------------------------------

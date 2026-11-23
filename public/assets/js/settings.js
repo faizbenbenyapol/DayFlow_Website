@@ -112,7 +112,7 @@
                 </div>
             `).join('');
             $$('.device-revoke', list).forEach(button => button.addEventListener('click', async () => {
-                const ok = await confirmAction('อุปกรณ์นี้จะต้องเข้าสู่ระบบใหม่ในครั้งถัดไป', 'ยกเลิกอุปกรณ์', 'ยืนยันการยกเลิก');
+                const ok = await confirmAction('อุปกรณ์นี้จะต้องเข้าสู่ระบบใหม่ในครั้งถัดไป', 'ยกเลิกอุปกรณ์', 'ยกเลิกอุปกรณ์นี้?', 'primary');
                 if (!ok) return;
                 button.disabled = true;
                 try {
@@ -139,7 +139,7 @@
         };
         onSettingsTab('devices', () => { if (!loaded) load(); });
         $('#btnRevokeOtherDevices')?.addEventListener('click', async () => {
-            const ok = await confirmAction('อุปกรณ์อื่นทั้งหมดจะต้องเข้าสู่ระบบใหม่ โดยอุปกรณ์นี้จะยังใช้งานต่อได้', 'ออกจากอุปกรณ์อื่น', 'ยืนยัน');
+            const ok = await confirmAction('อุปกรณ์อื่นทั้งหมดจะต้องเข้าสู่ระบบใหม่ โดยอุปกรณ์นี้จะยังใช้งานต่อได้', 'ออกจากอุปกรณ์อื่น', 'ออกจากอุปกรณ์อื่นทั้งหมด?', 'primary');
             if (!ok) return;
             try {
                 const data = await apiFetch(BASE_URL + '/api/settings/devices/revoke-others', { method: 'POST' });
@@ -267,8 +267,7 @@
                 $('#pwCurrent').value = ''; newPw.value = ''; confirm.value = '';
                 fill.style.setProperty('--v', '0%'); $('#pwStrength').dataset.level = ''; txt.textContent = 'อย่างน้อย 8 ตัวอักษร';
                 hint.textContent = '';
-                if (window.Swal) Swal.fire({ icon: 'success', title: 'เปลี่ยนรหัสผ่านแล้ว', timer: 1500, showConfirmButton: false });
-                else toast('เปลี่ยนรหัสผ่านแล้ว');
+                toast('เปลี่ยนรหัสผ่านแล้ว');
             } catch (err) {
                 toast(err.message || 'เปลี่ยนรหัสผ่านไม่สำเร็จ', 'danger');
             }
@@ -388,19 +387,8 @@
                         ? `นำเข้าข้อมูลสำเร็จ ${result.total.toLocaleString('th-TH')} รายการ`
                         : 'นำเข้าข้อมูลสำเร็จแล้ว';
 
-                    if (window.Swal) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: summary,
-                            text: 'ระบบได้รีสโตร์ข้อมูลสำรองเรียบร้อยแล้ว กำลังโหลดหน้าใหม่...',
-                            timer: 2000,
-                            showConfirmButton: false
-                        });
-                        setTimeout(() => { window.location.reload(); }, 2000);
-                    } else {
-                        toast(summary);
-                        setTimeout(() => { window.location.reload(); }, 1500);
-                    }
+                    toast(summary + ' กำลังโหลดหน้าใหม่');
+                    setTimeout(() => { window.location.reload(); }, 2000);
                 } catch (err) {
                     toast(err.message || 'นำเข้าไม่สำเร็จ', 'danger');
                     btn.disabled = false;

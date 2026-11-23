@@ -105,7 +105,13 @@
     $id('btnTfaCancel')?.addEventListener('click', async function () {
         // Enrolment was never confirmed, so nothing is protecting the account
         // yet; the password the user just typed is enough to back out.
-        const password = prompt('ยืนยันรหัสผ่านเพื่อยกเลิกการตั้งค่า');
+        const password = await askText({
+            title: 'ยกเลิกการตั้งค่ายืนยันสองขั้น',
+            label: 'รหัสผ่านของบัญชีนี้',
+            type: 'password',
+            okLabel: 'ยกเลิกการตั้งค่า',
+            required: 'กรอกรหัสผ่านก่อน',
+        });
         if (!password) return;
         try {
             await apiFetch(BASE_URL + '/api/settings/two-factor', {

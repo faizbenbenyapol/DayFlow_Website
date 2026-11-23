@@ -284,7 +284,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return '<div class="focus-log' + (s.type === 'work' ? '' : ' is-break') + '">'
                 + '<div class="grow"><span class="title">' + text + '</span>'
                 + '<span class="meta">' + when + ' · ' + (TYPE_LABEL[s.type] || escHtml(s.type)) + task + '</span></div>'
-                + '<span class="side">' + s.duration_min + ' นาที</span>'
+                + '<span class="side num">' + s.duration_min + ' นาที</span>'
                 + (IS_READ_ONLY ? '' : '<button type="button" class="icon-btn sm danger btn-delete-log" data-id="' + s.id + '" aria-label="ลบประวัติ: ' + text + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>')
                 + '</div>';
         }).join('');

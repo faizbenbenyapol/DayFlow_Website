@@ -65,22 +65,15 @@ async function uploadScreenshot(input) {
     const file = input.files[0];
     if (!file) return;
 
-    let description = '';
-    if (window.Swal) {
-        const { value: text } = await Swal.fire({
-            title: 'คำอธิบายรูปภาพ',
-            input: 'text',
-            inputLabel: 'ใส่คำอธิบายสั้นๆ ไว้ค้นทีหลัง (ไม่ใส่ก็ได้)',
-            inputPlaceholder: 'เช่น พอร์ตสิ้นเดือนมิถุนายน',
-            showCancelButton: true,
-            confirmButtonText: 'อัปโหลด',
-            cancelButtonText: 'ยกเลิก',
-        });
-        if (text === undefined) {
-            input.value = '';
-            return;
-        }
-        description = text || '';
+    const description = await askText({
+        title: 'คำอธิบายรูปภาพ',
+        label: 'ใส่คำอธิบายสั้น ๆ ไว้ค้นทีหลัง (ไม่ใส่ก็ได้)',
+        placeholder: 'เช่น พอร์ตสิ้นเดือนมิถุนายน',
+        okLabel: 'อัปโหลด',
+    });
+    if (description === null) {
+        input.value = '';
+        return;
     }
 
     const formData = new FormData();

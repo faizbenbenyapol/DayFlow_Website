@@ -22,7 +22,7 @@
     --rule-strong:  #7E8794;   /* anything the eye must find: field edges, checkboxes */
     --edge:         #3A3F4A;   /* the outline of a button and an index tab */
     --ink:          #2B2F38;
-    --pencil:       #59606C;   /* secondary text */
+    --pencil:       #4E5561;   /* secondary text */
 
     /* Meaning. Used only when the colour says something; pastels never do. */
     --stamp-red:    #B83232;   /* overdue, expense, delete, the tick of a done item */
@@ -108,7 +108,7 @@
     --rule-strong:  #7F8985;
     --edge:         #BFC6C2;
     --ink:          #E8EBE8;
-    --pencil:       #A6AEAA;
+    --pencil:       #B6BDB9;
     --stamp-red:    #F08080;
     --ledger-green: #6BCB9A;
     --caution:      #E6AE4A;

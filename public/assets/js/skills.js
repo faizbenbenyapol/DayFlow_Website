@@ -124,7 +124,7 @@ async function loadLogs() {
             + '<small>' + l.start_time.substring(11, 16) + '–' + l.end_time.substring(11, 16) + '</small></span>'
             + '<span class="grow"><span class="title sk-name">' + name + '</span>'
             + (l.notes ? '<span class="meta">' + escHtml(l.notes) + '</span>' : '') + '</span>'
-            + '<span class="side sk-dur">' + formatDuration(l.duration_seconds) + '</span>'
+            + '<span class="side num sk-dur">' + formatDuration(l.duration_seconds) + '</span>'
             + '<button type="button" class="icon-btn sm" data-act="deleteLog" data-args="[' + l.id + ']" aria-label="ลบรายการ ' + name + ' ' + formatDuration(l.duration_seconds) + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>'
             + '</li>';
     }).join('') + '</ul>'

@@ -24,6 +24,7 @@
 .sub-amount {
     flex: none;
     min-width: 6rem;
+    font-weight: 600;   /* the figure is what the row is for */
     padding-top: 2px;
 }
 

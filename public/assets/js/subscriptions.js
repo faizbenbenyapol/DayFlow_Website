@@ -150,7 +150,7 @@ function renderSubs() {
 
 /* --- Renew --- */
 async function renewSub(id) {
-    if (!await confirmAction('วันครบกำหนดจะเลื่อนไปรอบถัดไป', 'ชำระแล้ว', 'ชำระรอบนี้แล้ว?')) return;
+    if (!await confirmAction('วันครบกำหนดจะเลื่อนไปรอบถัดไป', 'ชำระแล้ว', 'ชำระรอบนี้แล้ว?', 'primary')) return;
     try {
         await apiFetch(BASE_URL + '/api/subscriptions/' + id + '/renew', { method: 'POST' });
         await loadSubs();

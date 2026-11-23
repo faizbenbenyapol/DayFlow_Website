@@ -1,8 +1,6 @@
 </div><!-- /.app-content -->
 </main><!-- /.app-main -->
 
-<!-- SweetAlert2 is not loaded here: app.js fetches it the first time something
-     calls Swal.fire(), so page views that never open a dialog skip ~90KB. -->
 <!-- CDN: Sortable.js — only the pages with drag-and-drop lists need it -->
 <?php
 $sortablePages = ['notes', 'projects', 'settings', 'tasks'];
@@ -72,7 +70,7 @@ if ('serviceWorker' in navigator) {
 
     const shouldHold = () => document.hidden
         || document.querySelector('.modal-backdrop.active')
-        || document.querySelector('.swal2-container');
+        || document.querySelector('.df-dialog[open]');
 
     // Reloading a tab nobody is looking at costs a full page render plus every
     // query behind it, so a hidden or busy tab defers until it is back in use.
