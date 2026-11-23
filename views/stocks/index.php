@@ -124,22 +124,19 @@ $readOnly = Auth::isReadOnly();
                 <option value="OTHER">อื่นๆ</option>
             </select>
         </div>
+        <?php // ซื้อกับขายแยกกันดู: ฝั่งขายมีกำไรต่อครั้งและเงินที่ได้ (ลงทุนต่อ/ถอน) ที่ฝั่งซื้อไม่มี ?>
+        <div class="stk-side-bar">
+            <div class="seg-pair" role="radiogroup" aria-label="ดูรายการซื้อหรือขาย">
+                <label><input type="radio" name="stkTxnSide" value="buy" checked data-act="renderStockTxnList" data-on="change"><span>รายการซื้อ</span></label>
+                <label><input type="radio" name="stkTxnSide" value="sell" data-act="renderStockTxnList" data-on="change"><span>รายการขาย</span></label>
+            </div>
+            <p class="stk-side-total" id="stkTxnTotal" aria-live="polite"></p>
+        </div>
         <div class="table-wrap">
             <table class="table" aria-label="รายการซื้อขาย">
-                <thead>
-                    <tr>
-                        <th scope="col">วันที่</th>
-                        <th scope="col">หุ้น</th>
-                        <th scope="col">ฝั่ง</th>
-                        <th scope="col" class="num">จำนวน</th>
-                        <th scope="col" class="num">ราคา</th>
-                        <th scope="col" class="num">ค่าธรรมเนียม</th>
-                        <th scope="col" class="num">มูลค่า</th>
-                        <th scope="col"><span class="sr-only">แก้ไข</span></th>
-                    </tr>
-                </thead>
+                <thead id="stkTxnHead"></thead>
                 <tbody id="stkTxnList">
-                    <tr><td colspan="8"><span class="skel skel-w-52"></span></td></tr>
+                    <tr><td colspan="9"><span class="skel skel-w-52"></span></td></tr>
                 </tbody>
             </table>
         </div>
@@ -277,8 +274,8 @@ $readOnly = Auth::isReadOnly();
             <input type="hidden" id="editStockId">
             <div class="form-group">
                 <div class="seg-pair" role="radiogroup" aria-label="ซื้อหรือขาย">
-                    <label><input type="radio" name="stkSide" value="buy" checked><span>ซื้อ</span></label>
-                    <label><input type="radio" name="stkSide" value="sell"><span>ขาย</span></label>
+                    <label><input type="radio" name="stkSide" value="buy" checked data-act="syncProceedsFields" data-on="change"><span>ซื้อ</span></label>
+                    <label><input type="radio" name="stkSide" value="sell" data-act="syncProceedsFields" data-on="change"><span>ขาย</span></label>
                 </div>
             </div>
             <div class="form-row">
@@ -298,21 +295,21 @@ $readOnly = Auth::isReadOnly();
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label" for="stkQty">จำนวน (หุ้น)</label>
-                    <input type="number" class="form-control" id="stkQty" step="0.0001" min="0.0001" inputmode="decimal">
+                    <input type="number" class="form-control" id="stkQty" step="0.0001" min="0.0001" inputmode="decimal" data-act="syncProceedsFields" data-on="input">
                 </div>
                 <div class="form-group">
                     <label class="form-label" for="stkPrice">ราคาต่อหุ้น</label>
-                    <input type="number" class="form-control" id="stkPrice" step="0.0001" min="0" inputmode="decimal">
+                    <input type="number" class="form-control" id="stkPrice" step="0.0001" min="0" inputmode="decimal" data-act="syncProceedsFields" data-on="input">
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label" for="stkCurrency">สกุลเงิน</label>
-                    <input type="text" class="form-control" id="stkCurrency" value="USD" maxlength="3" autocomplete="off">
+                    <input type="text" class="form-control" id="stkCurrency" value="USD" maxlength="3" autocomplete="off" data-act="syncProceedsFields" data-on="input">
                 </div>
                 <div class="form-group">
                     <label class="form-label" for="stkFee">ค่าธรรมเนียม</label>
-                    <input type="number" class="form-control" id="stkFee" step="0.0001" min="0" value="0" inputmode="decimal">
+                    <input type="number" class="form-control" id="stkFee" step="0.0001" min="0" value="0" inputmode="decimal" data-act="syncProceedsFields" data-on="input">
                 </div>
             </div>
             <div class="form-row">
@@ -325,6 +322,28 @@ $readOnly = Auth::isReadOnly();
                     <input type="text" class="form-control" id="stkNotes" maxlength="500">
                 </div>
             </div>
+            <?php // เฉพาะการขาย: เงินที่ได้เก็บไว้ในพอร์ต หรือถอนออก (ถอนออก = รายการถอนในแท็บเงินลงทุน) ?>
+            <fieldset class="form-group stk-proceeds" id="stkProceeds" hidden>
+                <legend class="form-label">เงินจากการขายนี้</legend>
+                <div class="seg-pair" role="radiogroup" aria-label="เงินจากการขายนี้">
+                    <label><input type="radio" name="stkProceeds" value="reinvest" data-act="syncProceedsFields" data-on="change"><span>เก็บไว้ลงทุนต่อ</span></label>
+                    <label><input type="radio" name="stkProceeds" value="withdraw" data-act="syncProceedsFields" data-on="change"><span>ถอนออก</span></label>
+                </div>
+                <p class="form-hint">ลงทุนต่อ: เงินอยู่ในพอร์ต เงินต้นไม่เปลี่ยน กำไรไม่นับเป็นเงินต้น · ถอนออก: บันทึกเป็นเงินถอนในแท็บเงินลงทุน</p>
+                <div class="form-row" id="stkWithdrawFields" hidden>
+                    <div class="form-group">
+                        <label class="form-label" for="stkWithdrawAmount">ยอดที่ถอน</label>
+                        <input type="number" class="form-control" id="stkWithdrawAmount" step="0.01" min="0" inputmode="decimal" data-act="markWithdrawEdited" data-on="input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="stkWithdrawCurrency">สกุลเงินที่ถอน</label>
+                        <select class="form-control" id="stkWithdrawCurrency" data-act="markWithdrawEdited" data-on="change">
+                            <option value="THB">THB</option>
+                            <option value="USD">USD</option>
+                        </select>
+                    </div>
+                </div>
+            </fieldset>
             <p class="form-error" id="stkError" role="alert" hidden></p>
         </div>
         <div class="modal-footer">

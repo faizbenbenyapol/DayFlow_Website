@@ -7,6 +7,8 @@ class StockCapitalController
 {
     public function apiList(): void
     {
+        // คนดูลิงก์แชร์เห็นยอดเงินลงทุนจากหน้าสรุปพอร์ตแล้ว รายการรายครั้งไม่เปิดให้ (CR-1)
+        if (Auth::isReadOnly()) Response::json(['error' => 'ลิงก์แชร์ไม่แสดงรายการเงินลงทุน'], 403);
         Response::json(['flows' => Stock::listCapitalFlows(Auth::userId())]);
     }
 
@@ -25,7 +27,9 @@ class StockCapitalController
     {
         $userId = Auth::userId();
         $flowId = (int)$id;
-        if (!Stock::getCapitalFlowById($flowId, $userId)) Response::json(['error' => 'ไม่พบรายการ'], 404);
+        $flow   = Stock::getCapitalFlowById($flowId, $userId);
+        if (!$flow) Response::json(['error' => 'ไม่พบรายการ'], 404);
+        self::refuseSaleLinked($flow);
 
         $data = $this->validate();
         if (isset($data['error'])) Response::json(['error' => $data['error']], 422);
@@ -36,10 +40,24 @@ class StockCapitalController
 
     public function apiDelete(string $id): void
     {
-        if (!Stock::deleteCapitalFlow((int)$id, Auth::userId())) {
-            Response::json(['error' => 'ไม่พบรายการ'], 404);
-        }
+        $userId = Auth::userId();
+        $flow   = Stock::getCapitalFlowById((int)$id, $userId);
+        if (!$flow) Response::json(['error' => 'ไม่พบรายการ'], 404);
+        self::refuseSaleLinked($flow);
+
+        Stock::deleteCapitalFlow((int)$id, $userId);
         Response::json(['ok' => true]);
+    }
+
+    /**
+     * รายการถอนที่ระบบสร้างจากการขายหุ้น แก้หรือลบได้ที่รายการขายเท่านั้น
+     * ไม่งั้นยอดถอนกับป้าย "ถอนออก" ของรายการขายจะไม่ตรงกัน ตอบ 409 แล้วจบ request
+     */
+    private static function refuseSaleLinked(array $flow): void
+    {
+        if (!empty($flow['sale_txn_id'])) {
+            Response::json(['error' => 'รายการนี้มาจากการขายหุ้น แก้หรือลบที่รายการขายในแท็บซื้อขาย'], 409);
+        }
     }
 
     private function validate(): array

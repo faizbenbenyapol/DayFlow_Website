@@ -5,22 +5,39 @@
 
 class Stock
 {
+    /**
+     * รายการซื้อขายล่าสุด 500 รายการ (กรองตามหุ้น/ตลาดได้)
+     * รายการขายมีเพิ่ม: realized_pl (กำไรครั้งนั้น คิดจากทุกรายการของหุ้นตัวนั้น ไม่ใช่แค่ที่กรองมา)
+     * และ withdraw_amount / withdraw_currency เมื่อเลือก "ถอนออก" รายการซื้อได้ realized_pl = null
+     */
     public static function listForUser(int $userId, array $filters = []): array
     {
-        $sql = 'SELECT * FROM stock_transactions WHERE user_id = ?';
+        $sql = 'SELECT t.*, f.amount AS withdraw_amount, f.currency AS withdraw_currency
+                FROM stock_transactions t
+                LEFT JOIN stock_capital_flows f ON f.sale_txn_id = t.id AND f.user_id = t.user_id
+                WHERE t.user_id = ?';
         $params = [$userId];
 
         if (!empty($filters['ticker'])) {
-            $sql .= ' AND ticker = ?';
+            $sql .= ' AND t.ticker = ?';
             $params[] = strtoupper($filters['ticker']);
         }
         if (!empty($filters['market'])) {
-            $sql .= ' AND market = ?';
+            $sql .= ' AND t.market = ?';
             $params[] = $filters['market'];
         }
 
-        $sql .= ' ORDER BY txn_date DESC, id DESC LIMIT 500';
-        return DB::run($sql, $params)->fetchAll();
+        $sql .= ' ORDER BY t.txn_date DESC, t.id DESC LIMIT 500';
+        $rows = DB::run($sql, $params)->fetchAll();
+
+        // ไม่ปัดเป็น 2 ตำแหน่งที่นี่: ต้นทุนเฉลี่ยมักเป็นทศนิยมไม่รู้จบ ถ้าปัดทีละรายการ
+        // ผลรวมจะเพี้ยนจาก totals.realized_pl ของหน้าสรุปพอร์ต (REQ-12) หน้าจอปัดตอนแสดงเอง
+        $realized = self::realizedBySale($userId);
+        foreach ($rows as &$row) {
+            $row['realized_pl'] = $row['side'] === 'sell' ? round($realized[(int)$row['id']] ?? 0.0, 6) : null;
+        }
+        unset($row);
+        return $rows;
     }
 
     public static function getById(int $id, int $userId): ?array
@@ -31,48 +48,118 @@ class Stock
         )->fetch() ?: null;
     }
 
+    /**
+     * บันทึกรายการซื้อขายใหม่ ถ้าเป็นการขายแบบ "ถอนออก" สร้างรายการถอนที่ผูกกันในธุรกรรมเดียวกัน
+     * @param array $data ค่าที่ผ่าน validateData() แล้ว ใช้ proceeds_action และ withdraw (ถ้ามี)
+     * @return int id ของรายการใหม่
+     * @throws Throwable เมื่อบันทึกไม่สำเร็จ (ย้อนทั้งสองตารางแล้ว)
+     */
     public static function create(int $userId, array $data): int
     {
-        DB::run(
-            'INSERT INTO stock_transactions
-                (user_id, ticker, market, side, quantity, price, fee, currency, txn_date, notes)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [
-                $userId,
-                strtoupper($data['ticker']),
-                $data['market'] ?? 'US',
-                $data['side'],
-                (float)$data['quantity'],
-                (float)$data['price'],
-                (float)($data['fee'] ?? 0),
-                strtoupper($data['currency'] ?? 'USD'),
-                $data['txn_date'],
-                $data['notes'] ?? null,
-            ]
-        );
-        return (int)DB::conn()->lastInsertId();
+        return self::inTransaction(function () use ($userId, $data): int {
+            DB::run(
+                'INSERT INTO stock_transactions
+                    (user_id, ticker, market, side, quantity, price, fee, proceeds_action, currency, txn_date, notes)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [
+                    $userId,
+                    strtoupper($data['ticker']),
+                    $data['market'] ?? 'US',
+                    $data['side'],
+                    (float)$data['quantity'],
+                    (float)$data['price'],
+                    (float)($data['fee'] ?? 0),
+                    $data['proceeds_action'] ?? null,
+                    strtoupper($data['currency'] ?? 'USD'),
+                    $data['txn_date'],
+                    $data['notes'] ?? null,
+                ]
+            );
+            $id = (int)DB::conn()->lastInsertId();
+            self::syncSaleWithdrawal($userId, $id, $data);
+            return $id;
+        });
     }
 
-    public static function update(int $id, int $userId, array $data): bool
+    /**
+     * แก้รายการซื้อขาย และปรับรายการถอนที่ผูกกันให้ตรงกับตัวเลือกใหม่ในธุรกรรมเดียวกัน
+     * (เปลี่ยนเป็น "ลงทุนต่อ" หรือเปลี่ยนเป็นรายการซื้อ = ลบรายการถอนที่ผูกไว้)
+     * @throws Throwable เมื่อบันทึกไม่สำเร็จ (ย้อนทั้งสองตารางแล้ว)
+     */
+    public static function update(int $id, int $userId, array $data): void
     {
-        return DB::run(
-            'UPDATE stock_transactions
-             SET ticker=?, market=?, side=?, quantity=?, price=?, fee=?, currency=?, txn_date=?, notes=?
-             WHERE id = ? AND user_id = ?',
+        self::inTransaction(function () use ($id, $userId, $data): void {
+            DB::run(
+                'UPDATE stock_transactions
+                 SET ticker=?, market=?, side=?, quantity=?, price=?, fee=?, proceeds_action=?, currency=?, txn_date=?, notes=?
+                 WHERE id = ? AND user_id = ?',
+                [
+                    strtoupper($data['ticker']),
+                    $data['market'] ?? 'US',
+                    $data['side'],
+                    (float)$data['quantity'],
+                    (float)$data['price'],
+                    (float)($data['fee'] ?? 0),
+                    $data['proceeds_action'] ?? null,
+                    strtoupper($data['currency'] ?? 'USD'),
+                    $data['txn_date'],
+                    $data['notes'] ?? null,
+                    $id,
+                    $userId,
+                ]
+            );
+            self::syncSaleWithdrawal($userId, $id, $data);
+        });
+    }
+
+    /**
+     * ทำให้รายการถอนที่ผูกกับการขายตรงกับตัวเลือกของรายการขาย
+     * - ถอนออก: สร้างหรือแก้รายการถอน (หนึ่งการขายมีได้หนึ่งรายการ ด้วย unique key ของ sale_txn_id)
+     * - อย่างอื่น (ลงทุนต่อ ไม่ได้ระบุ หรือเป็นรายการซื้อ): ลบรายการถอนที่ผูกไว้ ถ้ามี
+     * ผลข้างเคียง: เขียนตาราง stock_capital_flows ต้องเรียกภายในธุรกรรมของ create()/update()
+     */
+    private static function syncSaleWithdrawal(int $userId, int $saleId, array $data): void
+    {
+        $withdraw = $data['withdraw'] ?? null;
+        if (($data['proceeds_action'] ?? null) !== 'withdraw' || $withdraw === null) {
+            DB::run('DELETE FROM stock_capital_flows WHERE sale_txn_id = ? AND user_id = ?', [$saleId, $userId]);
+            return;
+        }
+
+        DB::run(
+            'INSERT INTO stock_capital_flows (user_id, flow_type, amount, currency, flow_date, notes, sale_txn_id)
+             VALUES (?, \'withdrawal\', ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE amount = VALUES(amount), currency = VALUES(currency),
+                                     flow_date = VALUES(flow_date), notes = VALUES(notes)',
             [
-                strtoupper($data['ticker']),
-                $data['market'] ?? 'US',
-                $data['side'],
-                (float)$data['quantity'],
-                (float)$data['price'],
-                (float)($data['fee'] ?? 0),
-                strtoupper($data['currency'] ?? 'USD'),
-                $data['txn_date'],
-                $data['notes'] ?? null,
-                $id,
                 $userId,
+                (float)$withdraw['amount'],
+                $withdraw['currency'],
+                $data['txn_date'],
+                'ถอนจากการขาย ' . strtoupper($data['ticker']),
+                $saleId,
             ]
-        )->rowCount() > 0;
+        );
+    }
+
+    /**
+     * รัน $work ในธุรกรรมฐานข้อมูล สำเร็จแล้ว commit พลาดแล้ว rollback แล้วโยน error ต่อ
+     * @template T
+     * @param callable(): T $work
+     * @return T
+     */
+    private static function inTransaction(callable $work): mixed
+    {
+        $db = DB::conn();
+        $db->beginTransaction();
+        try {
+            $result = $work();
+            $db->commit();
+            return $result;
+        } catch (Throwable $e) {
+            $db->rollBack();
+            throw $e;
+        }
     }
 
     public static function delete(int $id, int $userId): bool
@@ -90,6 +177,72 @@ class Stock
             [$userId]
         )->fetchAll();
         return array_column($rows, 'ticker');
+    }
+
+    /**
+     * เดินรายการซื้อขายของหุ้นตัวเดียวตามลำดับเวลา ด้วยวิธีต้นทุนเฉลี่ย (average cost)
+     * เป็นสูตรเดียวที่ทั้งหน้าสรุปพอร์ตและกำไรรายครั้งใช้ ผลรวมของสองที่จึงตรงกันเสมอ
+     * - ซื้อ: ต้นทุนเพิ่ม (จำนวน × ราคา + ค่าธรรมเนียม)
+     * - ขาย: กำไร = (ราคาขาย − ต้นทุนเฉลี่ย ณ ตอนขาย) × จำนวนที่ขายได้จริง − ค่าธรรมเนียมขาย
+     *   ขายเกินที่ถืออยู่ นับเฉพาะส่วนที่ถืออยู่ (ขายของที่ไม่มีเลย = ขาดทุนเท่าค่าธรรมเนียม)
+     *
+     * @param array<int, array<string, mixed>> $rows รายการของ ticker เดียว เรียง txn_date แล้ว id จากเก่าไปใหม่
+     * @return array{qty: float, cost: float, realized: float, by_sale: array<int, float>}
+     *   qty/cost = หุ้นและต้นทุนที่ยังถืออยู่, by_sale = กำไรต่อรายการขาย (key = id ของรายการ, ยังไม่ปัดเศษ)
+     */
+    public static function averageCostWalk(array $rows): array
+    {
+        $qty = 0.0;
+        $cost = 0.0;
+        $realized = 0.0;
+        $bySale = [];
+
+        foreach ($rows as $r) {
+            $q = (float)$r['quantity'];
+            $p = (float)$r['price'];
+            $f = (float)$r['fee'];
+
+            if ($r['side'] === 'buy') {
+                $cost += ($q * $p) + $f;
+                $qty  += $q;
+                continue;
+            }
+
+            $avgCostAtSell = $qty > 0 ? $cost / $qty : 0.0;
+            $sellQty = min($q, $qty);
+            $pl = ($p - $avgCostAtSell) * $sellQty - $f;
+            $bySale[(int)$r['id']] = $pl;
+            $realized += $pl;
+            // ต้นทุนของหุ้นที่ขายออกไปหายจากกองตามสัดส่วน
+            $cost -= $avgCostAtSell * $sellQty;
+            $qty  -= $sellQty;
+            if ($qty < 1e-9) { $qty = 0.0; $cost = 0.0; }
+        }
+
+        return ['qty' => $qty, 'cost' => $cost, 'realized' => $realized, 'by_sale' => $bySale];
+    }
+
+    /**
+     * กำไร/ขาดทุนของทุกรายการขายของผู้ใช้ คำนวณตอนเรียก (แก้รายการซื้อย้อนหลังแล้วค่าเปลี่ยนตาม)
+     * @return array<int, float> key = id ของรายการขาย
+     */
+    public static function realizedBySale(int $userId): array
+    {
+        $txns = DB::run(
+            'SELECT id, ticker, side, quantity, price, fee FROM stock_transactions WHERE user_id = ?
+             ORDER BY ticker, txn_date ASC, id ASC',
+            [$userId]
+        )->fetchAll();
+
+        $groups = [];
+        foreach ($txns as $t) {
+            $groups[$t['ticker']][] = $t;
+        }
+        $result = [];
+        foreach ($groups as $rows) {
+            $result += self::averageCostWalk($rows)['by_sale'];
+        }
+        return $result;
     }
 
     /**
@@ -123,32 +276,10 @@ class Stock
         $totUnreal = 0.0;
 
         foreach ($groups as $ticker => $rows) {
-            $qty = 0.0;
-            $cost = 0.0;       // running cost basis of held shares
-            $realized = 0.0;
-            $currency = 'USD';
-            $market = 'US';
-
-            foreach ($rows as $r) {
-                $currency = $r['currency'];
-                $market   = $r['market'];
-                $q = (float)$r['quantity'];
-                $p = (float)$r['price'];
-                $f = (float)$r['fee'];
-
-                if ($r['side'] === 'buy') {
-                    $cost += ($q * $p) + $f;
-                    $qty  += $q;
-                } else { // sell
-                    $avgCostAtSell = $qty > 0 ? $cost / $qty : 0.0;
-                    $sellQty = min($q, $qty);
-                    $realized += ($p - $avgCostAtSell) * $sellQty - $f;
-                    // reduce cost basis proportionally
-                    $cost -= $avgCostAtSell * $sellQty;
-                    $qty  -= $sellQty;
-                    if ($qty < 1e-9) { $qty = 0.0; $cost = 0.0; }
-                }
-            }
+            ['qty' => $qty, 'cost' => $cost, 'realized' => $realized] = self::averageCostWalk($rows);
+            $last     = end($rows);
+            $currency = $last['currency'];
+            $market   = $last['market'];
 
             $totRealized += $realized;
 

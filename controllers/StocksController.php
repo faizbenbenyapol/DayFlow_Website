@@ -12,6 +12,9 @@ class StocksController
     /** A cached quote younger than this is not fetched again. */
     private const CACHE_COOLDOWN_SECONDS = 300;
 
+    /** ยอดถอนสูงสุดที่คอลัมน์ DECIMAL(18,4) ของ stock_capital_flows.amount เก็บได้ */
+    private const MAX_WITHDRAW_AMOUNT = 99999999999999;
+
     /** AI providers tried for an analysis, in order, until one answers. */
     private const ANALYSIS_PROVIDERS = ['gemini', 'openai', 'anthropic', 'kimi', 'openrouter'];
 
@@ -32,6 +35,8 @@ class StocksController
 
     public function apiList(): void
     {
+        // คนดูลิงก์แชร์เห็นแค่ยอดรวม เงินสด และรูป (CR-1) รายการซื้อขายรายครั้งไม่เปิดให้
+        if (Auth::isReadOnly()) Response::json(['error' => 'ลิงก์แชร์ไม่แสดงรายการซื้อขาย'], 403);
         $userId = Auth::userId();
         $filters = [
             'ticker' => Request::query('ticker', ''),
@@ -295,7 +300,29 @@ class StocksController
             return ['error' => 'สกุลเงินไม่ถูกต้อง'];
         }
 
+        // เงินจากการขาย: ลงทุนต่อ หรือถอนออก (ไม่ส่งมา = ไม่ได้ระบุ เหมือนรายการขายเก่า)
+        $action = $side === 'sell' ? (Request::input('proceeds_action') ?: null) : null;
+        if ($action !== null && !in_array($action, ['reinvest', 'withdraw'], true)) {
+            return ['error' => 'ตัวเลือกเงินจากการขายไม่ถูกต้อง'];
+        }
+        $withdraw = null;
+        if ($action === 'withdraw') {
+            $withdraw = [
+                'amount'   => (float)Request::input('withdraw_amount', 0),
+                'currency' => strtoupper(trim((string)Request::input('withdraw_currency', ''))),
+            ];
+            if ($withdraw['amount'] <= 0) return ['error' => 'ใส่ยอดที่ถอนออกให้มากกว่า 0'];
+            // คอลัมน์ amount เป็น DECIMAL(18,4) ยอดที่เกินจะทำให้บันทึกล้มเป็น 500
+            if ($withdraw['amount'] > self::MAX_WITHDRAW_AMOUNT) return ['error' => 'ยอดที่ถอนออกมากเกินไป'];
+            // แท็บเงินลงทุนรับแค่ THB และ USD (StockCapitalController::validate)
+            if (!in_array($withdraw['currency'], ['THB', 'USD'], true)) {
+                return ['error' => 'ยอดที่ถอนออกต้องเป็น THB หรือ USD'];
+            }
+        }
+
         return [
+            'proceeds_action' => $action,
+            'withdraw' => $withdraw,
             'ticker'   => $ticker,
             'market'   => $market,
             'side'     => $side,
