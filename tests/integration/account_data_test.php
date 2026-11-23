@@ -48,7 +48,8 @@ function accountFixture(): array
         'format' => 'dayflow-export', 'version' => 2,
         'settings' => ['theme' => 'dark', 'day_color' => 0, 'timezone' => 'Asia/Tokyo', 'menu_order' => '["notes","tasks"]'],
         // daily_todos and quick_items from old backups are converted into tasks
-        'tasks'               => [['id' => 9001, 'title' => 'งานสำรอง', 'quadrant' => 1, 'status' => 'open']],
+        'tasks'               => [['id' => 9001, 'title' => 'งานสำรอง', 'quadrant' => 1, 'status' => 'open', 'remind_at' => '2099-01-01 09:00:00']],
+        'task_subtasks'       => [['id' => 9023, 'task_id' => 9001, 'title' => 'ย่อยสำรอง', 'is_done' => 1, 'position' => 0]],
         'notes'               => [['id' => 9002, 'title' => 'โน้ตสำรอง']],
         'note_tags'           => [['id' => 9003, 'name' => 'แท็กสำรอง']],
         'note_blocks'         => [['id' => 9004, 'note_id' => 9002, 'type' => 'text', 'content' => 'บล็อกสำรอง', 'position' => 0]],
@@ -131,6 +132,14 @@ test('a backup restores every section into another account', function (TestClien
     assertSame('งานสำรอง', $realTask['title'] ?? null, 'focus session points at the real task, not a converted legacy row');
     assertSame($restored['skills'][0]['id'], $restored['skill_logs'][0]['skill_id'], 'log → skill');
     assertFalse($restored['skills'][0]['id'] === 'old-skill-uuid', 'a UUID id is regenerated too');
+
+    // งานย่อยและเวลาเตือนต้องเดินทางมาด้วย และชี้ไปที่งานที่สร้างใหม่
+    $realTask = rowById($restored['tasks'], $restored['task_subtasks'][0]['task_id']);
+    assertTrue($realTask !== null, 'subtask → task');
+    assertSame('งานสำรอง', $realTask['title'] ?? null, 'subtask links to the restored task, not the old id');
+    assertSame('ย่อยสำรอง', $restored['task_subtasks'][0]['title'] ?? null, 'subtask title survives');
+    assertSame(1, (int)($restored['task_subtasks'][0]['is_done'] ?? 0), 'subtask done state survives');
+    assertSame('2099-01-01 09:00:00', $realTask['remind_at'] ?? null, 'task reminder time survives');
 
     // And the restored note is really usable through the app.
     $blocks = $second->json($second->get('/api/notes/' . (int)$note['id'] . '/blocks'))['blocks'] ?? [];

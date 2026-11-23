@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (IS_READ_ONLY) return;
     initSortable();
     initQuickAdd();
+    initTaskDialogExtras();
 });
 
 // จดงานจากช่อง quick-add ที่หน้าอื่น: โหลดรายการใหม่ถ้าเป็นงาน
@@ -156,6 +157,22 @@ function expandInbox() {
     renderQuadrant(0);
 }
 
+/**
+ * แปลงเวลาเตือนเป็นรูปแบบสั้น ถ้าเป็นวันนี้แสดงเฉพาะเวลา
+ *
+ * @param {string} dateTimeStr วันเวลาในรูปแบบ Y-m-d H:i:s
+ * @returns {string} ข้อความที่อ่านง่าย เช่น "🔔 09:00" หรือ "🔔 20 พ.ย. 09:00"
+ */
+function formatReminderAt(dateTimeStr) {
+    if (!dateTimeStr) return '';
+    const d = parseServerDate(dateTimeStr);
+    const datePart = dateTimeStr.slice(0, 10);
+    const time = d.toTimeString().slice(0, 5);
+    if (datePart === todayISO()) return '🔔 ' + time;
+    const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    return '🔔 ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + time;
+}
+
 function renderTaskItem(task) {
     const isDone = task.status === 'done';
     const days   = daysUntil(task.due_date);
@@ -176,6 +193,13 @@ function renderTaskItem(task) {
     const repeatLabel = REPEAT_LABELS[task.repeat_rule];
     if (repeatLabel) {
         meta += '<span class="task-repeat" title="งานที่ทำซ้ำ">↻ ' + escHtml(repeatLabel) + '</span>';
+    }
+
+    if (task.subtask_total > 0) {
+        meta += '<span class="task-subtasks" title="งานย่อยที่เสร็จ">☑ ' + escHtml(task.subtask_done + '/' + task.subtask_total) + '</span>';
+    }
+    if (task.remind_at) {
+        meta += '<span class="task-remind" title="เวลาเตือน">' + escHtml(formatReminderAt(task.remind_at)) + '</span>';
     }
 
     const title = escHtml(task.title);
@@ -227,6 +251,32 @@ function initQuickAdd() {
             }
         });
     });
+}
+
+/**
+ * ตั้งค่า event listener สำหรับส่วนเสริมของ dialog (เตือนและงานย่อย)
+ */
+function initTaskDialogExtras() {
+    const addDue = taskField('add', 'Due');
+    if (addDue) {
+        addDue.addEventListener('change', () => {
+            const timeField = taskField('add', 'RemindTime');
+            if (timeField && timeField.value === '') {
+                taskField('add', 'RemindDate').value = addDue.value || todayISO();
+            }
+        });
+    }
+
+    const subtaskNew = document.getElementById('editSubtaskNew');
+    if (subtaskNew) {
+        subtaskNew.addEventListener('keydown', async event => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            const taskId = parseInt(document.getElementById('editTaskId').value, 10);
+            if (!taskId) return;
+            await addSubtask(taskId);
+        });
+    }
 }
 
 /* --- Sortable (drag & drop between quadrants, including inbox) --- */
@@ -291,13 +341,15 @@ async function toggleTask(id, isDone) {
 }
 
 /* --- The add and edit dialogs share their fields; only the prefix differs --- */
-const TASK_FIELDS = ['Title', 'Desc', 'Quadrant', 'Due', 'Repeat', 'RepeatUntil'];
+const TASK_FIELDS = ['Title', 'Desc', 'Quadrant', 'Due', 'Repeat', 'RepeatUntil', 'RemindDate', 'RemindTime'];
 
 function taskField(prefix, name) {
     return document.getElementById(prefix + 'Task' + name);
 }
 
 function readTaskForm(prefix) {
+    const remindDate = taskField(prefix, 'RemindDate').value;
+    const remindTime = taskField(prefix, 'RemindTime').value;
     return {
         title:        taskField(prefix, 'Title').value.trim(),
         description:  taskField(prefix, 'Desc').value.trim(),
@@ -305,6 +357,7 @@ function readTaskForm(prefix) {
         due_date:     taskField(prefix, 'Due').value,
         repeat_rule:  taskField(prefix, 'Repeat').value,
         repeat_until: taskField(prefix, 'RepeatUntil').value,
+        remind_at:    remindTime ? remindDate + ' ' + remindTime : '',
     };
 }
 
@@ -320,6 +373,7 @@ function openAddTask(quadrant) {
     TASK_FIELDS.forEach(name => { taskField('add', name).value = ''; });
     taskField('add', 'Quadrant').value = quadrant;
     taskField('add', 'Repeat').value = 'none';
+    taskField('add', 'RemindDate').value = todayISO();
     openModal('addTaskModal');
 }
 
@@ -355,6 +409,17 @@ function openEditTask(id) {
     taskField('edit', 'Repeat').value = task.repeat_rule || 'none';
     taskField('edit', 'RepeatUntil').value = task.repeat_until || '';
 
+    if (task.remind_at) {
+        taskField('edit', 'RemindDate').value = task.remind_at.slice(0, 10);
+        taskField('edit', 'RemindTime').value = task.remind_at.slice(11, 16);
+    } else {
+        taskField('edit', 'RemindDate').value = task.due_date || todayISO();
+        taskField('edit', 'RemindTime').value = '';
+    }
+
+    const subtasksList = document.getElementById('editSubtasksList');
+    if (subtasksList) subtasksList.innerHTML = '<p class="form-hint">กำลังโหลด…</p>';
+    loadSubtasks(task.id);
     openModal('editTaskModal');
 }
 
@@ -383,6 +448,287 @@ async function deleteTask(id) {
         toast('ลบงานแล้ว');
     } catch {
         toast('ลบไม่สำเร็จ ลองอีกครั้ง', 'danger');
+    }
+}
+
+/* --- Reminder helpers --- */
+
+/**
+ * ล้างช่องเวลาเตือน
+ *
+ * @param {string} prefix คำนำหน้าของฟอร์ม (add หรือ edit)
+ */
+function clearTaskRemindTime(prefix) {
+    const timeField = taskField(prefix, 'RemindTime');
+    if (timeField) timeField.value = '';
+}
+
+/* --- Subtasks (edit dialog only) --- */
+
+let subtaskSortable = null;
+
+/**
+ * โหลดรายการงานย่อยของงานที่กำลังแก้ไข แล้ววาดรายการ พร้อมอัปเดตจำนวนใน allTasks
+ *
+ * @param {number} taskId รหัสงานหลัก
+ */
+async function loadSubtasks(taskId) {
+    const list = document.getElementById('editSubtasksList');
+    if (!list) return;
+
+    try {
+        const data = await apiFetch(BASE_URL + '/api/tasks/' + taskId + '/subtasks');
+        if (!isEditingTask(taskId)) return;
+        const subtasks = data.subtasks || [];
+        renderSubtasksList(taskId, subtasks);
+        updateTaskSubtaskCounts(taskId, subtasks.length, subtasks.filter(s => s.is_done).length);
+    } catch (err) {
+        if (!isEditingTask(taskId)) return;
+        list.innerHTML = '<p class="form-error">' + escHtml(err.message || 'โหลดงานย่อยไม่สำเร็จ') + '</p>';
+    }
+}
+
+/**
+ * ตรวจว่า dialog แก้ไขงานที่ต้องการอยู่หรือไม่ (กันคำตอบช้าไปวาดทับงานอื่น)
+ *
+ * @param {number} taskId รหัสงานที่คาดหวัง
+ * @returns {boolean} true ถ้ายังเป็นงานเดียวกัน
+ */
+function isEditingTask(taskId) {
+    const currentId = parseInt(document.getElementById('editTaskId')?.value, 10);
+    return currentId === taskId;
+}
+
+/**
+ * วาดรายการงานย่อยและติดตั้งการลากเรียงลำดับ
+ *
+ * @param {number} taskId รหัสงานหลัก
+ * @param {Array} subtasks รายการงานย่อย
+ */
+function renderSubtasksList(taskId, subtasks) {
+    const list = document.getElementById('editSubtasksList');
+    if (!list) return;
+
+    if (subtasks.length === 0) {
+        list.innerHTML = '<p class="form-hint">ยังไม่มีงานย่อย</p>';
+        initSubtaskSortable(taskId, list);
+        return;
+    }
+
+    list.innerHTML = subtasks.map(s => renderSubtaskItem(s)).join('');
+    initSubtaskSortable(taskId, list);
+    attachSubtaskListeners(taskId);
+}
+
+/**
+ * สร้าง HTML ของงานย่อยหนึ่งรายการ
+ *
+ * @param {object} s งานย่อย
+ * @returns {string} HTML
+ */
+function renderSubtaskItem(s) {
+    const title = escHtml(s.title);
+    const doneClass = s.is_done ? ' done' : '';
+    return '<div class="subtask-item' + doneClass + '" data-id="' + s.id + '">'
+        + '<span class="subtask-drag" aria-hidden="true">⋮⋮</span>'
+        + '<input type="checkbox" class="subtask-check" ' + (s.is_done ? 'checked' : '') + ' aria-label="เสร็จแล้ว: ' + title + '">'
+        + '<input type="text" class="form-control subtask-title" value="' + title + '" maxlength="255" data-subtask-id="' + s.id + '">'
+        + '<button type="button" class="icon-btn sm danger" data-act="deleteSubtask" data-args="[' + s.id + ']" aria-label="ลบงานย่อย: ' + title + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>'
+        + '</div>';
+}
+
+/**
+ * ติดตั้ง Sortable สำหรับลากเรียงงานย่อย
+ *
+ * @param {number} taskId รหัสงานหลัก
+ * @param {HTMLElement} list รายการงานย่อย
+ */
+function initSubtaskSortable(taskId, list) {
+    if (typeof Sortable === 'undefined' || !list) return;
+    if (subtaskSortable) subtaskSortable.destroy();
+
+    subtaskSortable = Sortable.create(list, {
+        animation: 150,
+        handle: '.subtask-drag',
+        ghostClass: 'sortable-ghost',
+        dragClass: 'sortable-drag',
+        onEnd: () => reorderSubtasks(taskId),
+    });
+}
+
+/**
+ * ผูก event listener ให้ชื่องานย่อย (Enter = บันทึก) และ checkbox
+ *
+ * @param {number} taskId รหัสงานหลัก
+ */
+function attachSubtaskListeners(taskId) {
+    const list = document.getElementById('editSubtasksList');
+    if (!list) return;
+
+    list.querySelectorAll('.subtask-title').forEach(input => {
+        input.addEventListener('keydown', event => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                input.blur();
+            }
+        });
+        input.addEventListener('change', () => saveSubtaskTitle(taskId, parseInt(input.dataset.subtaskId, 10), input));
+    });
+
+    list.querySelectorAll('.subtask-check').forEach(check => {
+        check.addEventListener('change', () => toggleSubtask(taskId, parseInt(check.closest('.subtask-item').dataset.id, 10), check.checked));
+    });
+}
+
+/**
+ * อัปเดตจำนวนงานย่อยใน allTasks แล้ววาดการ์ดงานใหม่
+ *
+ * @param {number} taskId รหัสงาน
+ * @param {number} total จำนวนทั้งหมด
+ * @param {number} done จำนวนที่เสร็จ
+ */
+function updateTaskSubtaskCounts(taskId, total, done) {
+    for (const q in allTasks) {
+        const task = allTasks[q].find(t => t.id === taskId);
+        if (task) {
+            task.subtask_total = total;
+            task.subtask_done = done;
+            renderQuadrant(parseInt(q, 10));
+            renderTally();
+            return;
+        }
+    }
+}
+
+/**
+ * นับงานย่อยจาก DOM ปัจจุบันแล้วอัปเดตการ์ดงานหลัก
+ *
+ * @param {number} taskId รหัสงานหลัก
+ */
+function recountSubtasksAndUpdateCard(taskId) {
+    const list = document.getElementById('editSubtasksList');
+    if (!list) return;
+    const total = list.querySelectorAll('.subtask-item[data-id]').length;
+    const done = list.querySelectorAll('.subtask-item.done').length;
+    updateTaskSubtaskCounts(taskId, total, done);
+}
+
+/**
+ * บันทึกชื่องานย่อย ถ้า API ปฏิเสธให้คืนค่าเดิม
+ *
+ * @param {number} taskId รหัสงานหลัก
+ * @param {number} sid รหัสงานย่อย
+ * @param {HTMLInputElement} input ช่องชื่องานย่อย
+ */
+async function saveSubtaskTitle(taskId, sid, input) {
+    const newTitle = input.value.trim();
+    const oldTitle = input.defaultValue;
+    if (newTitle === oldTitle) return;
+    if (newTitle === '') {
+        input.value = oldTitle;
+        return;
+    }
+    try {
+        await apiFetch(BASE_URL + '/api/tasks/subtasks/' + sid, {
+            method: 'PUT',
+            body: JSON.stringify({ title: newTitle }),
+        });
+        input.defaultValue = newTitle;
+    } catch (err) {
+        input.value = oldTitle;
+        toast(err.message || 'บันทึกไม่สำเร็จ', 'danger');
+    }
+}
+
+/**
+ * เปลี่ยนสถานะงานย่อยเสร็จ/ไม่เสร็จ
+ *
+ * @param {number} taskId รหัสงานหลัก
+ * @param {number} sid รหัสงานย่อย
+ * @param {boolean} isDone เสร็จหรือไม่
+ */
+async function toggleSubtask(taskId, sid, isDone) {
+    try {
+        const data = await apiFetch(BASE_URL + '/api/tasks/subtasks/' + sid, {
+            method: 'PUT',
+            body: JSON.stringify({ is_done: isDone }),
+        });
+        const subtask = data.subtask;
+        const row = document.querySelector('#editSubtasksList .subtask-item[data-id="' + sid + '"]');
+        if (row && subtask) {
+            row.classList.toggle('done', subtask.is_done);
+            const check = row.querySelector('.subtask-check');
+            if (check) check.checked = subtask.is_done;
+        }
+        recountSubtasksAndUpdateCard(taskId);
+    } catch (err) {
+        toast(err.message || 'อัปเดตสถานะไม่สำเร็จ', 'danger');
+        const row = document.querySelector('#editSubtasksList .subtask-item[data-id="' + sid + '"]');
+        const check = row?.querySelector('.subtask-check');
+        if (check) check.checked = !isDone;
+    }
+}
+
+/**
+ * ลบงานย่อย
+ *
+ * @param {number} sid รหัสงานย่อย
+ */
+async function deleteSubtask(sid) {
+    if (!await confirmAction('ลบงานย่อยนี้', 'ลบ', 'ลบงานย่อย?')) return;
+    const taskId = parseInt(document.getElementById('editTaskId').value, 10);
+    try {
+        await apiFetch(BASE_URL + '/api/tasks/subtasks/' + sid, { method: 'DELETE' });
+        await loadSubtasks(taskId);
+    } catch (err) {
+        toast(err.message || 'ลบไม่สำเร็จ', 'danger');
+    }
+}
+
+/**
+ * เรียงลำดับงานย่อยใหม่ตาม DOM ปัจจุบัน
+ *
+ * @param {number} taskId รหัสงานหลัก
+ */
+async function reorderSubtasks(taskId) {
+    const list = document.getElementById('editSubtasksList');
+    if (!list) return;
+    const ids = Array.from(list.querySelectorAll('.subtask-item[data-id]')).map(el => parseInt(el.dataset.id, 10));
+    try {
+        await apiFetch(BASE_URL + '/api/tasks/' + taskId + '/subtasks/reorder', {
+            method: 'POST',
+            body: JSON.stringify({ ids }),
+        });
+        await loadSubtasks(taskId);
+    } catch (err) {
+        toast(err.message || 'เรียงลำดับไม่สำเร็จ', 'danger');
+        await loadSubtasks(taskId);
+    }
+}
+
+/**
+ * เพิ่มงานย่อยใหม่จากช่องพิมพ์ แล้วเคลียร์ช่องและโฟกัสใหม่
+ *
+ * @param {number} taskId รหัสงานหลัก
+ */
+async function addSubtask(taskId) {
+    const input = document.getElementById('editSubtaskNew');
+    if (!input) return;
+    const title = input.value.trim();
+    if (title === '') return;
+    input.disabled = true;
+    try {
+        await apiFetch(BASE_URL + '/api/tasks/' + taskId + '/subtasks', {
+            method: 'POST',
+            body: JSON.stringify({ title }),
+        });
+        input.value = '';
+        await loadSubtasks(taskId);
+    } catch (err) {
+        toast(err.message || 'เพิ่มงานย่อยไม่สำเร็จ', 'danger');
+    } finally {
+        input.disabled = false;
+        input.focus();
     }
 }
 

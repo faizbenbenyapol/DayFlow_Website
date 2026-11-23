@@ -15,6 +15,7 @@ require_once ROOT . '/models/User.php';
 require_once ROOT . '/models/AccountData.php';
 require_once ROOT . '/core/DemoReset.php';
 require_once ROOT . '/models/PushSubscription.php';
+require_once ROOT . '/models/Task.php';
 require_once ROOT . '/models/FileTransfer.php';
 require_once ROOT . '/core/DriveMigration.php';
 
@@ -114,6 +115,65 @@ if (WebPush::isConfigured()) {
     echo "Web push: VAPID keys not configured, skipping.
 ";
 }
+
+// 1.5. Task reminders (Telegram + Web Push wake-up).
+//
+// Runs after the digest block because the Telegram section below returns
+// early when nobody has configured a bot, and push users still need this.
+$due = Task::dueReminders();
+$reminderSent = 0;
+$reminderSkipped = 0;
+$reminderUserIds = [];
+$allReminderIds = [];
+$now = time();
+
+foreach ($due as $reminder) {
+    $allReminderIds[] = (int)$reminder['id'];
+    $remindTime = strtotime((string)$reminder['remind_at']);
+
+    if ($remindTime < $now - 3600) {
+        $reminderSkipped++;
+        continue;
+    }
+
+    $userId = (int)$reminder['user_id'];
+    // แจ้งเตือนตรงเวลาทุกรายการต้องปลุกเบราว์เซอร์ของผู้ใช้ ไม่ขึ้นกับ Telegram
+    $reminderUserIds[$userId] = true;
+    $reminderSent++;
+
+    $timeStr = date('H:i', $remindTime) . ' น.';
+    $msg = TelegramService::formatMessage(
+        "🔔 เตือนงาน",
+        [
+            'ชื่องาน' => htmlspecialchars((string)$reminder['title']),
+            'เวลา'   => $timeStr,
+        ]
+    );
+
+    try {
+        $ok = TelegramService::sendNotification($userId, 'reminder', $msg);
+        if (!$ok) {
+            echo "Task reminder Telegram failed for user {$userId}.\n";
+        }
+    } catch (Throwable $e) {
+        // หนึ่งรายการเตือนผิดพลาดไม่ควรหยุดรายการอื่นหรือการ mark
+        echo "Task reminder failed for user {$userId}: " . $e->getMessage() . "\n";
+    }
+}
+
+// mark ทุกแถวที่เลือกไว้ ไม่ว่าจะส่งหรือข้าม
+Task::markReminded($allReminderIds);
+
+if (WebPush::isConfigured() && !empty($reminderUserIds)) {
+    foreach (array_keys($reminderUserIds) as $reminderUserId) {
+        $result = PushSubscription::notifyUser($reminderUserId);
+        if ($result['removed'] > 0) {
+            echo "Removed {$result['removed']} expired push subscription(s) for user {$reminderUserId}.\n";
+        }
+    }
+}
+
+echo "Task reminders: {$reminderSent} sent, {$reminderSkipped} skipped (over 1 hour late).\n";
 
 // 2. Fetch users with valid Telegram settings
 $users = DB::run("

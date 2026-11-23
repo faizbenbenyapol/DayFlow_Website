@@ -4,16 +4,18 @@
 // =====================================================
 
 require_once ROOT . '/models/Task.php';
+require_once ROOT . '/models/User.php';
+require_once ROOT . '/models/PushSubscription.php';
 require_once ROOT . '/core/TelegramService.php';
 
 class TaskController
 {
     /**
-     * ตรวจสอบข้อมูลงานที่ส่งเข้ามา รองรับ quadrant 0 เป็น inbox (null)
+     * ตรวจสอบข้อมูลงานที่ส่งเข้ามา รองรับ quadrant 0 เป็น inbox และ normalise remind_at
      *
      * @param array<string, mixed> $data ข้อมูลงาน
      * @param bool $requireTitle บังคับให้มีชื่องานหรือไม่
-     * @return array<string, mixed> ข้อมูลที่ผ่านการตรวจสอบ quadrant 0 จะถูกแปลงเป็น null
+     * @return array<string, mixed> ข้อมูลที่ผ่านการตรวจสอบ
      */
     private function validatePayload(array $data, bool $requireTitle = false): array
     {
@@ -54,6 +56,19 @@ class TaskController
                 Response::json(['error' => 'รูปแบบวันสิ้นสุดการทำซ้ำไม่ถูกต้อง'], 422);
             }
         }
+        if (array_key_exists('remind_at', $data)) {
+            $raw = (string)$data['remind_at'];
+            if ($raw === '') {
+                $data['remind_at'] = null;
+            } else {
+                $dt = DateTime::createFromFormat('Y-m-d H:i', $raw);
+                if (!$dt) $dt = DateTime::createFromFormat('Y-m-d H:i:s', $raw);
+                if (!$dt || ($dt->format('Y-m-d H:i') !== $raw && $dt->format('Y-m-d H:i:s') !== $raw)) {
+                    Response::json(['error' => 'รูปแบบเวลาเตือนไม่ถูกต้อง'], 422);
+                }
+                $data['remind_at'] = $dt->format('Y-m-d H:i:00');
+            }
+        }
         // A repeat needs a first date to count from. Only checked when the
         // caller sends a due date, so a partial update that touches nothing but
         // the rule still works on a task that already has one.
@@ -70,6 +85,12 @@ class TaskController
         $pageTitle  = 'งาน';
         $pageStyle  = 'tasks';
         $pageScript = 'tasks';
+
+        $userId = Auth::userId();
+        $settings = User::getSettings($userId);
+        $hasTelegram = !empty($settings['telegram_bot_token']) && !empty($settings['telegram_chat_id']);
+        $hasPush = PushSubscription::countForUser($userId) > 0;
+        $needsChannelHint = !$hasTelegram && !$hasPush;
 
         require ROOT . '/views/layout/header.php';
         require ROOT . '/views/tasks/index.php';
@@ -101,6 +122,9 @@ class TaskController
         Response::json(['quadrants' => $quadrants]);
     }
 
+    /**
+     * สร้างงานใหม่ พร้อมตรวจสอบ remind_at ไม่ให้เป็นเวลาที่ผ่านมาแล้ว
+     */
     public function apiCreate(): void
     {
         $userId = Auth::userId();
@@ -118,13 +142,24 @@ class TaskController
             'due_date'     => Request::input('due_date', ''),
             'repeat_rule'  => Request::input('repeat_rule', 'none'),
             'repeat_until' => Request::input('repeat_until', ''),
+            'remind_at'    => Request::input('remind_at', ''),
         ], true);
+
+        if (!empty($payload['remind_at']) && strtotime($payload['remind_at']) < time()) {
+            Response::json(['error' => 'เวลาเตือนผ่านไปแล้ว'], 422);
+        }
+
         $id = Task::create($userId, $payload);
 
         $task = Task::getById($id, $userId);
         Response::json(['ok' => true, 'task' => $task], 201);
     }
 
+    /**
+     * อัปเดตงาน รองรับการลบ remind_at ด้วย '' และตรวจสอบเวลาผ่านไปแล้วเฉพาะเมื่อเปลี่ยน
+     *
+     * @param string $id รหัสงาน
+     */
     public function apiUpdate(string $id): void
     {
         $userId = Auth::userId();
@@ -142,14 +177,26 @@ class TaskController
             'position'     => Request::input('position') !== null ? (int)Request::input('position') : null,
             'repeat_rule'  => Request::input('repeat_rule'),
             'repeat_until' => Request::input('repeat_until'),
+            'remind_at'    => Request::input('remind_at'),
         ], fn($v) => $v !== null);
 
-        // Allow explicit empty string for due_date
+        // Allow explicit empty string for due_date and remind_at
         if (array_key_exists('due_date', Request::json())) {
             $data['due_date'] = Request::input('due_date', '');
         }
+        if (array_key_exists('remind_at', Request::json())) {
+            $data['remind_at'] = Request::input('remind_at', '');
+        }
 
         $data = $this->validatePayload($data);
+
+        if (isset($data['remind_at'])) {
+            $oldNormalized = $task['remind_at'] ? date('Y-m-d H:i:00', strtotime($task['remind_at'])) : null;
+            if ($data['remind_at'] !== $oldNormalized && strtotime($data['remind_at']) < time()) {
+                Response::json(['error' => 'เวลาเตือนผ่านไปแล้ว'], 422);
+            }
+        }
+
         Task::update($taskId, $userId, $data);
         $updated = Task::getById($taskId, $userId);
         
