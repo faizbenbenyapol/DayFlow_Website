@@ -66,8 +66,18 @@ $data = [
         ['title' => 'อัพเดตเว็บไซต์ส่วนตัวให้ตรงกับผลงานล่าสุดและเพิ่มหน้า case study ของโปรเจกต์ที่เพิ่งส่งมอบ', 'quadrant' => 2, 'status' => 'open', 'due_date' => day(9), 'position' => 2],
         ['title' => 'ตอบอีเมลลูกค้าเรื่องใบเสนอราคา', 'quadrant' => 3, 'status' => 'open', 'due_date' => day(-1), 'position' => 0],
         ['title' => 'จัดโต๊ะทำงาน', 'quadrant' => 4, 'status' => 'open', 'due_date' => null, 'position' => 0],
-        ['title' => 'จองโต๊ะร้านอาหารวันเสาร์', 'quadrant' => 1, 'status' => 'done', 'due_date' => day(0), 'position' => 3],
-        ['title' => 'ส่งใบแจ้งหนี้เดือนที่แล้ว', 'quadrant' => 1, 'status' => 'done', 'due_date' => day(-4), 'position' => 4],
+        ['title' => 'จองโต๊ะร้านอาหารวันเสาร์', 'quadrant' => 1, 'status' => 'done', 'completed_at' => day(0) . ' 00:00:00', 'due_date' => day(0), 'position' => 3],
+        ['title' => 'ส่งใบแจ้งหนี้เดือนที่แล้ว', 'quadrant' => 1, 'status' => 'done', 'completed_at' => day(-4) . ' 00:00:00', 'due_date' => day(-4), 'position' => 4],
+
+        // planner to-dos for today (moved from daily_todos)
+        ['title' => 'โทรหาช่างแอร์', 'quadrant' => null, 'status' => 'open', 'due_date' => day(0), 'position' => 10],
+        ['title' => 'ซื้อของเข้าบ้าน', 'quadrant' => null, 'status' => 'open', 'due_date' => day(0), 'position' => 11],
+        ['title' => 'เติมน้ำมัน', 'quadrant' => null, 'status' => 'done', 'completed_at' => day(0) . ' 00:00:00', 'due_date' => day(0), 'position' => 12],
+
+        // quick notes (moved from quick_items)
+        ['title' => 'โทรถามราคาเปลี่ยนแบตเตอรี่รถ', 'quadrant' => null, 'status' => 'open', 'due_date' => null, 'position' => 0],
+        ['title' => 'อ่านรีวิวหูฟังตัวใหม่ก่อนซื้อ', 'quadrant' => null, 'status' => 'open', 'due_date' => null, 'position' => 0],
+        ['title' => 'ส่งรูปงานแต่งให้พี่ตุ๊กตา', 'quadrant' => null, 'status' => 'done', 'completed_at' => date('Y-m-d H:i:s'), 'due_date' => null, 'position' => 0],
     ],
 
     'calendar_events' => [
@@ -79,11 +89,7 @@ $data = [
         ['title' => 'ส่งภาษีหัก ณ ที่จ่าย', 'description' => null, 'start_datetime' => at(11, '00:00'), 'end_datetime' => at(11, '23:59'), 'is_all_day' => 1, 'repeat_rule' => 'monthly', 'repeat_until' => null, 'color' => '#8b5cf6'],
     ],
 
-    'daily_todos' => [
-        ['todo_date' => day(0), 'title' => 'โทรหาช่างแอร์', 'is_done' => 0, 'position' => 0],
-        ['todo_date' => day(0), 'title' => 'ซื้อของเข้าบ้าน', 'is_done' => 0, 'position' => 1],
-        ['todo_date' => day(0), 'title' => 'เติมน้ำมัน', 'is_done' => 1, 'position' => 2],
-    ],
+    // daily_todos and quick_items have been merged into tasks in step 2.
 
     'finance_categories' => [
         ['id' => 'c1', 'name' => 'เงินเดือน', 'type' => 'income'],
@@ -162,12 +168,6 @@ $data = [
     'note_tags' => [['id' => 't1', 'name' => 'งาน'], ['id' => 't2', 'name' => 'ส่วนตัว']],
     'note_tag_relations' => [
         ['note_id' => 'n1', 'tag_id' => 't2'], ['note_id' => 'n3', 'tag_id' => 't1'],
-    ],
-
-    'quick_items' => [
-        ['content' => 'โทรถามราคาเปลี่ยนแบตเตอรี่รถ', 'is_done' => 0],
-        ['content' => 'อ่านรีวิวหูฟังตัวใหม่ก่อนซื้อ', 'is_done' => 0],
-        ['content' => 'ส่งรูปงานแต่งให้พี่ตุ๊กตา', 'is_done' => 1],
     ],
 
     'bookmarks' => [

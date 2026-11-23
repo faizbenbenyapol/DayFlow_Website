@@ -5,15 +5,40 @@
 
 class Task
 {
-    public static function getAllForUser(int $userId): array
+    /**
+     * จำนวนวันที่งาน done ใน inbox ยังคงแสดง นับจาก docs/requirements/daily-loop.md CR-2
+     */
+    public const INBOX_DONE_DAYS = 7;
+
+    /**
+     * คืนรายการงานทั้งหมดของผู้ใช้ โดย inbox (quadrant IS NULL) ซ่อนงาน done
+     * ที่ทำเสร็จเกิน INBOX_DONE_DAYS วัน งานใน quadrant 1-4 แสดงทั้งหมด
+     *
+     * ถ้าระบุ $showId งานนั้นจะถูกคืนเสมอ แม้จะถูกกฎ 7 วันซ่อนไว้
+     * (ใช้เมื่อผู้ใช้คลิกผลค้นหาที่ลิงก์มายังงานนั้น)
+     *
+     * @param int $userId รหัสผู้ใช้
+     * @param int|null $showId รหัสงานที่ต้องการบังคับแสดง
+     * @return array แถวงานเรียงตาม quadrant, position, id
+     */
+    public static function getAllForUser(int $userId, ?int $showId = null): array
     {
+        $params = [$userId];
+        $force  = '';
+        if ($showId !== null) {
+            $force  = ' OR id = ?';
+            $params[] = $showId;
+        }
+
         return DB::run(
             'SELECT id, title, description, quadrant, status, due_date,
                     repeat_rule, repeat_until, position
              FROM tasks
              WHERE user_id = ?
+               AND (quadrant IS NOT NULL OR status = \'open\'
+                    OR completed_at >= NOW() - INTERVAL ' . self::INBOX_DONE_DAYS . ' DAY' . $force . ')
              ORDER BY quadrant ASC, position ASC, id ASC',
-            [$userId]
+            $params
         )->fetchAll();
     }
 
@@ -25,32 +50,128 @@ class Task
         )->fetch() ?: null;
     }
 
+    /**
+     * คืนรายการงานที่ครบกำหนดในวันที่ระบุ พร้อม status
+     *
+     * เมื่อ $inboxOnly เป็น true จะคืนเฉพาะงานที่ไม่มี quadrant
+     * (ใช้สำหรับลิงก์แชร์ที่แชร์ planner แต่ไม่แชร์ tasks)
+     *
+     * @param int $userId รหัสผู้ใช้
+     * @param string $date วันที่ Y-m-d
+     * @param bool $inboxOnly คืนเฉพาะงานที่ไม่มี quadrant
+     * @return array แถวงานเรียงตาม day_position, id
+     */
+    public static function getForDate(int $userId, string $date, bool $inboxOnly = false): array
+    {
+        $sql = 'SELECT id, title, status, quadrant, day_position, position
+                FROM tasks
+                WHERE user_id = ? AND due_date = ?';
+        if ($inboxOnly) {
+            $sql .= ' AND quadrant IS NULL';
+        }
+        $sql .= ' ORDER BY day_position ASC, id ASC';
+
+        return DB::run($sql, [$userId, $date])->fetchAll();
+    }
+
+    /**
+     * คืนตำแหน่งถัดไปสำหรับงานที่ครบกำหนดในวันนั้น
+     *
+     * ใช้ day_position เพื่อให้ลำดับใน Planner แยกจากลำดับในหน้า Tasks
+     *
+     * @param int $userId รหัสผู้ใช้
+     * @param string $date วันที่ Y-m-d
+     * @return int ตำแหน่งถัดไป (เริ่มที่ 0)
+     */
+    public static function nextPositionForDate(int $userId, string $date): int
+    {
+        return 1 + (int)DB::run(
+            'SELECT COALESCE(MAX(day_position), -1) FROM tasks WHERE user_id = ? AND due_date = ?',
+            [$userId, $date]
+        )->fetchColumn();
+    }
+
+    /**
+     * คืนรายการจดด่วน (inbox task ที่ไม่มี due_date) พร้อม status
+     *
+     * @param int $userId รหัสผู้ใช้
+     * @return array แถวงาน open ก่อน แล้วตาม created_at DESC
+     */
+    public static function getInboxForUser(int $userId): array
+    {
+        return DB::run(
+            'SELECT id, title, description, status, created_at
+             FROM tasks
+             WHERE user_id = ? AND quadrant IS NULL AND due_date IS NULL
+             ORDER BY status ASC, created_at DESC',
+            [$userId]
+        )->fetchAll();
+    }
+
+    /**
+     * สร้างงานใหม่
+     *
+     * รองรับ quadrant เป็น null (inbox) และรับตำแหน่งที่ส่งมาล่วงหน้าได้
+     * ถ้าไม่ได้ระบุ day_position และมี due_date งานจะไปต่อท้ายวันนั้น
+     *
+     * @param int $userId รหัสผู้ใช้
+     * @param array<string, mixed> $data ข้อมูลงาน
+     * @return int รหัสงานที่สร้าง
+     */
     public static function create(int $userId, array $data): int
     {
+        $quadrant = array_key_exists('quadrant', $data) && $data['quadrant'] === null
+            ? null
+            : (int)($data['quadrant'] ?? 1);
+
+        $status = ($data['status'] ?? 'open') === 'done' ? 'done' : 'open';
+
         $maxPos = (int)DB::run(
-            'SELECT COALESCE(MAX(position), -1) FROM tasks WHERE user_id = ? AND quadrant = ?',
-            [$userId, (int)($data['quadrant'] ?? 1)]
+            'SELECT COALESCE(MAX(position), -1) FROM tasks WHERE user_id = ? AND quadrant <=> ?',
+            [$userId, $quadrant]
         )->fetchColumn();
 
+        $dueDate = ($data['due_date'] ?? null) ?: null;
+        if (array_key_exists('day_position', $data)) {
+            $dayPos = (int)$data['day_position'];
+        } elseif ($dueDate !== null) {
+            $dayPos = self::nextPositionForDate($userId, $dueDate);
+        } else {
+            $dayPos = 0;
+        }
+
         DB::run(
-            'INSERT INTO tasks (user_id, title, description, quadrant, status, due_date,
-                                repeat_rule, repeat_until, position)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO tasks (user_id, title, description, quadrant, status, completed_at, due_date,
+                                repeat_rule, repeat_until, position, day_position)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 $userId,
                 $data['title'],
                 $data['description'] ?? null,
-                (int)($data['quadrant'] ?? 1),
-                $data['status'] ?? 'open',
-                $data['due_date'] ?: null,
+                $quadrant,
+                $status,
+                $status === 'done' ? date('Y-m-d H:i:s') : null,
+                $dueDate,
                 Recurrence::normalise($data['repeat_rule'] ?? 'none'),
-                $data['repeat_until'] ?: null,
-                $maxPos + 1
+                ($data['repeat_until'] ?? null) ?: null,
+                array_key_exists('position', $data) ? (int)$data['position'] : $maxPos + 1,
+                $dayPos,
             ]
         );
         return (int)DB::conn()->lastInsertId();
     }
 
+    /**
+     * อัปเดตงาน โดย quadrant เป็น 0 หรือ null จะเก็บเป็น NULL (inbox)
+     *
+     * ถ้าเปลี่ยน due_date ให้ไปต่อท้ายวันใหม่ โดย day_position ต้องอยู่ก่อน due_date
+     * ใน SET เพราะ MariaDB ประเมินจากซ้ายไปขวาและใช้ค่าที่อัปเดตแล้ว
+     *
+     * @param int $id รหัสงาน
+     * @param int $userId รหัสผู้ใช้
+     * @param array<string, mixed> $data ข้อมูลที่ต้องการอัปเดต
+     * @return bool พบและอัปเดตหรือไม่
+     */
     public static function update(int $id, int $userId, array $data): bool
     {
         $fields = [];
@@ -66,15 +187,25 @@ class Task
         }
         if (array_key_exists('quadrant', $data)) {
             $fields[] = 'quadrant = ?';
-            $params[] = (int)$data['quadrant'];
+            // quadrant 0/null หมายถึง inbox ต้องเก็บเป็น NULL ในฐานข้อมูล
+            $params[] = ($data['quadrant'] === null || $data['quadrant'] === 0) ? null : (int)$data['quadrant'];
         }
         if (array_key_exists('status', $data)) {
+            $fields[] = "completed_at = IF(? = 'done', IF(status = 'done', completed_at, NOW()), NULL)";
+            $params[] = $data['status'];
             $fields[] = 'status = ?';
             $params[] = $data['status'];
         }
         if (array_key_exists('due_date', $data)) {
+            $newDate = $data['due_date'] ?: null;
+            if ($newDate !== null) {
+                $nextDayPos = self::nextPositionForDate($userId, $newDate);
+                $fields[] = 'day_position = IF(due_date <=> ?, day_position, ?)';
+                $params[] = $newDate;
+                $params[] = $nextDayPos;
+            }
             $fields[] = 'due_date = ?';
-            $params[] = $data['due_date'] ?: null;
+            $params[] = $newDate;
         }
         if (array_key_exists('position', $data)) {
             $fields[] = 'position = ?';
@@ -109,12 +240,14 @@ class Task
     }
 
     /**
-     * Schedules the next occurrence of a repeating task once one is completed,
-     * the same roll-forward a subscription uses when it renews. The finished
-     * task stays put as history.
+     * สร้างงานถัดไปของงานที่ทำซ้ำ เมื่องานปัจจุบันถูกทำเสร็จ
      *
-     * Returns the new task's id, or null when nothing was scheduled: the task
-     * does not repeat, has no due date, or the series has run out.
+     * งานเดิมยังคงอยู่เป็นประวัติ ฟังก์ชันนี้ insert งานใหม่ลง tasks
+     * คืน id ของงานใหม่ หรือ null เมื่องานไม่ซ้ำ ไม่มี due_date หรือหมดช่วงซ้ำ
+     *
+     * @param array<string, mixed> $task แถวงานที่ทำเสร็จ
+     * @param int $userId รหัสผู้ใช้
+     * @return int|null id งานใหม่ หรือ null ถ้าไม่ต้องสร้าง
      */
     public static function scheduleNextOccurrence(array $task, int $userId): ?int
     {
@@ -141,25 +274,77 @@ class Task
         return self::create($userId, [
             'title'        => $task['title'],
             'description'  => $task['description'] ?? null,
-            'quadrant'     => (int)($task['quadrant'] ?? 1),
+            'quadrant'     => $task['quadrant'] ?? null,
             'status'       => 'open',
             'due_date'     => $next,
             'repeat_rule'  => $rule,
             'repeat_until' => $until,
+            'day_position' => self::nextPositionForDate($userId, $next),
         ]);
     }
 
+    /**
+     * สลับสถานะ open/done ของงาน คืน true เมื่อพบงานของผู้ใช้
+     *
+     * @param int $id รหัสงาน
+     * @param int $userId รหัสผู้ใช้
+     * @return bool พบและอัปเดตหรือไม่
+     */
+    public static function toggle(int $id, int $userId): bool
+    {
+        return DB::run(
+            "UPDATE tasks SET completed_at = IF(status = 'done', NULL, NOW()),
+                              status = IF(status = 'done', 'open', 'done'),
+                              updated_at = NOW()
+             WHERE id = ? AND user_id = ?",
+            [$id, $userId]
+        )->rowCount() > 0;
+    }
+
+    /**
+     * เรียงตำแหน่งให้กับงานหนึ่งชุด โดยเปลี่ยนเฉพาะ day_position
+     *
+     * ใช้สำหรับ Planner reorder เท่านั้น ไม่ต้องอัปเดต updated_at
+     * เพราะการเปลี่ยนลำดับไม่ใช่การแก้ไขเนื้อหา
+     *
+     * @param int $userId รหัสผู้ใช้
+     * @param array<int, array<string, mixed>> $items แต่ละรายการมี id, position
+     */
+    public static function reorderPositions(int $userId, array $items): void
+    {
+        $db = DB::conn();
+        $stmt = $db->prepare(
+            'UPDATE tasks SET day_position = ?
+             WHERE id = ? AND user_id = ?'
+        );
+        foreach ($items as $item) {
+            $stmt->execute([
+                (int)$item['position'],
+                (int)$item['id'],
+                $userId
+            ]);
+        }
+    }
+
+    /**
+     * ย้ายงานระหว่าง quadrant รองรับการลากเข้า/ออก inbox (quadrant 0 = NULL)
+     *
+     * @param int $userId รหัสผู้ใช้
+     * @param array<int, array<string, mixed>> $items รายการที่มี id, quadrant, position
+     */
     public static function reorder(int $userId, array $items): void
     {
-        // $items = [['id' => 1, 'quadrant' => 1, 'position' => 0], ...]
+        // $items = [['id' => 1, 'quadrant' => 0, 'position' => 0], ...]
+        // quadrant 0 หมายถึง inbox ต้องเก็บเป็น NULL
         $db = DB::conn();
         $stmt = $db->prepare(
             'UPDATE tasks SET quadrant = ?, position = ?, updated_at = NOW()
              WHERE id = ? AND user_id = ?'
         );
         foreach ($items as $item) {
+            $quadrant = ($item['quadrant'] === null || (int)$item['quadrant'] === 0) ? null : (int)$item['quadrant'];
             $stmt->execute([
-                (int)$item['quadrant'],
+                $quadrant,
                 (int)$item['position'],
                 (int)$item['id'],
                 $userId

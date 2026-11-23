@@ -47,6 +47,7 @@ function accountFixture(): array
     return [
         'format' => 'dayflow-export', 'version' => 2,
         'settings' => ['theme' => 'dark', 'day_color' => 0, 'timezone' => 'Asia/Tokyo', 'menu_order' => '["notes","tasks"]'],
+        // daily_todos and quick_items from old backups are converted into tasks
         'tasks'               => [['id' => 9001, 'title' => 'งานสำรอง', 'quadrant' => 1, 'status' => 'open']],
         'notes'               => [['id' => 9002, 'title' => 'โน้ตสำรอง']],
         'note_tags'           => [['id' => 9003, 'name' => 'แท็กสำรอง']],
@@ -84,15 +85,37 @@ test('a backup restores every section into another account', function (TestClien
     $first = accountClient('first');
     $response = accountImport($first, $fixture);
     assertSame(200, $response['status'], 'fixture import failed: ' . substr($response['body'], 0, 300));
-    assertSame(count($tables), $first->json($response)['total'] ?? null, 'every fixture row should land');
+
+    $imported = $first->json($response)['imported'] ?? [];
+    assertSame(3, $imported['tasks'] ?? null, 'legacy rows should land as tasks');
+    assertFalse(array_key_exists('daily_todos', $imported), 'daily_todos is not counted separately');
+    assertFalse(array_key_exists('quick_items', $imported), 'quick_items is not counted separately');
+    assertSame(count($tables), $first->json($response)['total'] ?? null, 'every fixture row should land once');
+
+    $export = accountExport($first);
+    assertSame(3, count($export['tasks'] ?? []), 'tasks include the converted rows');
+    $titles = array_column($export['tasks'], 'title');
+    assertContains('งานสำรอง', $titles, 'real task survives');
+    assertContains('ทำสำรอง', $titles, 'daily todo becomes a task');
+    assertContains('จดด่วนสำรอง', $titles, 'quick item becomes a task');
+    $dueDates = array_column($export['tasks'], 'due_date');
+    assertContains('2026-10-01', $dueDates, 'daily todo keeps its due date');
 
     // Round-trip through a second, unrelated account.
     $second = accountClient('second');
-    assertSame(200, accountImport($second, accountExport($first))['status']);
+    assertSame(200, accountImport($second, $export)['status']);
     $restored = accountExport($second);
 
+    assertSame(3, count($restored['tasks'] ?? []), 'tasks survive the round trip');
+    assertFalse(array_key_exists('daily_todos', $restored), 'daily_todos no longer travels');
+    assertFalse(array_key_exists('quick_items', $restored), 'quick_items no longer travels');
     foreach ($tables as $table) {
+        if (in_array($table, ['tasks', 'daily_todos', 'quick_items'], true)) continue;
         assertSame(1, count($restored[$table] ?? []), "{$table} should survive the round trip");
+    }
+    foreach ($restored['tasks'] as $task) {
+        assertFalse(array_key_exists('legacy_source', $task), 'legacy_source is not exported');
+        assertFalse(array_key_exists('legacy_id', $task), 'legacy_id is not exported');
     }
 
     // Fresh ids everywhere, and every reference follows its parent.
@@ -103,7 +126,9 @@ test('a backup restores every section into another account', function (TestClien
     assertSame((string)$restored['note_tags'][0]['id'], (string)$restored['note_tag_relations'][0]['tag_id'], 'tag link → tag');
     assertSame((string)$restored['finance_categories'][0]['id'], (string)$restored['finances'][0]['category_id'], 'finance → category');
     assertSame((string)$restored['habits'][0]['id'], (string)$restored['habit_logs'][0]['habit_id'], 'log → habit');
-    assertSame((string)$restored['tasks'][0]['id'], (string)$restored['focus_sessions'][0]['task_id'], 'focus → task');
+    $realTask = rowById($restored['tasks'], $restored['focus_sessions'][0]['task_id']);
+    assertTrue($realTask !== null, 'focus → task');
+    assertSame('งานสำรอง', $realTask['title'] ?? null, 'focus session points at the real task, not a converted legacy row');
     assertSame($restored['skills'][0]['id'], $restored['skill_logs'][0]['skill_id'], 'log → skill');
     assertFalse($restored['skills'][0]['id'] === 'old-skill-uuid', 'a UUID id is regenerated too');
 
@@ -118,7 +143,7 @@ test('importing the same backup twice replaces instead of duplicating', function
     accountImport($client, accountFixture());
 
     $export = accountExport($client);
-    assertSame(1, count($export['tasks']));
+    assertSame(3, count($export['tasks']), 'legacy rows become tasks, not duplicates');
     assertSame(1, count($export['note_blocks']));
     assertSame(1, count($export['habit_logs']));
 });
@@ -135,7 +160,7 @@ test('only the sections in the file are replaced', function (TestClient $_c): vo
 
     $export = accountExport($client);
     assertSame(['ใหม่ 1', 'ใหม่ 2'], array_column($export['bookmarks'], 'title'), 'bookmarks are replaced');
-    assertSame(1, count($export['tasks']), 'tasks were not in the file and must be untouched');
+    assertSame(3, count($export['tasks']), 'tasks were not in the file and must be untouched');
     assertSame(1, count($export['food_notes']), 'food notes were not in the file and must be untouched');
     assertSame(1, count($export['skill_logs']), 'skill logs were not in the file and must be untouched');
 });
@@ -152,7 +177,9 @@ test('a bad row rolls the whole import back', function (TestClient $_c): void {
     assertStringContains('finances', $response['body'], 'the message names the section');
 
     $export = accountExport($client);
-    assertSame(['งานสำรอง'], array_column($export['tasks'], 'title'), 'nothing may change on a failed import');
+    $titles = array_column($export['tasks'], 'title');
+    sort($titles);
+    assertSame(['งานสำรอง', 'จดด่วนสำรอง', 'ทำสำรอง'], $titles, 'nothing may change on a failed import');
 });
 
 test('a file that is not a DayFlow backup is refused', function (TestClient $_c): void {
@@ -185,9 +212,133 @@ test('settings travel, credentials do not', function (TestClient $_c): void {
 
     $export = accountExport($client);
     assertSame('dayflow-export', $export['format'] ?? null);
+    assertSame(3, $export['version'] ?? null, 'new exports are version 3');
     assertFalse(array_key_exists('telegram_bot_token', $export['settings'] ?? []), 'no Telegram token');
-    foreach (['user_ai_keys', 'user_stock_api_keys', 'remember_tokens', 'app_shares', 'files', 'projects'] as $table) {
+    foreach (['user_ai_keys', 'user_stock_api_keys', 'remember_tokens', 'app_shares', 'files', 'projects', 'daily_todos', 'quick_items'] as $table) {
         assertFalse(array_key_exists($table, $export), "{$table} must not be exported");
     }
     assertFalse(array_key_exists('password_hash', $export['user'] ?? []), 'no password hash');
+    foreach ($export['tasks'] ?? [] as $task) {
+        assertFalse(array_key_exists('legacy_source', $task), 'no legacy_source in exported tasks');
+        assertFalse(array_key_exists('legacy_id', $task), 'no legacy_id in exported tasks');
+    }
+});
+
+test('converted legacy rows do not steal ids from real tasks', function (TestClient $_c): void {
+    $client = accountClient('legacy_focus');
+    $response = accountImport($client, [
+        'format'         => 'dayflow-export',
+        'version'        => 2,
+        'tasks'          => [['id' => 5, 'title' => 'REAL TASK', 'quadrant' => 1, 'status' => 'open']],
+        'daily_todos'    => [['id' => 5, 'todo_date' => '2026-11-01', 'title' => 'TODO FIVE', 'is_done' => 0, 'position' => 0]],
+        'focus_sessions' => [['id' => 1, 'task_id' => 5, 'title' => 'focus', 'duration_min' => 25, 'type' => 'work']],
+    ]);
+    assertSame(200, $response['status']);
+
+    $export = accountExport($client);
+    $task = rowById($export['tasks'], $export['focus_sessions'][0]['task_id'] ?? null);
+    assertTrue($task !== null, 'focus session should link to a task');
+    assertSame('REAL TASK', $task['title'] ?? null, 'focus session must link to the real task, not the converted daily todo');
+});
+
+test('malformed legacy rows are rejected without PHP warnings', function (TestClient $_c): void {
+    $client = accountClient('legacy_malformed');
+    $response = accountImport($client, [
+        'format'      => 'dayflow-export',
+        'version'     => 2,
+        'daily_todos' => [['title' => 'no id no date']],
+        'quick_items' => [['content' => 'no id']],
+    ]);
+    assertSame(422, $response['status']);
+    assertStringContains('daily_todos', $response['body']);
+
+    $export = accountExport($client);
+    assertSame([], $export['tasks'] ?? [], 'nothing is imported when legacy rows are invalid');
+    assertFalse(array_key_exists('daily_todos', $export), 'daily_todos should not exist');
+    assertFalse(array_key_exists('quick_items', $export), 'quick_items should not exist');
+});
+
+test('imported done tasks without completed_at get a fallback timestamp', function (TestClient $_c): void {
+    $label = 'done_fallback';
+    $client = accountClient($label);
+    $username = 'acct_' . $label . '_' . TEST_RUN_ID;
+    $keptCompletedAt = '2026-10-05 14:30:00';
+
+    $response = accountImport($client, [
+        'format'  => 'dayflow-export',
+        'version' => 2,
+        'tasks'   => [
+            ['id' => 1, 'title' => 'Done no completed_at', 'quadrant' => 1, 'status' => 'done', 'updated_at' => '2026-10-03 08:00:00'],
+            ['id' => 2, 'title' => 'Done with completed_at', 'quadrant' => 1, 'status' => 'done', 'completed_at' => $keptCompletedAt, 'updated_at' => '2026-10-04 08:00:00'],
+        ],
+    ]);
+    assertSame(200, $response['status'], 'import should succeed: ' . substr($response['body'], 0, 300));
+
+    $userId = (int)DB::run('SELECT id FROM users WHERE username = ?', [$username])->fetchColumn();
+    $rows = DB::run(
+        'SELECT title, completed_at FROM tasks WHERE user_id = ? AND title LIKE ? ORDER BY title',
+        [$userId, 'Done%']
+    )->fetchAll();
+
+    $byTitle = [];
+    foreach ($rows as $row) {
+        $byTitle[$row['title']] = $row['completed_at'];
+    }
+
+    assertTrue(isset($byTitle['Done no completed_at']) && $byTitle['Done no completed_at'] !== null, 'missing completed_at is filled from updated_at');
+    assertSame('2026-10-03 08:00:00', $byTitle['Done no completed_at'] ?? null, 'uses updated_at when completed_at is missing');
+    assertSame($keptCompletedAt, $byTitle['Done with completed_at'] ?? null, 'explicit completed_at must be preserved');
+});
+
+test('a backup without a tasks section does not wipe existing tasks', function (TestClient $_c): void {
+    $client = accountClient('no_tasks_section');
+
+    // สร้างงานเดิมของผู้ใช้ไว้ก่อน
+    $client->post('/api/tasks', ['title' => 'Existing task ' . TEST_RUN_ID, 'quadrant' => 1]);
+
+    // นำเข้าไฟล์สำรองเก่าที่มีแค่ quick_items ไม่มีส่วน tasks
+    $response = accountImport($client, [
+        'format'      => 'dayflow-export',
+        'version'     => 2,
+        'quick_items' => [['id' => 1, 'content' => 'Imported quick ' . TEST_RUN_ID, 'is_done' => 0]],
+    ]);
+    assertSame(200, $response['status'], 'import should succeed');
+
+    $export = accountExport($client);
+    $titles = array_column($export['tasks'] ?? [], 'title');
+    assertContains('Existing task ' . TEST_RUN_ID, $titles, 'existing task must survive');
+    assertContains('Imported quick ' . TEST_RUN_ID, $titles, 'quick item must become a task');
+});
+
+test('a backup whose tasks section is not an array returns 422 and leaves tasks untouched', function (TestClient $_c): void {
+    $client = accountClient('tasks_not_array');
+    $client->post('/api/tasks', ['title' => 'Keep me ' . TEST_RUN_ID, 'quadrant' => 1]);
+
+    $response = accountImport($client, [
+        'format'  => 'dayflow-export',
+        'version' => 2,
+        'tasks'   => 5,
+    ]);
+    assertSame(422, $response['status'], 'numeric tasks should be rejected');
+
+    $export = accountExport($client);
+    $titles = array_column($export['tasks'] ?? [], 'title');
+    assertSame(['Keep me ' . TEST_RUN_ID], $titles, 'existing tasks must be untouched');
+});
+
+test('a backup with string tasks and quick_items returns 422 without crashing', function (TestClient $_c): void {
+    $client = accountClient('tasks_string');
+    $client->post('/api/tasks', ['title' => 'Keep me too ' . TEST_RUN_ID, 'quadrant' => 1]);
+
+    $response = accountImport($client, [
+        'format'      => 'dayflow-export',
+        'version'     => 2,
+        'tasks'       => 'abc',
+        'quick_items' => [['id' => 1, 'content' => 'Quick ' . TEST_RUN_ID, 'is_done' => 0]],
+    ]);
+    assertSame(422, $response['status'], 'string tasks should be rejected');
+
+    $export = accountExport($client);
+    $titles = array_column($export['tasks'] ?? [], 'title');
+    assertSame(['Keep me too ' . TEST_RUN_ID], $titles, 'existing tasks must be untouched');
 });

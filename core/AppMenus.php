@@ -62,7 +62,7 @@ final class AppMenus
         'subscriptions' => ['group' => 'money', 'label' => 'รายจ่ายประจำ',    'path' => '/subscriptions'],
         'stocks'        => ['group' => 'money', 'label' => 'หุ้น',            'path' => '/stocks'],
         'notes'         => ['group' => 'vault', 'label' => 'โน้ต',            'path' => '/notes'],
-        'quick-notes'   => ['group' => 'vault', 'label' => 'จดด่วน',         'path' => '/quick-notes'],
+        'quick-notes'   => ['group' => 'vault', 'label' => 'ยังไม่จัด',       'path' => '/quick-notes'],
         'bookmarks'     => ['group' => 'vault', 'label' => 'ลิงก์',           'path' => '/bookmarks'],
         'files'         => ['group' => 'vault', 'label' => 'ไฟล์',            'path' => '/files'],
         'transfer'      => ['group' => 'vault', 'label' => 'ส่งไฟล์',         'path' => '/transfer'],

@@ -16,7 +16,7 @@ class SearchController
      * 'binds' is how many of (userId, like, like) the fragment consumes.
      */
     private const SOURCES = [
-        ['key' => 'tasks',         'label' => 'งาน',            'path' => '/tasks',         'deep' => false, 'binds' => 3,
+        ['key' => 'tasks',         'label' => 'งาน',            'path' => '/tasks',         'deep' => false, 'hash' => true, 'binds' => 3,
          'sql' => 'SELECT %d AS src, id, title, description AS subtitle FROM tasks
                    WHERE user_id = ? AND (title LIKE ? OR description LIKE ?)
                    ORDER BY id DESC LIMIT 5'],
@@ -53,11 +53,6 @@ class SearchController
         ['key' => 'bookmarks',     'label' => 'ลิงก์',          'path' => '/bookmarks',     'deep' => false, 'binds' => 3,
          'sql' => 'SELECT %d AS src, id, title, url AS subtitle FROM bookmarks
                    WHERE user_id = ? AND (title LIKE ? OR url LIKE ?)
-                   ORDER BY id DESC LIMIT 5'],
-
-        ['key' => 'quick_items',   'label' => 'จดด่วน',         'path' => '/quick-notes',   'deep' => false, 'binds' => 2,
-         'sql' => 'SELECT %d AS src, id, content AS title, "" AS subtitle FROM quick_items
-                   WHERE user_id = ? AND content LIKE ?
                    ORDER BY id DESC LIMIT 5'],
 
         ['key' => 'food_notes',    'label' => 'อาหาร',          'path' => '/food-notes',    'deep' => false, 'binds' => 3,
@@ -116,11 +111,13 @@ class SearchController
             if (isset($seen[$dedupeKey])) continue;
             $seen[$dedupeKey] = true;
 
+            $id    = (int)$row['id'];
+            $hash  = !empty($source['hash']) ? '#task-' . $id : '';
             $results[] = [
                 'type'     => $source['label'],
                 'title'    => $title,
                 'subtitle' => trim(mb_substr((string)($row['subtitle'] ?? ''), 0, 160)),
-                'url'      => APP_URL . $source['path'] . ($source['deep'] ? '/' . (int)$row['id'] : ''),
+                'url'      => APP_URL . $source['path'] . ($source['deep'] ? '/' . $id : '') . $hash,
                 'rank'     => $this->rank($title, $needle),
             ];
         }

@@ -29,6 +29,35 @@
 #q3 { --q: var(--butter-2); }
 #q4 { --q: var(--lilac-2); }
 
+/* Inbox: a loose note that has not been filed yet */
+#inbox {
+    min-height: auto;
+    margin-bottom: var(--space-5);
+    border-style: dashed;
+    border-top: 1px dashed var(--rule);
+}
+
+#inbox .quadrant-body {
+    max-height: none;
+}
+
+#inbox .quadrant-empty {
+    padding: var(--space-2) 0;
+}
+
+.task-item.is-target {
+    outline: 2px solid var(--highlighter);
+    outline-offset: 2px;
+    border-radius: var(--r-control);
+    transition: outline var(--dur) ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .task-item.is-target {
+        transition: none;
+    }
+}
+
 .quadrant-head {
     display: flex;
     align-items: baseline;
@@ -87,7 +116,7 @@
 
 /* The title is a button so the keyboard can reach it; it must not look like one. */
 .task-title {
-    display: block;
+    display: -webkit-box;
     max-width: 100%;
     padding: 0;
     border: 0;
@@ -97,6 +126,10 @@
     text-align: left;
     overflow-wrap: anywhere;
     cursor: pointer;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .task-title:hover {
