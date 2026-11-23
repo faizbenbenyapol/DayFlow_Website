@@ -65,6 +65,57 @@ $skeleton = '<div aria-busy="true"><div class="skel-row"><span class="skel box">
     . '<div class="skel-row"><span class="skel box"></span><span class="skel skel-w-52"></span></div></div>';
 
 $renderSection = function (string $key) use ($sectionDef, $skeleton, $sectionTone, $tinted): void {
+    if ($key === 'tasks') {
+        // หน้าวันนี้: งานแบ่งเป็น 3 กลุ่มย่อยซ้อนกันใต้ layout key เดียว
+        ?>
+        <section class="tasks-stack" data-section="tasks" aria-label="งาน">
+            <div data-subsection="overdue" class="sec taped overdue" style="--sec-c: var(--rose-2); --sec-c2: var(--rose); --sec-bg: var(--rose)" hidden>
+                <div class="sec-head">
+                    <h2>ค้าง<span class="count" data-count></span></h2>
+                    <a href="<?= APP_URL ?>/tasks">ดูทั้งหมด</a>
+                </div>
+                <div class="bulk-bar">
+                    <span class="bulk-label" data-bulk-label></span>
+                    <div class="bulk-actions">
+                        <button type="button" class="btn btn-sm" data-act="overdueBulk" data-action="today">ทำวันนี้</button>
+                        <button type="button" class="btn btn-sm" data-act="overdueBulk" data-action="tomorrow">พรุ่งนี้</button>
+                        <button type="button" class="btn btn-sm" data-act="overdueBulk" data-action="date">เลือกวัน…</button>
+                        <button type="button" class="btn btn-sm" data-act="overdueBulk" data-action="clear">เอาวันที่ออก</button>
+                        <button type="button" class="btn btn-sm btn-danger" data-act="overdueBulk" data-action="delete">ลบ…</button>
+                    </div>
+                </div>
+                <div data-body><?= $skeleton ?></div>
+            </div>
+
+            <div data-subsection="today" class="sec taped" style="--sec-c: var(--butter-2); --sec-c2: var(--butter)">
+                <div class="sec-head">
+                    <h2>วันนี้<span class="count" data-count></span></h2>
+                    <a href="<?= APP_URL ?>/tasks">ไปที่งาน</a>
+                </div>
+                <div data-body><?= $skeleton ?></div>
+                <label class="add-row">
+                    <span class="plus" aria-hidden="true">+</span>
+                    <span class="sr-only">เพิ่มงานวันนี้</span>
+                    <input type="text" id="todayAddTask" maxlength="200" autocomplete="off" placeholder="เพิ่มงานวันนี้ เช่น โทรหาช่างแอร์">
+                </label>
+            </div>
+
+            <div data-subsection="my-project" class="sec taped" style="--sec-c: var(--sky-2); --sec-c2: var(--sky)" hidden>
+                <div class="sec-head">
+                    <h2>งานโปรเจกต์ของฉัน<span class="count" data-count></span></h2>
+                    <a href="<?= APP_URL ?>/projects">ไปที่โปรเจกต์</a>
+                </div>
+                <div data-body><?= $skeleton ?></div>
+            </div>
+
+            <div data-subsection="empty" class="empty-state" hidden>
+                <p class="empty-state-text">ไม่มีงานค้างและไม่มีงานครบกำหนดวันนี้ พิมพ์งานแรกในช่องด้านล่างแล้วกด Enter</p>
+            </div>
+        </section>
+        <?php
+        return;
+    }
+
     [$title, $linkText, $path] = $sectionDef[$key];
     $tone = $sectionTone[$key];
     ?>
@@ -74,13 +125,6 @@ $renderSection = function (string $key) use ($sectionDef, $skeleton, $sectionTon
             <a href="<?= APP_URL . h($path) ?>"><?= h($linkText) ?></a>
         </div>
         <div data-body><?= $skeleton ?></div>
-        <?php if ($key === 'tasks'): ?>
-        <label class="add-row">
-            <span class="plus" aria-hidden="true">+</span>
-            <span class="sr-only">เพิ่มงานวันนี้</span>
-            <input type="text" id="todayAddTask" maxlength="200" autocomplete="off" placeholder="เพิ่มงานวันนี้ เช่น โทรหาช่างแอร์">
-        </label>
-        <?php endif; ?>
     </section>
     <?php
 };
@@ -118,4 +162,20 @@ $renderSection = function (string $key) use ($sectionDef, $skeleton, $sectionTon
     </div>
     <?php endif; ?>
     <?php endif; ?>
+    <div class="modal-backdrop" id="overdueDateModal" aria-hidden="true">
+        <div class="modal modal-narrow" role="dialog" aria-modal="true" aria-labelledby="overdue-date-title">
+            <div class="modal-header">
+                <h3 class="modal-title" id="overdue-date-title">เลือกวัน</h3>
+                <button type="button" class="modal-close" data-close-modal aria-label="ปิด">×</button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label" for="overdueDateInput">วันที่</label>
+                <input type="date" id="overdueDateInput" class="form-control">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" data-close-modal>ยกเลิก</button>
+                <button type="button" class="btn btn-primary" id="overdueDateConfirm">ยืนยัน</button>
+            </div>
+        </div>
+    </div>
 </div>

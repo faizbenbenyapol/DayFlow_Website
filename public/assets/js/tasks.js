@@ -23,6 +23,13 @@ document.addEventListener('DOMContentLoaded', async function () {
     initQuickAdd();
 });
 
+// จดงานจากช่อง quick-add ที่หน้าอื่น: โหลดรายการใหม่ถ้าเป็นงาน
+document.addEventListener('dayflow:added', function (event) {
+    if (event.detail?.kind === 'task') {
+        loadTasks();
+    }
+});
+
 // ถ้ากำลังอยู่บนหน้า /tasks แล้วคลิกผลค้นหา เบราว์เซอร์เปลี่ยนแค่ hash ไม่โหลดหน้าใหม่ จึงต้องโหลดงานเอง
 window.addEventListener('hashchange', function () {
     if (!/^#task-\d+$/.test(location.hash) && location.hash !== '#inbox') return;

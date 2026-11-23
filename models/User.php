@@ -231,6 +231,8 @@ class User
 
     public static function deleteAccount(int $userId): bool
     {
+        // ล้างข้อความ assignee เดิมก่อนลบ เพราะ FK nulls assignee_user_id แต่ข้อความยังคงอยู่
+        DB::run('UPDATE project_tasks SET assignee = NULL WHERE assignee_user_id = ?', [$userId]);
         // CASCADE on FK will remove child rows
         $stmt = DB::run('DELETE FROM users WHERE id = ?', [$userId]);
         return $stmt->rowCount() > 0;
