@@ -259,8 +259,13 @@ document.addEventListener('click', event => {
    Keyboard shortcut: N opens the task sheet anywhere
    --------------------------------------------------- */
 (function initQuickAddShortcut() {
+    // ปุ่มที่พิมพ์ n ได้ หรือปุ่มตำแหน่ง N เมื่อแป้นไม่ใช่อักษรละติน (เช่นแป้นไทยที่ได้ ื)
+    // แป้นละตินแบบอื่นอย่าง Dvorak ปุ่มตำแหน่ง N พิมพ์ b จึงไม่นับ
+    const isN = event => event.key === 'n' || event.key === 'N'
+        || (event.code === 'KeyN' && !/^[a-z]$/i.test(event.key));
+
     const allowed = event => {
-        if (event.key !== 'n' && event.key !== 'N' && event.code !== 'KeyN') return false;
+        if (!isN(event)) return false;
         if (event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return false;
         const active = document.activeElement;
         if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT' || active.isContentEditable)) return false;

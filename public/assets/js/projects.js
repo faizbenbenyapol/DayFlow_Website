@@ -37,6 +37,18 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
 });
 
+/**
+ * ลบ ?project= ออกจาก URL เมื่อเปิดโปรเจกต์อื่นที่ไม่ใช่ตัวใน URL
+ * ไม่งั้นรีเฟรชหรือคัดลอกลิงก์แล้วจะเด้งกลับไปโปรเจกต์เดิม ใช้ replaceState จึงไม่เพิ่มประวัติให้ปุ่มย้อนกลับ
+ */
+function forgetProjectParam(projectId) {
+    const url = new URL(window.location.href);
+    const param = url.searchParams.get('project');
+    if (param === null || param === String(projectId)) return;
+    url.searchParams.delete('project');
+    history.replaceState(history.state, '', url);
+}
+
 function show(id, visible) {
     const el = document.getElementById(id);
     if (el) el.hidden = !visible;
@@ -165,6 +177,7 @@ async function refreshProjectList() {
 async function selectProject(projectId) {
     activeProjectId = projectId;
     stopChatPolling();
+    forgetProjectParam(projectId);
 
     try {
         const data = await apiFetch(BASE_URL + '/api/projects/' + projectId + '/tasks');

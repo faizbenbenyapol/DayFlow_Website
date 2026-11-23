@@ -4,7 +4,7 @@
 //
 // The time is the page. assets/js/focus.js runs it from an end time, so a tab
 // in the background or a locked phone does not make it run slow.
-// $openTasks comes from FocusController.
+// $openTasks and $selectedTaskId (0 = none, from ?task=) come from FocusController.
 // =====================================================
 // On a share link the timer is left out: a finished round is saved, and
 // share mode saves nothing. What has been counted is still there to see.
@@ -28,6 +28,7 @@ $readOnly = Auth::isReadOnly();
 
         <div class="timer-face" role="timer" aria-label="เวลาที่เหลือ">
             <div class="timer-phase-lbl" id="timerPhaseLabel">พร้อมโฟกัส</div>
+            <div class="timer-task" id="timerTask" hidden></div>
             <div class="timer-countdown" id="timerDisplay">25:00</div>
             <div class="progress timer-bar" aria-hidden="true"><div class="progress-bar" id="timerProgress"></div></div>
         </div>
@@ -44,7 +45,7 @@ $readOnly = Auth::isReadOnly();
                 <select class="form-control" id="selectFocusTask">
                     <option value="">ไม่ระบุงาน</option>
                     <?php foreach ($openTasks as $t): ?>
-                        <option value="<?= (int)$t['id'] ?>"><?= h($t['title']) ?></option>
+                        <option value="<?= (int)$t['id'] ?>"<?= (int)$t['id'] === $selectedTaskId ? ' selected' : '' ?>><?= h($t['title']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>

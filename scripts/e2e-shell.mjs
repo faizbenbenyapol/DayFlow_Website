@@ -181,6 +181,16 @@ async function main() {
         check(await tab.eval(`document.getElementById('quickSheet').open`), 'Thai-layout N key opens the quick-add sheet');
         await tab.eval(`document.getElementById('quickSheet').close()`);
 
+        // Dvorak: the physical N key types b, which is not the shortcut; the key that types n (physical L) is.
+        for (const [typed, code, opens] of [['b', 'KeyN', false], ['n', 'KeyL', true]]) {
+            await sleep(200);
+            await tab.send('Input.dispatchKeyEvent', { type: 'keyDown', key: typed, code });
+            await tab.send('Input.dispatchKeyEvent', { type: 'keyUp', key: typed, code });
+            await sleep(400);
+            check(await tab.eval(`document.getElementById('quickSheet').open`) === opens, `Dvorak "${typed}" on ${code} ${opens ? 'opens' : 'does not open'} the quick-add sheet`);
+            await tab.eval(`document.getElementById('quickSheet').close()`);
+        }
+
         // A task: tick it, check the server, put it back.
         const firstTask = await tab.eval(`document.querySelector('.task-tick').closest('[data-task]').dataset.task`);
         await tab.eval(`document.querySelector('.task-tick').click()`);
@@ -262,6 +272,16 @@ async function main() {
         await tab.eval(`document.querySelector('#editTaskModal [data-close-modal]').click()`);
 
         console.log('Planner');
+        // A browser clock on another day than the server: UTC+14 is a day ahead from 10:00 UTC, UTC-11 a day behind until 11:00 UTC.
+        await tab.send('Emulation.setTimezoneOverride', { timezoneId: new Date().getUTCHours() >= 10 ? 'Pacific/Kiritimati' : 'Pacific/Pago_Pago' });
+        await tab.goto(BASE + '/planner');
+        await tab.settle();
+        const plannerDay = await tab.eval(`({ server: document.documentElement.dataset.today, local: new Date().getDate(),
+            today: document.querySelector('.calendar-cell.today .calendar-day-number')?.textContent, sheet: document.getElementById('dayNum').textContent })`);
+        check(plannerDay.local !== Number(plannerDay.server.slice(8)), 'the browser clock is on another day than the server', JSON.stringify(plannerDay));
+        check(plannerDay.today === String(Number(plannerDay.server.slice(8))), 'the grid marks the server\'s today', JSON.stringify(plannerDay));
+        check(plannerDay.sheet === plannerDay.today, 'and the day sheet opens on it', JSON.stringify(plannerDay));
+        await tab.send('Emulation.setTimezoneOverride', { timezoneId: process.env.E2E_TZ || 'UTC' });
         await tab.goto(BASE + '/planner');
         await tab.settle();
         check(await tab.eval(`document.querySelectorAll('.calendar-cell').length`) >= 35, 'the month grid is drawn');
@@ -831,6 +851,14 @@ async function main() {
             await sleep(1500);
             check(await tab.eval(`document.getElementById('activeProjectTitle').textContent.trim()`) === name, `?project= opens "${name}"`);
         }
+        check(await tab.eval(`location.search`) === `?project=${second.body?.id}`, 'the URL keeps ?project= while that project is open');
+        // Opening another project drops the stale ?project=, so a reload stays on the one in view.
+        await click(tab, `.proj-row[data-args="[${newProject?.id}]"]`);
+        await sleep(1500);
+        check(await tab.eval(`location.search`) === '', 'opening another project clears ?project= from the URL', await tab.eval(`location.href`));
+        // Back on the newer project, where the steps below expect to start.
+        await tab.goto(`${BASE}/projects?project=${second.body?.id}`);
+        await sleep(1500);
 
         await click(tab, '[data-act="toggleQuickAddForm"][data-args=\'["To Do"]\']');
         await sleep(200);
@@ -1017,6 +1045,96 @@ async function main() {
             check(await anon.eval(`!!document.getElementById('appFlags')`), 'inside the app');
         } finally {
             await cdp.send('Target.disposeBrowserContext', { browserContextId }).catch(() => {});
+        }
+
+        // ---------- a new account: the welcome, then focus from a task (REQ-21, 23, EDGE-16) ----------
+        console.log('New account');
+        const fresh = await cdp.send('Target.createBrowserContext');
+        const freshTarget = await cdp.send('Target.createTarget', { url: 'about:blank', browserContextId: fresh.browserContextId });
+        const freshSession = (await cdp.send('Target.attachToTarget', { targetId: freshTarget.targetId, flatten: true })).sessionId;
+        await cdp.send('Page.enable', {}, freshSession);
+        await cdp.send('Runtime.enable', {}, freshSession);
+        const newbie = new Tab(cdp, freshSession);
+        await newbie.send('Emulation.setTimezoneOverride', { timezoneId: process.env.E2E_TZ || 'UTC' });
+        await newbie.viewport({ width: 1366, height: 900, mobile: false });
+        const newbiePassword = 'Newbie-' + STAMP + '-9x';
+        const welcomeOn = `!document.querySelector('[data-subsection="welcome"]').hidden`;
+
+        try {
+            await newbie.goto(BASE + '/login');
+            await click(newbie, '#tabRegister');
+            await fill(newbie, '#regDisplayName', 'มือใหม่');
+            await fill(newbie, '#regUsername', 'newbie' + STAMP.replace(/\W/g, ''));
+            await fill(newbie, '#regEmail', 'newbie-' + STAMP + '@example.test');
+            await fill(newbie, '#regPassword', newbiePassword);
+            await fill(newbie, '#regConfirm', newbiePassword);
+            await click(newbie, '#registerBtn');
+            await sleep(2500);
+            await newbie.settle();
+            check(await newbie.eval(`location.pathname`) === '/', 'a new account lands on today');
+            check(await newbie.eval(welcomeOn), 'and is welcomed');
+            check(await newbie.eval(`document.querySelectorAll('.welcome-steps li').length`) === 3, 'with three steps, no more');
+            check(await newbie.eval(`document.querySelector('[data-subsection="today"]').hidden && document.querySelector('[data-subsection="empty"]').hidden`), 'instead of an empty list');
+
+            const firstTitle = `งานแรก ${STAMP}`;
+            await fill(newbie, '#welcomeAddTask', firstTitle);
+            await newbie.eval(`document.getElementById('welcomeAddTask').focus()`);
+            await key(newbie, 'Enter');
+            await sleep(1500);
+            check(!(await newbie.eval(welcomeOn)), 'the first task ends the welcome');
+            check(await newbie.eval(`document.querySelector('[data-subsection="today"]').textContent.includes(${JSON.stringify(firstTitle)})`), 'and it is on today at once');
+            check(await newbie.eval(`document.activeElement.id`) === 'todayAddTask', 'the cursor moves on to today\'s add line');
+
+            const firstId = Number(await newbie.eval(`document.querySelector('[data-subsection="today"] [data-task]')?.dataset.task`));
+            check(await newbie.eval(`document.querySelector('[data-task="${firstId}"] a[href$="/focus?task=${firstId}"]')?.getAttribute('aria-label')`) === `โฟกัส: ${firstTitle}`, 'the task has a focus button named for it');
+            await click(newbie, `[data-task="${firstId}"] a[href$="/focus?task=${firstId}"]`);
+            await sleep(1500);
+            await newbie.settle();
+            check(await newbie.eval(`location.pathname + location.search`) === `/focus?task=${firstId}`, 'it opens Focus');
+            check(Number(await newbie.eval(`document.getElementById('selectFocusTask').value`)) === firstId, 'with that task chosen');
+            check(await newbie.eval(`!document.getElementById('timerTask').hidden && document.getElementById('timerTask').textContent`) === firstTitle, 'and its name on the timer');
+
+            // A round that ends in a moment: the page resumes a running timer from storage, as after a reload.
+            await newbie.eval(`localStorage.setItem('dayflow.focus', JSON.stringify({ mode: 'work', endsAt: Date.now() + 1500, total: 60 }))`);
+            await newbie.goto(`${BASE}/focus?task=${firstId}`);
+            await sleep(3500);
+            const round = (await api(newbie, '/api/focus')).body.sessions?.[0];
+            check(Number(round?.task_id) === firstId && round?.task_title === firstTitle, 'the finished round is tied to the task', JSON.stringify(round));
+
+            const late = (await api(newbie, '/api/tasks', { method: 'POST', body: JSON.stringify({ title: `ค้าง ${STAMP}`, quadrant: 1, due_date: '2020-01-01' }) })).body.task;
+            await newbie.goto(BASE + '/');
+            await newbie.settle();
+            await sleep(800);
+            check(await newbie.eval(`!!document.querySelector('[data-subsection="overdue"] [data-task="${late?.id}"] a[href$="/focus?task=${late?.id}"]')`), 'an overdue task has the focus button too');
+
+            // A running round belongs to the task it started on, wherever Focus is reopened from.
+            await newbie.goto(`${BASE}/focus?task=${firstId}`);
+            await newbie.settle();
+            await click(newbie, '#btnStartStop');
+            await sleep(500);
+            await newbie.goto(BASE + '/focus');
+            await newbie.settle();
+            check(Number(await newbie.eval(`document.getElementById('selectFocusTask').value`)) === firstId, 'a running round keeps its task when Focus is opened from the menu');
+            await newbie.goto(`${BASE}/focus?task=${late?.id}`);
+            await newbie.settle();
+            check(Number(await newbie.eval(`document.getElementById('selectFocusTask').value`)) === firstId, 'and when another task\'s focus button is pressed mid-round');
+
+            // Its task deleted before the page came back: the round ends under the old name, tied to nothing.
+            await newbie.eval(`localStorage.setItem('dayflow.focus', JSON.stringify({ mode: 'work', endsAt: Date.now() + 1500, total: 60, task: '999999999', taskTitle: 'ลบไปแล้ว ${STAMP}' }))`);
+            await newbie.goto(BASE + '/focus');
+            await sleep(3500);
+            const orphan = (await api(newbie, '/api/focus')).body.sessions?.[0];
+            check(orphan?.task_id === null && orphan?.title === `ลบไปแล้ว ${STAMP}`, 'a round whose task is gone keeps the task\'s name', JSON.stringify(orphan));
+
+            await api(newbie, `/api/tasks/${firstId}`, { method: 'DELETE' });
+            await api(newbie, `/api/tasks/${late?.id}`, { method: 'DELETE' });
+            await newbie.goto(BASE + '/');
+            await newbie.settle();
+            await sleep(800);
+            check(!(await newbie.eval(welcomeOn)), 'deleting the first task does not bring the welcome back');
+        } finally {
+            await api(newbie, '/api/settings/delete', { method: 'POST', body: JSON.stringify({ password: newbiePassword, confirm_text: 'DELETE' }) }).catch(() => {});
+            await cdp.send('Target.disposeBrowserContext', { browserContextId: fresh.browserContextId }).catch(() => {});
         }
 
         // ---------- phone ----------

@@ -186,7 +186,13 @@ test('a focus session cannot be attached to somebody else\'s task', function (Te
         'type' => 'work', 'duration_min' => 25, 'task_id' => (int)$task['id'],
     ]);
 
-    assertSame(422, $response['status'], 'a task that is not yours is not a valid target');
+    // The round is kept but tied to nothing: the server cannot tell a task that
+    // is not yours from one deleted mid-focus (EDGE-13), and answering the same
+    // way for both does not reveal which task ids exist.
+    assertSame(201, $response['status'], $response['body']);
+    $mine = $other->json($other->get('/api/focus'))['sessions'];
+    assertSame(null, $mine[0]['task_id'], 'a task that is not yours is never attached');
+    assertSame(null, $mine[0]['task_title'], 'and its title does not leak into the history');
 });
 
 test('a focus session belonging to someone else cannot be deleted', function (TestClient $_c): void {

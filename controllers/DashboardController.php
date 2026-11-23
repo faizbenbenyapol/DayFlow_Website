@@ -52,6 +52,8 @@ class DashboardController
 
         $userId = Auth::userId();
         $layout  = DashboardLayout::getForUser($userId);
+        // ตัดสินการ์ดต้อนรับตั้งแต่ render หน้า ไม่ให้บัญชีใหม่เห็นกลุ่ม "วันนี้" แวบหนึ่งก่อน summary มาถึง
+        $welcome = Task::shouldWelcome($userId);
 
         require ROOT . '/views/layout/header.php';
         require ROOT . '/views/dashboard/index.php';
@@ -66,7 +68,7 @@ class DashboardController
         $payload = [];
 
         // Tasks: ค้าง, วันนี้, และงานโปรเจกต์ที่มอบให้ฉัน
-        // ใช้ 5 คำสั่งคงที่ ไม่ขยายตามจำนวนงานหรือโปรเจกต์
+        // ใช้ 6 คำสั่งคงที่ ไม่ขยายตามจำนวนงานหรือโปรเจกต์
         if (isset($need['tasks'])) {
             $overdueCount = (int)$this->safeModule('tasks', fn() => DB::run(
                 'SELECT COUNT(*) FROM tasks
@@ -108,12 +110,15 @@ class DashboardController
                 [$userId, $userId, $userId, $userId, $userId]
             )->fetchAll(), $warnings, []);
 
+            $welcome = (bool)$this->safeModule('tasks', fn() => Task::shouldWelcome($userId), $warnings, false);
+
             $payload['tasks'] = [
                 'overdue'          => $overdueCount,
                 'due_today'        => $dueToday,
                 'overdue_items'    => $overdueItems,
                 'today_items'      => $todayItems,
                 'my_project_items' => $myProjectItems,
+                'welcome'          => $welcome,
             ];
         }
 

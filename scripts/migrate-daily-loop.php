@@ -316,13 +316,27 @@ function insertCopyLogBatch(string $legacySource, array $rows): void
 }
 
 /**
+ * นิพจน์ SQL ที่ใช้เทียบชื่อ: เปลี่ยน NBSP เป็นช่องว่าง ตัดช่องว่างหัวท้าย ทำตัวเล็ก แล้วเทียบแบบ binary
+ * TRIM ของ MariaDB ตัดแค่ช่องว่างธรรมดา ชื่อที่คัดลอกจากเว็บมักมี NBSP (U+00A0) ติดมา
+ * ส่วน utf8mb4_bin มีไว้ไม่ให้มองข้ามวรรณยุกต์ไทยแบบ utf8mb4_unicode_ci
+ *
+ * @param string $column ชื่อคอลัมน์ใน SQL เช่น t.assignee
+ * @return string นิพจน์ SQL
+ */
+function nameKeySql(string $column): string
+{
+    return "LOWER(TRIM(REPLACE({$column}, _utf8mb4 X'C2A0', ' '))) COLLATE utf8mb4_bin";
+}
+
+/**
  * สร้าง derived table ของ guest_name ที่ปรากฏในโปรเจคนั้น (จาก task/chat/activity)
  *
- * @return string SQL ของ derived table มีคอลัมน์ project_id, guest_name
+ * @return string SQL ของ derived table มีคอลัมน์ project_id, guest_name (เป็นค่าจาก nameKeySql แล้ว)
  */
 function guestNamesSql(): string
 {
-    return "SELECT DISTINCT project_id, LOWER(TRIM(guest_name)) AS guest_name
+    $key = nameKeySql('guest_name');
+    return "SELECT DISTINCT project_id, {$key} AS guest_name
         FROM (
             SELECT project_id, guest_name COLLATE utf8mb4_bin AS guest_name FROM project_tasks
             UNION ALL
@@ -330,7 +344,7 @@ function guestNamesSql(): string
             UNION ALL
             SELECT project_id, guest_name COLLATE utf8mb4_bin AS guest_name FROM project_activities
         ) g
-        WHERE guest_name IS NOT NULL AND TRIM(guest_name) <> ''";
+        WHERE guest_name IS NOT NULL AND {$key} <> ''";
 }
 
 /**
@@ -349,20 +363,17 @@ function matchedProjectTasksSql(): string
     )';
 
     $guestSql = guestNamesSql();
+    $assignee = nameKeySql('t.assignee');
 
     return "SELECT t.id, mem.user_id
         FROM project_tasks t
         JOIN {$membersSql} mem ON mem.project_id = t.project_id
         WHERE t.assignee_user_id IS NULL
-          AND TRIM(t.assignee) <> ''
-          AND (
-              LOWER(TRIM(t.assignee)) COLLATE utf8mb4_bin = LOWER(TRIM(mem.display_name)) COLLATE utf8mb4_bin
-              OR LOWER(TRIM(t.assignee)) COLLATE utf8mb4_bin = LOWER(TRIM(mem.username)) COLLATE utf8mb4_bin
-          )
+          AND {$assignee} <> ''
+          AND ({$assignee} = " . nameKeySql('mem.display_name') . " OR {$assignee} = " . nameKeySql('mem.username') . ")
           AND NOT EXISTS (
               SELECT 1 FROM ({$guestSql}) g
-              WHERE g.project_id = t.project_id
-                AND g.guest_name COLLATE utf8mb4_bin = LOWER(TRIM(t.assignee)) COLLATE utf8mb4_bin
+              WHERE g.project_id = t.project_id AND g.guest_name = {$assignee}
           )";
 }
 
@@ -375,6 +386,7 @@ function projectTaskAssigneeCounts(): array
 {
     $matchedSql = matchedProjectTasksSql();
     $guestSql = guestNamesSql();
+    $assignee = nameKeySql('pt.assignee');
 
     $sql = "SELECT
         SUM(CASE WHEN gn.project_id IS NOT NULL THEN 1 ELSE 0 END) AS guest,
@@ -389,8 +401,8 @@ function projectTaskAssigneeCounts(): array
     ) m ON m.id = pt.id
     LEFT JOIN ({$guestSql}) gn
         ON gn.project_id = pt.project_id
-        AND gn.guest_name COLLATE utf8mb4_bin = LOWER(TRIM(pt.assignee)) COLLATE utf8mb4_bin
-    WHERE pt.assignee_user_id IS NULL AND TRIM(pt.assignee) <> ''";
+        AND gn.guest_name = {$assignee}
+    WHERE pt.assignee_user_id IS NULL AND {$assignee} <> ''";
 
     $row = DB::run($sql)->fetch() ?: [];
 
