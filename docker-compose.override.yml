@@ -19,6 +19,9 @@ services:
       GOOGLE_TOKEN_URL: ${GOOGLE_TOKEN_URL-http://fake-google:8090/token}
       GOOGLE_REVOKE_URL: ${GOOGLE_REVOKE_URL-http://fake-google:8090/revoke}
       GOOGLE_API_URL: ${GOOGLE_API_URL-http://fake-google:8090}
+      # AI ปลอม (ด้านล่าง) อยู่ในเครือข่ายภายในของ Docker ผู้ใช้ที่กำหนด URL เองจึงต้องชี้ที่อยู่ภายในได้
+      # production ไม่โหลดไฟล์นี้ ค่าเริ่มต้นยังบล็อกที่อยู่ภายใน (กัน SSRF)
+      AI_ALLOW_PRIVATE_URLS: "true"
 
   cron:
     environment:
@@ -38,4 +41,17 @@ services:
       # php -S ใช้ OPcache แบบ production (ไม่ตรวจว่าไฟล์เปลี่ยน) แก้ router แล้วจะไม่มีผลจนรีสตาร์ท
       - ./docker/php.dev.ini:/usr/local/etc/php/conf.d/zz-dayflow-dev.ini:ro
     entrypoint: ["php", "-S", "0.0.0.0:8090", "/var/www/html/tests/fake-google/router.php"]
+    restart: unless-stopped
+
+  # AI ปลอมสำหรับทดสอบผู้ให้บริการ (tests/fake-llm/router.php) — ห้ามใช้ใน production
+  fake-llm:
+    build: .
+    container_name: dayflow-fake-llm
+    ports:
+      - "8091:8091"
+    volumes:
+      - .:/var/www/html
+      # php -S ใช้ OPcache แบบ production (ไม่ตรวจว่าไฟล์เปลี่ยน) แก้ router แล้วจะไม่มีผลจนรีสตาร์ท
+      - ./docker/php.dev.ini:/usr/local/etc/php/conf.d/zz-dayflow-dev.ini:ro
+    entrypoint: ["php", "-S", "0.0.0.0:8091", "/var/www/html/tests/fake-llm/router.php"]
     restart: unless-stopped

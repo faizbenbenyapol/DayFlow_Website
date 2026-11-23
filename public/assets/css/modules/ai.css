@@ -87,6 +87,68 @@
     text-decoration: underline;
 }
 
+/* ---------- Chat ---------- */
+.ai-chat-toolbar {
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.ai-chat-pick {
+    flex: 1 1 220px;
+    min-width: 0;
+    max-width: 320px;
+}
+
+.ai-chat-log {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    max-height: 60vh;
+    margin-bottom: var(--space-4);
+    padding: var(--space-2) 0;
+    overflow-y: auto;
+}
+
+.ai-chat-bubble {
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.ai-chat-msg-own .ai-chat-bubble {
+    padding-left: var(--space-3);
+    border-left: 2px solid var(--day);
+}
+
+.ai-chat-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+}
+
+.ai-chat-compose {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.ai-chat-compose .form-control {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 44px;
+}
+
+.ai-chat-compose .btn {
+    flex: none;
+    min-height: 44px;
+}
+
+.ai-chat-empty {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
 /* ---------- API keys ---------- */
 .ai-key-row {
     padding: var(--space-3) 0;
@@ -110,6 +172,15 @@
 .ai-key-body input {
     flex: 1;
     min-width: 200px;
+}
+
+.ai-key-field {
+    flex: 1 1 220px;
+    min-width: 0;
+}
+
+.ai-key-field .form-label {
+    font-size: 0.8125rem;
 }
 
 .ai-key-msg {
@@ -295,5 +366,15 @@
 
     .ai-shortcut {
         display: none;
+    }
+
+    /* ปุ่ม + ลอยของแอปอยู่มุมขวาล่าง ปุ่มส่งที่ชิดขวาจะถูกมันทับ จึงย้ายลงใต้ช่องพิมพ์ชิดซ้าย */
+    .ai-chat-compose {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .ai-chat-compose .form-control {
+        width: 100%;
     }
 }

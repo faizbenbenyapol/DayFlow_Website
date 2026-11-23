@@ -232,6 +232,8 @@ class Router
         $this->add('GET',    '/api/ai/video/{id}/status',     'AiController', 'apiVideoStatus',    true);
         $this->add('GET',    '/api/ai/history',               'AiController', 'apiHistory',        true);
         $this->add('DELETE', '/api/ai/history/{id}',          'AiController', 'apiHistoryDelete',  true);
+        $this->add('POST',   '/api/ai/chat',                  'AiChatController', 'chat',          true);
+        $this->add('POST',   '/api/ai/chat/confirm',          'AiChatController', 'confirm',       true);
 
         // --- Page & API: Skills (Time Tracker) ---
         $this->add('GET',    '/skills',                       'SkillController', 'index',          true);

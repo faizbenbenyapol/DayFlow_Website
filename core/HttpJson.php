@@ -10,18 +10,20 @@
 final class HttpJson
 {
     /**
-     * Sends a request and returns the decoded JSON body.
+     * ส่งคำขอแล้วคืน JSON ที่ถอดรหัสแล้ว
      *
-     * @param mixed $body    encoded as JSON when not null
-     * @param int   $timeout seconds for the whole request
-     * @throws RuntimeException on a transport error, an HTTP error status, or a non-JSON reply
+     * @param mixed $body        แปลงเป็น JSON เมื่อไม่ใช่ null
+     * @param int   $timeout     วินาทีของทั้งคำขอ
+     * @param array $curlOptions ตัวเลือก cURL เพิ่มเติม (เช่น CURLOPT_RESOLVE ที่ AiEndpoint ตรวจแล้ว)
+     * @throws RuntimeException transport error (code 0), HTTP >= 400 (code = status) หรือคำตอบไม่ใช่ JSON
      */
     public static function request(
         string $url,
         mixed $body = null,
         array $headers = [],
         string $method = 'POST',
-        int $timeout = 20
+        int $timeout = 20,
+        array $curlOptions = []
     ): array {
         $ch = curl_init($url);
         $hdrs = array_merge(['Accept: application/json'], $headers);
@@ -34,6 +36,8 @@ final class HttpJson
             CURLOPT_HTTPHEADER     => $hdrs,
             CURLOPT_CUSTOMREQUEST  => $method,
         ]);
+        // ไม่เปิด FOLLOWLOCATION: ปลายทางที่เปลี่ยนเส้นทางเองจะพาไปที่อยู่ภายในไม่ได้
+        if ($curlOptions !== []) curl_setopt_array($ch, $curlOptions);
         if ($body !== null) {
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body, JSON_UNESCAPED_UNICODE));
         }
@@ -50,7 +54,7 @@ final class HttpJson
                 ? ($data['error']['message'] ?? $data['error'] ?? $data['detail'] ?? $data['message'] ?? $data['Note'] ?? json_encode($data))
                 : $raw;
             if (is_array($msg)) $msg = json_encode($msg);
-            throw new RuntimeException('HTTP ' . $code . ': ' . $msg);
+            throw new RuntimeException('HTTP ' . $code . ': ' . $msg, $code);
         }
         if (!is_array($data)) throw new RuntimeException('ตอบกลับไม่ใช่ JSON');
         return $data;

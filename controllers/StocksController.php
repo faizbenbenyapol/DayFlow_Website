@@ -165,7 +165,7 @@ class StocksController
     // AI STOCK ANALYSIS
     // ============================================================
 
-    /** Asks each configured AI provider in turn until one returns a usable analysis. */
+    /** ถามผู้ให้บริการ AI ที่ตั้งค่าไว้ทีละเจ้าจนกว่าจะได้ผลวิเคราะห์ที่ใช้ได้ */
     public function apiAnalyze(): void
     {
         $userId = Auth::userId();
@@ -176,12 +176,12 @@ class StocksController
             Response::json(['error' => 'กรุณากรอกสัญลักษณ์หุ้นให้ถูกต้อง'], 422);
         }
 
-        $availableKeys = [];
+        $available = [];
         foreach (self::ANALYSIS_PROVIDERS as $p) {
-            $key = AiKey::get($userId, $p);
-            if ($key !== '') $availableKeys[] = ['provider' => $p, 'key' => $key];
+            $cfg = AiKey::config($userId, $p);
+            if ($cfg) $available[] = $cfg;
         }
-        if (!$availableKeys) {
+        if (!$available) {
             Response::json(['error' => 'กรุณาตั้งค่า API Key สำหรับ AI ก่อนใช้งาน ในส่วน "API สำหรับการวิเคราะห์หุ้นด้วย AI" ในหน้า ตั้งค่า → API หุ้น'], 422);
         }
 
@@ -196,16 +196,17 @@ class StocksController
         $prompt = self::analysisPrompt($ticker, $market, StockPriceCache::get($ticker));
 
         $lastError = '';
-        foreach ($availableKeys as ['provider' => $provider, 'key' => $apiKey]) {
+        foreach ($available as $cfg) {
+            $provider = $cfg['provider'];
             try {
-                $parsed = LlmClient::extractJson(LlmClient::complete($provider, $apiKey, $prompt));
+                $parsed = LlmClient::extractJson(LlmClient::complete($cfg, $prompt));
                 if ($parsed) {
                     Response::json(['ok' => true, 'result' => $parsed, 'provider' => $provider]);
                 }
                 $lastError = 'AI ' . $provider . ' ส่งข้อมูลมาไม่ถูกต้อง';
             } catch (Throwable $e) {
-                // A rate limit or a revoked key on one provider moves on to the next.
-                $lastError = $e->getMessage();
+                // คีย์ถูกเพิกถอนหรือติด rate limit เจ้าหนึ่ง ให้ลองเจ้าถัดไป
+                $lastError = LlmClient::explain($provider, $e);
             }
         }
 
