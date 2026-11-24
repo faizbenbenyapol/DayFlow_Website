@@ -1,11 +1,31 @@
 /* =====================================================
    projects.css — projects
 
-   The projects are ruled rows; the open one is a board of four columns. A task's
-   priority is a word and a left edge, a status segment is a word and a pattern
-   of weight; colour is a help, never the only sign. Progress is sized by --v and
-   the status bar by --w, set from the script.
+   The projects are ruled rows; the open one is a board whose columns come from
+   the project's type. A task's priority is a word and a left edge, a status
+   segment is a word and a pattern of weight; colour is a help, never the only
+   sign. Progress is sized by --v and the column bar by --w, set from the script.
 ===================================================== */
+
+/* The pastel of each project type: the theme's own colours, nothing new. */
+[data-ptype="general"]   { --type: var(--sky);   --type-2: var(--sky-2); }
+[data-ptype="software"]  { --type: var(--lilac); --type-2: var(--lilac-2); }
+[data-ptype="marketing"] { --type: var(--peach); --type-2: var(--peach-2); }
+[data-ptype="finance"]   { --type: var(--mint);  --type-2: var(--mint-2); }
+
+/* The coloured ear of a type: on a list row, the board head and a pick card. */
+.type-ear {
+    display: inline-block;
+    padding: 1px 10px 2px;
+    border: 1.5px solid var(--edge);
+    border-bottom: 0;
+    border-radius: 8px 8px 0 0;
+    background: var(--type);
+    color: var(--ink);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
 
 .proj-filters {
     display: flex;
@@ -38,9 +58,9 @@
     gap: var(--space-3);
     width: 100%;
     min-height: 56px;
-    padding: 8px var(--space-3);
+    padding: 8px var(--space-3) 8px var(--space-2);
     border: 0;
-    border-left: 3px solid transparent;
+    border-left: 6px solid var(--type-2, var(--rule));
     border-bottom: 1px solid var(--rule);
     background: none;
     color: var(--ink);
@@ -59,7 +79,6 @@
 }
 
 .proj-row[aria-pressed="true"] {
-    border-left-color: var(--day);
     background: var(--paper-sunk);
 }
 
@@ -82,6 +101,12 @@
     color: var(--pencil);
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.proj-row-type {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--pencil);
 }
 
 .proj-row-status,
@@ -138,6 +163,194 @@
 }
 
 /* ---------------------------------------------------------------
+   The type picker (create a project, step 1)
+--------------------------------------------------------------- */
+.step-label {
+    margin: 0 0 var(--space-3);
+    font-size: 0.8125rem;
+    color: var(--pencil);
+}
+
+.step-label .btn-link {
+    padding: 0;
+    font-size: inherit;
+}
+
+.type-pick {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-5) var(--space-4);
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.type-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-top: 22px;
+    cursor: pointer;
+}
+
+.type-card .type-ear {
+    position: absolute;
+    top: 0;
+    left: 14px;
+}
+
+.type-card .sheet {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border: 1.5px solid var(--rule-strong);
+    border-top: 4px solid var(--type-2);
+    border-radius: 4px var(--r-card) var(--r-card) var(--r-card);
+    background: var(--paper);
+}
+
+.type-card input {
+    position: absolute;
+    opacity: 0;
+}
+
+.type-card input:checked ~ .sheet {
+    border-color: var(--edge);
+    box-shadow: inset 0 0 0 1.5px var(--edge);
+}
+
+.type-card input:checked ~ .type-ear::after {
+    content: " ✓";
+}
+
+.type-card input:focus-visible ~ .sheet {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+}
+
+.type-card h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.type-card p {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--pencil);
+}
+
+.type-card .defaults {
+    font-size: 0.75rem;
+    color: var(--pencil);
+}
+
+.type-card .defaults b {
+    color: var(--ink);
+    font-weight: 600;
+}
+
+/* The look of each type, drawn with CSS: a board, a backlog, a calendar, a ledger. */
+.thumb {
+    height: 76px;
+    padding: 6px;
+    border-radius: 6px;
+    background: var(--paper-sunk);
+    display: grid;
+    gap: 3px;
+    overflow: hidden;
+}
+
+.thumb i {
+    display: block;
+    border-radius: 2px;
+    background: var(--type-2);
+}
+
+.thumb.t-board {
+    grid-template-columns: repeat(4, 1fr);
+    align-items: start;
+}
+
+.thumb.t-board span {
+    display: grid;
+    gap: 3px;
+}
+
+.thumb.t-board i {
+    height: 9px;
+}
+
+.thumb.t-backlog {
+    grid-template-rows: repeat(5, 1fr);
+}
+
+.thumb.t-backlog span {
+    display: grid;
+    grid-template-columns: 22px 1fr 10px;
+    gap: 4px;
+    align-items: center;
+    font: 600 7px/1 var(--font-mono);
+    color: var(--pencil);
+}
+
+.thumb.t-backlog i {
+    height: 5px;
+    background: var(--rule-strong);
+    opacity: 0.5;
+}
+
+.thumb.t-backlog i + i {
+    background: var(--type-2);
+    opacity: 1;
+}
+
+.thumb.t-cal {
+    grid-template-columns: repeat(7, 1fr);
+    grid-auto-rows: 1fr;
+}
+
+.thumb.t-cal i {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+}
+
+.thumb.t-cal i.on {
+    background: var(--type-2);
+    border-color: var(--type-2);
+}
+
+.thumb.t-ledger {
+    grid-template-rows: repeat(5, 1fr);
+}
+
+.thumb.t-ledger span {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--rule);
+    font: 7px/1 var(--font-num);
+    color: var(--pencil);
+}
+
+.thumb.t-ledger span::before {
+    content: "";
+    width: 40%;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--rule-strong);
+    opacity: 0.5;
+}
+
+.thumb.t-ledger span:last-child {
+    border-bottom: 1.5px solid var(--edge);
+    color: var(--ink);
+    font-weight: 600;
+}
+
+/* ---------------------------------------------------------------
    The board
 --------------------------------------------------------------- */
 .proj-board-label {
@@ -151,33 +364,107 @@
     gap: var(--space-2);
 }
 
+.proj-head {
+    position: relative;
+    margin-bottom: var(--space-2);
+    padding-top: 24px;
+}
+
+.proj-head .type-ear {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.proj-head-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-4);
+    padding-top: var(--space-2);
+    border-top: 4px solid var(--type-2, var(--rule-strong));
+}
+
+.proj-head-title {
+    margin: 0;
+    font-size: 1.5rem;
+    overflow-wrap: anywhere;
+}
+
+.proj-head .me {
+    font-size: 0.8125rem;
+    color: var(--pencil);
+}
+
+.proj-head .me b {
+    color: var(--ink);
+}
+
 .kanban-board {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: var(--space-5);
-    padding-top: var(--space-4);
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(190px, 1fr);
+    gap: var(--space-4);
+    padding: var(--space-4) 0 var(--space-3);
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
 }
 
 .kanban-column {
     min-width: 0;
+    scroll-snap-align: start;
 }
 
 .kanban-column-header {
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--rule-strong);
+    align-items: center;
+    gap: var(--space-2);
+    padding-bottom: var(--space-2);
+    border-bottom: 3px solid var(--g, var(--rule-strong));
 }
 
 .kanban-column-title {
-    font-size: 1rem;
+    flex: 1;
+    min-width: 0;
+    font-size: 0.9375rem;
     font-weight: 600;
+    overflow-wrap: anywhere;
 }
 
 .kanban-column-count {
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     color: var(--pencil);
+    font-variant-numeric: tabular-nums;
+}
+
+.grp {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.75rem;
+    color: var(--pencil);
+    white-space: nowrap;
+}
+
+.grp::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--g);
+}
+
+[data-g="todo"] {
+    --g: var(--rule-strong);
+}
+
+[data-g="doing"] {
+    --g: var(--caution);
+}
+
+[data-g="done"] {
+    --g: var(--ledger-green);
 }
 
 .kanban-cards-list {
@@ -328,23 +615,18 @@
     width: var(--w, 0%);
 }
 
-.seg[data-status="to-do"],
-.proj-legend li[data-status="to-do"] .key {
+.seg[data-g="todo"],
+.proj-legend li[data-g="todo"] .key {
     background: var(--rule-strong);
 }
 
-.seg[data-status="in-progress"],
-.proj-legend li[data-status="in-progress"] .key {
+.seg[data-g="doing"],
+.proj-legend li[data-g="doing"] .key {
     background: var(--caution);
 }
 
-.seg[data-status="review"],
-.proj-legend li[data-status="review"] .key {
-    background: var(--ink);
-}
-
-.seg[data-status="done"],
-.proj-legend li[data-status="done"] .key {
+.seg[data-g="done"],
+.proj-legend li[data-g="done"] .key {
     background: var(--ledger-green);
 }
 
@@ -562,12 +844,6 @@
     margin-top: var(--space-5);
 }
 
-@media (max-width: 1023px) {
-    .kanban-board {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
 @media (max-width: 767px) {
     .proj-row {
         grid-template-columns: minmax(0, 1fr) auto;
@@ -587,10 +863,32 @@
     }
 
     .kanban-board {
-        grid-template-columns: minmax(0, 1fr);
+        grid-auto-columns: 82%;
+    }
+
+    .kanban-quick-add-btn,
+    .proj-board-actions .btn,
+    .modal-footer .btn {
+        min-height: 44px;
     }
 
     .proj-search {
         max-width: none;
     }
+}
+
+@media (max-width: 720px) {
+    .type-pick {
+        grid-template-columns: 1fr;
+    }
+
+    .type-card .sheet {
+        grid-template-columns: 88px minmax(0, 1fr);
+    }
+}
+
+/* ขั้นเลือกประเภทต้องกว้างพอให้การ์ด 2×2 อ่านได้ (mockup 760px) ส่วนขั้นกรอกชื่อใช้ความกว้างฟอร์มปกติ
+   ใช้ :has แทน .modal-wide เพราะใน components.css กฎ .modal มาทีหลังและทับ .modal-wide อยู่ */
+#createProjectModal .modal:has(#createProjectStep1:not([hidden])) {
+    max-width: 760px;
 }

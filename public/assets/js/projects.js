@@ -17,7 +17,18 @@ let sortableInstances = [];
 
 const STATUS_LABEL = { 'Planning': 'วางแผน', 'In Progress': 'กำลังทำ', 'Review': 'รอตรวจ', 'Completed': 'เสร็จแล้ว' };
 const PRIORITY_LABEL = { 'Low': 'ต่ำ', 'Medium': 'ปานกลาง', 'High': 'สูง', 'Critical': 'วิกฤต' };
-const COLUMN_LABEL = { 'To Do': 'ต้องทำ', 'In Progress': 'กำลังทำ', 'Review': 'รอตรวจ', 'Done': 'เสร็จแล้ว' };
+const PROJECT_TYPE_LABEL = {
+    'general': 'ทั่วไป',
+    'software': 'พัฒนาซอฟต์แวร์',
+    'marketing': 'การตลาดและคอนเทนต์',
+    'finance': 'บัญชีและการเงิน',
+};
+const PROJECT_TYPE_EAR = {
+    'general': 'ทั่วไป',
+    'software': 'ซอฟต์แวร์',
+    'marketing': 'การตลาด',
+    'finance': 'บัญชี',
+};
 const THAI_MONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
     'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
 
@@ -101,6 +112,7 @@ function dueWords(dueDate) {
     return { text: 'เหลือ ' + days + ' วัน', cls: '' };
 }
 
+/** วาดแถวโปรเจคหนึ่งแถว: ชื่อ ประเภท คำอธิบาย สถานะ ความสำคัญ วันส่ง และเปอร์เซ็นต์ */
 function projectRow(p) {
     const total = parseInt(p.total_tasks || 0, 10);
     const done = parseInt(p.completed_tasks || 0, 10);
@@ -108,9 +120,11 @@ function projectRow(p) {
     const due = dueWords(p.due_date);
     const name = escHtml(p.name);
     const current = p.id === activeProjectId;
+    const type = p.type || 'general';
 
-    return '<li><button type="button" class="proj-row" data-priority="' + escHtml(p.priority.toLowerCase()) + '" aria-pressed="' + current + '" data-act="selectProject" data-args="[' + p.id + ']">'
+    return '<li><button type="button" class="proj-row" data-ptype="' + escHtml(type) + '" data-priority="' + escHtml(p.priority.toLowerCase()) + '" aria-pressed="' + current + '" data-act="selectProject" data-args="[' + p.id + ']">'
         + '<span class="proj-row-main"><span class="proj-row-name">' + name + '</span>'
+        + '<span class="proj-row-type">' + escHtml(PROJECT_TYPE_LABEL[type] || PROJECT_TYPE_LABEL.general) + '</span>'
         + '<span class="proj-row-desc">' + (p.description ? escHtml(p.description) : 'ไม่มีคำอธิบาย') + '</span></span>'
         + '<span class="proj-row-status">' + escHtml(STATUS_LABEL[p.status] || p.status) + '</span>'
         + '<span class="proj-row-priority">' + escHtml(PRIORITY_LABEL[p.priority] || p.priority) + '</span>'
@@ -137,21 +151,26 @@ function renderProjectsList(list) {
     grid.innerHTML = '<ul class="ruled-list">' + list.map(projectRow).join('') + '</ul>';
 }
 
+/** ล้างช่องค้นหาและตัวกรองทั้งหมด แล้ววาดรายการใหม่ */
 function clearProjectFilters() {
     document.getElementById('projectSearch').value = '';
+    document.getElementById('projectTypeFilter').value = '';
     document.getElementById('projectStatusFilter').value = '';
     document.getElementById('projectPriorityFilter').value = '';
     filterProjects();
 }
 
+/** กรองและเรียงรายการโปรเจคจากช่องค้นหาและตัวกรอง แล้ววาดรายการใหม่ */
 function filterProjects() {
     const q = document.getElementById('projectSearch').value.trim().toLowerCase();
+    const type = document.getElementById('projectTypeFilter').value;
     const status = document.getElementById('projectStatusFilter').value;
     const priority = document.getElementById('projectPriorityFilter').value;
     const sort = document.getElementById('projectSort').value;
 
     const list = allProjects.filter(p =>
         (p.name.toLowerCase().includes(q) || (p.description && p.description.toLowerCase().includes(q)))
+        && (!type || p.type === type)
         && (!status || p.status === status)
         && (!priority || p.priority === priority));
 
@@ -174,6 +193,19 @@ async function refreshProjectList() {
 }
 
 /* ── Opening a project ── */
+/**
+ * คำเรียกบทบาทของผู้ใช้ในโปรเจค
+ * รับข้อมูลโปรเจค (is_owner, user_role) คืนคำไทยสำหรับบรรทัด "คุณเป็น …"
+ */
+function roleWords(project) {
+    if (project.is_owner) return 'เจ้าของ';
+    return { 'Admin': 'ผู้ดูแล', 'Editor': 'สมาชิก', 'Viewer': 'ดูอย่างเดียว' }[project.user_role] || 'สมาชิก';
+}
+
+/**
+ * เปิดโปรเจค: โหลดงาน คอลัมน์ และสิทธิ์ แล้ววาดหัวบอร์ด ตัวเลข และแชท
+ * เก็บผลไว้ใน activeProjectData ให้ไฟล์อื่นใช้ต่อ
+ */
 async function selectProject(projectId) {
     activeProjectId = projectId;
     stopChatPolling();
@@ -182,7 +214,12 @@ async function selectProject(projectId) {
     try {
         const data = await apiFetch(BASE_URL + '/api/projects/' + projectId + '/tasks');
         activeProjectData = data;
-        document.getElementById('activeProjectTitle').textContent = data.project.name;
+        const project = data.project;
+        const type = project.type || 'general';
+        document.getElementById('activeProjectTitle').textContent = project.name;
+        document.getElementById('activeProjectHead').dataset.ptype = type;
+        document.getElementById('activeProjectEar').textContent = PROJECT_TYPE_EAR[type] || PROJECT_TYPE_EAR.general;
+        document.getElementById('activeProjectRole').textContent = roleWords(project);
 
         show('btnInviteMember', true);   // everyone can see who is on the team
         show('btnEditProject', !!data.project.is_owner);
@@ -200,6 +237,7 @@ async function selectProject(projectId) {
             document.getElementById('lblGuestName').textContent = 'คุณ: ' + CURRENT_GUEST_NAME;
         }
 
+        renderBoardColumns();
         renderKanbanCards();
         initSortable();
         updateAnalyticsCharts();
@@ -269,29 +307,35 @@ function navCalendar(direction) {
 }
 
 /* ── Figures ── */
+/**
+ * วาดตัวเลขความคืบหน้า แถบสัดส่วน และคำอธิบายใต้แถบ
+ * นับงานที่อยู่ในคอลัมน์กลุ่ม done เป็นงานเสร็จ และแสดงคอลัมน์จริงของโปรเจค
+ */
 function updateAnalyticsCharts() {
     const tasks = activeProjectData.tasks || [];
-    const done = tasks.filter(t => t.status === 'Done').length;
+    const done = tasks.filter(isDoneTask).length;
     const percent = tasks.length > 0 ? Math.round(done / tasks.length * 100) : 0;
 
     document.getElementById('statCompletedTasks').textContent = done;
     document.getElementById('statRemainingTasks').textContent = tasks.length - done;
     document.getElementById('statProductivity').textContent = percent + '%';
 
-    const counts = { 'To Do': 0, 'In Progress': 0, 'Review': 0, 'Done': 0 };
-    tasks.forEach(t => { if (counts[t.status] !== undefined) counts[t.status]++; });
+    const counts = projectColumns().map(column => ({
+        column,
+        n: tasks.filter(t => Number(t.column_id) === Number(column.id)).length,
+    }));
 
-    // One bar split by status, and the same figures as words.
+    // One bar split by column, and the same figures as words.
     const bar = document.getElementById('projectStatusBar');
     bar.innerHTML = tasks.length
-        ? Object.entries(counts).filter(([, n]) => n > 0).map(([status, n]) =>
-            '<span class="seg" data-status="' + status.toLowerCase().replace(' ', '-') + '" style="--w:' + (n / tasks.length * 100) + '%"></span>').join('')
+        ? counts.filter(row => row.n > 0).map(row =>
+            '<span class="seg" data-g="' + escHtml(row.column.grp) + '" style="--w:' + (row.n / tasks.length * 100) + '%"></span>').join('')
         : '';
     bar.classList.toggle('empty', !tasks.length);
 
     document.getElementById('projectStatusLegend').innerHTML = tasks.length
-        ? Object.entries(counts).map(([status, n]) =>
-            '<li data-status="' + status.toLowerCase().replace(' ', '-') + '"><span class="key" aria-hidden="true"></span>' + COLUMN_LABEL[status] + ' <strong>' + n + '</strong></li>').join('')
+        ? counts.map(row =>
+            '<li data-g="' + escHtml(row.column.grp) + '"><span class="key" aria-hidden="true"></span>' + escHtml(row.column.name) + ' <strong>' + row.n + '</strong></li>').join('')
         : '<li class="proj-note">ยังไม่มีงานในบอร์ด</li>';
 }
 
@@ -320,13 +364,48 @@ function renderAiInsights() {
 }
 
 /* ── New and edit ── */
-function openCreateProjectModal() {
-    document.getElementById('createProjectForm').reset();
+/**
+ * แสดงขั้นของแบบฟอร์มสร้างโปรเจค
+ * รับเลขขั้น (1 หรือ 2) แล้วซ่อน/แสดงเนื้อหาและปุ่มท้ายของขั้นนั้น
+ */
+function showCreateStep(step) {
+    document.getElementById('createProjectStep1').hidden = step !== 1;
+    document.getElementById('createProjectStep2').hidden = step !== 2;
+    document.getElementById('createProjectFooter1').hidden = step !== 1;
+    document.getElementById('createProjectFooter2').hidden = step !== 2;
+}
+
+/** คืนค่ารหัสประเภทที่เลือกในการ์ดขั้น 1 (ค่าเริ่มต้น general) */
+function selectedProjectType() {
+    const checked = document.querySelector('#createProjectStep1 input[name="ptype"]:checked');
+    return checked ? checked.value : 'general';
+}
+
+/** ไปขั้น 2: อ่านประเภทที่เลือก แสดงชื่อประเภท แล้วโฟกัสช่องชื่อโปรเจค */
+function createStepNext() {
     formErrorLine('newProjError', '');
-    openModal('createProjectModal');
+    const type = selectedProjectType();
+    document.getElementById('createStepTypeName').textContent = PROJECT_TYPE_LABEL[type] || PROJECT_TYPE_LABEL.general;
+    showCreateStep(2);
     document.getElementById('newProjName').focus();
 }
 
+/** กลับไปขั้น 1 เพื่อเปลี่ยนประเภท */
+function createStepBack() {
+    formErrorLine('newProjError', '');
+    showCreateStep(1);
+}
+
+/** เปิดกล่องสร้างโปรเจคที่ขั้น 1 เสมอ และล้างค่าเดิม */
+function openCreateProjectModal() {
+    document.getElementById('createProjectForm').reset();
+    formErrorLine('newProjError', '');
+    showCreateStep(1);
+    document.getElementById('createStepTypeName').textContent = PROJECT_TYPE_LABEL.general;
+    openModal('createProjectModal');
+}
+
+/** ส่งโปรเจคใหม่พร้อมประเภทที่เลือกในขั้น 1 แล้วโหลดรายการและเปิดโปรเจค */
 async function submitCreateProject(e) {
     e.preventDefault();
     const name = document.getElementById('newProjName').value.trim();
@@ -338,8 +417,8 @@ async function submitCreateProject(e) {
             body: JSON.stringify({
                 name,
                 description: document.getElementById('newProjDesc').value.trim(),
+                type: selectedProjectType(),
                 priority: document.getElementById('newProjPriority').value,
-                status: document.getElementById('newProjStatus').value,
                 due_date: document.getElementById('newProjDue').value,
             })
         });
