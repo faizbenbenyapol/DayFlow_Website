@@ -2,8 +2,8 @@
 // =====================================================
 // views/projects/index.php — projects
 //
-// The projects as ruled rows with their progress; the open one as a four-column
-// board (to do, doing, review, done) with the people, the figures, a calendar,
+// The projects as ruled rows with their progress; the open one as a board whose
+// columns come from the project's type, with the people, the figures, a calendar,
 // what happened lately and a chat beneath. Guests of a shared project get the
 // same page with the buttons their role allows. assets/js/projects*.js draw it
 // from /api/projects/*.
@@ -30,6 +30,14 @@
 <div class="proj-filters">
     <label class="sr-only" for="projectSearch">ค้นหาโปรเจค</label>
     <input type="search" id="projectSearch" class="form-control proj-search" placeholder="ค้นหาโปรเจค" autocomplete="off" data-act="filterProjects" data-on="input">
+    <label class="sr-only" for="projectTypeFilter">ประเภท</label>
+    <select id="projectTypeFilter" class="form-control" data-act="filterProjects" data-on="change">
+        <option value="">ทุกประเภท</option>
+        <option value="general">ทั่วไป</option>
+        <option value="software">พัฒนาซอฟต์แวร์</option>
+        <option value="marketing">การตลาดและคอนเทนต์</option>
+        <option value="finance">บัญชีและการเงิน</option>
+    </select>
     <label class="sr-only" for="projectStatusFilter">สถานะ</label>
     <select id="projectStatusFilter" class="form-control" data-act="filterProjects" data-on="change">
         <option value="">ทุกสถานะ</option>
@@ -66,7 +74,7 @@
 
 <div id="projectsEmptyState" class="empty-state" hidden>
     <p class="empty-state-title">ยังไม่มีโปรเจค</p>
-    <p class="empty-state-text">โปรเจคคือกลุ่มงานที่ทำร่วมกันหลายขั้น แต่ละโปรเจคมีบอร์ด 4 คอลัมน์ ทีม และแชทของตัวเอง เริ่มจากสร้างโปรเจคแรก</p>
+    <p class="empty-state-text">โปรเจคคือกลุ่มงานที่ทำร่วมกันหลายขั้น แต่ละโปรเจคมีบอร์ด ทีม และแชทของตัวเอง เริ่มจากสร้างโปรเจคแรก</p>
     <?php if (!$isGuest): ?>
     <button class="btn btn-primary" type="button" data-act="openCreateProjectModal">สร้างโปรเจคแรก</button>
     <?php endif; ?>
@@ -74,42 +82,146 @@
 
 <!-- The open project -->
 <section id="kanbanBoardSection" class="sec" aria-labelledby="activeProjectTitle" hidden>
-    <div class="sec-head">
-        <h2><span class="proj-board-label">บอร์ด</span> <span id="activeProjectTitle"></span></h2>
-        <div class="proj-board-actions">
-            <button class="btn btn-sm" type="button" id="btnInviteMember" data-act="openInviteMemberModal" hidden>ทีม (<span id="memberCountBadge">1</span>)</button>
-            <button class="btn btn-sm" type="button" id="btnEditProject" data-act="openEditProjectModal" hidden>แก้ไข</button>
-            <button class="btn btn-sm btn-danger" type="button" id="btnDeleteProject" data-act="deleteActiveProject" hidden>ลบโปรเจค</button>
+    <div class="proj-head" id="activeProjectHead">
+        <span class="type-ear" id="activeProjectEar"></span>
+        <div class="proj-head-row">
+            <div>
+                <h2 class="proj-head-title" id="activeProjectTitle"></h2>
+                <span class="me">คุณเป็น <b id="activeProjectRole"></b></span>
+            </div>
+            <div class="proj-board-actions">
+                <button class="btn btn-sm" type="button" id="btnEditProject" data-act="openEditProjectModal" hidden>แก้ไข</button>
+                <button class="btn btn-sm btn-danger" type="button" id="btnDeleteProject" data-act="deleteActiveProject" hidden>ลบโปรเจค</button>
+            </div>
         </div>
     </div>
 
-    <div class="kanban-board">
-        <?php foreach ([
-            ['todo', 'To Do', 'ต้องทำ'],
-            ['inprogress', 'In Progress', 'กำลังทำ'],
-            ['review', 'Review', 'รอตรวจ'],
-            ['done', 'Done', 'เสร็จแล้ว'],
-        ] as [$slug, $status, $label]): ?>
-        <div class="kanban-column" id="col-<?= $slug ?>-wrap">
-            <div class="kanban-column-header">
-                <h3 class="kanban-column-title"><?= h($label) ?></h3>
-                <span class="kanban-column-count" id="<?= $slug ?>-count">0</span>
-            </div>
-            <div class="kanban-cards-list" id="<?= $slug ?>-list" data-status="<?= h($status) ?>"></div>
-            <div class="kanban-quick-add">
-                <button class="btn btn-link btn-sm kanban-quick-add-btn" type="button" data-act="toggleQuickAddForm" data-args='["<?= h($status) ?>"]'>เพิ่มงานใน "<?= h($label) ?>"</button>
-                <div class="kanban-quick-add-form" id="quickadd-<?= $slug ?>-form" hidden>
-                    <label class="sr-only" for="quickadd-<?= $slug ?>-input">ชื่องาน</label>
-                    <input type="text" class="form-control" id="quickadd-<?= $slug ?>-input" placeholder="ชื่องาน แล้วกด Enter" autocomplete="off"
-                           data-act="handleQuickAddKey" data-args='["$event", "<?= h($status) ?>"]' data-on="keydown">
-                    <div class="kanban-quick-add-actions">
-                        <button class="btn btn-sm" type="button" data-act="toggleQuickAddForm" data-args='["<?= h($status) ?>", false]'>ยกเลิก</button>
-                        <button class="btn btn-sm btn-primary" type="button" data-act="submitQuickAdd" data-args='["<?= h($status) ?>"]'>เพิ่ม</button>
+    <div class="tabs" role="tablist" aria-label="มุมมองของโปรเจค" id="projectTabs">
+        <button class="tab" role="tab" type="button" id="tabBoard" aria-selected="true" aria-controls="boardPanel" data-act="showProjectTab" data-args='["board"]'>บอร์ด</button>
+        <?php if (!$isGuest): /* a share-link guest has no settings to change */ ?>
+        <button class="tab" role="tab" type="button" id="tabSettings" aria-selected="false" aria-controls="settingsPanel" data-act="showProjectTab" data-args='["settings"]'>ตั้งค่า</button>
+        <?php endif; ?>
+    </div>
+
+    <div id="boardPanel" role="tabpanel" aria-labelledby="tabBoard">
+        <div class="kanban-board" id="kanbanBoard"></div>
+    </div>
+
+    <div id="settingsPanel" role="tabpanel" aria-labelledby="tabSettings" hidden>
+        <nav class="subnav proj-subnav" aria-label="ตั้งค่าโปรเจค">
+            <button class="subnav-link" type="button" id="settingsNavTeam" aria-current="page" data-act="showSettingsSection" data-args='["team"]'>ทีมและสิทธิ์</button>
+            <button class="subnav-link" type="button" id="settingsNavColumns" data-act="showSettingsSection" data-args='["columns"]'>คอลัมน์</button>
+            <button class="subnav-link" type="button" id="settingsNavType" data-act="showSettingsSection" data-args='["type"]'>ประเภท</button>
+        </nav>
+
+        <!-- ทีมและสิทธิ์ -->
+        <div class="proj-settings-pane" id="settingsTeam">
+            <div class="sec">
+                <div class="sec-head">
+                    <h2>คนในโปรเจค</h2>
+                    <button class="btn btn-sm btn-primary" type="button" id="btnFocusInvite" data-act="focusInviteForm" hidden>ชวนคนเข้าทีม</button>
+                </div>
+                <div class="proj-members" id="projectMembersList"></div>
+
+                <div class="empty-state" id="teamSoloEmpty" hidden>
+                    <p class="empty-state-title">ตอนนี้มีคุณคนเดียว</p>
+                    <p class="empty-state-text">ทุกอย่างใช้ได้ครบโดยไม่ต้องมีทีม ปุ่ม "อนุมัติ" คุณกดของตัวเองได้ ช่องผู้รับผิดชอบเว้นว่างได้ ชวนคนเข้ามาเมื่อพร้อม</p>
+                    <button class="btn btn-primary" type="button" data-act="focusInviteForm">ชวนคนเข้าทีม</button>
+                </div>
+
+                <form id="inviteMemberForm" class="proj-invite" data-act="submitInviteMember" data-args='["$event"]' data-on="submit" novalidate hidden>
+                    <h3 class="subhead">เชิญคนเข้าทีม</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="inviteSearchInput">ชื่อผู้ใช้หรืออีเมล</label>
+                            <input type="text" id="inviteSearchInput" class="form-control" placeholder="ผู้ที่มีบัญชีในระบบนี้" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="inviteRoleSelect">สิทธิ์</label>
+                            <select id="inviteRoleSelect" class="form-control"></select>
+                        </div>
+                    </div>
+                    <p class="form-error" id="inviteError" role="alert" hidden></p>
+                    <button type="submit" class="btn btn-primary">เชิญเข้าทีม</button>
+                </form>
+
+                <div id="publicShareSection" hidden>
+                    <h3 class="subhead">ลิงก์สำหรับคนนอกทีม</h3>
+                    <div class="proj-share-row">
+                        <label class="proj-share-label" for="shareLinkToggle">เปิดให้เข้าผ่านลิงก์โดยไม่ต้องมีบัญชี</label>
+                        <label class="switch">
+                            <input type="checkbox" id="shareLinkToggle" data-act="togglePublicShare" data-on="change">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div id="shareLinkDetails" hidden>
+                        <div class="form-group">
+                            <label class="form-label" for="shareLinkRole">สิทธิ์ของคนที่เข้าผ่านลิงก์</label>
+                            <select id="shareLinkRole" class="form-control" data-act="updateShareRole" data-on="change">
+                                <option value="Viewer">ดูอย่างเดียว (ดูบอร์ดและแชท)</option>
+                                <option value="Editor">แก้ไขได้ (จัดการงานและแชท)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="shareLinkUrl">ลิงก์</label>
+                            <div class="proj-share-url">
+                                <input type="text" id="shareLinkUrl" class="form-control" readonly>
+                                <button type="button" class="btn btn-sm" data-act="copyShareUrl">คัดลอก</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <div class="sec">
+                <div class="sec-head"><h2>แต่ละบทบาททำอะไรได้</h2></div>
+                <div class="perm-wrap">
+                    <table class="perm">
+                        <thead>
+                            <tr>
+                                <th scope="col">ทำอะไร</th>
+                                <th scope="col" data-role-col="owner">เจ้าของ</th>
+                                <th scope="col" data-role-col="admin">ผู้ดูแล</th>
+                                <th scope="col" data-role-col="editor">สมาชิก</th>
+                                <th scope="col" data-role-col="viewer">ดูอย่างเดียว</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>ดูงาน ความคืบหน้า แชท</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+                            <tr><td>สร้าง แก้ ลากงาน เขียนความเห็น</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td></tr>
+                            <tr><td>ตั้งคอลัมน์ ชวนคน เอาคนออก ลิงก์แชร์</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
+                            <tr><td>ตั้งผู้ดูแล เปลี่ยนประเภท ลบโปรเจค</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-        <?php endforeach; ?>
+
+        <!-- คอลัมน์ -->
+        <div class="proj-settings-pane" id="settingsColumns" hidden>
+            <div id="columnsEditor"></div>
+            <p class="alert alert-warning" id="columnsDenied" role="alert" hidden>คอลัมน์ตั้งได้เฉพาะเจ้าของและผู้ดูแล</p>
+        </div>
+
+        <!-- ประเภท -->
+        <div class="proj-settings-pane" id="settingsType" hidden>
+            <div class="sec">
+                <div class="sec-head"><h2>ประเภทของโปรเจคนี้</h2></div>
+                <div class="type-now" id="typeCurrentWrap">
+                    <span class="type-ear" id="typeCurrentEar"></span>
+                </div>
+                <div id="typeChangeOwner" hidden>
+                    <p class="proj-note">เปลี่ยนเป็น</p>
+                    <div class="proj-type-buttons">
+                        <button class="btn" type="button" data-type-button="general" data-act="changeProjectType" data-args='["general"]'>ทั่วไป</button>
+                        <button class="btn" type="button" data-type-button="software" data-act="changeProjectType" data-args='["software"]'>พัฒนาซอฟต์แวร์</button>
+                        <button class="btn" type="button" data-type-button="marketing" data-act="changeProjectType" data-args='["marketing"]'>การตลาดและคอนเทนต์</button>
+                        <button class="btn" type="button" data-type-button="finance" data-act="changeProjectType" data-args='["finance"]'>บัญชีและการเงิน</button>
+                    </div>
+                </div>
+                <p class="alert alert-warning" id="typeDenied" role="alert" hidden>เปลี่ยนประเภทได้เฉพาะเจ้าของ</p>
+            </div>
+        </div>
     </div>
 </section>
 
@@ -128,7 +240,7 @@
             <div class="fact"><div class="k">ยังค้างอยู่</div><div class="v" id="statRemainingTasks">0</div></div>
             <div class="fact"><div class="k">สำเร็จ</div><div class="v" id="statProductivity">0%</div></div>
         </div>
-        <div class="proj-status-bar" id="projectStatusBar" role="img" aria-label="สัดส่วนงานแต่ละสถานะ"></div>
+        <div class="proj-status-bar" id="projectStatusBar" role="img" aria-label="สัดส่วนงานแต่ละคอลัมน์"></div>
         <ul class="proj-legend" id="projectStatusLegend"></ul>
     </section>
 
@@ -167,52 +279,93 @@
     </section>
 </div>
 
-<!-- New project -->
+<!-- New project: step 1 the type, step 2 the details -->
 <div class="modal-backdrop" id="createProjectModal" aria-hidden="true">
-    <div class="modal" role="dialog" aria-labelledby="createProjectTitle">
+    <div class="modal modal-wide" role="dialog" aria-labelledby="createProjectTitle">
         <div class="modal-header">
             <h2 class="modal-title" id="createProjectTitle">สร้างโปรเจค</h2>
             <button class="modal-close" type="button" aria-label="ปิด" data-close-modal>&times;</button>
         </div>
         <form id="createProjectForm" data-act="submitCreateProject" data-args='["$event"]' data-on="submit" novalidate>
             <div class="modal-body">
-                <div class="form-group">
-                    <label class="form-label" for="newProjName">ชื่อโปรเจค</label>
-                    <input type="text" id="newProjName" class="form-control" name="name" maxlength="255" autocomplete="off" placeholder="เช่น ออกแบบเว็บไซต์ร้านกาแฟ">
+                <div id="createProjectStep1">
+                    <p class="step-label">ขั้น 1 จาก 2 · โปรเจคนี้เป็นงานแบบไหน</p>
+                    <fieldset class="type-pick">
+                        <legend class="sr-only">ประเภทโปรเจค</legend>
+                        <label class="type-card" data-ptype="general">
+                            <input type="radio" name="ptype" value="general" checked>
+                            <span class="type-ear">ทั่วไป</span>
+                            <span class="sheet">
+                                <span class="thumb t-board"><span><i></i><i></i><i></i></span><span><i></i><i></i></span><span><i></i></span><span><i></i><i></i></span></span>
+                                <span><h3>งานทั่วไป</h3><p>บอร์ดลากงานข้ามคอลัมน์ เหมาะกับงานบ้าน งานอีเวนต์ หรืองานที่ไม่เข้าหมวดไหน</p>
+                                <span class="defaults">ได้คอลัมน์: <b>ต้องทำ · กำลังทำ · รอตรวจ · เสร็จแล้ว</b></span></span>
+                            </span>
+                        </label>
+                        <label class="type-card" data-ptype="software">
+                            <input type="radio" name="ptype" value="software">
+                            <span class="type-ear">ซอฟต์แวร์</span>
+                            <span class="sheet">
+                                <span class="thumb t-backlog"><span>DF-12<i></i><i></i></span><span>DF-13<i></i><i></i></span><span>DF-14<i></i><i></i></span><span>DF-15<i></i><i></i></span><span>DF-16<i></i><i></i></span></span>
+                                <span><h3>พัฒนาซอฟต์แวร์</h3><p>เลขงานอัตโนมัติ คลังงาน รอบงาน เวอร์ชัน และบั๊ก สำหรับทำแอปหรือเว็บ</p>
+                                <span class="defaults">ได้คอลัมน์: <b>ต้องทำ · กำลังทำ · รอรีวิว · ทดสอบ · เสร็จ</b></span></span>
+                            </span>
+                        </label>
+                        <label class="type-card" data-ptype="marketing">
+                            <input type="radio" name="ptype" value="marketing">
+                            <span class="type-ear">การตลาด</span>
+                            <span class="sheet">
+                                <span class="thumb t-cal"><i></i><i class="on"></i><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i class="on"></i><i></i><i></i></span>
+                                <span><h3>การตลาดและคอนเทนต์</h3><p>ปฏิทินโพสต์ทุกช่องทาง ส่งโพสต์ให้อนุมัติ และแคมเปญเทียบงบ</p>
+                                <span class="defaults">ได้คอลัมน์: <b>ไอเดีย · ร่าง · รอตรวจ · นัดโพสต์ · โพสต์แล้ว</b></span></span>
+                            </span>
+                        </label>
+                        <label class="type-card" data-ptype="finance">
+                            <input type="radio" name="ptype" value="finance">
+                            <span class="type-ear">บัญชี</span>
+                            <span class="sheet">
+                                <span class="thumb t-ledger"><span>4,500.00</span><span>12,000.00</span><span>850.00</span><span>3,200.00</span><span>20,550.00</span></span>
+                                <span><h3>บัญชีและการเงิน</h3><p>งบ ค่าใช้จ่ายพร้อมใบเสร็จและการอนุมัติ ใบเสนอราคา ใบแจ้งหนี้</p>
+                                <span class="defaults">งานใช้คอลัมน์แบบทั่วไป ส่วนค่าใช้จ่ายมีขั้นของตัวเอง (มาในเฟสบัญชี)</span></span>
+                            </span>
+                        </label>
+                    </fieldset>
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="newProjDesc">คำอธิบายสั้นๆ</label>
-                    <textarea id="newProjDesc" class="form-control" name="description" rows="3" placeholder="ขอบเขตงานคร่าวๆ"></textarea>
-                </div>
-                <div class="form-row">
+                <div id="createProjectStep2" hidden>
+                    <p class="step-label">ขั้น 2 จาก 2 · <span id="createStepTypeName">ทั่วไป</span> · <button type="button" class="btn-link" data-act="createStepBack">เปลี่ยนประเภท</button></p>
                     <div class="form-group">
-                        <label class="form-label" for="newProjPriority">ความสำคัญ</label>
-                        <select id="newProjPriority" class="form-control" name="priority">
-                            <option value="Low">ต่ำ</option>
-                            <option value="Medium" selected>ปานกลาง</option>
-                            <option value="High">สูง</option>
-                            <option value="Critical">วิกฤต</option>
-                        </select>
+                        <label class="form-label" for="newProjName">ชื่อโปรเจค</label>
+                        <input type="text" id="newProjName" class="form-control" name="name" maxlength="255" autocomplete="off" placeholder="เช่น ออกแบบเว็บไซต์ร้านกาแฟ">
                     </div>
                     <div class="form-group">
-                        <label class="form-label" for="newProjStatus">สถานะ</label>
-                        <select id="newProjStatus" class="form-control" name="status">
-                            <option value="Planning" selected>วางแผน</option>
-                            <option value="In Progress">กำลังทำ</option>
-                            <option value="Review">รอตรวจ</option>
-                            <option value="Completed">เสร็จแล้ว</option>
-                        </select>
+                        <label class="form-label" for="newProjDesc">คำอธิบายสั้นๆ <span class="text-muted">(ไม่บังคับ)</span></label>
+                        <textarea id="newProjDesc" class="form-control" name="description" rows="3" placeholder="ขอบเขตงานคร่าวๆ"></textarea>
                     </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="newProjDue">กำหนดส่ง <span class="text-muted">(ไม่บังคับ)</span></label>
+                            <input type="date" id="newProjDue" class="form-control" name="due_date">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="newProjPriority">ความสำคัญ</label>
+                            <select id="newProjPriority" class="form-control" name="priority">
+                                <option value="Low">ต่ำ</option>
+                                <option value="Medium" selected>ปานกลาง</option>
+                                <option value="High">สูง</option>
+                                <option value="Critical">วิกฤต</option>
+                            </select>
+                        </div>
+                    </div>
+                    <p class="form-hint">ชวนคนเข้าทีมได้หลังสร้าง ใช้คนเดียวก็ได้ทุกอย่าง</p>
+                    <p class="form-error" id="newProjError" role="alert" hidden></p>
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="newProjDue">กำหนดส่ง</label>
-                    <input type="date" id="newProjDue" class="form-control" name="due_date">
-                </div>
-                <p class="form-error" id="newProjError" role="alert" hidden></p>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" id="createProjectFooter1">
                 <button type="button" class="btn" data-close-modal>ยกเลิก</button>
-                <button type="submit" class="btn btn-primary">สร้างโปรเจค</button>
+                <button type="button" class="btn btn-primary" id="createProjectNext" data-act="createStepNext">ถัดไป</button>
+            </div>
+            <div class="modal-footer" id="createProjectFooter2" hidden>
+                <button type="button" class="btn" data-act="createStepBack">ย้อนกลับ</button>
+                <button type="submit" class="btn btn-primary" id="createProjectSubmit">สร้างโปรเจค</button>
             </div>
         </form>
     </div>
@@ -286,13 +439,8 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label" for="editTaskStatus">อยู่ในคอลัมน์</label>
-                        <select id="editTaskStatus" class="form-control">
-                            <option value="To Do">ต้องทำ</option>
-                            <option value="In Progress">กำลังทำ</option>
-                            <option value="Review">รอตรวจ</option>
-                            <option value="Done">เสร็จแล้ว</option>
-                        </select>
+                        <label class="form-label" for="editTaskColumn">คอลัมน์</label>
+                        <select id="editTaskColumn" class="form-control"></select>
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="editTaskPriority">ความสำคัญ</label>
@@ -342,61 +490,28 @@
     </div>
 </div>
 
-<!-- The team and the public link -->
-<div class="modal-backdrop" id="inviteMemberModal" aria-hidden="true">
-    <div class="modal" role="dialog" aria-labelledby="teamTitle">
+<!-- Deleting a column that still holds tasks -->
+<div class="modal-backdrop" id="deleteColumnModal" aria-hidden="true">
+    <div class="modal modal-narrow" role="dialog" aria-labelledby="deleteColumnTitle">
         <div class="modal-header">
-            <h2 class="modal-title" id="teamTitle">ทีมของโปรเจค</h2>
+            <h2 class="modal-title" id="deleteColumnTitle">ลบคอลัมน์</h2>
             <button class="modal-close" type="button" aria-label="ปิด" data-close-modal>&times;</button>
         </div>
-        <div class="modal-body">
-            <h3 class="subhead">สมาชิก</h3>
-            <ul class="members-list-wrapper ruled-list" id="projectMembersList"></ul>
-
-            <form id="inviteMemberForm" data-act="submitInviteMember" data-args='["$event"]' data-on="submit" novalidate hidden>
-                <h3 class="subhead">เชิญคนเข้าทีม</h3>
+        <form id="deleteColumnForm" data-act="confirmDeleteColumn" data-args='["$event"]' data-on="submit" novalidate>
+            <div class="modal-body">
+                <p id="deleteColumnMessage"></p>
                 <div class="form-group">
-                    <label class="form-label" for="inviteSearchInput">ชื่อผู้ใช้หรืออีเมล</label>
-                    <input type="text" id="inviteSearchInput" class="form-control" placeholder="ผู้ที่มีบัญชีในระบบนี้" autocomplete="off">
+                    <label class="form-label" for="deleteColumnMoveTo">ย้ายงานไปที่</label>
+                    <select id="deleteColumnMoveTo" class="form-control"></select>
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="inviteRoleSelect">สิทธิ์</label>
-                    <select id="inviteRoleSelect" class="form-control">
-                        <option value="Editor" selected>แก้ไขได้ (เพิ่มและแก้งาน)</option>
-                        <option value="Viewer">ดูได้อย่างเดียว (ดูบอร์ดและแชท)</option>
-                    </select>
-                </div>
-                <p class="form-error" id="inviteError" role="alert" hidden></p>
-                <button type="submit" class="btn btn-primary">เชิญเข้าทีม</button>
-            </form>
-
-            <div id="publicShareSection" hidden>
-                <h3 class="subhead">ลิงก์สำหรับคนนอกทีม</h3>
-                <div class="proj-share-row">
-                    <label class="proj-share-label" for="shareLinkToggle">เปิดให้เข้าผ่านลิงก์โดยไม่ต้องมีบัญชี</label>
-                    <label class="switch">
-                        <input type="checkbox" id="shareLinkToggle" data-act="togglePublicShare" data-on="change">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <div id="shareLinkDetails" hidden>
-                    <div class="form-group">
-                        <label class="form-label" for="shareLinkRole">สิทธิ์ของคนที่เข้าผ่านลิงก์</label>
-                        <select id="shareLinkRole" class="form-control" data-act="updateShareRole" data-on="change">
-                            <option value="Viewer">ดูอย่างเดียว (ดูบอร์ดและแชท)</option>
-                            <option value="Editor">แก้ไขได้ (จัดการงานและแชท)</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="shareLinkUrl">ลิงก์</label>
-                        <div class="proj-share-url">
-                            <input type="text" id="shareLinkUrl" class="form-control" readonly>
-                            <button type="button" class="btn btn-sm" data-act="copyShareUrl">คัดลอก</button>
-                        </div>
-                    </div>
-                </div>
+                <p class="form-hint">งานย้ายไปต่อท้ายคอลัมน์นั้น</p>
+                <p class="form-error" id="deleteColumnError" role="alert" hidden></p>
             </div>
-        </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" data-close-modal>ยกเลิก</button>
+                <button type="submit" class="btn btn-danger">ย้ายงานแล้วลบคอลัมน์</button>
+            </div>
+        </form>
     </div>
 </div>
 

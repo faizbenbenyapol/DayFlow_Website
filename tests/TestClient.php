@@ -36,6 +36,55 @@ final class TestClient
     /** @return array{status:int, body:string, headers:string} */
     public function request(string $method, string $path, ?array $json = null): array
     {
+        $ch = $this->handle($method, $path, $json);
+        $raw = curl_exec($ch);
+        if ($raw === false) {
+            $error = curl_error($ch);
+            curl_close($ch);
+            throw new RuntimeException('HTTP request failed: ' . $error);
+        }
+        return $this->finish($ch, $raw);
+    }
+
+    /**
+     * ยิงหลายคำขอพร้อมกันจริงด้วย curl_multi (ใช้ทดสอบสองคนกดพร้อมกัน)
+     *
+     * แต่ละคำขอต้องมาจาก client คนละ session เพราะ PHP ล็อก session ให้คำขอ
+     * ของ session เดียวกันเข้าคิวกันอยู่แล้ว จะไม่เกิดการแย่งกันจริง
+     *
+     * @param array<int, array{0: TestClient, 1: string, 2: string, 3?: array<mixed>|null}> $calls
+     *        แต่ละรายการคือ [client, method, path, json]
+     * @return array<int, array{status:int, body:string, headers:string}> ผลตามลำดับเดียวกับ $calls
+     */
+    public static function parallel(array $calls): array
+    {
+        $multi = curl_multi_init();
+        $handles = [];
+        foreach ($calls as $i => $call) {
+            $handles[$i] = $call[0]->handle($call[1], $call[2], $call[3] ?? null);
+            curl_multi_add_handle($multi, $handles[$i]);
+        }
+        do {
+            curl_multi_exec($multi, $running);
+            curl_multi_select($multi);
+        } while ($running > 0);
+
+        $out = [];
+        foreach ($handles as $i => $ch) {
+            $out[$i] = $calls[$i][0]->finish($ch, (string)curl_multi_getcontent($ch));
+            curl_multi_remove_handle($multi, $ch);
+        }
+        curl_multi_close($multi);
+        return $out;
+    }
+
+    /**
+     * สร้าง curl handle ของคำขอหนึ่งคำขอ พร้อมคุกกี้ CSRF และ header ของ client นี้
+     *
+     * @param array<mixed>|null $json body แบบ JSON หรือ null เมื่อไม่มี body
+     */
+    private function handle(string $method, string $path, ?array $json): CurlHandle
+    {
         $ch = curl_init($this->baseUrl . $path);
         $headers = array_merge(['Accept: application/json'], $this->headers);
 
@@ -55,14 +104,16 @@ final class TestClient
             CURLOPT_HTTPHEADER     => $headers,
             CURLOPT_TIMEOUT        => 20,
         ]);
+        return $ch;
+    }
 
-        $raw = curl_exec($ch);
-        if ($raw === false) {
-            $error = curl_error($ch);
-            curl_close($ch);
-            throw new RuntimeException('HTTP request failed: ' . $error);
-        }
-
+    /**
+     * แยกสถานะ header และ body ของคำตอบ แล้วจำ CSRF token ใหม่ถ้าหน้านั้นมี
+     *
+     * @return array{status:int, body:string, headers:string}
+     */
+    private function finish(CurlHandle $ch, string $raw): array
+    {
         $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
         $status     = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);

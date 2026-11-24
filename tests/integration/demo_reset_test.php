@@ -79,7 +79,10 @@ test('projects visitors made are cleared and the sample projects come back whole
     withDemoAccount(function (int $demoId, int $otherId): void {
         DB::run("INSERT INTO projects (user_id, name) VALUES (?, 'โปรเจกต์ตัวอย่าง')", [$demoId]);
         $sampleId = (int)DB::conn()->lastInsertId();
-        DB::run("INSERT INTO project_tasks (project_id, user_id, title, status) VALUES (?, ?, 'งานในโปรเจกต์', 'Review')", [$sampleId, $demoId]);
+        DB::run("INSERT INTO project_columns (project_id, name, grp, position) VALUES (?, 'ต้องทำ', 'todo', 0)", [$sampleId]);
+        $sampleColumnId = (int)DB::conn()->lastInsertId();
+        DB::run("INSERT INTO project_columns (project_id, name, grp, position) VALUES (?, 'กำลังทำ', 'doing', 1)", [$sampleId]);
+        DB::run("INSERT INTO project_tasks (project_id, user_id, column_id, title, status) VALUES (?, ?, ?, 'งานในโปรเจกต์', 'To Do')", [$sampleId, $demoId, $sampleColumnId]);
         DB::run("INSERT INTO project_chats (project_id, user_id, message) VALUES (?, ?, 'สวัสดี')", [$sampleId, $demoId]);
         DB::run("INSERT INTO projects (user_id, name) VALUES (?, 'ของคนจริง')", [$otherId]);
         $realId = (int)DB::conn()->lastInsertId();
@@ -96,11 +99,17 @@ test('projects visitors made are cleared and the sample projects come back whole
         $projects = DB::run('SELECT id, name FROM projects WHERE user_id = ?', [$demoId])->fetchAll();
         assertSame(['โปรเจกต์ตัวอย่าง'], array_column($projects, 'name'), 'only the sample project is left');
         $restoredId = (int)$projects[0]['id'];
-        assertSame(
-            [['title' => 'งานในโปรเจกต์', 'status' => 'Review']],
-            DB::run('SELECT title, status FROM project_tasks WHERE project_id = ?', [$restoredId])->fetchAll(),
-            'its tasks are back inside it'
-        );
+
+        $task = DB::run('SELECT title, status, column_id FROM project_tasks WHERE project_id = ?', [$restoredId])->fetch();
+        assertSame('งานในโปรเจกต์', $task['title'], 'its tasks are back inside it');
+        assertSame('To Do', $task['status'], 'the status comes back with the task');
+
+        // The restored task must point at a column of the restored project.
+        $columnProject = DB::run('SELECT project_id FROM project_columns WHERE id = ?', [(int)$task['column_id']])->fetchColumn();
+        assertSame($restoredId, (int)$columnProject, 'the task points at a column of the restored project');
+        assertTrue((int)$task['column_id'] !== $sampleColumnId, 'the task no longer points at the old column id');
+        assertSame(['ต้องทำ', 'กำลังทำ'], DB::run('SELECT name FROM project_columns WHERE project_id = ? ORDER BY position', [$restoredId])->fetchAll(PDO::FETCH_COLUMN));
+
         assertSame(['สวัสดี'], DB::run('SELECT message FROM project_chats WHERE project_id = ?', [$restoredId])->fetchAll(PDO::FETCH_COLUMN));
         assertSame('ของคนจริง', DB::run('SELECT name FROM projects WHERE id = ?', [$realId])->fetchColumn(), 'a real project is never touched');
     });
@@ -116,6 +125,46 @@ test('a snapshot from before projects were covered leaves the projects alone', f
         DB::run("INSERT INTO projects (user_id, name) VALUES (?, 'ต้องอยู่ต่อ')", [$demoId]);
         demoScript();
         assertSame(['ต้องอยู่ต่อ'], DB::run('SELECT name FROM projects WHERE user_id = ?', [$demoId])->fetchAll(PDO::FETCH_COLUMN));
+    });
+});
+
+test('a snapshot taken before board columns existed comes back with default columns', function (TestClient $_c): void {
+    withDemoAccount(function (int $demoId, int $_otherId): void {
+        // snapshot บน production ถ่ายด้วยโค้ดก่อน migration 038: ไม่มี project_columns และงานไม่มี column_id
+        DB::run("INSERT INTO projects (user_id, name, type) VALUES (?, 'โปรเจกต์ก่อนมีคอลัมน์', 'software')", [$demoId]);
+        $sampleId = (int)DB::conn()->lastInsertId();
+        foreach (['To Do', 'In Progress', 'Review', 'Done'] as $status) {
+            DB::run('INSERT INTO project_tasks (project_id, user_id, title, status) VALUES (?, ?, ?, ?)', [$sampleId, $demoId, 'งาน ' . $status, $status]);
+        }
+        demoScript('--snapshot');
+        $data = json_decode((string)file_get_contents(DemoReset::snapshotPath()), true);
+        unset($data['demo_projects']['project_columns']);
+        foreach ($data['demo_projects']['project_tasks'] as &$task) unset($task['column_id']);
+        unset($task);
+        file_put_contents(DemoReset::snapshotPath(), json_encode($data, JSON_UNESCAPED_UNICODE));
+
+        // demo-reset.php ไม่มี autoloader: ถ้า DemoReset ไม่ require model เอง บรรทัดนี้จะล้ม
+        assertStringContains('รีเซ็ตบัญชี demo แล้ว', demoScript());
+
+        $restoredId = (int)DB::run('SELECT id FROM projects WHERE user_id = ?', [$demoId])->fetchColumn();
+        $columns = DB::run(
+            "SELECT id, name, grp FROM project_columns WHERE project_id = ? ORDER BY FIELD(grp, 'todo', 'doing', 'done'), position, id",
+            [$restoredId]
+        )->fetchAll();
+        assertSame(['ต้องทำ', 'กำลังทำ', 'รอรีวิว', 'ทดสอบ', 'เสร็จ'], array_column($columns, 'name'), 'the software defaults are created');
+
+        // แต่ละสถานะเดิมลงคอลัมน์ตามกฎกลุ่ม และสถานะเป็นเงาของคอลัมน์ (Review = doing คอลัมน์สุดท้าย)
+        $want = ['งาน To Do' => ['ต้องทำ', 'To Do'], 'งาน In Progress' => ['กำลังทำ', 'In Progress'],
+                 'งาน Review' => ['ทดสอบ', 'Review'], 'งาน Done' => ['เสร็จ', 'Done']];
+        $got = DB::run(
+            'SELECT t.title, c.name, t.status FROM project_tasks t JOIN project_columns c ON c.id = t.column_id AND c.project_id = t.project_id
+             WHERE t.project_id = ?',
+            [$restoredId]
+        )->fetchAll();
+        assertSame(4, count($got), 'every task has a column of the restored project');
+        foreach ($got as $row) {
+            assertSame($want[$row['title']], [$row['name'], $row['status']], $row['title']);
+        }
     });
 });
 

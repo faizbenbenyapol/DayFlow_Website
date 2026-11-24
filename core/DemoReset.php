@@ -15,10 +15,17 @@
 // upload files in the first place).
 // =====================================================
 
+// cron.php และ scripts/demo-reset.php ไม่มี autoloader จึงต้องโหลด model ที่ใช้ตอนกู้โปรเจคเอง
+require_once __DIR__ . '/../models/ProjectColumn.php';
+require_once __DIR__ . '/../models/ProjectTask.php';
+
 final class DemoReset
 {
-    /** Rows that live inside a project, restored after their project. */
-    private const PROJECT_CHILDREN = ['project_tasks', 'project_activities', 'project_chats'];
+    /**
+     * Rows that live inside a project, restored after their project.
+     * Columns come first so tasks can be pointed at the restored column ids.
+     */
+    private const PROJECT_CHILDREN = ['project_columns', 'project_tasks', 'project_activities', 'project_chats'];
 
     /** Where the snapshot lives. storage/ is outside the web root. */
     public static function snapshotPath(): string
@@ -117,6 +124,8 @@ final class DemoReset
             DB::run('DELETE FROM projects WHERE user_id = ?', [$demoUserId]);
 
             $newIds = [];
+            $newColumnIds = [];
+            $projectsWithColumns = [];
             $counts = ['projects' => 0];
             foreach ((array)($snapshot['projects'] ?? []) as $row) {
                 // A visitor may not make project links, so none comes back.
@@ -135,10 +144,38 @@ final class DemoReset
                     $projectId = $newIds[(string)($row['project_id'] ?? '')] ?? null;
                     if ($projectId === null) continue;
 
+                    $oldId = (string)($row['id'] ?? '');
                     unset($row['id']);
-                    self::insert($table, array_merge($row, ['project_id' => $projectId, 'user_id' => $demoUserId]));
+                    $row['project_id'] = $projectId;
+
+                    if ($table === 'project_columns') {
+                        // project_columns has no user_id of its own.
+                        self::insert($table, $row);
+                        $newColumnIds[$oldId] = (int)$conn->lastInsertId();
+                        $projectsWithColumns[] = $projectId;
+                    } elseif ($table === 'project_tasks') {
+                        // Point the task at the restored column, never the old one.
+                        $row['column_id'] = $newColumnIds[(string)($row['column_id'] ?? '')] ?? null;
+                        self::insert($table, array_merge($row, ['user_id' => $demoUserId]));
+                    } else {
+                        self::insert($table, array_merge($row, ['user_id' => $demoUserId]));
+                    }
                     $counts[$table]++;
                 }
+            }
+
+            // snapshot ที่ถ่ายก่อนมีคอลัมน์ (migration 038) ไม่มี project_columns:
+            // สร้างคอลัมน์ตั้งต้นตามประเภทให้ แล้วจับคู่งานเข้าคอลัมน์ตามสถานะเดิม
+            $types = [];
+            foreach ((array)($snapshot['projects'] ?? []) as $row) {
+                $oldId = (string)(is_array($row) ? ($row['id'] ?? '') : '');
+                if (isset($newIds[$oldId])) $types[$newIds[$oldId]] = (string)($row['type'] ?? 'general');
+            }
+            foreach ($newIds as $projectId) {
+                if (!in_array($projectId, $projectsWithColumns, true)) {
+                    ProjectColumn::createDefaults($projectId, $types[$projectId] ?? 'general');
+                }
+                ProjectColumn::adoptLooseTasks($projectId);
             }
 
             $conn->commit();

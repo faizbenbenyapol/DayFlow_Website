@@ -26,23 +26,25 @@ class ProjectTeamController
 
     /**
      * POST /api/projects/{id}/members
+     *
+     * ผู้ดูแลหรือเจ้าของเชิญสมาชิกได้ บทบาทต้องอยู่ใน MEMBER_ROLES
+     * และการเชิญเป็นผู้ดูแล (Admin) เป็นของเจ้าของเท่านั้น
      */
     public function apiMemberAdd(string $id): void
     {
         $userId    = Auth::userId();
         $projectId = (int)$id;
 
-        $project = Project::getById($projectId, $userId);
-        if (!$project) {
-            Response::json(['error' => 'ไม่พบข้อมูลโปรเจค'], 404);
-        }
-
-        $this->requireOwner($project, 'เชิญผู้อื่นเข้าร่วมโครงการ');
+        $project = $this->loadProject($projectId);
+        $this->requireRole($project, 'admin', 'เชิญผู้อื่นเข้าร่วมโครงการ');
 
         $emailOrUsername = trim(Request::input('email_or_username', ''));
-        $role            = Request::input('role', 'Editor');
-        if (!in_array($role, ProjectMember::GRANTABLE_ROLES, true)) {
+        $role            = (string)Request::input('role', 'Editor');
+        if (!in_array($role, ProjectMember::MEMBER_ROLES, true)) {
             Response::json(['error' => 'สิทธิ์ไม่ถูกต้อง'], 422);
+        }
+        if ($role === 'Admin' && empty($project['is_owner'])) {
+            Response::json(['error' => 'เฉพาะเจ้าของโครงการเท่านั้นที่ตั้งผู้ดูแลได้'], 403);
         }
 
         if (!$emailOrUsername) {
@@ -67,7 +69,7 @@ class ProjectTeamController
         }
 
         if (ProjectMember::addMember($projectId, $targetUserId, $role)) {
-            ProjectActivity::log($projectId, $userId, 'เชิญสมาชิกใหม่ "' . $targetUser['display_name'] . '" เข้าร่วมโครงการด้วยสิทธิ์ ' . $role);
+            ProjectActivity::log($projectId, $userId, 'เชิญสมาชิกใหม่ "' . $targetUser['display_name'] . '" เข้าร่วมโครงการด้วยสิทธิ์ ' . ProjectMember::roleLabel($role));
             Response::json(['ok' => true]);
         } else {
             Response::json(['error' => 'ไม่สามารถเพิ่มสมาชิกได้'], 500);
@@ -75,7 +77,73 @@ class ProjectTeamController
     }
 
     /**
+     * หาแถวสมาชิกของโปรเจคนี้ หรือหยุดด้วย 404 เดียวกันทุกกรณี
+     *
+     * คืนบทบาทปัจจุบันเมื่อ $memberId เป็นสมาชิกของโปรเจคนี้และไม่ใช่เจ้าของ
+     * เจ้าของ บัญชีที่ไม่มีอยู่ และคนของโปรเจคอื่นได้ 404 ข้อความเดียวกัน
+     *
+     * @param array<string, mixed> $project โปรเจคที่ผู้เรียกเห็นได้
+     * @param int $memberId รหัสผู้ใช้จาก URL
+     * @return string บทบาทปัจจุบันของสมาชิก
+     */
+    private static function memberRoleOr404(array $project, int $memberId): string
+    {
+        $role = ProjectMember::getRole((int)$project['id'], $memberId);
+        if ($role === null || $role === 'Owner') {
+            Response::json(['error' => 'ไม่พบสมาชิก'], 404);
+        }
+        return $role;
+    }
+
+    /**
+     * PUT /api/projects/{id}/members/{mid}
+     *
+     * เจ้าของตั้งได้ทั้ง Admin/Editor/Viewer ผู้ดูแลเปลี่ยนได้แค่สมาชิก/ดูอย่างเดียว
+     * เป็นสมาชิก/ดูอย่างเดียว และเปลี่ยนผู้ดูแลคนอื่นไม่ได้
+     */
+    public function apiMemberRole(string $id, string $mid): void
+    {
+        $userId    = Auth::userId();
+        $projectId = (int)$id;
+        $memberId  = (int)$mid;
+
+        $project = $this->loadProject($projectId);
+        $this->requireRole($project, 'admin', 'เปลี่ยนสิทธิ์สมาชิก');
+
+        $currentRole = self::memberRoleOr404($project, $memberId);
+
+        $role = (string)Request::input('role', '');
+        if (!in_array($role, ProjectMember::MEMBER_ROLES, true)) {
+            Response::json(['error' => 'สิทธิ์ไม่ถูกต้อง'], 422);
+        }
+
+        if (empty($project['is_owner'])) {
+            $canChange = in_array($currentRole, ['Editor', 'Viewer'], true)
+                && in_array($role, ['Editor', 'Viewer'], true);
+            if (!$canChange) {
+                Response::json(['error' => 'ผู้ดูแลเปลี่ยนได้เฉพาะสมาชิกหรือผู้ดูอย่างเดียว'], 403);
+            }
+        }
+
+        if (!ProjectMember::updateRole($projectId, $memberId, $role)) {
+            Response::json(['error' => 'ไม่สามารถเปลี่ยนสิทธิ์ได้'], 500);
+        }
+
+        $memberUser = User::findById($memberId);
+        $name = $memberUser['display_name'] ?? ('#' . $memberId);
+        ProjectActivity::log(
+            $projectId,
+            $userId,
+            'เปลี่ยนสิทธิ์ "' . $name . '" จาก ' . ProjectMember::roleLabel($currentRole) . ' เป็น ' . ProjectMember::roleLabel($role)
+        );
+        Response::json(['ok' => true]);
+    }
+
+    /**
      * DELETE /api/projects/{id}/members/{mid}
+     *
+     * เจ้าของเอาสมาชิกคนไหนก็ได้ ผู้ดูแลเอาสมาชิก/ดูอย่างเดียวได้แต่ผู้ดูแลด้วยกันไม่ได้
+     * สมาชิกทุกคนออกเองได้ (ยกเว้นเจ้าของ) และเจ้าของถูกเอาออกไม่ได้
      */
     public function apiMemberRemove(string $id, string $mid): void
     {
@@ -83,14 +151,13 @@ class ProjectTeamController
         $projectId = (int)$id;
         $memberId  = (int)$mid;
 
-        $project = Project::getById($projectId, $userId);
-        if (!$project) {
-            Response::json(['error' => 'ไม่พบข้อมูลโปรเจค'], 404);
-        }
+        $project = $this->loadProject($projectId);
+        $isSelf   = $userId === $memberId;
+        $isOwner  = !empty($project['is_owner']);
 
-        // ต้องเป็นเจ้าของโครงการ หรือตัวสมาชิกเองที่ขอกดออกจากกลุ่ม (Leave)
-        if (!$project['is_owner'] && $userId !== $memberId) {
-            Response::json(['error' => 'คุณไม่มีสิทธิ์ในการนำสมาชิกคนอื่นออกจากโครงการ'], 403);
+        // ออกเองได้ทุกบทบาท แต่การเอาคนอื่นออกต้องเป็นผู้ดูแลขึ้นไป
+        if (!$isSelf) {
+            $this->requireRole($project, 'admin', 'นำสมาชิกออกจากโครงการ');
         }
 
         // ห้ามเอาเจ้าของโครงการออก
@@ -98,16 +165,45 @@ class ProjectTeamController
             Response::json(['error' => 'ไม่สามารถลบเจ้าของโครงการออกได้'], 403);
         }
 
-        $memberUser = User::findById($memberId);
-        if (!$memberUser) {
-            Response::json(['error' => 'ไม่พบข้อมูลสมาชิก'], 404);
+        $currentRole = self::memberRoleOr404($project, $memberId);
+
+        // ผู้ดูแลเอาผู้ดูแลคนอื่นออกไม่ได้
+        if (!$isSelf && !$isOwner && $currentRole === 'Admin') {
+            Response::json(['error' => 'ผู้ดูแลไม่สามารถนำผู้ดูแลคนอื่นออกจากโครงการได้'], 403);
         }
 
+        $memberUser = User::findById($memberId);
+        $memberName = $memberUser['display_name'] ?? ('#' . $memberId);
+
+        // EDGE-P3: นับงานที่ผู้ถูกเอาออกถืออยู่ก่อนล้างผู้รับผิดชอบ
+        $assignedCount = (int)DB::run(
+            'SELECT COUNT(*) FROM project_tasks WHERE project_id = ? AND assignee_user_id = ?',
+            [$projectId, $memberId]
+        )->fetchColumn();
+
         if (ProjectMember::removeMember($projectId, $memberId)) {
-            $actText = ($userId === $memberId) 
-                ? 'ออกจากการเข้าร่วมโครงการ' 
-                : 'ลบสมาชิก "' . $memberUser['display_name'] . '" ออกจากโครงการ';
+            $actText = $isSelf
+                ? 'ออกจากการเข้าร่วมโครงการ'
+                : 'ลบสมาชิก "' . $memberName . '" ออกจากโครงการ';
             ProjectActivity::log($projectId, $userId, $actText);
+
+            // แจ้งเจ้าของเมื่อคนอื่นเป็นผู้กระทำ (REQ-P10: ไม่แจ้งการกระทำของตัวเอง)
+            if (!$isOwner) {
+                $details = [
+                    'โปรเจค'  => htmlspecialchars((string)$project['name']),
+                    'สมาชิก'  => htmlspecialchars($memberName),
+                    'สถานะ'   => $isSelf ? 'ออกจากโครงการเอง' : 'ถูกนำออกจากโครงการ',
+                ];
+                if ($assignedCount > 0) {
+                    $details['งาน'] = $assignedCount . ' งานไม่มีผู้รับผิดชอบแล้ว';
+                }
+                TelegramService::sendNotification(
+                    (int)$project['user_id'],
+                    'project',
+                    TelegramService::formatMessage('👤 สมาชิกออกจากโปรเจค', $details, 'แจ้งเตือน')
+                );
+            }
+
             Response::json(['ok' => true]);
         } else {
             Response::json(['error' => 'ไม่สามารถนำสมาชิกออกได้'], 500);
@@ -133,6 +229,8 @@ class ProjectTeamController
 
     /**
      * POST /api/projects/{id}/chat
+     *
+     * สมาชิกขึ้นไปส่งข้อความได้ ผู้ดูอย่างเดียวและแขกอ่านได้อย่างเดียว
      */
     public function apiChatSend(string $id): void
     {
@@ -140,7 +238,7 @@ class ProjectTeamController
         $projectId = (int)$id;
 
         $project = $this->loadProject($projectId);
-        $this->requireEditor($project, 'ส่งข้อความ');
+        $this->requireRole($project, 'member', 'ส่งข้อความ');
 
         $message = trim(Request::input('message', ''));
         if ($message === '') {

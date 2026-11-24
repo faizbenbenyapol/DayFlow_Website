@@ -74,9 +74,15 @@ class ProjectController
 
         $status  = Request::input('status', 'Planning');
         $priority = Request::input('priority', 'Medium');
+        $type = (string)Request::input('type', 'general');
+        if (!in_array($type, Project::TYPES, true)) {
+            Response::json(['error' => 'ประเภทโปรเจคไม่ถูกต้อง'], 422);
+        }
+
         $data = $this->validateProjectData([
             'name'        => $name,
             'description' => Request::input('description', ''),
+            'type'        => $type,
             'status'      => $status,
             'priority'    => $priority,
             'due_date'    => Request::input('due_date', '')
@@ -99,7 +105,29 @@ class ProjectController
     }
 
     /**
+     * แปลงประเภทโปรเจคเป็นชื่อไทยสำหรับบันทึกกิจกรรม
+     *
+     * รับค่าประเภทจาก Project::TYPES และคืนชื่อไทย ไม่มีผลข้างเคียง
+     *
+     * @param string $type ประเภทโปรเจค
+     * @return string ชื่อไทย
+     */
+    private static function typeLabel(string $type): string
+    {
+        return match ($type) {
+            'general'   => 'ทั่วไป',
+            'software'  => 'ซอฟต์แวร์',
+            'marketing' => 'การตลาด',
+            'finance'   => 'บัญชีและการเงิน',
+            default     => $type,
+        };
+    }
+
+    /**
      * PUT /api/projects/{id}
+     *
+     * ฟิลด์ทั่วไปแก้ได้ตั้งแต่ผู้ดูแลขึ้นไป ส่วนการเปลี่ยนประเภทเป็นของเจ้าของ
+     * และการเปลี่ยนประเภทไม่แตะคอลัมน์หรืองาน (ข้อมูลเฉพาะประเภทซ่อนไว้ ไม่ลบ)
      */
     public function apiUpdate(string $id): void
     {
@@ -107,12 +135,25 @@ class ProjectController
         $projectId = (int)$id;
 
         $project = $this->loadProject($projectId);
-        $this->requireOwner($project, 'แก้ไขรายละเอียดโครงการ');
+
+        $typeInput = Request::input('type');
+        if ($typeInput !== null && !in_array($typeInput, Project::TYPES, true)) {
+            Response::json(['error' => 'ประเภทโปรเจคไม่ถูกต้อง'], 422);
+        }
+        $typeChange = $typeInput !== null && (string)$typeInput !== (string)$project['type'];
+        $this->requireRole($project, $typeChange ? 'owner' : 'admin', 'แก้ไขรายละเอียดโครงการ');
 
         $data = [];
-        $allowed = ['name', 'description', 'status', 'priority', 'due_date'];
         $changes = [];
 
+        if ($typeInput !== null) {
+            $data['type'] = $typeInput;
+            if ($typeChange) {
+                $changes[] = 'ประเภท เปลี่ยนเป็น "' . self::typeLabel((string)$typeInput) . '"';
+            }
+        }
+
+        $allowed = ['name', 'description', 'status', 'priority', 'due_date'];
         foreach ($allowed as $field) {
             $val = Request::input($field);
             if ($val !== null) {
@@ -128,7 +169,7 @@ class ProjectController
             Response::json(['error' => 'ไม่มีข้อมูลสำหรับแก้ไข'], 400);
         }
 
-        if (Project::update($projectId, $userId, $data)) {
+        if (Project::update($projectId, $data)) {
             if (!empty($changes)) {
                 ProjectActivity::log($projectId, $userId, 'อัปเดตข้อมูลโปรเจค: ' . implode(', ', $changes));
             }
@@ -140,6 +181,8 @@ class ProjectController
 
     /**
      * DELETE /api/projects/{id}
+     *
+     * การลบโครงการเป็นของเจ้าของเท่านั้น
      */
     public function apiDelete(string $id): void
     {
@@ -147,7 +190,7 @@ class ProjectController
         $projectId = (int)$id;
 
         $project = $this->loadProject($projectId);
-        $this->requireOwner($project, 'ลบโครงการ');
+        $this->requireRole($project, 'owner', 'ลบโครงการ');
 
         if (Project::delete($projectId, $userId)) {
             Response::json(['ok' => true]);

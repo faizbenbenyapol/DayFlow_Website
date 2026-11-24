@@ -5,6 +5,9 @@
 
 class Project
 {
+    /** ประเภทโปรเจคที่รับได้ (คอลัมน์ตั้งต้นขึ้นกับค่านี้) */
+    public const TYPES = ['general', 'software', 'marketing', 'finance'];
+
     /**
      * ดึงโครงการทั้งหมดของผู้ใช้ พร้อมสรุปสถิติจำนวนงานย่อย (รวมโปรเจคที่ผู้อื่นแชร์มาด้วย หรือบอร์ดสาธารณะของแขก)
      */
@@ -79,34 +82,57 @@ class Project
     }
 
     /**
-     * สร้างโครงการใหม่
+     * สร้างโครงการใหม่พร้อมคอลัมน์ตั้งต้นตามประเภท ใน transaction เดียว
+     *
+     * @param int $userId เจ้าของโปรเจค
+     * @param array<string, mixed> $data ข้อมูลโปรเจค (name, description, type, ...)
+     * @return int รหัสโปรเจคใหม่
      */
     public static function create(int $userId, array $data): int
     {
-        DB::run(
-            'INSERT INTO projects (user_id, name, description, status, priority, due_date)
-             VALUES (?, ?, ?, ?, ?, ?)',
-            [
-                $userId,
-                $data['name'],
-                $data['description'] ?? null,
-                $data['status'] ?? 'Planning',
-                $data['priority'] ?? 'Medium',
-                !empty($data['due_date']) ? $data['due_date'] : null
-            ]
-        );
-        return (int)DB::conn()->lastInsertId();
+        $type = (string)($data['type'] ?? 'general');
+        $db = DB::conn();
+        $db->beginTransaction();
+        try {
+            DB::run(
+                'INSERT INTO projects (user_id, name, description, type, status, priority, due_date)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [
+                    $userId,
+                    $data['name'],
+                    $data['description'] ?? null,
+                    $type,
+                    $data['status'] ?? 'Planning',
+                    $data['priority'] ?? 'Medium',
+                    !empty($data['due_date']) ? $data['due_date'] : null
+                ]
+            );
+            $projectId = (int)$db->lastInsertId();
+            ProjectColumn::createDefaults($projectId, $type);
+            $db->commit();
+            return $projectId;
+        } catch (Throwable $e) {
+            $db->rollBack();
+            throw $e;
+        }
     }
 
     /**
      * อัปเดตโครงการ
+     *
+     * รับรหัสโปรเจคและฟิลด์ที่อนุญาต (ชื่อ คำอธิบาย ประเภท สถานะ ความสำคัญ วันครบกำหนด)
+     * ผู้เรียกต้องตรวจสิทธิ์มาก่อนแล้ว (ผู้ดูแลแก้ฟิลด์ทั่วไป เจ้าของเปลี่ยนประเภท)
+     * คืน true เมื่อมีแถวที่ตรงรหัส ไม่มีผลข้างเคียงอื่น
+     *
+     * @param int $id รหัสโปรเจค
+     * @param array<string, mixed> $data ฟิลด์ที่จะเขียน
      */
-    public static function update(int $id, int $userId, array $data): bool
+    public static function update(int $id, array $data): bool
     {
         $fields = [];
         $params = [];
 
-        $allowed = ['name', 'description', 'status', 'priority', 'due_date'];
+        $allowed = ['name', 'description', 'type', 'status', 'priority', 'due_date'];
         foreach ($allowed as $field) {
             if (array_key_exists($field, $data)) {
                 $fields[] = "`$field` = ?";
@@ -117,10 +143,9 @@ class Project
         if (empty($fields)) return false;
 
         $params[] = $id;
-        $params[] = $userId;
 
         return DB::run(
-            'UPDATE projects SET ' . implode(', ', $fields) . ' WHERE id = ? AND user_id = ?',
+            'UPDATE projects SET ' . implode(', ', $fields) . ' WHERE id = ?',
             $params
         )->rowCount() > 0;
     }

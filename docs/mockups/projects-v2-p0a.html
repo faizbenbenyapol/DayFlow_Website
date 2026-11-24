@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light" data-desk="sage" data-place="work">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mockup — โปรเจค v2 เฟส P0a</title>
+<!-- ใช้ CSS ตัวจริงของแอป หน้าตาจึงตรงกับที่จะสร้าง เปิดได้ทั้งดับเบิลคลิกไฟล์และผ่าน server ที่ root ของ repo -->
+<link rel="stylesheet" href="../../public/assets/css/fonts.css">
+<link rel="stylesheet" href="../../public/assets/css/tokens.css">
+<link rel="stylesheet" href="../../public/assets/css/base.css">
+<link rel="stylesheet" href="../../public/assets/css/components.css">
+<link rel="stylesheet" href="../../public/assets/css/shell.css">
+<link rel="stylesheet" href="../../public/assets/css/modules/projects.css">
+<style>
+/* ---------- แถบควบคุมของ mockup (ไม่ใช่ส่วนของแอป) ---------- */
+.mk-bar { position: sticky; top: 0; z-index: 10000; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center;
+    padding: 8px 16px; background: var(--ink); color: var(--paper); font-size: .8125rem; }
+.mk-bar label { display: inline-flex; gap: 6px; align-items: center; }
+.mk-bar select { font: inherit; padding: 2px 4px; border-radius: 4px; }
+.mk-bar b { font-weight: 600; }
+.mk-note { margin: 0 0 var(--space-4); padding: var(--space-3) var(--space-4); border: 1.5px dashed var(--rule-strong);
+    border-radius: var(--r-card); background: var(--paper); font-size: .875rem; color: var(--pencil); }
+.mk-note strong { color: var(--ink); }
+[data-screen-panel] { display: none; }
+body[data-screen="list"] [data-screen-panel~="list"],
+body[data-screen="create1"] [data-screen-panel~="create1"],
+body[data-screen="create2"] [data-screen-panel~="create2"],
+body[data-screen="board"] [data-screen-panel~="board"],
+body[data-screen="colsA"] [data-screen-panel~="colsA"],
+body[data-screen="colsB"] [data-screen-panel~="colsB"],
+body[data-screen="team"] [data-screen-panel~="team"],
+body[data-screen="type"] [data-screen-panel~="type"] { display: block; }
+
+/* ---------- สิทธิ์: ซ่อนสิ่งที่บทบาทนั้นทำไม่ได้ ---------- */
+body[data-role="member"] [data-min="admin"], body[data-role="viewer"] [data-min="admin"],
+body[data-role="admin"] [data-min="owner"], body[data-role="member"] [data-min="owner"], body[data-role="viewer"] [data-min="owner"],
+body[data-role="viewer"] [data-min="member"] { display: none !important; }
+[data-low-only] { display: none; }
+body[data-role="member"] [data-low-only], body[data-role="viewer"] [data-low-only] { display: revert; }
+body[data-team="solo"] [data-team-only] { display: none !important; }
+[data-solo-only] { display: none; }
+body[data-team="solo"] [data-solo-only] { display: revert; }
+
+/* ---------- สีประจำประเภท: พาสเทลเดิมของธีม ไม่มีสีใหม่ ---------- */
+[data-ptype="general"]   { --type: var(--sky);   --type-2: var(--sky-2); }
+[data-ptype="software"]  { --type: var(--lilac); --type-2: var(--lilac-2); }
+[data-ptype="marketing"] { --type: var(--peach); --type-2: var(--peach-2); }
+[data-ptype="finance"]   { --type: var(--mint);  --type-2: var(--mint-2); }
+
+/* หูสีของใบแบ่งหมวด ใช้ทั้งในรายการ หัวโปรเจค และการ์ดเลือกประเภท */
+.type-ear { display: inline-block; padding: 1px 10px 2px; border: 1.5px solid var(--edge); border-bottom: 0;
+    border-radius: 8px 8px 0 0; background: var(--type); color: var(--ink); font-size: .8125rem; font-weight: 600; white-space: nowrap; }
+
+/* ---------- รายการโปรเจค: แถบสีประเภทชิดซ้ายของแถว ---------- */
+.mk-proj-row { display: grid; grid-template-columns: 6px minmax(0, 1fr) auto; gap: var(--space-3); align-items: center;
+    padding: var(--space-3) var(--space-3) var(--space-3) 0; border-bottom: 1px solid var(--rule); }
+.mk-proj-row::before { content: ""; align-self: stretch; background: var(--type-2); border-radius: 0 3px 3px 0; }
+.mk-proj-row .name { font-weight: 600; overflow-wrap: anywhere; }
+.mk-proj-row .meta { color: var(--pencil); font-size: .8125rem; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.mk-proj-row .pct { font-family: var(--font-num); font-variant-numeric: tabular-nums; color: var(--pencil); }
+
+/* ---------- เลือกประเภท: ใบแบ่งหมวด 4 ใบ ---------- */
+.type-pick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5) var(--space-4); margin: 0; padding: 0; border: 0; }
+.type-card { position: relative; display: flex; flex-direction: column; gap: var(--space-2); padding-top: 22px; cursor: pointer; }
+.type-card .type-ear { position: absolute; top: 0; left: 14px; }
+.type-card .sheet { flex: 1; display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: var(--space-3); padding: var(--space-3);
+    border: 1.5px solid var(--rule-strong); border-radius: 4px var(--r-card) var(--r-card) var(--r-card); background: var(--paper);
+    border-top: 4px solid var(--type-2); }
+.type-card input { position: absolute; opacity: 0; }
+.type-card input:checked ~ .sheet { border-color: var(--edge); box-shadow: inset 0 0 0 1.5px var(--edge); }
+.type-card input:checked ~ .type-ear::after { content: " ✓"; }
+.type-card input:focus-visible ~ .sheet { outline: 2px solid var(--ink); outline-offset: 2px; }
+.type-card h3 { margin: 0; font-size: 1rem; }
+.type-card p { margin: 0; font-size: .8125rem; color: var(--pencil); }
+.type-card .defaults { font-size: .75rem; color: var(--pencil); }
+.type-card .defaults b { color: var(--ink); font-weight: 600; }
+
+/* ภาพย่อของหน้าตาแต่ละประเภท วาดด้วย CSS */
+.thumb { height: 76px; padding: 6px; border-radius: 6px; background: var(--paper-sunk); display: grid; gap: 3px; overflow: hidden; }
+.thumb i { display: block; border-radius: 2px; background: var(--type-2); }
+.thumb.t-board { grid-template-columns: repeat(4, 1fr); align-items: start; }
+.thumb.t-board span { display: grid; gap: 3px; }
+.thumb.t-board i { height: 9px; }
+.thumb.t-backlog { grid-template-rows: repeat(5, 1fr); }
+.thumb.t-backlog span { display: grid; grid-template-columns: 22px 1fr 10px; gap: 4px; align-items: center; font: 600 7px/1 var(--font-mono); color: var(--pencil); }
+.thumb.t-backlog i { height: 5px; background: var(--rule-strong); opacity: .5; }
+.thumb.t-backlog i + i { background: var(--type-2); opacity: 1; }
+.thumb.t-cal { grid-template-columns: repeat(7, 1fr); grid-auto-rows: 1fr; }
+.thumb.t-cal i { background: var(--paper); border: 1px solid var(--rule); }
+.thumb.t-cal i.on { background: var(--type-2); border-color: var(--type-2); }
+.thumb.t-ledger { grid-template-rows: repeat(5, 1fr); }
+.thumb.t-ledger span { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--rule); font: 7px/1 var(--font-num); color: var(--pencil); }
+.thumb.t-ledger span::before { content: ""; width: 40%; height: 4px; border-radius: 2px; background: var(--rule-strong); opacity: .5; }
+.thumb.t-ledger span:last-child { border-bottom: 1.5px solid var(--edge); color: var(--ink); font-weight: 600; }
+
+.step-label { margin: 0 0 var(--space-3); font-size: .8125rem; color: var(--pencil); }
+.key-preview { font-family: var(--font-mono); font-size: .8125rem; color: var(--pencil); }
+[data-for-type] { display: none; }
+body[data-type="general"] [data-for-type~="general"], body[data-type="software"] [data-for-type~="software"],
+body[data-type="marketing"] [data-for-type~="marketing"], body[data-type="finance"] [data-for-type~="finance"] { display: block; }
+
+/* ---------- หัวโปรเจค ---------- */
+.proj-head { position: relative; margin-bottom: var(--space-2); padding-top: 24px; }
+.proj-head .type-ear { position: absolute; top: 0; left: 0; }
+.proj-head-row { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: flex-end; justify-content: space-between;
+    padding-top: var(--space-2); border-top: 4px solid var(--type-2); }
+.proj-head h1 { margin: 0; font-size: 1.5rem; overflow-wrap: anywhere; }
+.proj-head .me { font-size: .8125rem; color: var(--pencil); }
+.proj-head .me b { color: var(--ink); }
+.tab .later { margin-left: 4px; font-size: .6875rem; color: var(--pencil); font-weight: 400; }
+
+/* ---------- บอร์ดที่คอลัมน์ตั้งเองได้ ---------- */
+.mk-board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(190px, 1fr); gap: var(--space-4); overflow-x: auto;
+    padding: var(--space-4) 0 var(--space-3); scroll-snap-type: x proximity; }
+.mk-col { scroll-snap-align: start; min-width: 0; }
+.mk-col-head { display: flex; align-items: center; gap: var(--space-2); padding-bottom: var(--space-2); border-bottom: 3px solid var(--g); }
+.mk-col-head h3 { margin: 0; font-size: .9375rem; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.mk-col-head .count { font-family: var(--font-num); color: var(--pencil); font-size: .8125rem; }
+.grp { display: inline-flex; align-items: center; gap: 5px; font-size: .75rem; color: var(--pencil); white-space: nowrap; }
+.grp::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--g); }
+[data-g="todo"] { --g: var(--rule-strong); }
+[data-g="doing"] { --g: var(--caution); }
+[data-g="done"] { --g: var(--ledger-green); }
+.mk-card { margin-top: var(--space-2); padding: var(--space-2) var(--space-3); border: 1px solid var(--rule); border-radius: var(--r-control);
+    background: var(--paper); font-size: .875rem; }
+.mk-card .k { font-family: var(--font-mono); font-size: .75rem; color: var(--pencil); margin-right: 6px; }
+.mk-card .who { display: block; margin-top: 2px; font-size: .75rem; color: var(--pencil); }
+.mk-card .who.none { color: var(--caution); }
+.mk-add { margin-top: var(--space-2); }
+
+/* แบบ B: แก้คอลัมน์บนบอร์ด */
+.mk-col.editing .mk-col-head { flex-wrap: wrap; border-bottom-style: dashed; }
+.mk-col.editing input { flex: 1 1 120px; min-width: 0; }
+.mk-col.editing select { font-size: .8125rem; padding: 4px 6px; min-height: 32px; }
+.mk-col.editing .mk-card { opacity: .55; }
+.mk-col-new { display: grid; place-items: center; min-height: 140px; border: 1.5px dashed var(--rule-strong); border-radius: var(--r-card); color: var(--pencil); }
+.edit-banner { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; justify-content: space-between;
+    margin-top: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--r-control); background: var(--highlighter); color: var(--ink-fixed); font-size: .875rem; }
+
+/* แบบ A: รายการคอลัมน์ในแท็บตั้งค่า */
+.col-group { margin-top: var(--space-5); }
+.col-group h3 { display: flex; align-items: baseline; gap: var(--space-3); margin: 0 0 var(--space-2); font-size: 1rem; }
+.col-group h3 small { font-weight: 400; font-size: .8125rem; color: var(--pencil); }
+.col-line { display: grid; grid-template-columns: 28px minmax(0, 26rem) 72px auto; justify-content: start; gap: var(--space-3); align-items: center;
+    padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); }
+.col-line .n { font-family: var(--font-num); font-size: .8125rem; color: var(--pencil); text-align: right; }
+.col-line .why { grid-column: 2 / -1; margin: -4px 0 0; font-size: .75rem; color: var(--pencil); }
+
+/* ---------- ทีมและสิทธิ์ ---------- */
+.member { display: grid; grid-template-columns: 36px minmax(0, 1fr) minmax(130px, auto) auto; gap: var(--space-3); align-items: center;
+    padding: var(--space-3) 0; border-bottom: 1px solid var(--rule); }
+.avatar { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--paper-sunk); border: 1.5px solid var(--rule-strong); font-weight: 600; }
+.member .sub { display: block; font-size: .75rem; color: var(--pencil); }
+.role-fixed { font-size: .875rem; font-weight: 600; }
+.perm { width: 100%; border-collapse: collapse; font-size: .8125rem; }
+.perm th, .perm td { padding: 6px 8px; border-bottom: 1px solid var(--rule); text-align: center; }
+.perm th:first-child, .perm td:first-child { text-align: left; }
+.perm thead th { font-weight: 600; vertical-align: bottom; white-space: nowrap; }
+.perm .y { color: var(--ledger-green); font-weight: 700; }
+.perm .n { color: var(--pencil); }
+.perm tr.mine td { background: var(--paper-sunk); }
+
+/* ---------- เปลี่ยนประเภท ---------- */
+.type-now { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+.hide-list { margin: var(--space-2) 0 0; padding-left: 1.2em; }
+.hide-list li { margin: 2px 0; }
+
+/* dialog ของ mockup ใช้คลาส modal เดิม */
+.modal-backdrop.mk-open { display: flex; }
+
+@media (max-width: 720px) {
+    .type-pick { grid-template-columns: 1fr; }
+    .type-card .sheet { grid-template-columns: 88px minmax(0, 1fr); }
+    .member { grid-template-columns: 36px minmax(0, 1fr); }
+    .member > select, .member > .role-fixed, .member > .btn { grid-column: 2; justify-self: start; }
+    .mk-board { grid-auto-columns: 82%; }
+    .col-line { grid-template-columns: 28px minmax(0, 1fr) auto; }
+    .col-line .n { display: none; }
+    .perm-wrap { overflow-x: auto; }
+}
+</style>
+</head>
+<body data-screen="create1" data-role="owner" data-type="software" data-team="team" data-variant="A">
+
+<div class="mk-bar" role="region" aria-label="ตัวควบคุม mockup">
+    <b>mockup P0a</b>
+    <label>หน้าจอ
+        <select id="mkScreen">
+            <option value="list">1 รายการโปรเจค</option>
+            <option value="create1" selected>2 สร้าง: เลือกประเภท</option>
+            <option value="create2">3 สร้าง: ตั้งชื่อ</option>
+            <option value="board">4 บอร์ด</option>
+            <option value="colsA">5A แก้คอลัมน์ แบบ A (แท็บตั้งค่า)</option>
+            <option value="colsB">5B แก้คอลัมน์ แบบ B (บนบอร์ด)</option>
+            <option value="team">6 ทีมและสิทธิ์</option>
+            <option value="type">7 เปลี่ยนประเภท</option>
+        </select>
+    </label>
+    <label>ประเภท
+        <select id="mkType">
+            <option value="general">ทั่วไป</option>
+            <option value="software" selected>พัฒนาซอฟต์แวร์</option>
+            <option value="marketing">การตลาดและคอนเทนต์</option>
+            <option value="finance">บัญชีและการเงิน</option>
+        </select>
+    </label>
+    <label>ดูในฐานะ
+        <select id="mkRole">
+            <option value="owner">เจ้าของ</option>
+            <option value="admin">ผู้ดูแล</option>
+            <option value="member">สมาชิก</option>
+            <option value="viewer">ดูอย่างเดียว</option>
+        </select>
+    </label>
+    <label>แก้คอลัมน์
+        <select id="mkVariant">
+            <option value="A">แบบ A แท็บตั้งค่า</option>
+            <option value="B">แบบ B บนบอร์ด</option>
+        </select>
+    </label>
+    <label>คน
+        <select id="mkTeam">
+            <option value="team">มีทีม 4 คน</option>
+            <option value="solo">ใช้คนเดียว</option>
+        </select>
+    </label>
+    <label>ธีม
+        <select id="mkTheme">
+            <option value="light">สว่าง</option>
+            <option value="dark">มืด</option>
+        </select>
+    </label>
+</div>
+
+<header class="desk-top">
+    <a class="brand" href="#">DayFlow</a>
+    <nav class="flags" aria-label="ที่หลัก">
+        <a class="flag" data-place="today" href="#"><span>วันนี้</span></a>
+        <a class="flag" data-place="work" href="#" aria-current="page"><span>งาน</span></a>
+        <a class="flag" data-place="life" href="#"><span>ชีวิต</span></a>
+        <a class="flag" data-place="money" href="#"><span>เงิน</span></a>
+        <a class="flag" data-place="vault" href="#"><span>คลัง</span></a>
+    </nav>
+    <div class="top-actions"><button type="button" class="btn btn-primary top-add">เพิ่ม</button></div>
+</header>
+
+<main class="app-main">
+    <nav class="subnav" aria-label="งาน">
+        <a class="subnav-link" href="#">งาน</a>
+        <a class="subnav-link" href="#" aria-current="page">โปรเจค</a>
+        <a class="subnav-link" href="#">แพลนเนอร์</a>
+    </nav>
+    <div class="app-content">
+
+    <!-- ================= 1 รายการโปรเจค ================= -->
+    <section data-screen-panel="list">
+        <p class="mk-note"><strong>ดูอะไร:</strong> ทุกแถวมีแถบสีประเภทชิดซ้าย และบอกประเภทเป็นคำ (สีอย่างเดียวไม่พอสำหรับคนตาบอดสี) โปรเจคเดิมทั้งหมดจะขึ้นเป็น "ทั่วไป" เพิ่มตัวกรองประเภท</p>
+        <div class="page-head">
+            <div><h1>โปรเจค</h1><p class="sub">5 โปรเจค · กำลังทำ 4</p></div>
+            <div class="page-head-actions"><button class="btn btn-primary" type="button" data-go="create1">สร้างโปรเจค</button></div>
+        </div>
+        <div class="proj-filters">
+            <input type="search" class="form-control proj-search" placeholder="ค้นหาโปรเจค" aria-label="ค้นหาโปรเจค">
+            <select class="form-control" aria-label="ประเภท"><option>ทุกประเภท</option><option>ทั่วไป</option><option>พัฒนาซอฟต์แวร์</option><option>การตลาดและคอนเทนต์</option><option>บัญชีและการเงิน</option></select>
+            <select class="form-control" aria-label="บทบาทของฉัน"><option>ทุกบทบาทของฉัน</option><option>ฉันเป็นเจ้าของ</option><option>ฉันเป็นผู้ดูแล</option><option>ฉันเป็นสมาชิก</option><option>ฉันดูอย่างเดียว</option></select>
+        </div>
+        <div>
+            <div class="mk-proj-row" data-ptype="software"><div><div class="name">แอป DayFlow รุ่นมือถือ</div><div class="meta"><span>พัฒนาซอฟต์แวร์</span><span>DF</span><span>คุณเป็นเจ้าของ</span><span>4 คน</span></div></div><span class="pct">38%</span></div>
+            <div class="mk-proj-row" data-ptype="marketing"><div><div class="name">เปิดตัวเมนูหน้าหนาว ร้านบ้านสวน</div><div class="meta"><span>การตลาดและคอนเทนต์</span><span>คุณเป็นผู้ดูแล</span><span>3 คน</span></div></div><span class="pct">62%</span></div>
+            <div class="mk-proj-row" data-ptype="finance"><div><div class="name">บัญชีสตูดิโอ 2569</div><div class="meta"><span>บัญชีและการเงิน</span><span>คุณเป็นเจ้าของ</span><span>คนเดียว</span></div></div><span class="pct">—</span></div>
+            <div class="mk-proj-row" data-ptype="general"><div><div class="name">ย้ายบ้านไปเชียงใหม่ (เก็บของ ขนของ แจ้งย้ายที่อยู่ ธนาคาร ประกัน และไปรษณีย์)</div><div class="meta"><span>ทั่วไป</span><span>คุณเป็นเจ้าของ</span><span>คนเดียว</span><span>ส่ง 15 ธ.ค.</span></div></div><span class="pct">20%</span></div>
+            <div class="mk-proj-row" data-ptype="general"><div><div class="name">งานแต่งพี่ฝน</div><div class="meta"><span>ทั่วไป</span><span>คุณดูอย่างเดียว</span><span>6 คน</span></div></div><span class="pct">85%</span></div>
+        </div>
+    </section>
+
+    <!-- ================= 2 สร้าง: เลือกประเภท ================= -->
+    <section data-screen-panel="create1">
+        <p class="mk-note"><strong>ดูอะไร:</strong> การ์ด 4 ใบเป็น "ใบแบ่งหมวด" มีหูสีโผล่ด้านบน ภาพย่อซ้ายมือคือหน้าหลักของประเภทนั้น บรรทัดล่างบอกคอลัมน์ตั้งต้นที่จะได้ แก้ทีหลังได้ทั้งหมด กดการ์ดแล้วลองกด "ถัดไป"</p>
+        <div class="modal-backdrop mk-open" style="position:static; background:none; padding:0;">
+            <div class="modal modal-wide" role="dialog" aria-labelledby="c1Title" style="max-width:760px; max-height:none;">
+                <div class="modal-header"><h2 class="modal-title" id="c1Title">สร้างโปรเจค</h2><button class="modal-close" type="button" aria-label="ปิด">&times;</button></div>
+                <div class="modal-body">
+                    <p class="step-label">ขั้น 1 จาก 2 · โปรเจคนี้เป็นงานแบบไหน</p>
+                    <fieldset class="type-pick">
+                        <legend class="sr-only">ประเภทโปรเจค</legend>
+                        <label class="type-card" data-ptype="general">
+                            <input type="radio" name="ptype" value="general">
+                            <span class="type-ear">ทั่วไป</span>
+                            <span class="sheet">
+                                <span class="thumb t-board"><span><i></i><i></i><i></i></span><span><i></i><i></i></span><span><i></i></span><span><i></i><i></i></span></span>
+                                <span><h3>งานทั่วไป</h3><p>บอร์ดลากงานข้ามคอลัมน์ เหมาะกับงานบ้าน งานอีเวนต์ หรืองานที่ไม่เข้าหมวดไหน</p>
+                                <span class="defaults">ได้คอลัมน์: <b>ต้องทำ · กำลังทำ · รอตรวจ · เสร็จแล้ว</b></span></span>
+                            </span>
+                        </label>
+                        <label class="type-card" data-ptype="software">
+                            <input type="radio" name="ptype" value="software" checked>
+                            <span class="type-ear">ซอฟต์แวร์</span>
+                            <span class="sheet">
+                                <span class="thumb t-backlog"><span>DF-12<i></i><i></i></span><span>DF-13<i></i><i></i></span><span>DF-14<i></i><i></i></span><span>DF-15<i></i><i></i></span><span>DF-16<i></i><i></i></span></span>
+                                <span><h3>พัฒนาซอฟต์แวร์</h3><p>เลขงานอัตโนมัติ คลังงาน รอบงาน เวอร์ชัน และบั๊ก สำหรับทำแอปหรือเว็บ</p>
+                                <span class="defaults">ได้คอลัมน์: <b>ต้องทำ · กำลังทำ · รอรีวิว · ทดสอบ · เสร็จ</b></span></span>
+                            </span>
+                        </label>
+                        <label class="type-card" data-ptype="marketing">
+                            <input type="radio" name="ptype" value="marketing">
+                            <span class="type-ear">การตลาด</span>
+                            <span class="sheet">
+                                <span class="thumb t-cal"><i></i><i class="on"></i><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i class="on"></i><i></i><i></i></span>
+                                <span><h3>การตลาดและคอนเทนต์</h3><p>ปฏิทินโพสต์ทุกช่องทาง ส่งโพสต์ให้อนุมัติ และแคมเปญเทียบงบ</p>
+                                <span class="defaults">ได้คอลัมน์: <b>ไอเดีย · ร่าง · รอตรวจ · นัดโพสต์ · โพสต์แล้ว</b></span></span>
+                            </span>
+                        </label>
+                        <label class="type-card" data-ptype="finance">
+                            <input type="radio" name="ptype" value="finance">
+                            <span class="type-ear">บัญชี</span>
+                            <span class="sheet">
+                                <span class="thumb t-ledger"><span>4,500.00</span><span>12,000.00</span><span>850.00</span><span>3,200.00</span><span>20,550.00</span></span>
+                                <span><h3>บัญชีและการเงิน</h3><p>งบ ค่าใช้จ่ายพร้อมใบเสร็จและการอนุมัติ ใบเสนอราคา ใบแจ้งหนี้</p>
+                                <span class="defaults">งานใช้คอลัมน์แบบทั่วไป ส่วนค่าใช้จ่ายมีขั้นของตัวเอง (มาในเฟสบัญชี)</span></span>
+                            </span>
+                        </label>
+                    </fieldset>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn">ยกเลิก</button><button type="button" class="btn btn-primary" data-go="create2">ถัดไป</button></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= 3 สร้าง: ตั้งชื่อ ================= -->
+    <section data-screen-panel="create2">
+        <p class="mk-note"><strong>ดูอะไร:</strong> ขั้น 2 ถามเฉพาะที่ประเภทนั้นต้องใช้ ซอฟต์แวร์ถามตัวย่อ (เดาจากชื่อให้ก่อน) บัญชีถามผู้ออกเอกสารแต่ข้ามได้ ลองสลับ "ประเภท" ที่แถบบน</p>
+        <div class="modal-backdrop mk-open" style="position:static; background:none; padding:0;">
+            <div class="modal" role="dialog" aria-labelledby="c2Title" style="max-height:none;">
+                <div class="modal-header"><h2 class="modal-title" id="c2Title">สร้างโปรเจค</h2><button class="modal-close" type="button" aria-label="ปิด">&times;</button></div>
+                <div class="modal-body">
+                    <p class="step-label">ขั้น 2 จาก 2 · <span data-for-type="general">ทั่วไป</span><span data-for-type="software">พัฒนาซอฟต์แวร์</span><span data-for-type="marketing">การตลาดและคอนเทนต์</span><span data-for-type="finance">บัญชีและการเงิน</span> · <a href="#" data-go="create1">เปลี่ยนประเภท</a></p>
+                    <div class="form-group"><label class="form-label" for="c2Name">ชื่อโปรเจค</label><input id="c2Name" class="form-control" value="แอป DayFlow รุ่นมือถือ"></div>
+                    <div class="form-group" data-for-type="software">
+                        <label class="form-label" for="c2Key">ตัวย่อสำหรับเลขงาน</label>
+                        <input id="c2Key" class="form-control" value="DF" maxlength="6" style="max-width:8rem; text-transform:uppercase;">
+                        <p class="form-hint">ตัวอักษรอังกฤษหรือตัวเลข 2–6 ตัว งานจะได้เลข <span class="key-preview">DF-1, DF-2, DF-3…</span> เปลี่ยนทีหลังได้ เลขเดิมยังค้นเจอ</p>
+                    </div>
+                    <div class="form-group" data-for-type="finance">
+                        <label class="form-label" for="c2Issuer">ชื่อกิจการบนเอกสาร</label>
+                        <input id="c2Issuer" class="form-control" placeholder="เช่น สตูดิโอบ้านสวน">
+                        <p class="form-hint">ใช้ตอนออกใบเสนอราคาและใบแจ้งหนี้ ที่อยู่ เลขผู้เสียภาษี และโลโก้ไปกรอกในตั้งค่าได้ <a href="#">ข้ามไปก่อน</a></p>
+                    </div>
+                    <div class="form-group"><label class="form-label" for="c2Desc">คำอธิบายสั้นๆ <span class="text-muted">(ไม่บังคับ)</span></label><textarea id="c2Desc" class="form-control" rows="2"></textarea></div>
+                    <div class="form-row">
+                        <div class="form-group"><label class="form-label" for="c2Due">กำหนดส่ง <span class="text-muted">(ไม่บังคับ)</span></label><input id="c2Due" type="date" class="form-control"></div>
+                        <div class="form-group"><label class="form-label" for="c2Pri">ความสำคัญ</label><select id="c2Pri" class="form-control"><option>ต่ำ</option><option selected>ปานกลาง</option><option>สูง</option><option>วิกฤต</option></select></div>
+                    </div>
+                    <p class="form-hint">ชวนคนเข้าทีมได้หลังสร้าง ใช้คนเดียวก็ได้ทุกอย่าง</p>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn" data-go="create1">ย้อนกลับ</button><button type="button" class="btn btn-primary" data-go="board">สร้างโปรเจค</button></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= หัวโปรเจค (ใช้ร่วมหน้าจอ 4–7) ================= -->
+    <div data-screen-panel="board colsA colsB team type">
+        <div class="proj-head" id="projHead">
+            <span class="type-ear" id="headEar">ซอฟต์แวร์</span>
+            <div class="proj-head-row">
+                <h1 id="headName">แอป DayFlow รุ่นมือถือ</h1>
+                <span class="me">คุณเป็น <b id="headRole">เจ้าของ</b> · <span data-team-only>4 คน</span><span data-solo-only>ใช้คนเดียว</span></span>
+            </div>
+        </div>
+        <div class="tabs" role="tablist" aria-label="มุมมองของโปรเจค">
+            <button class="tab" role="tab" type="button" data-go="board" data-tab="board">บอร์ด</button>
+            <button class="tab" role="tab" type="button">รายการ<span class="later">P0b</span></button>
+            <button class="tab" role="tab" type="button">ปฏิทิน<span class="later">P0b</span></button>
+            <button class="tab" role="tab" type="button">ภาพรวม<span class="later">P0b</span></button>
+            <button class="tab" role="tab" type="button" data-go="team" data-tab="team colsA type">ตั้งค่า</button>
+        </div>
+    </div>
+
+    <!-- ================= 4 บอร์ด ================= -->
+    <section data-screen-panel="board">
+        <p class="mk-note"><strong>ดูอะไร:</strong> คอลัมน์มาจากประเภทและแก้ได้ เส้นใต้หัวคอลัมน์บอกกลุ่ม (เทา = ยังไม่เริ่ม, เหลือง = กำลังทำ, เขียว = เสร็จ) ซึ่งใช้คิดตัวเลขความคืบหน้า คอลัมน์เกิน 4 เลื่อนแนวนอนได้ สลับ "ดูในฐานะ" เพื่อดูว่าปุ่มไหนหายไป</p>
+        <div class="flex items-center justify-between gap-3 flex-wrap mt-3">
+            <span class="text-sm text-muted" id="boardTally"></span>
+            <span class="flex gap-2">
+                <button class="btn btn-sm" type="button" data-min="admin" data-go-variant>แก้คอลัมน์</button>
+                <button class="btn btn-sm btn-primary" type="button" data-min="member">เพิ่มงาน</button>
+            </span>
+        </div>
+        <div class="mk-board" id="board"></div>
+        <p class="text-sm text-muted" data-low-only>คุณเป็น<span class="mk-role-word"></span> <span class="mk-viewer-hint">ดูได้อย่างเดียว ลากหรือแก้งานไม่ได้</span><span class="mk-member-hint">ลากงาน สร้างงาน และแก้งานได้ ส่วนคอลัมน์และทีม เจ้าของหรือผู้ดูแลเป็นคนตั้ง</span></p>
+    </section>
+
+    <!-- ================= 5A แก้คอลัมน์ในแท็บตั้งค่า ================= -->
+    <section data-screen-panel="colsA">
+        <p class="mk-note"><strong>แบบ A (เจ้าของเลือก 2026-11-24):</strong> แก้คอลัมน์ในแท็บ "ตั้งค่า" เป็นรายการแยกตามกลุ่ม เห็นทั้งหมดในที่เดียว เหมาะกับมือถือ แต่ต้องสลับไปดูบอร์ดเองว่าออกมาเป็นยังไง ลองกด "ลบ" ที่ "รอรีวิว" (มีงาน) และดูว่า "เสร็จ" ลบไม่ได้</p>
+        <nav class="subnav mt-3" aria-label="ตั้งค่าโปรเจค" style="padding-left:0">
+            <a class="subnav-link" href="#" data-go="team">ทีมและสิทธิ์</a>
+            <a class="subnav-link" href="#" aria-current="page">คอลัมน์</a>
+            <a class="subnav-link" href="#" data-go="type">ประเภท</a>
+        </nav>
+        <div data-min="admin">
+            <p class="text-sm text-muted mt-3">ลาก ⠿ เพื่อเรียง แต่ละกลุ่มต้องมีอย่างน้อย 1 คอลัมน์ ตัวเลขความคืบหน้านับงานในกลุ่ม "เสร็จ"</p>
+            <div id="colsA"></div>
+        </div>
+        <p class="alert alert-warning mt-4" data-low-only>คอลัมน์ตั้งได้เฉพาะเจ้าของและผู้ดูแล</p>
+    </section>
+
+    <!-- ================= 5B แก้คอลัมน์บนบอร์ด ================= -->
+    <section data-screen-panel="colsB">
+        <p class="mk-note"><strong>แบบ B (ไม่ได้เลือก 2026-11-24 ใช้แบบ A):</strong> กด "แก้คอลัมน์" บนบอร์ดแล้วหัวคอลัมน์กลายเป็นช่องแก้ เห็นผลทันทีบนบอร์ดจริง แต่บนมือถือเห็นทีละ 1–2 คอลัมน์ ต้องเลื่อนแนวนอน</p>
+        <div class="edit-banner" data-min="admin">
+            <span>กำลังแก้คอลัมน์ ลากหัวคอลัมน์เพื่อเรียง ระหว่างนี้ลากงานไม่ได้</span>
+            <span class="flex gap-2"><button class="btn btn-sm" type="button" data-go="board">ยกเลิก</button><button class="btn btn-sm btn-primary" type="button" data-go="board">บันทึกคอลัมน์</button></span>
+        </div>
+        <div class="mk-board" id="boardEdit" data-min="admin"></div>
+        <p class="alert alert-warning mt-4" data-low-only>คอลัมน์ตั้งได้เฉพาะเจ้าของและผู้ดูแล</p>
+    </section>
+
+    <!-- ================= 6 ทีมและสิทธิ์ ================= -->
+    <section data-screen-panel="team">
+        <p class="mk-note"><strong>ดูอะไร:</strong> บทบาทเลือกจากเมนูของแต่ละคน ผู้ดูแลตั้งใครเป็นผู้ดูแลไม่ได้ (ตัวเลือกนั้นไม่มีในเมนูของเขา) ตารางล่างคือสิ่งที่แต่ละบทบาททำได้ หัวตารางที่ขีดเส้นใต้คือบทบาทของคุณ ลองสลับ "คน" เป็นใช้คนเดียว และกด "เอาออก" ที่ ต้น</p>
+        <nav class="subnav mt-3" aria-label="ตั้งค่าโปรเจค" style="padding-left:0">
+            <a class="subnav-link" href="#" aria-current="page">ทีมและสิทธิ์</a>
+            <a class="subnav-link" href="#" data-go-cols>คอลัมน์</a>
+            <a class="subnav-link" href="#" data-go="type">ประเภท</a>
+        </nav>
+
+        <div class="sec mt-4">
+            <div class="sec-head"><h2>คนในโปรเจค</h2><button class="btn btn-sm btn-primary" type="button" data-min="admin">ชวนคนเข้าทีม</button></div>
+            <div data-team-only>
+                <div class="member"><span class="avatar">ฟ</span><span>ฟ้าใส (คุณ)<span class="sub">ฟ้าใส@…</span></span><span class="role-fixed">เจ้าของ</span><span></span></div>
+                <div class="member"><span class="avatar">ม</span><span>มายด์<span class="sub">รับผิดชอบ 5 งาน</span></span>
+                    <select class="form-control" aria-label="บทบาทของ มายด์" data-min="owner"><option selected>ผู้ดูแล</option><option>สมาชิก</option><option>ดูอย่างเดียว</option></select>
+                    <span class="role-fixed mk-not-owner">ผู้ดูแล</span>
+                    <button class="btn btn-sm btn-ghost" type="button" data-min="owner">เอาออก</button></div>
+                <div class="member"><span class="avatar">ต</span><span>ต้น<span class="sub">รับผิดชอบ 3 งาน</span></span>
+                    <select class="form-control" aria-label="บทบาทของ ต้น" data-min="admin"><option data-min="owner">ผู้ดูแล</option><option selected>สมาชิก</option><option>ดูอย่างเดียว</option></select>
+                    <span class="role-fixed" data-low-only>สมาชิก</span>
+                    <button class="btn btn-sm btn-ghost" type="button" data-min="admin" data-open="dlgRemove">เอาออก</button></div>
+                <div class="member"><span class="avatar">น</span><span>พี่นก<span class="sub">ดูอย่างเดียว</span></span>
+                    <select class="form-control" aria-label="บทบาทของ พี่นก" data-min="admin"><option data-min="owner">ผู้ดูแล</option><option>สมาชิก</option><option selected>ดูอย่างเดียว</option></select>
+                    <span class="role-fixed" data-low-only>ดูอย่างเดียว</span>
+                    <button class="btn btn-sm btn-ghost" type="button" data-min="admin">เอาออก</button></div>
+            </div>
+            <div class="empty-state" data-solo-only>
+                <p class="empty-state-title">ตอนนี้มีคุณคนเดียว</p>
+                <p class="empty-state-text">ทุกอย่างใช้ได้ครบโดยไม่ต้องมีทีม ปุ่ม "อนุมัติ" คุณกดของตัวเองได้ ช่องผู้รับผิดชอบเว้นว่างได้ ชวนคนเข้ามาเมื่อพร้อม</p>
+                <button class="btn btn-primary" type="button">ชวนคนเข้าทีม</button>
+            </div>
+            <div class="form-group mt-4" data-min="owner">
+                <div class="flex items-center gap-3"><label class="switch"><input type="checkbox" id="viewerMoney"><span class="slider"></span></label>
+                    <label for="viewerMoney">ให้คนที่ "ดูอย่างเดียว" เห็นตัวเลขเงิน (งบ ค่าใช้จ่าย เอกสาร)</label></div>
+                <p class="form-hint">ปิดไว้: เขาเห็นงานและความคืบหน้า แต่ไม่เห็นยอดเงิน ลิงก์แชร์ใช้ค่าเดียวกัน</p>
+            </div>
+        </div>
+
+        <div class="sec mt-4">
+            <div class="sec-head"><h2>แต่ละบทบาททำอะไรได้</h2></div>
+            <div class="perm-wrap">
+            <table class="perm">
+                <thead><tr><th scope="col">ทำอะไร</th><th scope="col" data-role-col="owner">เจ้าของ</th><th scope="col" data-role-col="admin">ผู้ดูแล</th><th scope="col" data-role-col="member">สมาชิก</th><th scope="col" data-role-col="viewer">ดูอย่างเดียว</th></tr></thead>
+                <tbody>
+                    <tr><td>ดูงาน ความคืบหน้า แชท</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+                    <tr><td>สร้าง แก้ ลากงาน เขียนความเห็น</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td></tr>
+                    <tr><td>อนุมัติ เริ่ม/ปิดรอบงาน ออกเอกสาร</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
+                    <tr><td>ตั้งคอลัมน์ ชวนคน เอาคนออก</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
+                    <tr><td>ตั้งผู้ดูแล เปลี่ยนประเภท ลบ โอนโปรเจค</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+                </tbody>
+            </table>
+            </div>
+            <p class="form-hint mt-2">สมาชิกเดิม (Editor) ทุกคนจะกลายเป็น "สมาชิก" และผู้ชมเดิม (Viewer) เป็น "ดูอย่างเดียว" ไม่มีใครได้สิทธิ์เพิ่มเองหลังย้ายข้อมูล</p>
+        </div>
+    </section>
+
+    <!-- ================= 7 เปลี่ยนประเภท ================= -->
+    <section data-screen-panel="type">
+        <p class="mk-note"><strong>ดูอะไร:</strong> เจ้าของเท่านั้นที่เปลี่ยนได้ ก่อนเปลี่ยนจะบอกว่าอะไรจะถูก "ซ่อน" (ไม่ลบ) และเปลี่ยนกลับแล้วได้คืนครบ คอลัมน์และงานไม่เปลี่ยน ลองกด "เปลี่ยนเป็นทั่วไป"</p>
+        <nav class="subnav mt-3" aria-label="ตั้งค่าโปรเจค" style="padding-left:0">
+            <a class="subnav-link" href="#" data-go="team">ทีมและสิทธิ์</a>
+            <a class="subnav-link" href="#" data-go-cols>คอลัมน์</a>
+            <a class="subnav-link" href="#" aria-current="page">ประเภท</a>
+        </nav>
+        <div class="sec mt-4">
+            <div class="sec-head"><h2>ประเภทของโปรเจคนี้</h2></div>
+            <div class="type-now"><span class="type-ear" id="typeNowEar" style="border-bottom:1.5px solid var(--edge); border-radius:8px;">ซอฟต์แวร์</span><span class="text-sm text-muted">ตั้งแต่ 3 พ.ย. 2569</span></div>
+            <div data-min="owner" class="mt-4">
+                <p class="text-sm">เปลี่ยนเป็น</p>
+                <div class="flex gap-2 flex-wrap">
+                    <button class="btn" type="button" data-open="dlgType">ทั่วไป</button>
+                    <button class="btn" type="button">การตลาดและคอนเทนต์</button>
+                    <button class="btn" type="button">บัญชีและการเงิน</button>
+                </div>
+            </div>
+            <p class="alert alert-warning mt-4" data-low-only>เปลี่ยนประเภทได้เฉพาะเจ้าของ</p>
+            <p class="alert alert-warning mt-4 mk-admin-only">เปลี่ยนประเภทได้เฉพาะเจ้าของ</p>
+        </div>
+    </section>
+    </div>
+</main>
+
+<!-- ================= dialog ================= -->
+<div class="modal-backdrop" id="dlgDelCol">
+    <div class="modal modal-narrow" role="dialog" aria-labelledby="dlgDelColT">
+        <div class="modal-header"><h2 class="modal-title" id="dlgDelColT">ลบคอลัมน์ "รอรีวิว"</h2><button class="modal-close" type="button" aria-label="ปิด" data-close>&times;</button></div>
+        <div class="modal-body">
+            <p>คอลัมน์นี้มีงาน 2 งาน เลือกที่ให้งานไปอยู่ก่อนลบ</p>
+            <div class="form-group"><label class="form-label" for="moveTo">ย้ายงานไปที่</label>
+                <select id="moveTo" class="form-control"><option>กำลังทำ</option><option>ทดสอบ</option><option>ต้องทำ</option><option>เสร็จ</option></select></div>
+            <p class="form-hint">งานย้ายไปต่อท้ายคอลัมน์นั้น ลำดับเดิมในกลุ่มยังอยู่</p>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn" data-close>ยกเลิก</button><button type="button" class="btn btn-danger" data-close>ย้ายงานแล้วลบคอลัมน์</button></div>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="dlgRemove">
+    <div class="modal modal-narrow" role="dialog" aria-labelledby="dlgRemoveT">
+        <div class="modal-header"><h2 class="modal-title" id="dlgRemoveT">เอา ต้น ออกจากโปรเจค</h2><button class="modal-close" type="button" aria-label="ปิด" data-close>&times;</button></div>
+        <div class="modal-body">
+            <p>ต้นรับผิดชอบอยู่ 3 งาน งานยังอยู่ครบ แต่จะไม่มีผู้รับผิดชอบ</p>
+            <p class="form-hint">เจ้าของจะได้แจ้งเตือนให้มอบหมายใหม่ ต้นจะไม่เห็นโปรเจคนี้อีก</p>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn" data-close>ยกเลิก</button><button type="button" class="btn btn-danger" data-close>เอาต้นออก</button></div>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="dlgType">
+    <div class="modal modal-narrow" role="dialog" aria-labelledby="dlgTypeT">
+        <div class="modal-header"><h2 class="modal-title" id="dlgTypeT">เปลี่ยนเป็น "ทั่วไป"</h2><button class="modal-close" type="button" aria-label="ปิด" data-close>&times;</button></div>
+        <div class="modal-body">
+            <p>สิ่งเหล่านี้จะถูกซ่อน ไม่ได้ลบ:</p>
+            <ul class="hide-list">
+                <li>รอบงาน "รอบ 4 · ส่งหน้าตั้งค่า" ที่<strong>กำลังทำอยู่</strong></li>
+                <li>เลขงาน DF-1 ถึง DF-58 และแต้มความยาก</li>
+                <li>เวอร์ชัน 2 รายการ (1.2 ออกแล้ว, 1.3 กำลังทำ)</li>
+            </ul>
+            <p class="form-hint">งาน คอลัมน์ ทีม และแชทไม่เปลี่ยน เปลี่ยนกลับเป็นซอฟต์แวร์เมื่อไหร่ สิ่งที่ซ่อนจะกลับมาครบ</p>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn" data-close>ยกเลิก</button><button type="button" class="btn btn-primary" data-close>เปลี่ยนเป็นทั่วไป</button></div>
+    </div>
+</div>
+
+<script>
+/* ข้อมูลตัวอย่างของแต่ละประเภท: คอลัมน์ (ชื่อ, กลุ่ม) และงานในคอลัมน์ ใช้วาดบอร์ด แบบ A และแบบ B จากชุดเดียวกัน */
+var TYPES = {
+    general:   { ear: 'ทั่วไป', name: 'ย้ายบ้านไปเชียงใหม่', key: '', cols: [
+        ['ต้องทำ', 'todo', ['แจ้งย้ายที่อยู่ธนาคาร', 'จองรถขนของ', 'ทิ้งของที่ไม่ใช้']],
+        ['กำลังทำ', 'doing', ['แพ็กหนังสือ 12 กล่อง']],
+        ['รอตรวจ', 'doing', []],
+        ['เสร็จแล้ว', 'done', ['หาห้องใหม่']]] },
+    software:  { ear: 'ซอฟต์แวร์', name: 'แอป DayFlow รุ่นมือถือ', key: 'DF', cols: [
+        ['ต้องทำ', 'todo', ['หน้าตั้งค่าแจ้งเตือน', 'ปุ่มย้อนกลับบน Android', 'โหมดออฟไลน์', 'ไอคอนแอปใหม่']],
+        ['กำลังทำ', 'doing', ['ล็อกอินด้วยลายนิ้วมือ', 'ซิงก์งานทุก 5 นาที']],
+        ['รอรีวิว', 'doing', ['แก้วันที่เพี้ยนตอนเที่ยงคืน', 'ปรับสีโหมดมืด']],
+        ['ทดสอบ', 'doing', ['ส่งออกไฟล์ CSV', 'แชร์ลิงก์โปรเจค']],
+        ['เสร็จ', 'done', ['หน้าแรกแบบใหม่', 'ย้ายฐานข้อมูล', 'แบบฟอร์มสมัคร']]] },
+    marketing: { ear: 'การตลาด', name: 'เปิดตัวเมนูหน้าหนาว', key: '', cols: [
+        ['ไอเดีย', 'todo', ['คลิปชงโกโก้ 15 วิ', 'รีวิวจากลูกค้าประจำ']],
+        ['ร่าง', 'doing', ['โพสต์เปิดตัว Facebook']],
+        ['รอตรวจ', 'doing', ['ภาพเมนู 4 รูป IG']],
+        ['นัดโพสต์', 'doing', ['บรอดแคสต์ LINE OA 1 ธ.ค.']],
+        ['โพสต์แล้ว', 'done', ['ทีเซอร์ "ของอุ่นๆ กำลังมา"']]] },
+    finance:   { ear: 'บัญชี', name: 'บัญชีสตูดิโอ 2569', key: '', cols: [
+        ['ต้องทำ', 'todo', ['ตามเงินลูกค้า ร้านบ้านสวน', 'ต่ออายุโดเมน']],
+        ['กำลังทำ', 'doing', ['สรุปค่าใช้จ่าย พ.ย.']],
+        ['รอตรวจ', 'doing', []],
+        ['เสร็จแล้ว', 'done', ['ยื่น ภ.ง.ด.94']]] }
+};
+var GROUPS = { todo: 'ยังไม่เริ่ม', doing: 'กำลังทำ', done: 'เสร็จ' };
+var ROLES = { owner: 'เจ้าของ', admin: 'ผู้ดูแล', member: 'สมาชิก', viewer: 'ดูอย่างเดียว' };
+var PEOPLE = ['มายด์', 'ต้น', 'ฟ้าใส', ''];
+var b = document.body;
+
+/* หนีอักขระ HTML ของข้อความตัวอย่าง: รับข้อความ คืนข้อความที่ใส่ใน innerHTML ได้ปลอดภัย */
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+/* วาดบอร์ด แบบ A และแบบ B ใหม่ตามประเภทที่เลือก: อ่าน TYPES[b.dataset.type] เขียนทับ #board #boardEdit #colsA */
+function render() {
+    var t = TYPES[b.dataset.type], n = 0, solo = b.dataset.team === 'solo';
+    document.getElementById('projHead').dataset.ptype = b.dataset.type;
+    document.getElementById('headEar').textContent = t.ear;
+    document.getElementById('typeNowEar').textContent = t.ear;
+    document.getElementById('typeNowEar').parentElement.dataset.ptype = b.dataset.type;
+    document.getElementById('headName').textContent = t.name;
+
+    // บอร์ดปกติ: การ์ดมีเลขงานเฉพาะซอฟต์แวร์ ผู้รับผิดชอบว่างแสดงเป็นคำเตือนเมื่อมีทีม
+    document.getElementById('board').innerHTML = t.cols.map(function (c) {
+        return '<div class="mk-col" data-g="' + c[1] + '"><div class="mk-col-head"><h3>' + esc(c[0]) + '</h3><span class="grp">' + GROUPS[c[1]] + '</span><span class="count">' + c[2].length + '</span></div>'
+            + (c[2].length ? c[2].map(function (task) {
+                n++;
+                var who = solo ? '' : PEOPLE[n % 4];
+                return '<div class="mk-card">' + (t.key ? '<span class="k">' + t.key + '-' + (40 + n) + '</span>' : '') + esc(task)
+                    + (solo ? '' : '<span class="who' + (who ? '' : ' none') + '">' + (who ? esc(who) : 'ยังไม่มีผู้รับผิดชอบ') + '</span>') + '</div>';
+            }).join('') : '<p class="kanban-empty text-sm text-muted mt-2">ว่าง</p>')
+            + '<button class="btn btn-link btn-sm mk-add" type="button" data-min="member">เพิ่มงานใน "' + esc(c[0]) + '"</button></div>';
+    }).join('');
+
+    // แบบ B: หัวคอลัมน์เป็นช่องแก้ + ตัวเลือกกลุ่ม + ปุ่มลบ และช่อง "เพิ่มคอลัมน์" ท้ายบอร์ด
+    document.getElementById('boardEdit').innerHTML = t.cols.map(function (c, i) {
+        var last = t.cols.filter(function (x) { return x[1] === c[1]; }).length === 1;
+        return '<div class="mk-col editing" data-g="' + c[1] + '"><div class="mk-col-head"><span class="drag-handle" aria-hidden="true">⠿</span>'
+            + '<input class="form-control" value="' + esc(c[0]) + '" aria-label="ชื่อคอลัมน์">'
+            + '<select class="form-control" aria-label="กลุ่ม">' + Object.keys(GROUPS).map(function (g) { return '<option' + (g === c[1] ? ' selected' : '') + '>' + GROUPS[g] + '</option>'; }).join('') + '</select>'
+            + (last ? '<span class="text-xs text-muted" title="กลุ่มนี้ต้องมีอย่างน้อย 1 คอลัมน์">ลบไม่ได้</span>'
+                    : '<button class="btn btn-sm btn-ghost" type="button" ' + (c[2].length ? 'data-open="dlgDelCol"' : '') + '>ลบ</button>')
+            + '</div>' + c[2].slice(0, 2).map(function (task) { return '<div class="mk-card">' + esc(task) + '</div>'; }).join('') + '</div>';
+    }).join('') + '<button class="mk-col-new" type="button">+ เพิ่มคอลัมน์</button>';
+
+    // แบบ A: รายการแยก 3 กลุ่ม คอลัมน์สุดท้ายของกลุ่มลบไม่ได้ (EDGE-P2)
+    document.getElementById('colsA').innerHTML = Object.keys(GROUPS).map(function (g) {
+        var cols = t.cols.filter(function (c) { return c[1] === g; });
+        return '<div class="col-group" data-g="' + g + '"><h3><span class="grp">' + GROUPS[g] + '</span><small>' + cols.length + ' คอลัมน์</small></h3>'
+            + cols.map(function (c) {
+                var last = cols.length === 1;
+                return '<div class="col-line"><span class="drag-handle" aria-hidden="true">⠿</span><input class="form-control" value="' + esc(c[0]) + '" aria-label="ชื่อคอลัมน์">'
+                    + '<span class="n">' + c[2].length + ' งาน</span>'
+                    + (last ? '<button class="btn btn-sm btn-ghost" type="button" disabled>ลบ</button><p class="why">คอลัมน์เดียวของกลุ่ม "' + GROUPS[g] + '" ต้องมีไว้ ลบไม่ได้</p>'
+                            : '<button class="btn btn-sm btn-ghost" type="button" ' + (c[2].length ? 'data-open="dlgDelCol"' : '') + '>ลบ</button>')
+                    + '</div>';
+            }).join('')
+            + '<button class="btn btn-link btn-sm mt-2" type="button">เพิ่มคอลัมน์ในกลุ่มนี้</button></div>';
+    }).join('');
+
+    // ตัวเลขความคืบหน้านับจากคอลัมน์ในกลุ่ม "เสร็จ" ไม่ใช่จากชื่อคอลัมน์
+    var all = 0, done = 0;
+    t.cols.forEach(function (c) { all += c[2].length; if (c[1] === 'done') done += c[2].length; });
+    document.getElementById('boardTally').textContent = all + ' งาน · เสร็จ ' + done + ' · ความคืบหน้า ' + Math.round(done * 100 / all) + '%';
+
+    // ข้อความตามบทบาท
+    var r = b.dataset.role;
+    document.getElementById('headRole').textContent = ROLES[r];
+    document.querySelectorAll('.mk-role-word').forEach(function (el) { el.textContent = ROLES[r]; });
+    document.querySelectorAll('.mk-viewer-hint').forEach(function (el) { el.hidden = r !== 'viewer'; });
+    document.querySelectorAll('.mk-member-hint').forEach(function (el) { el.hidden = r !== 'member'; });
+    document.querySelectorAll('.mk-not-owner').forEach(function (el) { el.hidden = r === 'owner'; });
+    document.querySelectorAll('.mk-admin-only').forEach(function (el) { el.hidden = r !== 'admin'; });
+    document.querySelectorAll('.perm tbody tr').forEach(function (tr) { tr.classList.remove('mine'); });
+    document.querySelectorAll('.perm th[data-role-col]').forEach(function (th) { th.style.textDecoration = th.dataset.roleCol === r ? 'underline' : ''; });
+
+    // แท็บที่เลือกในหัวโปรเจค
+    document.querySelectorAll('.tab[data-tab]').forEach(function (tab) {
+        tab.setAttribute('aria-selected', String(tab.dataset.tab.split(' ').indexOf(b.dataset.screen) >= 0 || (tab.dataset.tab === 'board' && b.dataset.screen === 'colsB')));
+    });
+}
+
+/* เปลี่ยนหน้าจอ: ตั้ง data-screen ที่ body และให้ select ตรงกัน */
+function go(screen) { b.dataset.screen = screen; document.getElementById('mkScreen').value = screen; render(); window.scrollTo(0, 0); }
+
+// ตัวควบคุมบนแถบ mockup
+[['mkScreen', 'screen'], ['mkType', 'type'], ['mkRole', 'role'], ['mkTeam', 'team'], ['mkVariant', 'variant']].forEach(function (p) {
+    document.getElementById(p[0]).addEventListener('change', function (e) { b.dataset[p[1]] = e.target.value; render(); });
+});
+document.getElementById('mkTheme').addEventListener('change', function (e) { document.documentElement.dataset.theme = e.target.value; });
+
+// การ์ดเลือกประเภท เปลี่ยนประเภทของทั้ง mockup
+document.querySelectorAll('input[name="ptype"]').forEach(function (i) {
+    i.addEventListener('change', function () { b.dataset.type = i.value; document.getElementById('mkType').value = i.value; render(); });
+});
+
+// ปุ่มนำทางและ dialog ใน mockup (ใช้ event delegation เพราะบอร์ดวาดใหม่ทุกครั้ง)
+document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-go],[data-go-variant],[data-go-cols],[data-open],[data-close]');
+    if (!el) return;
+    e.preventDefault();
+    if (el.dataset.go) go(el.dataset.go);
+    else if (el.hasAttribute('data-go-variant')) go(b.dataset.variant === 'B' ? 'colsB' : 'colsA');
+    else if (el.hasAttribute('data-go-cols')) go('colsA');
+    else if (el.dataset.open) document.getElementById(el.dataset.open).classList.add('mk-open');
+    else el.closest('.modal-backdrop').classList.remove('mk-open');
+});
+
+// เปิดหน้าจอจาก URL ได้ เช่น ?screen=board&type=marketing&role=member
+new URLSearchParams(location.search).forEach(function (v, k) { if (k in b.dataset || k === 'screen') b.dataset[k] = v; var s = document.getElementById('mk' + k[0].toUpperCase() + k.slice(1)); if (s) s.value = v; if (k === 'theme') document.documentElement.dataset.theme = v; });
+render();
+</script>
+</body>
+</html>

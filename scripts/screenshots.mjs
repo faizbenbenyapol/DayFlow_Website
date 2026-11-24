@@ -49,7 +49,7 @@ const PAGES = [
     ['settings-categories', '/settings', '[data-tab="categories"]'],
     ['settings-shares', '/settings', '[data-tab="app-shares"]'],
     ['projects-task', '/projects', '[data-act="openEditTask"]'],
-    ['projects-team', '/projects', '#btnInviteMember'],
+    ['projects-team', '/projects', '#tabSettings'],
     ['projects-new', '/projects', '[data-act="openCreateProjectModal"]'],
     ['dev-components', '/dev/components'],
     ['planner-event', '/planner', '[data-act="openAddEvent"]'],

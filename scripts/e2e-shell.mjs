@@ -827,7 +827,7 @@ async function main() {
         await sleep(600);
         check(await tab.eval(`document.querySelectorAll('#projectsGrid .proj-row').length`) >= 1, 'the projects are listed');
         check(await tab.eval(`document.querySelector('.proj-row[aria-pressed="true"]') !== null`), 'the open one is marked');
-        check(await tab.eval(`document.querySelectorAll('.kanban-column').length`) === 4, 'the board has four columns');
+        check(await tab.eval(`document.querySelectorAll('#kanbanBoard .kanban-column').length`) >= 1, 'the board draws its columns from the project');
         check(await tab.eval(`document.querySelector('#aiSummaryCardWrap').textContent.includes('ไม่ได้ใช้ AI')`), 'the summary says it is not AI');
         await fill(tab, '#projectSearch', 'ไม่มีทางเจอ' + STAMP);
         await sleep(300);
@@ -836,15 +836,23 @@ async function main() {
         await fill(tab, '#projectSearch', '');
         await sleep(300);
 
+        // A project in two steps: pick the type, then name it.
         await click(tab, '[data-act="openCreateProjectModal"]');
         await sleep(300);
-        await click(tab, '#createProjectForm [type="submit"]');
+        check(await tab.eval(`document.getElementById('createProjectStep1').hidden === false && document.getElementById('createProjectStep2').hidden`), 'the create dialog starts on step 1');
+        check(await tab.eval(`document.querySelectorAll('#createProjectStep1 input[name="ptype"]').length`) === 4, 'four type cards are offered');
+        check(await tab.eval(`document.querySelector('#createProjectStep1 input[name="ptype"]:checked')?.value`) === 'general', 'general is picked to begin with');
+        await click(tab, '#createProjectNext');
+        await sleep(200);
+        check(await tab.eval(`document.getElementById('createProjectStep2').hidden === false`), 'next opens step 2');
+        await click(tab, '#createProjectSubmit');
         await sleep(200);
         check(await tab.eval(`!document.getElementById('newProjError').hidden`), 'a project without a name shows an error in the form');
         await fill(tab, '#newProjName', `โปรเจค ${STAMP}`);
-        await click(tab, '#createProjectForm [type="submit"]');
+        await click(tab, '#createProjectSubmit');
         await sleep(1500);
         check(await tab.eval(`document.getElementById('activeProjectTitle').textContent.includes(${JSON.stringify(STAMP)})`), 'a new project opens its board');
+        check(await tab.eval(`document.querySelectorAll('#kanbanBoard .kanban-column').length`) === 4, 'a general project gets its four columns');
         const projectList = await api(tab, '/api/projects');
         const newProject = (projectList.body.projects || []).find(p => p.name.includes(STAMP));
         check(!!newProject, 'it reached the server');
@@ -868,18 +876,21 @@ async function main() {
         await tab.goto(`${BASE}/projects?project=${second.body?.id}`);
         await sleep(1500);
 
-        await click(tab, '[data-act="toggleQuickAddForm"][data-args=\'["To Do"]\']');
+        const firstColumnId = await tab.eval(`document.querySelector('#kanbanBoard .kanban-column')?.dataset.columnId`);
+        check(!!firstColumnId, 'each board column carries its id');
+        await click(tab, `[data-act="toggleQuickAddForm"][data-args="[${firstColumnId}]"]`);
         await sleep(200);
-        check(await tab.eval(`document.activeElement.id`) === 'quickadd-todo-input', 'adding a task puts the cursor in its field');
-        await fill(tab, '#quickadd-todo-input', `งาน ${STAMP}`);
+        check(await tab.eval(`document.activeElement.id`) === `quickadd-col-${firstColumnId}-input`, 'adding a task puts the cursor in its field');
+        await fill(tab, `#quickadd-col-${firstColumnId}-input`, `งาน ${STAMP}`);
         await key(tab, 'Enter');
         await sleep(1500);
-        check(await tab.eval(`document.getElementById('todo-list').textContent.includes(${JSON.stringify(STAMP)})`), 'the task lands in the column');
-        check(await tab.eval(`document.getElementById('todo-count').textContent`) === '1', 'and the column counts it');
+        check(await tab.eval(`document.getElementById('col-${firstColumnId}-list').textContent.includes(${JSON.stringify(STAMP)})`), 'the task lands in the column');
+        check(await tab.eval(`document.getElementById('col-${firstColumnId}-count').textContent`) === '1', 'and the column counts it');
 
-        await click(tab, '#todo-list [data-act="openEditTask"]');
+        await click(tab, `#col-${firstColumnId}-list [data-act="openEditTask"]`);
         await sleep(300);
-        await fill(tab, '#editTaskStatus', 'In Progress');
+        const secondColumnId = await tab.eval(`document.querySelectorAll('#kanbanBoard .kanban-column')[1]?.dataset.columnId`);
+        await fill(tab, '#editTaskColumn', secondColumnId);
         await fill(tab, '#editTaskPriority', 'Critical');
         await click(tab, '[data-act="addChecklistItem"]');
         await fill(tab, '#newChecklistItemInput', 'ขั้นแรก');
@@ -888,24 +899,170 @@ async function main() {
         check(await tab.eval(`document.querySelectorAll('#modalChecklistList .checklist-item').length`) === 1, 'a checklist item can be added in the dialog');
         await click(tab, '#editTaskForm [type="submit"]');
         await sleep(1500);
-        check(await tab.eval(`document.getElementById('inprogress-list').textContent.includes(${JSON.stringify(STAMP)})`), 'changing the column in the dialog moves the card');
-        check(await tab.eval(`document.querySelector('#inprogress-list .kanban-card').dataset.priority`) === 'critical', 'and its priority shows');
-        check(await tab.eval(`document.querySelector('#inprogress-list .kcard-check').textContent.includes('0/1')`), 'with its checklist count');
-
-        await click(tab, '#btnInviteMember');
-        await sleep(600);
-        check(await tab.eval(`document.getElementById('inviteMemberModal').classList.contains('active')`), 'the team dialog opens');
-        check(await tab.eval(`document.querySelectorAll('#projectMembersList .member-item').length`) >= 1, 'it lists the members');
-        await click(tab, '#inviteMemberForm [type="submit"]');
-        await sleep(200);
-        check(await tab.eval(`!document.getElementById('inviteError').hidden`), 'inviting nobody shows an error in the form');
-        await tab.eval(`closeModal('inviteMemberModal')`);
+        check(await tab.eval(`document.getElementById('col-${secondColumnId}-list').textContent.includes(${JSON.stringify(STAMP)})`), 'changing the column in the dialog moves the card');
+        check(await tab.eval(`document.querySelector('#col-${secondColumnId}-list .kanban-card').dataset.priority`) === 'critical', 'and its priority shows');
+        check(await tab.eval(`document.querySelector('#col-${secondColumnId}-list .kcard-check').textContent.includes('0/1')`), 'with its checklist count');
 
         await fill(tab, '#chatMessageInput', `สวัสดีทีม ${STAMP}`);
         await tab.eval(`document.getElementById('chatMessageInput').focus()`);
         await key(tab, 'Enter');
         await sleep(1200);
         check(await tab.eval(`document.getElementById('chatMessagesList').textContent.includes(${JSON.stringify(STAMP)})`), 'a chat message appears after sending');
+
+        // ---------- the settings tab: team, columns and type ----------
+        console.log('Project settings');
+        await click(tab, '#tabSettings');
+        await sleep(300);
+        check(await tab.eval(`document.getElementById('tabSettings').getAttribute('aria-selected')`) === 'true', 'the settings tab opens');
+        check(await tab.eval(`document.getElementById('settingsPanel').hidden === false && document.getElementById('boardPanel').hidden`), 'and the board makes room for it');
+        check(await tab.eval(`document.getElementById('settingsNavTeam').getAttribute('aria-current')`) === 'page', 'team and permissions is the first section');
+        check(await tab.eval(`document.getElementById('teamSoloEmpty').hidden === false`), 'a fresh project says the owner is alone');
+        check(await tab.eval(`document.getElementById('teamSoloEmpty').textContent.includes('ตอนนี้มีคุณคนเดียว')`), 'and invites the first teammate');
+        check(await tab.eval(`document.querySelector('.perm th.mine')?.dataset.roleCol`) === 'owner', 'the permission table underlines the caller\'s role');
+
+        // Invite an existing test account, change its role, then remove it again.
+        const beforeMembers = await api(tab, `/api/projects/${second.body.id}/members`);
+        const leftover = (beforeMembers.body.members || []).find(m => m.username === 'shots_empty');
+        if (leftover) await api(tab, `/api/projects/${second.body.id}/members/${leftover.id}`, { method: 'DELETE' });
+        await fill(tab, '#inviteSearchInput', 'shots_empty');
+        await fill(tab, '#inviteRoleSelect', 'Editor');
+        await click(tab, '#inviteMemberForm [type="submit"]');
+        await sleep(1500);
+        check(await tab.eval(`[...document.querySelectorAll('#projectMembersList .member')].some(m => m.textContent.includes('ผู้ใช้ใหม่'))`), 'the invited member appears in the team');
+        await tab.eval(`(() => {
+            const row = [...document.querySelectorAll('#projectMembersList .member')].find(m => m.textContent.includes('ผู้ใช้ใหม่'));
+            const select = row?.querySelector('select');
+            if (!select) return false;
+            select.value = 'Viewer';
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            return true;
+        })()`);
+        await sleep(1500);
+        check(await tab.eval(`(() => {
+            const row = [...document.querySelectorAll('#projectMembersList .member')].find(m => m.textContent.includes('ผู้ใช้ใหม่'));
+            return row?.querySelector('select')?.value;
+        })()`) === 'Viewer', 'the role changes to viewer');
+        await tab.eval(`(() => {
+            const row = [...document.querySelectorAll('#projectMembersList .member')].find(m => m.textContent.includes('ผู้ใช้ใหม่'));
+            const button = row && [...row.querySelectorAll('button')].find(b => b.textContent.trim() === 'เอาออก');
+            if (!button) return false;
+            button.click();
+            return true;
+        })()`);
+        await sleep(300);
+        check(await tab.eval(`document.querySelector('.df-dialog[open]')?.textContent.includes('ผู้ใช้ใหม่')`), 'removing a member asks first');
+        await click(tab, '.df-dialog[open] button[type="submit"]');
+        await sleep(1500);
+        check(await tab.eval(`![...document.querySelectorAll('#projectMembersList .member')].some(m => m.textContent.includes('ผู้ใช้ใหม่'))`), 'the removed member is gone');
+
+        // Columns, variant A: add, rename, then delete a column that holds a task.
+        await click(tab, '#settingsNavColumns');
+        await sleep(300);
+        check(await tab.eval(`document.getElementById('columnsDenied').hidden`), 'an owner may edit the columns');
+        await click(tab, '#colAddButton-doing');
+        await sleep(200);
+        await fill(tab, '#colAddInput-doing', 'รอรีวิวโค้ด');
+        await click(tab, '#colAdd-doing .btn-primary');
+        await sleep(1500);
+        check(await tab.eval(`[...document.querySelectorAll('#colLines-doing input')].some(i => i.value === 'รอรีวิวโค้ด')`), 'a column is added to "กำลังทำ"');
+        await tab.eval(`(() => {
+            const input = [...document.querySelectorAll('#colLines-doing input')].find(i => i.value === 'รอรีวิวโค้ด');
+            if (!input) return false;
+            input.value = 'รอรีวิวโค้ด v2';
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            return true;
+        })()`);
+        await sleep(1500);
+        await click(tab, '#tabBoard');
+        await sleep(200);
+        check(await tab.eval(`[...document.querySelectorAll('#kanbanBoard .kanban-column-title')].some(h => h.textContent.trim() === 'รอรีวิวโค้ด v2')`), 'the board shows the new column name');
+        await click(tab, '#tabSettings');
+        await click(tab, '#settingsNavColumns');
+        await sleep(300);
+
+        await tab.eval(`(() => {
+            const row = [...document.querySelectorAll('#colLines-doing .col-line')].find(r => r.querySelector('input')?.value === 'กำลังทำ');
+            const button = row?.querySelector('button');
+            if (!button) return false;
+            button.click();
+            return true;
+        })()`);
+        await sleep(300);
+        check(await tab.eval(`document.getElementById('deleteColumnModal').classList.contains('active')`), 'deleting a column with tasks opens the move dialog');
+        check(await tab.eval(`document.getElementById('deleteColumnTitle').textContent.includes('กำลังทำ')`), 'the dialog names the column');
+        const doneColumnId = await tab.eval(`(() => {
+            const row = [...document.querySelectorAll('#columnsEditor .col-line')].find(r => r.querySelector('input')?.value === 'เสร็จแล้ว');
+            return row ? row.dataset.columnId : null;
+        })()`);
+        await fill(tab, '#deleteColumnMoveTo', doneColumnId);
+        await click(tab, '#deleteColumnForm [type="submit"]');
+        await sleep(1800);
+        check(await tab.eval(`document.getElementById('col-' + ${JSON.stringify(doneColumnId)} + '-list').textContent.includes(${JSON.stringify('งาน ' + STAMP)})`), 'the task moved to the chosen column');
+        check(await tab.eval(`[...document.querySelectorAll('#kanbanBoard .kanban-column-title')].every(h => h.textContent.trim() !== 'กำลังทำ')`), 'the deleted column left the board');
+        check(await tab.eval(`(() => {
+            const row = [...document.querySelectorAll('#columnsEditor .col-line')].find(r => r.querySelector('input')?.value === 'เสร็จแล้ว');
+            return !!row && !!row.querySelector('button[disabled]');
+        })()`), 'the only column of "เสร็จ" cannot be deleted');
+        check(await tab.eval(`document.getElementById('colLines-done').textContent.includes('คอลัมน์เดียวของกลุ่ม "เสร็จ" ต้องมีไว้ ลบไม่ได้')`), 'and says why');
+
+        // Type: the owner changes it and the coloured ear follows.
+        await click(tab, '#settingsNavType');
+        await sleep(300);
+        check(await tab.eval(`document.getElementById('typeChangeOwner').hidden === false`), 'the owner sees the type buttons');
+        await click(tab, '[data-type-button="marketing"]');
+        await sleep(300);
+        check(await tab.eval(`document.querySelector('.df-dialog[open]')?.textContent.includes('คอลัมน์ งาน ทีม และแชทไม่เปลี่ยน')`), 'changing type explains what is hidden');
+        await click(tab, '.df-dialog[open] button[type="submit"]');
+        await sleep(1800);
+        check(await tab.eval(`document.getElementById('activeProjectEar').textContent`) === 'การตลาด', 'the project ear names the new type');
+        check(await tab.eval(`document.getElementById('typeCurrentEar').textContent`) === 'การตลาด', 'and the type panel agrees');
+
+        // A software project through the same two steps: its five columns come from its type.
+        console.log('Project type');
+        await tab.goto(BASE + '/projects');
+        await tab.settle();
+        await sleep(600);
+        await click(tab, '[data-act="openCreateProjectModal"]');
+        await sleep(300);
+        await tab.eval(`document.querySelector('#createProjectStep1 input[name="ptype"][value="software"]').click()`);
+        check(await tab.eval(`document.querySelector('#createProjectStep1 input[name="ptype"]:checked').value`) === 'software', 'the software card can be picked');
+        await click(tab, '#createProjectNext');
+        await sleep(200);
+        check(await tab.eval(`document.getElementById('createStepTypeName').textContent`) === 'พัฒนาซอฟต์แวร์', 'step 2 names the chosen type');
+        const softwareName = `ซอฟต์แวร์ ${STAMP}`;
+        await fill(tab, '#newProjName', softwareName);
+        await click(tab, '#createProjectSubmit');
+        await sleep(1800);
+        check(await tab.eval(`document.getElementById('activeProjectTitle').textContent`) === softwareName, 'the software project opens its board');
+        const softwareColumns = await tab.eval(`[...document.querySelectorAll('#kanbanBoard .kanban-column-title')].map(h => h.textContent.trim())`);
+        check(JSON.stringify(softwareColumns) === JSON.stringify(['ต้องทำ', 'กำลังทำ', 'รอรีวิว', 'ทดสอบ', 'เสร็จ']), 'it gets the five software columns', JSON.stringify(softwareColumns));
+        const softwareList = await api(tab, '/api/projects');
+        const softwareProject = (softwareList.body.projects || []).find(p => p.name === softwareName);
+        check(!!softwareProject, 'the software project reached the server');
+        if (softwareProject) made.projects.push(softwareProject.id);
+
+        const testingColumnId = await tab.eval(`document.querySelector('#kanbanBoard .kanban-column:nth-child(4)')?.dataset.columnId`);
+        await click(tab, `[data-act="toggleQuickAddForm"][data-args="[${testingColumnId}]"]`);
+        await sleep(200);
+        await fill(tab, `#quickadd-col-${testingColumnId}-input`, `ทดสอบระบบ ${STAMP}`);
+        await key(tab, 'Enter');
+        await sleep(1500);
+        await tab.goto(`${BASE}/projects?project=${softwareProject?.id}`);
+        await sleep(1500);
+        check(await tab.eval(`document.getElementById('col-${testingColumnId}-list').textContent.includes(${JSON.stringify('ทดสอบระบบ ' + STAMP)})`), 'a quick-added task is still in "ทดสอบ" after a reload');
+        check(await tab.eval(`document.querySelector('.proj-row[data-args="[${softwareProject?.id}]"]')?.textContent.includes('พัฒนาซอฟต์แวร์')`), 'the project row names its type');
+
+        await tab.viewport({ width: 360, height: 800, mobile: true });
+        await tab.goto(BASE + '/projects');
+        await tab.settle();
+        await sleep(800);
+        check(await tab.eval(`document.documentElement.scrollWidth <= window.innerWidth`), 'at 360px the projects page does not scroll sideways');
+        check(await tab.eval(`document.getElementById('kanbanBoard').scrollWidth > document.getElementById('kanbanBoard').clientWidth`), 'the board scrolls its columns inside itself');
+        await click(tab, '#tabSettings');
+        await sleep(300);
+        check(await tab.eval(`document.documentElement.scrollWidth <= window.innerWidth`), 'at 360px the settings panel does not scroll sideways');
+        check(await tab.eval(`document.getElementById('settingsPanel').scrollWidth <= document.getElementById('settingsPanel').clientWidth`), 'the settings panel keeps its content inside itself');
+        await tab.viewport({ width: 1366, height: 900, mobile: false });
 
         // ---------- outside the app ----------
         console.log('Outside the app');
