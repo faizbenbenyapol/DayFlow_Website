@@ -488,6 +488,21 @@
                         <button type="button" class="btn btn-sm" data-act="addChecklistItem">เพิ่ม</button>
                     </div>
                 </div>
+                <!-- ความเห็น: แขกจากลิงก์แชร์ไม่เห็น (D-5) ผู้ดูอย่างเดียวอ่านได้แต่เขียนไม่ได้ -->
+                <section class="task-comments" id="taskComments" aria-labelledby="taskCommentsHeading">
+                    <h3 id="taskCommentsHeading">ความเห็น <small id="taskCommentCount"></small></h3>
+                    <div class="task-comment-list" id="taskCommentList" aria-live="polite"></div>
+                    <div class="comment-composer" id="taskCommentComposer">
+                        <div class="mention-pop" id="mentionPop" role="listbox" aria-label="เลือกคนที่จะกล่าวถึง" hidden></div>
+                        <label class="sr-only" for="taskCommentInput">เขียนความเห็น</label>
+                        <textarea id="taskCommentInput" class="form-control" rows="3" maxlength="5000" placeholder="เขียนความเห็น พิมพ์ @ เพื่อเรียกชื่อคนในทีม"
+                                  data-act="onCommentInput" data-on="input" aria-autocomplete="list" aria-controls="mentionPop"></textarea>
+                        <div class="comment-composer-actions">
+                            <span class="proj-note">ความเห็นใหม่ขึ้นเองภายใน 1 นาที · Ctrl+Enter ส่ง</span>
+                            <button type="button" class="btn btn-primary btn-sm" data-act="sendTaskComment">ส่งความเห็น</button>
+                        </div>
+                    </div>
+                </section>
                 <section class="task-history" aria-labelledby="taskHistoryHeading">
                     <h3 id="taskHistoryHeading">ประวัติ</h3>
                     <ul class="task-history-list" id="taskHistoryList"></ul>

@@ -234,6 +234,10 @@ class ProjectTeamController
         }
 
         if (ProjectChat::sendMessage($projectId, $userId, $message)) {
+            // @username ในแชท แจ้งคนในโปรเจคที่ถูกกล่าวถึง (แขกจากลิงก์แชร์ไม่มีบัญชี จึงไม่แจ้งในนามแขก)
+            if ($userId > 0) {
+                ProjectComment::notifyMentions($projectId, $message, $userId, 'ในแชท', (string)$project['name'], '/projects?project=' . $projectId);
+            }
             Response::json(['ok' => true], 201);
         } else {
             Response::json(['error' => 'ไม่สามารถส่งข้อความได้'], 500);

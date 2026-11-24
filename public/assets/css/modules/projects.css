@@ -1188,3 +1188,113 @@
         min-height: 44px;
     }
 }
+
+/* ---------------------------------------------------------------
+   ความเห็นในแผงรายละเอียดงาน และตัวเลือก @กล่าวถึง (P0b)
+--------------------------------------------------------------- */
+.task-comments {
+    margin-top: var(--space-5);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--rule-strong);
+}
+
+.task-comments h3 {
+    margin: 0 0 var(--space-2);
+    font-size: 0.9375rem;
+}
+
+.task-comments h3 small {
+    margin-left: var(--space-1);
+    font-weight: 400;
+    color: var(--pencil);
+}
+
+.comment {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+.comment .avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 0.8125rem;
+}
+
+.comment-who {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--space-2);
+    align-items: baseline;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.comment-who time {
+    font-weight: 400;
+    color: var(--pencil);
+}
+
+.comment-who .btn-link {
+    margin-left: auto;
+    min-height: 0;
+    padding: 0;
+    font-weight: 400;
+}
+
+.comment p {
+    margin: 2px 0 0;
+    font-size: 0.875rem;
+    overflow-wrap: anywhere;
+}
+
+.mention {
+    padding: 0 4px;
+    border-radius: 4px;
+    background: var(--sky);
+    color: var(--ink);
+    font-weight: 600;
+}
+
+.comment-composer {
+    position: relative;
+    display: grid;
+    gap: var(--space-2);
+}
+
+.comment-composer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    align-items: center;
+    justify-content: space-between;
+}
+
+.comment-composer-actions .proj-note {
+    margin: 0;
+}
+
+.mention-pop {
+    position: absolute;
+    left: var(--space-3);
+    bottom: 100%;
+    z-index: 5;
+    width: min(260px, 100%);
+    border: 1.5px solid var(--edge);
+    border-radius: var(--r-control);
+    background: var(--paper);
+    box-shadow: var(--lift-2);
+}
+
+.mention-pop [role="option"] {
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 0.875rem;
+    cursor: pointer;
+}
+
+.mention-pop [role="option"][aria-selected="true"] {
+    background: var(--paper-sunk);
+    font-weight: 600;
+}

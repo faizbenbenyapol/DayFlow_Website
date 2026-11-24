@@ -255,6 +255,7 @@ function openEditTask(id) {
     openModal('editTaskModal');
     setTaskParam(task.id);
     loadTaskHistory(task.id);
+    loadTaskComments(task.id);
 }
 
 /**
@@ -314,7 +315,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const panel = document.getElementById('editTaskModal');
     if (!panel) return;
     new MutationObserver(() => {
-        if (!panel.classList.contains('active')) setTaskParam(null);
+        if (!panel.classList.contains('active')) {
+            setTaskParam(null);
+            stopCommentPolling();
+        }
     }).observe(panel, { attributes: true, attributeFilter: ['class'] });
 });
 

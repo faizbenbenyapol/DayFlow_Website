@@ -324,6 +324,9 @@ class Router
         $this->add('PUT',    '/api/projects/tasks/{tid}',  'ProjectTaskController', 'apiTaskUpdate',  true);
         $this->add('DELETE', '/api/projects/tasks/{tid}',  'ProjectTaskController', 'apiTaskDelete',  true);
         $this->add('GET',    '/api/projects/tasks/{tid}/history', 'ProjectTaskController', 'apiTaskHistory', true);
+        $this->add('GET',    '/api/projects/tasks/{tid}/comments', 'ProjectCommentController', 'apiList',   true);
+        $this->add('POST',   '/api/projects/tasks/{tid}/comments', 'ProjectCommentController', 'apiCreate', true);
+        $this->add('DELETE', '/api/projects/comments/{cid}',       'ProjectCommentController', 'apiDelete', true);
         $this->add('POST',   '/api/projects/tasks/reorder','ProjectTaskController', 'apiTaskReorder', true);
 
         // --- API: Projects Board Columns ---
