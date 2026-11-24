@@ -75,7 +75,7 @@ test('a screenshot is stored under its real type and served to its owner only', 
 // Project roles
 // =====================================================
 
-test('only Editor and Viewer can be granted on a project', function (TestClient $_c): void {
+test('project roles are checked against the role lists', function (TestClient $_c): void {
     $owner = accessClient('proj_owner');
     accessClient('proj_member'); // exists, so an invite could otherwise succeed
 
@@ -85,12 +85,16 @@ test('only Editor and Viewer can be granted on a project', function (TestClient 
     $id = (int)($project['id'] ?? ($project['project']['id'] ?? 0));
     assertTrue($id > 0, 'project not created');
 
-    foreach (['Owner', 'Admin', 'viewer', ''] as $role) {
+    // สมาชิกถือได้แค่ Admin/Editor/Viewer (Owner มาจาก projects.user_id)
+    foreach (['Owner', 'viewer', ''] as $role) {
         $response = $owner->post("/api/projects/{$id}/members", [
             'email_or_username' => 'acc_proj_member_' . TEST_RUN_ID, 'role' => $role,
         ]);
         assertSame(422, $response['status'], "member role '{$role}' must be refused");
+    }
 
+    // ลิงก์แชร์เป็นผู้ดูแลไม่ได้
+    foreach (['Owner', 'Admin', 'viewer', ''] as $role) {
         assertSame(422, $owner->post("/api/projects/{$id}/share", ['share_role' => $role])['status'], "share role '{$role}'");
     }
 

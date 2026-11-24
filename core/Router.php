@@ -330,6 +330,7 @@ class Router
         // --- API: Projects Collaboration & Chat ---
         $this->add('GET',    '/api/projects/{id}/members',      'ProjectTeamController', 'apiMemberList',   true);
         $this->add('POST',   '/api/projects/{id}/members',      'ProjectTeamController', 'apiMemberAdd',    true);
+        $this->add('PUT',    '/api/projects/{id}/members/{mid}', 'ProjectTeamController', 'apiMemberRole',   true);
         $this->add('DELETE', '/api/projects/{id}/members/{mid}', 'ProjectTeamController', 'apiMemberRemove', true);
         $this->add('GET',    '/api/projects/{id}/chat',         'ProjectTeamController', 'apiChatList',     true);
         $this->add('POST',   '/api/projects/{id}/chat',         'ProjectTeamController', 'apiChatSend',     true);

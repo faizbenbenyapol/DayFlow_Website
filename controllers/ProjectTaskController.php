@@ -40,6 +40,8 @@ class ProjectTaskController
 
     /**
      * POST /api/projects/{id}/tasks
+     *
+     * สมาชิกขึ้นไปเพิ่มงานได้ ผู้ดูอย่างเดียวอ่านได้อย่างเดียว
      */
     public function apiTaskCreate(string $id): void
     {
@@ -51,7 +53,7 @@ class ProjectTaskController
             Response::json(['error' => 'ไม่พบข้อมูลโปรเจค'], 404);
         }
 
-        $this->requireEditor($project, 'เพิ่มงาน');
+        $this->requireRole($project, 'member', 'เพิ่มงาน');
 
         $title = trim(Request::input('title', ''));
         if (!$title) {
@@ -87,6 +89,8 @@ class ProjectTaskController
 
     /**
      * PUT /api/projects/tasks/{tid}
+     *
+     * สมาชิกขึ้นไปแก้งานได้ ผู้ดูอย่างเดียวและแขกถูกปฏิเสธ
      */
     public function apiTaskUpdate(string $tid): void
     {
@@ -104,7 +108,7 @@ class ProjectTaskController
             Response::json(['error' => 'ไม่พบข้อมูลงาน'], 404);
         }
 
-        $this->requireEditor($project, 'แก้ไขงาน');
+        $this->requireRole($project, 'member', 'แก้ไขงาน');
 
         // เปลี่ยนคอลัมน์ผ่าน column_id หรือสถานะเดิม (ถ้าส่งมา)
         $columnInput = Request::input('column_id');
@@ -189,6 +193,8 @@ class ProjectTaskController
 
     /**
      * DELETE /api/projects/tasks/{tid}
+     *
+     * สมาชิกขึ้นไปลบงานได้ ผู้ดูอย่างเดียวและแขกถูกปฏิเสธ
      */
     public function apiTaskDelete(string $tid): void
     {
@@ -206,7 +212,7 @@ class ProjectTaskController
             Response::json(['error' => 'ไม่พบข้อมูลงาน'], 404);
         }
 
-        $this->requireEditor($project, 'ลบงาน');
+        $this->requireRole($project, 'member', 'ลบงาน');
 
         if (ProjectTask::delete($taskId)) {
             ProjectActivity::log($task['project_id'], $userId, 'ลบงานย่อย: "' . $task['title'] . '"');
@@ -236,7 +242,7 @@ class ProjectTaskController
             Response::json(['error' => 'ไม่พบข้อมูลโปรเจค'], 404);
         }
 
-        $this->requireEditor($project, 'จัดเรียงงาน');
+        $this->requireRole($project, 'member', 'จัดเรียงงาน');
 
         // โหลดคอลัมน์ครั้งเดียวแล้วใช้ทั้งการตรวจ column_id และการแปลสถานะเดิม
         $columns = ProjectColumn::listForProject($projectId);

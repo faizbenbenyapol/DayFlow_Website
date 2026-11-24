@@ -21,10 +21,10 @@ class ProjectShareController
             Response::json(['error' => 'ไม่พบข้อมูลโปรเจค'], 404);
         }
 
-        $this->requireOwner($project, 'เปิดลิงก์สาธารณะ');
+        $this->requireRole($project, 'admin', 'เปิดลิงก์สาธารณะ');
 
-        $shareRole = Request::input('share_role', 'Viewer');
-        if (!in_array($shareRole, ProjectMember::GRANTABLE_ROLES, true)) {
+        $shareRole = (string)Request::input('share_role', 'Viewer');
+        if (!in_array($shareRole, ProjectMember::SHARE_ROLES, true)) {
             Response::json(['error' => 'สิทธิ์ไม่ถูกต้อง'], 422);
         }
         
@@ -60,7 +60,7 @@ class ProjectShareController
             Response::json(['error' => 'ไม่พบข้อมูลโปรเจค'], 404);
         }
 
-        $this->requireOwner($project, 'ปิดลิงก์สาธารณะ');
+        $this->requireRole($project, 'admin', 'ปิดลิงก์สาธารณะ');
 
         DB::run(
             'UPDATE projects SET share_token = NULL WHERE id = ?',

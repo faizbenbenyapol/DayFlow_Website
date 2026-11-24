@@ -119,13 +119,20 @@ class Project
 
     /**
      * อัปเดตโครงการ
+     *
+     * รับรหัสโปรเจคและฟิลด์ที่อนุญาต (ชื่อ คำอธิบาย ประเภท สถานะ ความสำคัญ วันครบกำหนด)
+     * ผู้เรียกต้องตรวจสิทธิ์มาก่อนแล้ว (ผู้ดูแลแก้ฟิลด์ทั่วไป เจ้าของเปลี่ยนประเภท)
+     * คืน true เมื่อมีแถวที่ตรงรหัส ไม่มีผลข้างเคียงอื่น
+     *
+     * @param int $id รหัสโปรเจค
+     * @param array<string, mixed> $data ฟิลด์ที่จะเขียน
      */
-    public static function update(int $id, int $userId, array $data): bool
+    public static function update(int $id, array $data): bool
     {
         $fields = [];
         $params = [];
 
-        $allowed = ['name', 'description', 'status', 'priority', 'due_date'];
+        $allowed = ['name', 'description', 'type', 'status', 'priority', 'due_date'];
         foreach ($allowed as $field) {
             if (array_key_exists($field, $data)) {
                 $fields[] = "`$field` = ?";
@@ -136,10 +143,9 @@ class Project
         if (empty($fields)) return false;
 
         $params[] = $id;
-        $params[] = $userId;
 
         return DB::run(
-            'UPDATE projects SET ' . implode(', ', $fields) . ' WHERE id = ? AND user_id = ?',
+            'UPDATE projects SET ' . implode(', ', $fields) . ' WHERE id = ?',
             $params
         )->rowCount() > 0;
     }

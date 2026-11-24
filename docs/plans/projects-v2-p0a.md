@@ -19,7 +19,8 @@ branch: `feat/projects-v2-p0a` จาก main `6b83dc8` · PR เดียว
 | สถานะงาน | `project_tasks.status ENUM('To Do','In Progress','Review','Done')` ตายตัว | อ่าน/เขียนใน 9 ไฟล์: `ProjectTask.php`, `Project.php` (นับเสร็จ 3 จุด), `ProjectTaskController.php`, `DashboardController.php` (2 จุด), `dashboard.js` (ติ๊กเสร็จจากแดชบอร์ด), `projects-board.js`, `projects.js`, `views/projects/index.php`, `seed-screenshots.php` |
 | บทบาท | `project_members.role` เป็นข้อความ `Editor`/`Viewer` เจ้าของคือ `projects.user_id` ลิงก์แชร์ใช้ `projects.share_role` | `ProjectAccess.php` (`requireEditor`, `requireOwner`), `ProjectTeamController.php`, `ProjectMember.php` |
 | ประเภท | ไม่มี | ใหม่ |
-| เอาสมาชิกออก | ลบแถวสมาชิกอย่างเดียว งานยังผูก `assignee_user_id` ของเขาไว้ | `ProjectTeamController::apiRemoveMember` |
+| เอาสมาชิกออก | ล้าง `assignee_user_id` ของงานให้แล้ว (แก้ข้อมูลในแผนฉบับแรกที่เขียนผิด) แต่ไม่มี `updated_at = updated_at` เวลาแก้ไขล่าสุดของงานจึงเปลี่ยน | `ProjectMember::removeMember` |
+| ลิงก์แชร์ | ใช้ `GRANTABLE_ROLES` ชุดเดียวกับการเชิญคน ถ้าเพิ่ม Admin ตรง ๆ ลิงก์สาธารณะจะเป็นผู้ดูแลได้ | แยก `SHARE_ROLES` |
 | เปลี่ยนบทบาท | ไม่มี endpoint ต้องเอาออกแล้วเชิญใหม่ | ใหม่ |
 | บัญชีตัวอย่าง | `core/DemoReset.php` คัดลอก `project_tasks` ทีละแถว (`PROJECT_CHILDREN`) | ต้องคัดลอก `project_columns` ด้วย และแปลง `column_id` ให้ชี้คอลัมน์ชุดใหม่ ไม่งั้นงานตัวอย่างชี้คอลัมน์ของโปรเจคต้นฉบับ |
 
@@ -93,6 +94,7 @@ ProjectColumn::delete($projectId, $columnId, $moveToId);      // ย้ายง
 ## 6.1 สมมติฐานที่ใช้ (ตัดสินเอง ย้อนได้ รอเจ้าของทักถ้าไม่ตรง)
 
 - ชื่อคอลัมน์ 1–60 ตัวอักษร ห้ามซ้ำในโปรเจคเดียวกัน สูงสุด 12 คอลัมน์ต่อโปรเจค
+- เปิด/ปิดลิงก์แชร์เป็นการตั้งค่าโปรเจค ผู้ดูแลทำได้ (เดิมเจ้าของเท่านั้น) ลิงก์แชร์เป็นได้แค่ สมาชิก/ดูอย่างเดียว
 - คอลัมน์เรียงตามกลุ่มเสมอ (ยังไม่เริ่ม → กำลังทำ → เสร็จ) เรียงได้ภายในกลุ่ม ตรงกับ mockup แบบ A
 - ย้ายคอลัมน์ข้ามกลุ่มหรือลบคอลัมน์แล้วย้ายงาน ไม่เปลี่ยนเวลาแก้ไขล่าสุดของงาน (ผู้ใช้แก้คอลัมน์ ไม่ได้แก้งาน)
 - client เดิมที่ส่ง `status` ยังใช้ได้: To Do → คอลัมน์แรกของ todo, In Progress → คอลัมน์แรกของ doing, Review → คอลัมน์สุดท้ายของ doing, Done → คอลัมน์แรกของ done

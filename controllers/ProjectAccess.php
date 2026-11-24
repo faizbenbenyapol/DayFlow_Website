@@ -27,39 +27,6 @@ trait ProjectAccess
     }
 
     /**
-     * Stops unless the caller may change project content.
-     *
-     * Viewer is the read-only role, and it is what a public share link hands a
-     * guest. This used to be written out at each task endpoint and missing from
-     * the others, which let a Viewer post into the project chat.
-     */
-    private function requireEditor(array $project, string $action): void
-    {
-        // Fails closed: a role this code does not know (a row written before
-        // roles were validated) is read-only rather than editor.
-        $canEdit = !empty($project['is_owner'])
-            || in_array($project['user_role'] ?? '', ['Owner', 'Editor'], true);
-        if (!$canEdit) {
-            Response::json(['error' => 'คุณมีสิทธิ์ดูเท่านั้น ไม่สามารถ' . $action . 'ได้'], 403);
-        }
-    }
-
-    /**
-     * Stops unless the caller owns the project.
-     *
-     * Renaming, deleting, managing members and share links are the owner's
-     * alone. The model's WHERE clause already refused to touch another
-     * person's row, but the endpoints reported that as success or as a 500
-     * rather than as a refusal.
-     */
-    private function requireOwner(array $project, string $action): void
-    {
-        if (empty($project['is_owner'])) {
-            Response::json(['error' => 'เฉพาะเจ้าของโครงการเท่านั้นที่' . $action . 'ได้'], 403);
-        }
-    }
-
-    /**
      * หยุดเมื่อผู้เรียกมีสิทธิ์ต่ำกว่าระดับที่กำหนด
      *
      * ลำดับ: เจ้าของ 4, Admin 3, Editor 2, Viewer 1, ค่าที่ไม่รู้จัก 0 (ปิดไว้ก่อน)

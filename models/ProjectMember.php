@@ -6,10 +6,34 @@
 class ProjectMember
 {
     /**
-     * Roles an owner can hand out to a member or a share link. Owner is
-     * implied by owning the project and is never granted.
+     * บทบาทที่แถวสมาชิกถือได้ (เจ้าของมาจาก projects.user_id ไม่ใช่แถวนี้)
      */
-    public const GRANTABLE_ROLES = ['Editor', 'Viewer'];
+    public const MEMBER_ROLES = ['Admin', 'Editor', 'Viewer'];
+
+    /**
+     * บทบาทที่ลิงก์แชร์สาธารณะให้ได้ — ลิงก์สาธารณะเป็นผู้ดูแลไม่ได้
+     */
+    public const SHARE_ROLES = ['Editor', 'Viewer'];
+
+    /**
+     * แปลงค่าบทบาทในฐานข้อมูลเป็นชื่อไทยสำหรับบันทึกกิจกรรม
+     *
+     * รับรหัสบทบาท เช่น Admin และคืนชื่อไทย ผู้ดูแล / สมาชิก / ดูอย่างเดียว
+     * ค่าที่ไม่รู้จักคืนตามเดิม ไม่มีผลข้างเคียง
+     *
+     * @param string $role บทบาทในฐานข้อมูล
+     * @return string ชื่อไทย
+     */
+    public static function roleLabel(string $role): string
+    {
+        return match ($role) {
+            'Owner'  => 'เจ้าของ',
+            'Admin'  => 'ผู้ดูแล',
+            'Editor' => 'สมาชิก',
+            'Viewer' => 'ดูอย่างเดียว',
+            default  => $role,
+        };
+    }
 
     /**
      * ดึงสิทธิ์/บทบาทของสมาชิกในโปรเจค
@@ -87,9 +111,24 @@ class ProjectMember
     }
 
     /**
+     * เปลี่ยนบทบาทของสมาชิกในโครงการ
+     *
+     * รับรหัสโปรเจค รหัสผู้ใช้ และบทบาทใหม่ แล้วอัปเดตแถวสมาชิกของโปรเจคนี้
+     * คืน true เมื่อเจอแถว (แม้ค่าเดิม) และ false เมื่อไม่ใช่สมาชิกของโปรเจคนี้
+     */
+    public static function updateRole(int $projectId, int $userId, string $role): bool
+    {
+        return DB::run(
+            'UPDATE project_members SET role = ? WHERE project_id = ? AND user_id = ?',
+            [$role, $projectId, $userId]
+        )->rowCount() > 0;
+    }
+
+    /**
      * ลบสมาชิกออกจากโครงการ
      *
      * งานโปรเจคใดที่มอบหมายให้สมาชิกคนนี้จะถูกปลดผู้รับผิดชอบในการเรียกเดียวกัน
+     * และคงเวลาแก้ไขล่าสุดของงานไว้ (updated_at = updated_at) เพราะผู้ใช้ไม่ได้แก้งาน
      */
     public static function removeMember(int $projectId, int $userId): bool
     {
@@ -98,7 +137,8 @@ class ProjectMember
 
         try {
             DB::run(
-                'UPDATE project_tasks SET assignee_user_id = NULL, assignee = NULL WHERE project_id = ? AND assignee_user_id = ?',
+                'UPDATE project_tasks SET assignee_user_id = NULL, assignee = NULL, updated_at = updated_at
+                 WHERE project_id = ? AND assignee_user_id = ?',
                 [$projectId, $userId]
             );
 
