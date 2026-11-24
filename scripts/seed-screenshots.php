@@ -21,6 +21,7 @@ require_once ROOT . '/config/database.php';
 require_once ROOT . '/models/User.php';
 require_once ROOT . '/models/AccountData.php';
 require_once ROOT . '/models/StockPriceCache.php';
+require_once ROOT . '/models/ProjectColumn.php';
 
 if (APP_ENV === 'production') {
     fwrite(STDERR, "ไม่รันบน production: บัญชีนี้มีรหัสผ่านที่เปิดเผยอยู่ในไฟล์นี้\n");
@@ -227,11 +228,17 @@ try {
     $project = function (string $name, string $description, string $status, string $priority, ?string $due) use ($shotsId): int {
         DB::run('INSERT INTO projects (user_id, name, description, status, priority, due_date) VALUES (?, ?, ?, ?, ?, ?)',
             [$shotsId, $name, $description, $status, $priority, $due]);
-        return (int)DB::conn()->lastInsertId();
+        $projectId = (int)DB::conn()->lastInsertId();
+        ProjectColumn::createDefaults($projectId, 'general');
+        return $projectId;
     };
     $addTask = function (int $project, string $title, string $status, string $priority, ?string $due, ?string $category, ?string $assignee, int $position, ?string $checklist = null) use ($shotsId): void {
-        DB::run('INSERT INTO project_tasks (project_id, user_id, title, status, priority, due_date, category, assignee, position, checklist) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [$project, $shotsId, $title, $status, $priority, $due, $category, $assignee, $position, $checklist]);
+        $column = ProjectColumn::forLegacyStatus($project, $status);
+        if (!$column) {
+            throw new RuntimeException('ไม่พบคอลัมน์สำหรับสถานะ ' . $status);
+        }
+        DB::run('INSERT INTO project_tasks (project_id, user_id, title, status, column_id, priority, due_date, category, assignee, position, checklist) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [$project, $shotsId, $title, $status, (int)$column['id'], $priority, $due, $category, $assignee, $position, $checklist]);
     };
     $site = $project('เว็บไซต์ร้านกาแฟสาขาใหม่', 'ออกแบบและเปิดหน้าเว็บสำหรับสาขาที่สอง พร้อมระบบสั่งล่วงหน้า', 'In Progress', 'High', day(21));
     $addTask($site, 'ร่างหน้าแรกและเมนูอาหาร', 'Done', 'High', day(-4), 'ดีไซน์', 'บัญชีถ่ายภาพ', 0);

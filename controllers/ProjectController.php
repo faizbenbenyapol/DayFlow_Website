@@ -74,9 +74,15 @@ class ProjectController
 
         $status  = Request::input('status', 'Planning');
         $priority = Request::input('priority', 'Medium');
+        $type = (string)Request::input('type', 'general');
+        if (!in_array($type, Project::TYPES, true)) {
+            Response::json(['error' => 'ประเภทโปรเจคไม่ถูกต้อง'], 422);
+        }
+
         $data = $this->validateProjectData([
             'name'        => $name,
             'description' => Request::input('description', ''),
+            'type'        => $type,
             'status'      => $status,
             'priority'    => $priority,
             'due_date'    => Request::input('due_date', '')

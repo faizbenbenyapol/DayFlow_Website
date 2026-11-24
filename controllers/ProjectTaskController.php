@@ -32,6 +32,7 @@ class ProjectTaskController
         Response::json([
             'project'    => $project,
             'tasks'      => $tasks,
+            'columns'    => ProjectColumn::listForProject($projectId),
             'activities' => $activities,
             'ai'         => $aiInsight
         ]);
@@ -57,9 +58,15 @@ class ProjectTaskController
             Response::json(['error' => 'กรุณาระบุชื่องาน'], 422);
         }
 
+        // column_id มาก่อน ถ้าไม่ส่งจึงแปลสถานะเดิม ถ้าไม่ส่งทั้งคู่ให้ลงคอลัมน์แรกของ todo
+        $column = self::resolveColumn(
+            $projectId,
+            Request::input('column_id'),
+            Request::input('status')
+        );
+
         $data = [
             'title'     => $title,
-            'status'    => Request::input('status', 'To Do'),
             'priority'  => Request::input('priority', 'Medium'),
             'due_date'  => Request::input('due_date', ''),
             'category'  => Request::input('category', ''),
@@ -72,7 +79,7 @@ class ProjectTaskController
             $data = self::applyAssigneeUserId($projectId, $data, $json['assignee_user_id']);
         }
 
-        $taskId = ProjectTask::create($userId, $projectId, $data);
+        $taskId = ProjectTask::create($userId, $projectId, $column, $data);
         ProjectActivity::log($projectId, $userId, 'เพิ่มงานย่อยใหม่: "' . $title . '"');
 
         Response::json(['ok' => true, 'id' => $taskId], 201);
@@ -87,19 +94,32 @@ class ProjectTaskController
         $taskId = (int)$tid;
 
         $task = ProjectTask::getById($taskId);
-        if (!$task) {
-            Response::json(['error' => 'ไม่พบข้อมูลงานย่อย'], 404);
+        $project = null;
+        if ($task) {
+            $project = Project::getById((int)$task['project_id'], $userId);
         }
 
-        $project = Project::getById($task['project_id'], $userId);
-        if (!$project) {
-            Response::json(['error' => 'คุณไม่มีสิทธิ์เข้าถึงโครงการนี้'], 403);
+        // EDGE-P4: งานที่ไม่มี งานของคนอื่น และงานที่ถูกลบ ต้องตอบเหมือนกัน
+        if (!$task || !$project) {
+            Response::json(['error' => 'ไม่พบข้อมูลงาน'], 404);
         }
 
         $this->requireEditor($project, 'แก้ไขงาน');
 
+        // เปลี่ยนคอลัมน์ผ่าน column_id หรือสถานะเดิม (ถ้าส่งมา)
+        $columnInput = Request::input('column_id');
+        $statusInput = Request::input('status');
+        $moveTo = null;
+        if ($columnInput !== null || $statusInput !== null) {
+            $moveTo = self::resolveColumn((int)$task['project_id'], $columnInput, $statusInput);
+        }
+        // บอร์ดเดิมส่ง status ทุกครั้งที่บันทึก: คอลัมน์เดิมจึงไม่ใช่การย้าย
+        if ($moveTo !== null && (int)$moveTo['id'] === (int)($task['column_id'] ?? 0)) {
+            $moveTo = null;
+        }
+
         $data = [];
-        $allowed = ['title', 'status', 'priority', 'due_date', 'category', 'assignee', 'checklist'];
+        $allowed = ['title', 'priority', 'due_date', 'category', 'assignee', 'checklist'];
         $changes = [];
 
         foreach ($allowed as $field) {
@@ -126,11 +146,21 @@ class ProjectTaskController
             }
         }
 
-        if (empty($data)) {
+        if (empty($data) && $moveTo === null) {
             Response::json(['error' => 'ไม่มีข้อมูลสำหรับแก้ไข'], 400);
         }
 
-        if (ProjectTask::update($taskId, $data)) {
+        $changed = false;
+        if (!empty($data)) {
+            $changed = ProjectTask::update($taskId, $data);
+        }
+        if ($moveTo !== null) {
+            ProjectTask::moveTo($taskId, (int)$task['project_id'], $moveTo);
+            $changed = true;
+            $changes[] = 'คอลัมน์ เปลี่ยนเป็น \'' . $moveTo['name'] . '\'';
+        }
+
+        if ($changed) {
             // ดึงกิจกรรม
             $actText = 'อัปเดตงานย่อย "' . ($data['title'] ?? $task['title']) . '"';
             if (!empty($changes)) {
@@ -138,8 +168,8 @@ class ProjectTaskController
             }
             ProjectActivity::log($task['project_id'], $userId, $actText);
 
-            // Send notification if task is marked as Done
-            if (isset($data['status']) && $data['status'] === 'Done' && $task['status'] !== 'Done') {
+            // แจ้ง Telegram เมื่อย้ายงานเข้าคอลัมน์กลุ่ม done จากกลุ่มอื่น
+            if ($moveTo !== null && $moveTo['grp'] === 'done' && $task['status'] !== 'Done') {
                 $msg = TelegramService::formatMessage(
                     "✅ งานในโปรเจคเสร็จสมบูรณ์",
                     [
@@ -166,13 +196,14 @@ class ProjectTaskController
         $taskId = (int)$tid;
 
         $task = ProjectTask::getById($taskId);
-        if (!$task) {
-            Response::json(['error' => 'ไม่พบข้อมูลงานย่อย'], 404);
+        $project = null;
+        if ($task) {
+            $project = Project::getById((int)$task['project_id'], $userId);
         }
 
-        $project = Project::getById($task['project_id'], $userId);
-        if (!$project) {
-            Response::json(['error' => 'คุณไม่มีสิทธิ์เข้าถึงโครงการนี้'], 403);
+        // EDGE-P4: งานที่ไม่มี งานของคนอื่น และงานที่ถูกลบ ต้องตอบเหมือนกัน
+        if (!$task || !$project) {
+            Response::json(['error' => 'ไม่พบข้อมูลงาน'], 404);
         }
 
         $this->requireEditor($project, 'ลบงาน');
@@ -196,7 +227,7 @@ class ProjectTaskController
         $projectId = (int)($payload['project_id'] ?? 0);
         $items     = $payload['items'] ?? [];
 
-        if (!$projectId || empty($items)) {
+        if (!$projectId || !is_array($items) || $items === []) {
             Response::json(['error' => 'ข้อมูลโปรเจคหรือโครงสร้างงานไม่ถูกต้อง'], 400);
         }
 
@@ -207,10 +238,86 @@ class ProjectTaskController
 
         $this->requireEditor($project, 'จัดเรียงงาน');
 
-        ProjectTask::reorder($projectId, $items);
+        // โหลดคอลัมน์ครั้งเดียวแล้วใช้ทั้งการตรวจ column_id และการแปลสถานะเดิม
+        $columns = ProjectColumn::listForProject($projectId);
+        $byId = [];
+        foreach ($columns as $column) {
+            $byId[(int)$column['id']] = $column;
+        }
+
+        $normalized = [];
+        foreach (array_values($items) as $item) {
+            if (!is_array($item)) {
+                Response::json(['error' => 'ข้อมูลงานไม่ถูกต้อง'], 422);
+            }
+            $column = null;
+            if (array_key_exists('column_id', $item) && $item['column_id'] !== null && $item['column_id'] !== '') {
+                $column = $byId[(int)$item['column_id']] ?? null;
+                if (!$column) {
+                    Response::json(['error' => 'ไม่พบคอลัมน์'], 404);
+                }
+            } elseif (isset($item['status'])) {
+                $legacy = is_string($item['status']) ? $item['status'] : '';
+                $grp = ProjectColumn::LEGACY_STATUS_GROUPS[$legacy] ?? null;
+                if ($grp === null) {
+                    Response::json(['error' => 'สถานะไม่ถูกต้อง'], 422);
+                }
+                $column = ProjectColumn::pickGroupColumn($columns, $grp, $legacy === 'Review');
+                if (!$column) {
+                    Response::json(['error' => 'ไม่พบคอลัมน์'], 404);
+                }
+            } else {
+                Response::json(['error' => 'ข้อมูลงานไม่ถูกต้อง'], 422);
+            }
+
+            $normalized[] = [
+                'id'        => (int)($item['id'] ?? 0),
+                'column_id' => (int)$column['id'],
+                'position'  => (int)($item['position'] ?? 0),
+            ];
+        }
+
+        ProjectTask::reorder($projectId, $normalized);
         ProjectActivity::log($projectId, $userId, 'จัดตำแหน่งลำดับบอร์ดคัมบังใหม่');
 
         Response::json(['ok' => true]);
+    }
+
+    /**
+     * แปลง column_id หรือสถานะเดิมให้เป็นคอลัมน์ของโปรเจค
+     *
+     * ถ้าไม่ส่งทั้งคู่จะใช้คอลัมน์แรกของ todo (ใช้ตอนสร้างงาน)
+     * หยุดด้วย 404 "ไม่พบคอลัมน์" เมื่อไม่ใช่คอลัมน์ของโปรเจค
+     * และ 422 "สถานะไม่ถูกต้อง" เมื่อสถานะเดิมไม่รู้จัก
+     *
+     * @param int $projectId รหัสโปรเจค
+     * @param mixed $columnId ค่า column_id ที่ client ส่งมา (null = ไม่ได้ส่ง)
+     * @param mixed $legacyStatus ค่า status เดิมที่ client ส่งมา (null = ไม่ได้ส่ง)
+     * @return array<string, mixed> คอลัมน์ที่เลือก
+     */
+    private static function resolveColumn(int $projectId, mixed $columnId, mixed $legacyStatus): array
+    {
+        if ($columnId !== null) {
+            $column = ProjectColumn::findInProject($projectId, (int)$columnId);
+            if (!$column) {
+                Response::json(['error' => 'ไม่พบคอลัมน์'], 404);
+            }
+            return $column;
+        }
+
+        if ($legacyStatus !== null) {
+            $column = ProjectColumn::forLegacyStatus($projectId, (string)$legacyStatus);
+            if (!$column) {
+                Response::json(['error' => 'สถานะไม่ถูกต้อง'], 422);
+            }
+            return $column;
+        }
+
+        $column = ProjectColumn::forLegacyStatus($projectId, 'To Do');
+        if (!$column) {
+            Response::json(['error' => 'ไม่พบคอลัมน์'], 404);
+        }
+        return $column;
     }
 
     /**

@@ -79,7 +79,10 @@ test('projects visitors made are cleared and the sample projects come back whole
     withDemoAccount(function (int $demoId, int $otherId): void {
         DB::run("INSERT INTO projects (user_id, name) VALUES (?, 'โปรเจกต์ตัวอย่าง')", [$demoId]);
         $sampleId = (int)DB::conn()->lastInsertId();
-        DB::run("INSERT INTO project_tasks (project_id, user_id, title, status) VALUES (?, ?, 'งานในโปรเจกต์', 'Review')", [$sampleId, $demoId]);
+        DB::run("INSERT INTO project_columns (project_id, name, grp, position) VALUES (?, 'ต้องทำ', 'todo', 0)", [$sampleId]);
+        $sampleColumnId = (int)DB::conn()->lastInsertId();
+        DB::run("INSERT INTO project_columns (project_id, name, grp, position) VALUES (?, 'กำลังทำ', 'doing', 1)", [$sampleId]);
+        DB::run("INSERT INTO project_tasks (project_id, user_id, column_id, title, status) VALUES (?, ?, ?, 'งานในโปรเจกต์', 'To Do')", [$sampleId, $demoId, $sampleColumnId]);
         DB::run("INSERT INTO project_chats (project_id, user_id, message) VALUES (?, ?, 'สวัสดี')", [$sampleId, $demoId]);
         DB::run("INSERT INTO projects (user_id, name) VALUES (?, 'ของคนจริง')", [$otherId]);
         $realId = (int)DB::conn()->lastInsertId();
@@ -96,11 +99,17 @@ test('projects visitors made are cleared and the sample projects come back whole
         $projects = DB::run('SELECT id, name FROM projects WHERE user_id = ?', [$demoId])->fetchAll();
         assertSame(['โปรเจกต์ตัวอย่าง'], array_column($projects, 'name'), 'only the sample project is left');
         $restoredId = (int)$projects[0]['id'];
-        assertSame(
-            [['title' => 'งานในโปรเจกต์', 'status' => 'Review']],
-            DB::run('SELECT title, status FROM project_tasks WHERE project_id = ?', [$restoredId])->fetchAll(),
-            'its tasks are back inside it'
-        );
+
+        $task = DB::run('SELECT title, status, column_id FROM project_tasks WHERE project_id = ?', [$restoredId])->fetch();
+        assertSame('งานในโปรเจกต์', $task['title'], 'its tasks are back inside it');
+        assertSame('To Do', $task['status'], 'the status comes back with the task');
+
+        // The restored task must point at a column of the restored project.
+        $columnProject = DB::run('SELECT project_id FROM project_columns WHERE id = ?', [(int)$task['column_id']])->fetchColumn();
+        assertSame($restoredId, (int)$columnProject, 'the task points at a column of the restored project');
+        assertTrue((int)$task['column_id'] !== $sampleColumnId, 'the task no longer points at the old column id');
+        assertSame(['ต้องทำ', 'กำลังทำ'], DB::run('SELECT name FROM project_columns WHERE project_id = ? ORDER BY position', [$restoredId])->fetchAll(PDO::FETCH_COLUMN));
+
         assertSame(['สวัสดี'], DB::run('SELECT message FROM project_chats WHERE project_id = ?', [$restoredId])->fetchAll(PDO::FETCH_COLUMN));
         assertSame('ของคนจริง', DB::run('SELECT name FROM projects WHERE id = ?', [$realId])->fetchColumn(), 'a real project is never touched');
     });

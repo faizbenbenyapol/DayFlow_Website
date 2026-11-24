@@ -17,8 +17,11 @@
 
 final class DemoReset
 {
-    /** Rows that live inside a project, restored after their project. */
-    private const PROJECT_CHILDREN = ['project_tasks', 'project_activities', 'project_chats'];
+    /**
+     * Rows that live inside a project, restored after their project.
+     * Columns come first so tasks can be pointed at the restored column ids.
+     */
+    private const PROJECT_CHILDREN = ['project_columns', 'project_tasks', 'project_activities', 'project_chats'];
 
     /** Where the snapshot lives. storage/ is outside the web root. */
     public static function snapshotPath(): string
@@ -117,6 +120,7 @@ final class DemoReset
             DB::run('DELETE FROM projects WHERE user_id = ?', [$demoUserId]);
 
             $newIds = [];
+            $newColumnIds = [];
             $counts = ['projects' => 0];
             foreach ((array)($snapshot['projects'] ?? []) as $row) {
                 // A visitor may not make project links, so none comes back.
@@ -135,8 +139,21 @@ final class DemoReset
                     $projectId = $newIds[(string)($row['project_id'] ?? '')] ?? null;
                     if ($projectId === null) continue;
 
+                    $oldId = (string)($row['id'] ?? '');
                     unset($row['id']);
-                    self::insert($table, array_merge($row, ['project_id' => $projectId, 'user_id' => $demoUserId]));
+                    $row['project_id'] = $projectId;
+
+                    if ($table === 'project_columns') {
+                        // project_columns has no user_id of its own.
+                        self::insert($table, $row);
+                        $newColumnIds[$oldId] = (int)$conn->lastInsertId();
+                    } elseif ($table === 'project_tasks') {
+                        // Point the task at the restored column, never the old one.
+                        $row['column_id'] = $newColumnIds[(string)($row['column_id'] ?? '')] ?? null;
+                        self::insert($table, array_merge($row, ['user_id' => $demoUserId]));
+                    } else {
+                        self::insert($table, array_merge($row, ['user_id' => $demoUserId]));
+                    }
                     $counts[$table]++;
                 }
             }
