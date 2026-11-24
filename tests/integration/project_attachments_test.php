@@ -9,6 +9,7 @@
 declare(strict_types=1);
 
 require_once ROOT . '/config/database.php';
+require_once ROOT . '/tests/fake-google/helpers.php';
 
 /**
  * โปรเจคพร้อมเจ้าของ ผู้ดูแล สมาชิก ผู้ดู คนนอก และแขกจากลิงก์แชร์ มีงานสองงาน
@@ -172,4 +173,28 @@ test('the Files page counts attachments, and deleting the file removes them', fu
         'its attachments disappear with it');
     assertSame(404, $f['viewer']->get('/api/projects/tasks/' . $f['taskId'] . '/files/' . $fileId)['status'],
         'and the old download link says not found');
+});
+
+test("a file kept in the attacher's Google Drive downloads for everyone in the project", function (TestClient $_c): void {
+    $f = attachFixture();
+    $username = 'att_drive_' . TEST_RUN_ID;
+    $driver = new TestClient(TEST_BASE_URL);
+    $driver->login($username, 'TestPass123!');
+    $link = linkDrive($username, 'att-drive@example.com');
+    $f['owner']->post('/api/projects/' . $f['projectId'] . '/members', ['email_or_username' => $username, 'role' => 'Editor']);
+
+    $bytes = random_bytes(40000);
+    $res = $driver->upload('/api/projects/tasks/' . $f['taskId'] . '/files', 'file', 'แบบร่าง.bin', $bytes);
+    assertSame(201, $res['status'], 'a member with Drive attaches a file');
+    $row = DB::run('SELECT f.file_path, f.drive_id, p.drive_id AS folder_drive FROM files f JOIN files p ON p.id = f.parent_id WHERE f.id = ?',
+        [(int)($driver->json($res)['file_id'] ?? 0)])->fetch();
+    assertSame(null, $row['file_path'], 'nothing is kept on the server');
+    $driveFiles = fakeDriveFiles();
+    assertSame([$row['folder_drive']], $driveFiles[$row['drive_id']]['parents'], 'the file sits in the project folder in Drive');
+    assertSame([$link['folder']], $driveFiles[$row['folder_drive']]['parents'], 'and that folder sits in the DayFlow folder');
+
+    // ผู้ดูไม่ได้เชื่อม Drive แต่ดาวน์โหลดได้ เพราะเซิร์ฟเวอร์ใช้สิทธิ์ของคนแนบ
+    $download = $f['viewer']->get('/api/projects/tasks/' . $f['taskId'] . '/files/' . (int)($driver->json($res)['file_id'] ?? 0));
+    assertSame(200, $download['status'], 'a viewer without Drive downloads it');
+    assertSame(md5($bytes), md5($download['body']), 'and gets the same bytes back');
 });
