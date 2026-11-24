@@ -903,20 +903,119 @@ async function main() {
         check(await tab.eval(`document.querySelector('#col-${secondColumnId}-list .kanban-card').dataset.priority`) === 'critical', 'and its priority shows');
         check(await tab.eval(`document.querySelector('#col-${secondColumnId}-list .kcard-check').textContent.includes('0/1')`), 'with its checklist count');
 
-        await click(tab, '#btnInviteMember');
-        await sleep(600);
-        check(await tab.eval(`document.getElementById('inviteMemberModal').classList.contains('active')`), 'the team dialog opens');
-        check(await tab.eval(`document.querySelectorAll('#projectMembersList .member-item').length`) >= 1, 'it lists the members');
-        await click(tab, '#inviteMemberForm [type="submit"]');
-        await sleep(200);
-        check(await tab.eval(`!document.getElementById('inviteError').hidden`), 'inviting nobody shows an error in the form');
-        await tab.eval(`closeModal('inviteMemberModal')`);
-
         await fill(tab, '#chatMessageInput', `สวัสดีทีม ${STAMP}`);
         await tab.eval(`document.getElementById('chatMessageInput').focus()`);
         await key(tab, 'Enter');
         await sleep(1200);
         check(await tab.eval(`document.getElementById('chatMessagesList').textContent.includes(${JSON.stringify(STAMP)})`), 'a chat message appears after sending');
+
+        // ---------- the settings tab: team, columns and type ----------
+        console.log('Project settings');
+        await click(tab, '#tabSettings');
+        await sleep(300);
+        check(await tab.eval(`document.getElementById('tabSettings').getAttribute('aria-selected')`) === 'true', 'the settings tab opens');
+        check(await tab.eval(`document.getElementById('settingsPanel').hidden === false && document.getElementById('boardPanel').hidden`), 'and the board makes room for it');
+        check(await tab.eval(`document.getElementById('settingsNavTeam').getAttribute('aria-current')`) === 'page', 'team and permissions is the first section');
+        check(await tab.eval(`document.getElementById('teamSoloEmpty').hidden === false`), 'a fresh project says the owner is alone');
+        check(await tab.eval(`document.getElementById('teamSoloEmpty').textContent.includes('ตอนนี้มีคุณคนเดียว')`), 'and invites the first teammate');
+        check(await tab.eval(`document.querySelector('.perm th.mine')?.dataset.roleCol`) === 'owner', 'the permission table underlines the caller\'s role');
+
+        // Invite an existing test account, change its role, then remove it again.
+        const beforeMembers = await api(tab, `/api/projects/${second.body.id}/members`);
+        const leftover = (beforeMembers.body.members || []).find(m => m.username === 'shots_empty');
+        if (leftover) await api(tab, `/api/projects/${second.body.id}/members/${leftover.id}`, { method: 'DELETE' });
+        await fill(tab, '#inviteSearchInput', 'shots_empty');
+        await fill(tab, '#inviteRoleSelect', 'Editor');
+        await click(tab, '#inviteMemberForm [type="submit"]');
+        await sleep(1500);
+        check(await tab.eval(`[...document.querySelectorAll('#projectMembersList .member')].some(m => m.textContent.includes('ผู้ใช้ใหม่'))`), 'the invited member appears in the team');
+        await tab.eval(`(() => {
+            const row = [...document.querySelectorAll('#projectMembersList .member')].find(m => m.textContent.includes('ผู้ใช้ใหม่'));
+            const select = row?.querySelector('select');
+            if (!select) return false;
+            select.value = 'Viewer';
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            return true;
+        })()`);
+        await sleep(1500);
+        check(await tab.eval(`(() => {
+            const row = [...document.querySelectorAll('#projectMembersList .member')].find(m => m.textContent.includes('ผู้ใช้ใหม่'));
+            return row?.querySelector('select')?.value;
+        })()`) === 'Viewer', 'the role changes to viewer');
+        await tab.eval(`(() => {
+            const row = [...document.querySelectorAll('#projectMembersList .member')].find(m => m.textContent.includes('ผู้ใช้ใหม่'));
+            const button = row && [...row.querySelectorAll('button')].find(b => b.textContent.trim() === 'เอาออก');
+            if (!button) return false;
+            button.click();
+            return true;
+        })()`);
+        await sleep(300);
+        check(await tab.eval(`document.querySelector('.df-dialog[open]')?.textContent.includes('ผู้ใช้ใหม่')`), 'removing a member asks first');
+        await click(tab, '.df-dialog[open] button[type="submit"]');
+        await sleep(1500);
+        check(await tab.eval(`![...document.querySelectorAll('#projectMembersList .member')].some(m => m.textContent.includes('ผู้ใช้ใหม่'))`), 'the removed member is gone');
+
+        // Columns, variant A: add, rename, then delete a column that holds a task.
+        await click(tab, '#settingsNavColumns');
+        await sleep(300);
+        check(await tab.eval(`document.getElementById('columnsDenied').hidden`), 'an owner may edit the columns');
+        await click(tab, '#colAddButton-doing');
+        await sleep(200);
+        await fill(tab, '#colAddInput-doing', 'รอรีวิวโค้ด');
+        await click(tab, '#colAdd-doing .btn-primary');
+        await sleep(1500);
+        check(await tab.eval(`[...document.querySelectorAll('#colLines-doing input')].some(i => i.value === 'รอรีวิวโค้ด')`), 'a column is added to "กำลังทำ"');
+        await tab.eval(`(() => {
+            const input = [...document.querySelectorAll('#colLines-doing input')].find(i => i.value === 'รอรีวิวโค้ด');
+            if (!input) return false;
+            input.value = 'รอรีวิวโค้ด v2';
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            return true;
+        })()`);
+        await sleep(1500);
+        await click(tab, '#tabBoard');
+        await sleep(200);
+        check(await tab.eval(`[...document.querySelectorAll('#kanbanBoard .kanban-column-title')].some(h => h.textContent.trim() === 'รอรีวิวโค้ด v2')`), 'the board shows the new column name');
+        await click(tab, '#tabSettings');
+        await click(tab, '#settingsNavColumns');
+        await sleep(300);
+
+        await tab.eval(`(() => {
+            const row = [...document.querySelectorAll('#colLines-doing .col-line')].find(r => r.querySelector('input')?.value === 'กำลังทำ');
+            const button = row?.querySelector('button');
+            if (!button) return false;
+            button.click();
+            return true;
+        })()`);
+        await sleep(300);
+        check(await tab.eval(`document.getElementById('deleteColumnModal').classList.contains('active')`), 'deleting a column with tasks opens the move dialog');
+        check(await tab.eval(`document.getElementById('deleteColumnTitle').textContent.includes('กำลังทำ')`), 'the dialog names the column');
+        const doneColumnId = await tab.eval(`(() => {
+            const row = [...document.querySelectorAll('#columnsEditor .col-line')].find(r => r.querySelector('input')?.value === 'เสร็จแล้ว');
+            return row ? row.dataset.columnId : null;
+        })()`);
+        await fill(tab, '#deleteColumnMoveTo', doneColumnId);
+        await click(tab, '#deleteColumnForm [type="submit"]');
+        await sleep(1800);
+        check(await tab.eval(`document.getElementById('col-' + ${JSON.stringify(doneColumnId)} + '-list').textContent.includes(${JSON.stringify('งาน ' + STAMP)})`), 'the task moved to the chosen column');
+        check(await tab.eval(`[...document.querySelectorAll('#kanbanBoard .kanban-column-title')].every(h => h.textContent.trim() !== 'กำลังทำ')`), 'the deleted column left the board');
+        check(await tab.eval(`(() => {
+            const row = [...document.querySelectorAll('#columnsEditor .col-line')].find(r => r.querySelector('input')?.value === 'เสร็จแล้ว');
+            return !!row && !!row.querySelector('button[disabled]');
+        })()`), 'the only column of "เสร็จ" cannot be deleted');
+        check(await tab.eval(`document.getElementById('colLines-done').textContent.includes('คอลัมน์เดียวของกลุ่ม "เสร็จ" ต้องมีไว้ ลบไม่ได้')`), 'and says why');
+
+        // Type: the owner changes it and the coloured ear follows.
+        await click(tab, '#settingsNavType');
+        await sleep(300);
+        check(await tab.eval(`document.getElementById('typeChangeOwner').hidden === false`), 'the owner sees the type buttons');
+        await click(tab, '[data-type-button="marketing"]');
+        await sleep(300);
+        check(await tab.eval(`document.querySelector('.df-dialog[open]')?.textContent.includes('คอลัมน์ งาน ทีม และแชทไม่เปลี่ยน')`), 'changing type explains what is hidden');
+        await click(tab, '.df-dialog[open] button[type="submit"]');
+        await sleep(1800);
+        check(await tab.eval(`document.getElementById('activeProjectEar').textContent`) === 'การตลาด', 'the project ear names the new type');
+        check(await tab.eval(`document.getElementById('typeCurrentEar').textContent`) === 'การตลาด', 'and the type panel agrees');
 
         // A software project through the same two steps: its five columns come from its type.
         console.log('Project type');
@@ -959,6 +1058,10 @@ async function main() {
         await sleep(800);
         check(await tab.eval(`document.documentElement.scrollWidth <= window.innerWidth`), 'at 360px the projects page does not scroll sideways');
         check(await tab.eval(`document.getElementById('kanbanBoard').scrollWidth > document.getElementById('kanbanBoard').clientWidth`), 'the board scrolls its columns inside itself');
+        await click(tab, '#tabSettings');
+        await sleep(300);
+        check(await tab.eval(`document.documentElement.scrollWidth <= window.innerWidth`), 'at 360px the settings panel does not scroll sideways');
+        check(await tab.eval(`document.getElementById('settingsPanel').scrollWidth <= document.getElementById('settingsPanel').clientWidth`), 'the settings panel keeps its content inside itself');
         await tab.viewport({ width: 1366, height: 900, mobile: false });
 
         // ---------- outside the app ----------

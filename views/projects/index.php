@@ -90,14 +90,139 @@
                 <span class="me">คุณเป็น <b id="activeProjectRole"></b></span>
             </div>
             <div class="proj-board-actions">
-                <button class="btn btn-sm" type="button" id="btnInviteMember" data-act="openInviteMemberModal" hidden>ทีม (<span id="memberCountBadge">1</span>)</button>
                 <button class="btn btn-sm" type="button" id="btnEditProject" data-act="openEditProjectModal" hidden>แก้ไข</button>
                 <button class="btn btn-sm btn-danger" type="button" id="btnDeleteProject" data-act="deleteActiveProject" hidden>ลบโปรเจค</button>
             </div>
         </div>
     </div>
 
-    <div class="kanban-board" id="kanbanBoard"></div>
+    <div class="tabs" role="tablist" aria-label="มุมมองของโปรเจค" id="projectTabs">
+        <button class="tab" role="tab" type="button" id="tabBoard" aria-selected="true" aria-controls="boardPanel" data-act="showProjectTab" data-args='["board"]'>บอร์ด</button>
+        <?php if (!$isGuest): /* a share-link guest has no settings to change */ ?>
+        <button class="tab" role="tab" type="button" id="tabSettings" aria-selected="false" aria-controls="settingsPanel" data-act="showProjectTab" data-args='["settings"]'>ตั้งค่า</button>
+        <?php endif; ?>
+    </div>
+
+    <div id="boardPanel" role="tabpanel" aria-labelledby="tabBoard">
+        <div class="kanban-board" id="kanbanBoard"></div>
+    </div>
+
+    <div id="settingsPanel" role="tabpanel" aria-labelledby="tabSettings" hidden>
+        <nav class="subnav proj-subnav" aria-label="ตั้งค่าโปรเจค">
+            <button class="subnav-link" type="button" id="settingsNavTeam" aria-current="page" data-act="showSettingsSection" data-args='["team"]'>ทีมและสิทธิ์</button>
+            <button class="subnav-link" type="button" id="settingsNavColumns" data-act="showSettingsSection" data-args='["columns"]'>คอลัมน์</button>
+            <button class="subnav-link" type="button" id="settingsNavType" data-act="showSettingsSection" data-args='["type"]'>ประเภท</button>
+        </nav>
+
+        <!-- ทีมและสิทธิ์ -->
+        <div class="proj-settings-pane" id="settingsTeam">
+            <div class="sec">
+                <div class="sec-head">
+                    <h2>คนในโปรเจค</h2>
+                    <button class="btn btn-sm btn-primary" type="button" id="btnFocusInvite" data-act="focusInviteForm" hidden>ชวนคนเข้าทีม</button>
+                </div>
+                <div class="proj-members" id="projectMembersList"></div>
+
+                <div class="empty-state" id="teamSoloEmpty" hidden>
+                    <p class="empty-state-title">ตอนนี้มีคุณคนเดียว</p>
+                    <p class="empty-state-text">ทุกอย่างใช้ได้ครบโดยไม่ต้องมีทีม ปุ่ม "อนุมัติ" คุณกดของตัวเองได้ ช่องผู้รับผิดชอบเว้นว่างได้ ชวนคนเข้ามาเมื่อพร้อม</p>
+                    <button class="btn btn-primary" type="button" data-act="focusInviteForm">ชวนคนเข้าทีม</button>
+                </div>
+
+                <form id="inviteMemberForm" class="proj-invite" data-act="submitInviteMember" data-args='["$event"]' data-on="submit" novalidate hidden>
+                    <h3 class="subhead">เชิญคนเข้าทีม</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="inviteSearchInput">ชื่อผู้ใช้หรืออีเมล</label>
+                            <input type="text" id="inviteSearchInput" class="form-control" placeholder="ผู้ที่มีบัญชีในระบบนี้" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="inviteRoleSelect">สิทธิ์</label>
+                            <select id="inviteRoleSelect" class="form-control"></select>
+                        </div>
+                    </div>
+                    <p class="form-error" id="inviteError" role="alert" hidden></p>
+                    <button type="submit" class="btn btn-primary">เชิญเข้าทีม</button>
+                </form>
+
+                <div id="publicShareSection" hidden>
+                    <h3 class="subhead">ลิงก์สำหรับคนนอกทีม</h3>
+                    <div class="proj-share-row">
+                        <label class="proj-share-label" for="shareLinkToggle">เปิดให้เข้าผ่านลิงก์โดยไม่ต้องมีบัญชี</label>
+                        <label class="switch">
+                            <input type="checkbox" id="shareLinkToggle" data-act="togglePublicShare" data-on="change">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div id="shareLinkDetails" hidden>
+                        <div class="form-group">
+                            <label class="form-label" for="shareLinkRole">สิทธิ์ของคนที่เข้าผ่านลิงก์</label>
+                            <select id="shareLinkRole" class="form-control" data-act="updateShareRole" data-on="change">
+                                <option value="Viewer">ดูอย่างเดียว (ดูบอร์ดและแชท)</option>
+                                <option value="Editor">แก้ไขได้ (จัดการงานและแชท)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="shareLinkUrl">ลิงก์</label>
+                            <div class="proj-share-url">
+                                <input type="text" id="shareLinkUrl" class="form-control" readonly>
+                                <button type="button" class="btn btn-sm" data-act="copyShareUrl">คัดลอก</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sec">
+                <div class="sec-head"><h2>แต่ละบทบาททำอะไรได้</h2></div>
+                <div class="perm-wrap">
+                    <table class="perm">
+                        <thead>
+                            <tr>
+                                <th scope="col">ทำอะไร</th>
+                                <th scope="col" data-role-col="owner">เจ้าของ</th>
+                                <th scope="col" data-role-col="admin">ผู้ดูแล</th>
+                                <th scope="col" data-role-col="editor">สมาชิก</th>
+                                <th scope="col" data-role-col="viewer">ดูอย่างเดียว</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>ดูงาน ความคืบหน้า แชท</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+                            <tr><td>สร้าง แก้ ลากงาน เขียนความเห็น</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td></tr>
+                            <tr><td>ตั้งคอลัมน์ ชวนคน เอาคนออก ลิงก์แชร์</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
+                            <tr><td>ตั้งผู้ดูแล เปลี่ยนประเภท ลบโปรเจค</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- คอลัมน์ -->
+        <div class="proj-settings-pane" id="settingsColumns" hidden>
+            <div id="columnsEditor"></div>
+            <p class="alert alert-warning" id="columnsDenied" role="alert" hidden>คอลัมน์ตั้งได้เฉพาะเจ้าของและผู้ดูแล</p>
+        </div>
+
+        <!-- ประเภท -->
+        <div class="proj-settings-pane" id="settingsType" hidden>
+            <div class="sec">
+                <div class="sec-head"><h2>ประเภทของโปรเจคนี้</h2></div>
+                <div class="type-now" id="typeCurrentWrap">
+                    <span class="type-ear" id="typeCurrentEar"></span>
+                </div>
+                <div id="typeChangeOwner" hidden>
+                    <p class="proj-note">เปลี่ยนเป็น</p>
+                    <div class="proj-type-buttons">
+                        <button class="btn" type="button" data-type-button="general" data-act="changeProjectType" data-args='["general"]'>ทั่วไป</button>
+                        <button class="btn" type="button" data-type-button="software" data-act="changeProjectType" data-args='["software"]'>พัฒนาซอฟต์แวร์</button>
+                        <button class="btn" type="button" data-type-button="marketing" data-act="changeProjectType" data-args='["marketing"]'>การตลาดและคอนเทนต์</button>
+                        <button class="btn" type="button" data-type-button="finance" data-act="changeProjectType" data-args='["finance"]'>บัญชีและการเงิน</button>
+                    </div>
+                </div>
+                <p class="alert alert-warning" id="typeDenied" role="alert" hidden>เปลี่ยนประเภทได้เฉพาะเจ้าของ</p>
+            </div>
+        </div>
+    </div>
 </section>
 
 <div class="proj-widgets">
@@ -365,61 +490,28 @@
     </div>
 </div>
 
-<!-- The team and the public link -->
-<div class="modal-backdrop" id="inviteMemberModal" aria-hidden="true">
-    <div class="modal" role="dialog" aria-labelledby="teamTitle">
+<!-- Deleting a column that still holds tasks -->
+<div class="modal-backdrop" id="deleteColumnModal" aria-hidden="true">
+    <div class="modal modal-narrow" role="dialog" aria-labelledby="deleteColumnTitle">
         <div class="modal-header">
-            <h2 class="modal-title" id="teamTitle">ทีมของโปรเจค</h2>
+            <h2 class="modal-title" id="deleteColumnTitle">ลบคอลัมน์</h2>
             <button class="modal-close" type="button" aria-label="ปิด" data-close-modal>&times;</button>
         </div>
-        <div class="modal-body">
-            <h3 class="subhead">สมาชิก</h3>
-            <ul class="members-list-wrapper ruled-list" id="projectMembersList"></ul>
-
-            <form id="inviteMemberForm" data-act="submitInviteMember" data-args='["$event"]' data-on="submit" novalidate hidden>
-                <h3 class="subhead">เชิญคนเข้าทีม</h3>
+        <form id="deleteColumnForm" data-act="confirmDeleteColumn" data-args='["$event"]' data-on="submit" novalidate>
+            <div class="modal-body">
+                <p id="deleteColumnMessage"></p>
                 <div class="form-group">
-                    <label class="form-label" for="inviteSearchInput">ชื่อผู้ใช้หรืออีเมล</label>
-                    <input type="text" id="inviteSearchInput" class="form-control" placeholder="ผู้ที่มีบัญชีในระบบนี้" autocomplete="off">
+                    <label class="form-label" for="deleteColumnMoveTo">ย้ายงานไปที่</label>
+                    <select id="deleteColumnMoveTo" class="form-control"></select>
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="inviteRoleSelect">สิทธิ์</label>
-                    <select id="inviteRoleSelect" class="form-control">
-                        <option value="Editor" selected>แก้ไขได้ (เพิ่มและแก้งาน)</option>
-                        <option value="Viewer">ดูได้อย่างเดียว (ดูบอร์ดและแชท)</option>
-                    </select>
-                </div>
-                <p class="form-error" id="inviteError" role="alert" hidden></p>
-                <button type="submit" class="btn btn-primary">เชิญเข้าทีม</button>
-            </form>
-
-            <div id="publicShareSection" hidden>
-                <h3 class="subhead">ลิงก์สำหรับคนนอกทีม</h3>
-                <div class="proj-share-row">
-                    <label class="proj-share-label" for="shareLinkToggle">เปิดให้เข้าผ่านลิงก์โดยไม่ต้องมีบัญชี</label>
-                    <label class="switch">
-                        <input type="checkbox" id="shareLinkToggle" data-act="togglePublicShare" data-on="change">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <div id="shareLinkDetails" hidden>
-                    <div class="form-group">
-                        <label class="form-label" for="shareLinkRole">สิทธิ์ของคนที่เข้าผ่านลิงก์</label>
-                        <select id="shareLinkRole" class="form-control" data-act="updateShareRole" data-on="change">
-                            <option value="Viewer">ดูอย่างเดียว (ดูบอร์ดและแชท)</option>
-                            <option value="Editor">แก้ไขได้ (จัดการงานและแชท)</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="shareLinkUrl">ลิงก์</label>
-                        <div class="proj-share-url">
-                            <input type="text" id="shareLinkUrl" class="form-control" readonly>
-                            <button type="button" class="btn btn-sm" data-act="copyShareUrl">คัดลอก</button>
-                        </div>
-                    </div>
-                </div>
+                <p class="form-hint">งานย้ายไปต่อท้ายคอลัมน์นั้น</p>
+                <p class="form-error" id="deleteColumnError" role="alert" hidden></p>
             </div>
-        </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" data-close-modal>ยกเลิก</button>
+                <button type="submit" class="btn btn-danger">ย้ายงานแล้วลบคอลัมน์</button>
+            </div>
+        </form>
     </div>
 </div>
 

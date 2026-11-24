@@ -221,11 +221,11 @@ async function selectProject(projectId) {
         document.getElementById('activeProjectEar').textContent = PROJECT_TYPE_EAR[type] || PROJECT_TYPE_EAR.general;
         document.getElementById('activeProjectRole').textContent = roleWords(project);
 
-        show('btnInviteMember', true);   // everyone can see who is on the team
-        show('btnEditProject', !!data.project.is_owner);
+        // "แก้ไข" is for the owner and admins; deleting the project is the owner's alone.
+        show('btnEditProject', !!data.project.is_owner || data.project.user_role === 'Admin');
         show('btnDeleteProject', !!data.project.is_owner);
 
-        await loadProjectMembers(false);
+        await loadProjectMembers(true);
 
         ['kanbanBoardSection', 'aiSummaryCardWrap', 'analyticsWidgetCard', 'activityWidgetCard', 'chatWidgetCard']
             .forEach(id => show(id, true));
@@ -245,6 +245,7 @@ async function selectProject(projectId) {
         renderAiInsights();
         renderCalendar();
         filterProjects();
+        renderSettingsPanel();
 
         await fetchChatMessages();
         startChatPolling();
