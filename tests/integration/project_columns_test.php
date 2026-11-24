@@ -756,6 +756,10 @@ test('re-running migration 038 files loose tasks into columns by group, not by p
             DB::run('INSERT INTO project_tasks (project_id, title, status) VALUES (?, ?, ?)', [$projectId, 'เก่า ' . $status, $status]);
             $taskIds[(int)DB::conn()->lastInsertId()] = [$projectId, $status];
         }
+        // โค้ดเก่าลากงานไป "เสร็จ": เขียนแค่ status ส่วน column_id ยังชี้คอลัมน์ todo เดิม → status ต้องชนะ
+        $todo = (int)columnOfGroup(columnList($owner, $projectId), 'todo')['id'];
+        DB::run('INSERT INTO project_tasks (project_id, title, status, column_id) VALUES (?, ?, ?, ?)', [$projectId, 'ย้ายโดยโค้ดเก่า', 'Done', $todo]);
+        $taskIds[(int)DB::conn()->lastInsertId()] = [$projectId, 'Done'];
     }
 
     $sql = (string)file_get_contents(dirname(__DIR__, 2) . '/sql/migrations/038_project_types_columns.sql');

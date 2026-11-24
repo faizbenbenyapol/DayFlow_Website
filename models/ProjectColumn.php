@@ -208,7 +208,10 @@ class ProjectColumn
      */
     public static function lockProject(int $projectId): void
     {
-        DB::run('SELECT id FROM projects WHERE id = ? FOR UPDATE', [$projectId]);
+        // โปรเจคอาจถูกลบระหว่างรอ lock: ตอบ 404 แบบ id ที่ถูกลบ (EDGE-P4) แทนการ INSERT ชน FK แล้วได้ 500
+        if (DB::run('SELECT id FROM projects WHERE id = ? FOR UPDATE', [$projectId])->fetchColumn() === false) {
+            throw new ProjectColumnException(404, 'ไม่พบข้อมูลโปรเจค');
+        }
     }
 
     /**

@@ -232,7 +232,8 @@ class ProjectTaskController
             ProjectActivity::log($task['project_id'], $userId, 'ลบงานย่อย: "' . $task['title'] . '"');
             Response::json(['ok' => true]);
         } else {
-            Response::json(['error' => 'ไม่สามารถลบงานได้'], 500);
+            // อีกคำขอลบงานนี้ไปก่อนแล้ว: ตอบแบบ id ที่ถูกลบ (EDGE-P4) ไม่ใช่ 500
+            Response::json(['error' => 'ไม่พบข้อมูลงาน'], 404);
         }
     }
 

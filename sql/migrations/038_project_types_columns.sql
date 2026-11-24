@@ -61,6 +61,15 @@ WHERE NOT EXISTS (
     SELECT 1 FROM `project_columns` c WHERE c.`project_id` = p.`id`
 );
 
+-- 4b. งานที่ status อยู่คนละกลุ่มกับคอลัมน์ของมัน = ถูกย้ายโดยโค้ดเก่าระหว่างถอยโค้ด (โค้ดเก่าเขียนแค่ status)
+--     ให้ status ชนะ: ปล่อย column_id ว่างแล้วขั้น 5 จัดเข้าคอลัมน์ตาม status
+--     รันครั้งแรกบนข้อมูลจริงไม่มีแถวไหนเข้าเงื่อนไข (column_id ยังว่างทั้งหมด) และรันซ้ำปกติก็ไม่มี (status เป็นเงาอยู่แล้ว)
+UPDATE `project_tasks` t
+JOIN `project_columns` c ON c.`id` = t.`column_id`
+SET t.`column_id` = NULL,
+    t.`updated_at` = t.`updated_at`
+WHERE c.`grp` <> CASE t.`status` WHEN 'To Do' THEN 'todo' WHEN 'Done' THEN 'done' ELSE 'doing' END;
+
 -- 5. backfill column_id ตามกลุ่มของ status เดิม เฉพาะงานที่ยังไม่มีคอลัมน์ (รอบที่ค้างกลางทางจึงถูกเก็บให้ครบ)
 --    กฎเดียวกับ ProjectColumn::forLegacyStatus(): To Do = คอลัมน์แรกของ todo, In Progress = คอลัมน์แรก
 --    ของ doing, Review = คอลัมน์สุดท้ายของ doing, Done = คอลัมน์แรกของ done (แรก/สุดท้ายตาม position แล้ว id)
