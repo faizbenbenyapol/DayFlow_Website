@@ -755,6 +755,75 @@
     max-width: 600px;
 }
 
+/* รายละเอียดงานเป็นแผงชิดขวาเต็มความสูง (mockup P0b แบบ A) บอร์ด/รายการยังเห็นอยู่ทางซ้าย */
+.task-panel {
+    justify-content: flex-end;
+    align-items: stretch;
+    padding: 0;
+}
+
+.task-panel .modal-task {
+    max-width: 480px;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    border-radius: 0;
+    border-left: 1.5px solid var(--edge);
+}
+
+.task-panel .modal-header {
+    gap: var(--space-2);
+}
+
+/* form ครอบทั้งเนื้อหาและปุ่ม: ต้องเป็น flex ไม่งั้น .modal-body ไม่เลื่อนและปุ่มบันทึกหลุดใต้จอ */
+.task-panel .modal-task > form {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.task-panel .modal-title {
+    flex: 1;
+}
+
+.task-history {
+    margin-top: var(--space-5);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--rule-strong);
+}
+
+.task-history h3 {
+    margin: 0 0 var(--space-2);
+    font-size: 0.9375rem;
+}
+
+.task-history-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.8125rem;
+}
+
+.task-history-list li {
+    padding: 6px 0;
+    border-bottom: 1px solid var(--rule);
+}
+
+.task-history-list time {
+    margin-right: var(--space-2);
+    color: var(--pencil);
+    font-family: var(--font-num);
+}
+
+@media (max-width: 576px) {
+    /* มือถือ: เต็มจอ อยู่เหนือแถบแท็บล่าง (z-index ของ .modal-backdrop สูงกว่า) */
+    .task-panel .modal-task {
+        max-width: none;
+        border-left: 0;
+    }
+}
+
 .modal-checklist-container {
     padding-top: var(--space-3);
     border-top: 1px solid var(--rule-strong);

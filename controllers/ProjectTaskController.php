@@ -7,6 +7,12 @@ class ProjectTaskController
 {
     use ProjectAccess;
 
+    /** ชื่อช่องภาษาไทยในบรรทัดประวัติ (แท็บประวัติแสดงให้ผู้ใช้เห็นตรง ๆ) */
+    private const FIELD_LABELS = ['title' => 'ชื่องาน', 'priority' => 'ความสำคัญ', 'due_date' => 'กำหนดส่ง', 'category' => 'หมวด', 'assignee' => 'ผู้รับผิดชอบ'];
+
+    /** ค่าความสำคัญภาษาไทย */
+    private const PRIORITY_LABELS = ['Low' => 'ต่ำ', 'Medium' => 'ปานกลาง', 'High' => 'สูง', 'Critical' => 'วิกฤต'];
+
     /**
      * ส่งข้อความของ ProjectColumnException ออกเป็น JSON ด้วยรหัสเดิม
      *
@@ -92,7 +98,7 @@ class ProjectTaskController
         } catch (ProjectColumnException $e) {
             self::fail($e);
         }
-        ProjectActivity::log($projectId, $userId, 'เพิ่มงานย่อยใหม่: "' . $title . '"');
+        ProjectActivity::log($projectId, $userId, 'เพิ่มงานย่อยใหม่: "' . $title . '"', $taskId);
         if (!empty($data['assignee_user_id'])) {
             self::notifyAssigned($project, $taskId, $title, (int)$data['assignee_user_id'], $userId);
         }
@@ -136,7 +142,7 @@ class ProjectTaskController
         }
 
         $data = [];
-        $allowed = ['title', 'priority', 'due_date', 'category', 'assignee', 'checklist'];
+        $allowed = ['title', 'description', 'priority', 'due_date', 'category', 'assignee', 'checklist'];
         $changes = [];
 
         foreach ($allowed as $field) {
@@ -145,8 +151,17 @@ class ProjectTaskController
                 $data[$field] = $val;
                 if ($field === 'checklist') {
                     // ไม่ต้องเทียบข้อความความแตกต่างสำหรับการอัปเดตสถานะเช็คลิสต์ด่วน
+                } elseif ($field === 'description') {
+                    // คำอธิบายยาวได้หลายย่อหน้า: บันทึกแค่ว่าแก้ ไม่ใส่ข้อความทั้งก้อนลงประวัติ
+                    if (mb_strlen((string)$val) > 10000) {
+                        Response::json(['error' => 'คำอธิบายยาวได้ไม่เกิน 10,000 ตัวอักษร'], 422);
+                    }
+                    if ((string)($task['description'] ?? '') !== (string)$val) {
+                        $changes[] = 'แก้คำอธิบาย';
+                    }
                 } elseif ($task[$field] != $val) {
-                    $changes[] = "$field เปลี่ยนเป็น '$val'";
+                    $shown = $field === 'priority' ? (self::PRIORITY_LABELS[$val] ?? $val) : ($val === '' ? 'ว่าง' : $val);
+                    $changes[] = self::FIELD_LABELS[$field] . " เปลี่ยนเป็น '" . $shown . "'";
                 }
             }
         }
@@ -187,7 +202,7 @@ class ProjectTaskController
             if (!empty($changes)) {
                 $actText .= ' (' . implode(', ', $changes) . ')';
             }
-            ProjectActivity::log($task['project_id'], $userId, $actText);
+            ProjectActivity::log($task['project_id'], $userId, $actText, $taskId);
 
             // ผู้รับผิดชอบเปลี่ยนเป็นคนใหม่ → แจ้งคนนั้น (send() ข้ามเองถ้ามอบให้ตัวเอง)
             $newAssignee = isset($data['assignee_user_id']) ? (int)$data['assignee_user_id'] : 0;
@@ -212,6 +227,22 @@ class ProjectTaskController
         } else {
             Response::json(['ok' => true, 'message' => 'ไม่มีการแก้ไขข้อมูล']);
         }
+    }
+
+    /**
+     * GET /api/projects/tasks/{tid}/history — ประวัติการเปลี่ยนของงาน (แท็บประวัติในแผงรายละเอียด)
+     *
+     * ทุกคนที่เห็นโปรเจคดูได้ งานที่ไม่มี งานที่ลบแล้ว และงานของโปรเจคที่มองไม่เห็นได้ 404 เดียวกัน (EDGE-P4)
+     */
+    public function apiTaskHistory(string $tid): void
+    {
+        $taskId = (int)$tid;
+        $task = ProjectTask::getById($taskId);
+        $project = $task ? Project::getById((int)$task['project_id'], Auth::userId()) : null;
+        if (!$task || !$project) {
+            Response::json(['error' => 'ไม่พบข้อมูลงาน'], 404);
+        }
+        Response::json(['items' => ProjectActivity::forTask($taskId)]);
     }
 
     /**

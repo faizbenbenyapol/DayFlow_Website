@@ -424,10 +424,14 @@
 </div>
 
 <!-- A task, with its checklist -->
-<div class="modal-backdrop" id="editTaskModal" aria-hidden="true">
+<!-- รายละเอียดงาน: แผงด้านขวา (mockup P0b แบบ A) บนมือถือเต็มจอ เปิดตรงได้ด้วย ?task=<id> -->
+<div class="modal-backdrop task-panel" id="editTaskModal" aria-hidden="true">
     <div class="modal modal-task" role="dialog" aria-labelledby="editTaskTitleHeading">
         <div class="modal-header">
-            <h2 class="modal-title" id="editTaskTitleHeading">แก้ไขงาน</h2>
+            <h2 class="modal-title" id="editTaskTitleHeading">รายละเอียดงาน</h2>
+            <button class="icon-btn" type="button" data-act="copyTaskLink" aria-label="คัดลอกลิงก์ของงานนี้" title="คัดลอกลิงก์ของงานนี้">
+                <svg class="icon" aria-hidden="true"><use href="#i-link"/></svg>
+            </button>
             <button class="modal-close" type="button" aria-label="ปิด" data-close-modal>&times;</button>
         </div>
         <form id="editTaskForm" data-act="submitEditTask" data-args='["$event"]' data-on="submit" novalidate>
@@ -436,6 +440,10 @@
                 <div class="form-group">
                     <label class="form-label" for="editTaskTitle">ชื่องาน</label>
                     <input type="text" id="editTaskTitle" class="form-control" maxlength="255" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="editTaskDescription">คำอธิบาย</label>
+                    <textarea id="editTaskDescription" class="form-control" rows="4" maxlength="10000" placeholder="รายละเอียด ลิงก์ หรือเงื่อนไขที่ทีมต้องรู้"></textarea>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -480,10 +488,14 @@
                         <button type="button" class="btn btn-sm" data-act="addChecklistItem">เพิ่ม</button>
                     </div>
                 </div>
+                <section class="task-history" aria-labelledby="taskHistoryHeading">
+                    <h3 id="taskHistoryHeading">ประวัติ</h3>
+                    <ul class="task-history-list" id="taskHistoryList"></ul>
+                </section>
                 <p class="form-error" id="taskError" role="alert" hidden></p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn" data-close-modal>ยกเลิก</button>
+                <button type="button" class="btn" data-close-modal>ปิด</button>
                 <button type="submit" class="btn btn-primary">บันทึกงาน</button>
             </div>
         </form>

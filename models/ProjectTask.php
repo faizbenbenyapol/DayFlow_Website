@@ -111,7 +111,7 @@ class ProjectTask
         $params = [];
 
         // สถานะและตำแหน่งเขียนผ่าน moveTo()/reorder() เท่านั้น
-        $allowed = ['title', 'priority', 'due_date', 'category', 'assignee_user_id', 'assignee', 'checklist'];
+        $allowed = ['title', 'description', 'priority', 'due_date', 'category', 'assignee_user_id', 'assignee', 'checklist'];
         foreach ($allowed as $field) {
             if (array_key_exists($field, $data)) {
                 $fields[] = "`$field` = ?";

@@ -235,6 +235,7 @@ function openEditTask(id) {
 
     document.getElementById('editTaskId').value = task.id;
     document.getElementById('editTaskTitle').value = task.title;
+    document.getElementById('editTaskDescription').value = task.description || '';
     const columnSelect = document.getElementById('editTaskColumn');
     columnSelect.innerHTML = projectColumns().map(column =>
         '<option value="' + Number(column.id) + '">' + escHtml(column.name) + '</option>').join('');
@@ -252,7 +253,70 @@ function openEditTask(id) {
     }
     renderChecklist();
     openModal('editTaskModal');
+    setTaskParam(task.id);
+    loadTaskHistory(task.id);
 }
+
+/**
+ * ใส่หรือเอา ?task=<id> ออกจาก URL ด้วย replaceState (ไม่เพิ่มประวัติให้ปุ่มย้อนกลับ)
+ * ลิงก์ที่คัดลอกหรือรีเฟรชจึงเปิดงานเดิม
+ * @param {number|null} taskId งานที่เปิดอยู่ หรือ null เมื่อปิดแผง
+ */
+function setTaskParam(taskId) {
+    const url = new URL(window.location.href);
+    if (taskId) {
+        url.searchParams.set('project', String(activeProjectId));
+        url.searchParams.set('task', String(taskId));
+    } else {
+        url.searchParams.delete('task');
+    }
+    history.replaceState(history.state, '', url);
+}
+
+/** คัดลอกลิงก์ของงานที่เปิดอยู่ (URL ตอนนี้มี ?project=&task= แล้ว) */
+async function copyTaskLink() {
+    try {
+        await navigator.clipboard.writeText(window.location.href);
+        toast('คัดลอกลิงก์ของงานแล้ว');
+    } catch (_) {
+        toast('คัดลอกไม่ได้ คัดลอกจากแถบที่อยู่ของเบราว์เซอร์แทน', 'error');
+    }
+}
+
+/**
+ * โหลดประวัติการเปลี่ยนของงานมาใส่แท็บประวัติในแผง
+ * @param {number} taskId รหัสงาน
+ */
+async function loadTaskHistory(taskId) {
+    const list = document.getElementById('taskHistoryList');
+    list.innerHTML = '<li class="text-muted">กำลังโหลด…</li>';
+    try {
+        const data = await apiFetch(BASE_URL + '/api/projects/tasks/' + taskId + '/history');
+        const items = data.items || [];
+        list.innerHTML = items.length
+            ? items.map(item => '<li><time>' + escHtml(historyWhen(item.created_at)) + '</time>'
+                + (item.display_name ? '<b>' + escHtml(item.display_name) + '</b> ' : '') + escHtml(item.action) + '</li>').join('')
+            : '<li class="text-muted">ยังไม่มีการเปลี่ยนที่บันทึกไว้ งานที่สร้างก่อนมีแท็บนี้จะเริ่มเก็บจากการแก้ครั้งถัดไป</li>';
+    } catch (_) {
+        list.innerHTML = '<li class="text-muted">โหลดประวัติไม่ได้</li>';
+    }
+}
+
+/** วันเวลาสั้น ๆ ของบรรทัดประวัติ เช่น "24 พ.ย. 09:02" */
+function historyWhen(stamp) {
+    const d = new Date(String(stamp).replace(' ', 'T'));
+    return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) + ' '
+        + d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ปิดแผงด้วยทางไหนก็ได้ (ปุ่ม Esc กดข้างนอก บันทึก) → เอา ?task= ออก
+document.addEventListener('DOMContentLoaded', () => {
+    const panel = document.getElementById('editTaskModal');
+    if (!panel) return;
+    new MutationObserver(() => {
+        if (!panel.classList.contains('active')) setTaskParam(null);
+    }).observe(panel, { attributes: true, attributeFilter: ['class'] });
+});
 
 function renderChecklist() {
     const listEl = document.getElementById('modalChecklistList');
@@ -346,6 +410,7 @@ async function submitEditTask(e) {
     const columnSelect = document.getElementById('editTaskColumn');
     const payload = {
         title,
+        description: document.getElementById('editTaskDescription').value,
         priority: document.getElementById('editTaskPriority').value,
         category: document.getElementById('editTaskCategory').value.trim(),
         due_date: document.getElementById('editTaskDue').value,

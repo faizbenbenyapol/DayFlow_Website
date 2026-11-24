@@ -1062,6 +1062,17 @@ async function main() {
         await sleep(300);
         check(await tab.eval(`document.documentElement.scrollWidth <= window.innerWidth`), 'at 360px the settings panel does not scroll sideways');
         check(await tab.eval(`document.getElementById('settingsPanel').scrollWidth <= document.getElementById('settingsPanel').clientWidth`), 'the settings panel keeps its content inside itself');
+
+        // แผงรายละเอียดงาน (P0b): เปิดตรงจาก ?task= และปุ่มบันทึกต้องอยู่ในจอ ไม่หลุดใต้ขอบล่าง
+        const panelTaskId = await tab.eval(`fetch(BASE_URL + '/api/projects/${softwareProject?.id}/tasks').then(r => r.json()).then(d => (d.tasks || [])[0]?.id || 0)`);
+        await tab.goto(`${BASE}/projects?project=${softwareProject?.id}&task=${panelTaskId}`);
+        await tab.settle();
+        await sleep(800);
+        check(await tab.eval(`document.getElementById('editTaskModal').classList.contains('active')`), 'a ?task= link opens the task panel');
+        check(await tab.eval(`document.querySelector('#editTaskModal .modal-footer').getBoundingClientRect().bottom <= window.innerHeight`), 'at 360px the save button of the panel is on screen');
+        await key(tab, 'Escape');
+        await sleep(300);
+        check(await tab.eval(`!new URL(location.href).searchParams.has('task')`), 'closing the panel takes ?task= out of the address');
         await tab.viewport({ width: 1366, height: 900, mobile: false });
 
         // ---------- outside the app ----------
