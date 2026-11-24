@@ -327,6 +327,11 @@ class Router
         $this->add('GET',    '/api/projects/tasks/{tid}/comments', 'ProjectCommentController', 'apiList',   true);
         $this->add('POST',   '/api/projects/tasks/{tid}/comments', 'ProjectCommentController', 'apiCreate', true);
         $this->add('DELETE', '/api/projects/comments/{cid}',       'ProjectCommentController', 'apiDelete', true);
+        $this->add('GET',    '/api/projects/tasks/{tid}/files',       'ProjectAttachmentController', 'apiList',     true);
+        $this->add('POST',   '/api/projects/tasks/{tid}/files',       'ProjectAttachmentController', 'apiUpload',   true);
+        $this->add('POST',   '/api/projects/tasks/{tid}/files/link',  'ProjectAttachmentController', 'apiLink',     true);
+        $this->add('GET',    '/api/projects/tasks/{tid}/files/{fid}', 'ProjectAttachmentController', 'apiDownload', true);
+        $this->add('DELETE', '/api/projects/tasks/{tid}/files/{fid}', 'ProjectAttachmentController', 'apiUnlink',   true);
         $this->add('POST',   '/api/projects/tasks/reorder','ProjectTaskController', 'apiTaskReorder', true);
 
         // --- API: Projects Board Columns ---
@@ -490,6 +495,8 @@ class Router
         '#^/api/ai/keys(/|$)#',
         '#^/api/push(/|$)#',
         '#^/api/projects/[^/]+/(share|members)(/|$)#',
+        // ไฟล์แนบของงานเก็บไฟล์ลงคลังเหมือน /api/files บัญชีทดลองจึงแนบไม่ได้
+        '#^/api/projects/tasks/[^/]+/files(/|$)#',
     ];
 
     private function isDemoRestricted(string $path): bool

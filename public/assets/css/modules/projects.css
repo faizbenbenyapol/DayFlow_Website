@@ -1298,3 +1298,110 @@
     background: var(--paper-sunk);
     font-weight: 600;
 }
+
+/* ---------------------------------------------------------------
+   ไฟล์แนบในแผงรายละเอียดงาน (P0b)
+--------------------------------------------------------------- */
+.task-files {
+    margin-top: var(--space-5);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--rule-strong);
+}
+
+.task-files h3 {
+    margin: 0 0 var(--space-2);
+    font-size: 0.9375rem;
+}
+
+.task-files h3 small {
+    margin-left: var(--space-1);
+    font-weight: 400;
+    color: var(--pencil);
+}
+
+.task-files .file-row {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    gap: var(--space-2);
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.875rem;
+}
+
+.file-ico {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    background: var(--paper-sunk);
+    color: var(--pencil);
+    font: 600 0.625rem var(--font-mono);
+}
+
+.file-main a {
+    color: var(--ink);
+    overflow-wrap: anywhere;
+}
+
+.file-sub {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--pencil);
+}
+
+.task-file-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+}
+
+.task-file-actions label.btn:focus-within {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+}
+
+.task-file-picker {
+    margin-top: var(--space-2);
+    border: 1.5px solid var(--rule-strong);
+    border-radius: var(--r-control);
+    max-height: 260px;
+    overflow: auto;
+}
+
+.task-file-picker-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-1) var(--space-2);
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.8125rem;
+}
+
+.picker-row {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-3);
+    border: 0;
+    border-bottom: 1px solid var(--rule);
+    background: none;
+    color: var(--ink);
+    text-align: left;
+    font: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+}
+
+.picker-row:hover,
+.picker-row:focus-visible {
+    background: var(--paper-sunk);
+}
+
+.task-files > .proj-note {
+    margin-top: var(--space-2);
+}

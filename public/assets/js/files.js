@@ -573,7 +573,10 @@ async function uploadFiles(fileList) {
 async function deleteFile(id) {
     const f = getFileObj(id);
     const what = f ? '"' + f.name + '"' : 'รายการนี้';
-    const extra = f && f.type === 'folder' ? ' และทุกอย่างในโฟลเดอร์' : '';
+    const attached = f ? Number(f.attached_tasks || 0) : 0;
+    // ไฟล์แนบของงานลิงก์มาที่ไฟล์นี้ ลบแล้วไฟล์แนบในงานหายด้วย (D-4)
+    const extra = (f && f.type === 'folder' ? ' และทุกอย่างในโฟลเดอร์' : '')
+        + (attached > 0 ? ' ไฟล์นี้แนบอยู่ในงาน ' + attached + ' งาน ไฟล์แนบในงานจะหายไปด้วย' : '');
     if (!await confirmAction('ลบ ' + what + extra + ' แล้วกู้คืนไม่ได้', 'ลบ', 'ลบรายการนี้?')) return;
     try {
         await apiFetch(BASE_URL + '/api/files/' + id, { method: 'DELETE' });

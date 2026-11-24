@@ -256,6 +256,7 @@ function openEditTask(id) {
     setTaskParam(task.id);
     loadTaskHistory(task.id);
     loadTaskComments(task.id);
+    loadTaskFiles(task.id);
 }
 
 /**

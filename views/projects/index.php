@@ -488,6 +488,24 @@
                         <button type="button" class="btn btn-sm" data-act="addChecklistItem">เพิ่ม</button>
                     </div>
                 </div>
+                <!-- ไฟล์แนบ: ลิงก์ไปไฟล์ในคลังของคนแนบ (D-4) แขกจากลิงก์แชร์ไม่เห็น (D-5) -->
+                <section class="task-files" id="taskFiles" aria-labelledby="taskFilesHeading">
+                    <h3 id="taskFilesHeading">ไฟล์แนบ <small id="taskFileCount"></small></h3>
+                    <div id="taskFileList"></div>
+                    <div class="task-file-actions" id="taskFileActions">
+                        <label class="btn btn-sm">แนบจากเครื่อง
+                            <input type="file" id="taskFileInput" class="sr-only" multiple data-act="uploadTaskFiles" data-on="change">
+                        </label>
+                        <button type="button" class="btn btn-sm" data-act="openTaskFilePicker">เลือกจากคลังไฟล์</button>
+                    </div>
+                    <div class="task-file-picker" id="taskFilePicker" hidden>
+                        <div class="task-file-picker-head"><span id="taskFilePickerPath">คลังไฟล์</span>
+                            <button type="button" class="btn btn-link btn-sm" data-act="closeTaskFilePicker">ปิด</button></div>
+                        <div id="taskFilePickerList"></div>
+                    </div>
+                    <p class="proj-note">ไฟล์เก็บในคลังไฟล์ของคนแนบ (รวม Google Drive ถ้าเปิดไว้) ทุกคนในโปรเจคเปิดได้</p>
+                </section>
+
                 <!-- ความเห็น: แขกจากลิงก์แชร์ไม่เห็น (D-5) ผู้ดูอย่างเดียวอ่านได้แต่เขียนไม่ได้ -->
                 <section class="task-comments" id="taskComments" aria-labelledby="taskCommentsHeading">
                     <h3 id="taskCommentsHeading">ความเห็น <small id="taskCommentCount"></small></h3>

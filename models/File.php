@@ -13,14 +13,16 @@ class FileModel
     {
         if ($parentId === null) {
             $stmt = DB::run(
-                'SELECT id, name, type, mime_type, file_size, file_path, drive_id, parent_id, created_at
+                'SELECT id, name, type, mime_type, file_size, file_path, drive_id, parent_id, created_at,
+                        (SELECT COUNT(*) FROM project_task_files a WHERE a.file_id = files.id) AS attached_tasks
                  FROM files WHERE user_id = ? AND parent_id IS NULL
                  ORDER BY type DESC, name ASC',
                 [$userId]
             );
         } else {
             $stmt = DB::run(
-                'SELECT id, name, type, mime_type, file_size, file_path, drive_id, parent_id, created_at
+                'SELECT id, name, type, mime_type, file_size, file_path, drive_id, parent_id, created_at,
+                        (SELECT COUNT(*) FROM project_task_files a WHERE a.file_id = files.id) AS attached_tasks
                  FROM files WHERE user_id = ? AND parent_id = ?
                  ORDER BY type DESC, name ASC',
                 [$userId, $parentId]
