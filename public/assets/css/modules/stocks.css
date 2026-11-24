@@ -235,6 +235,51 @@
     margin: 0;
 }
 
+/* Buys or sells, and the total of what is on screen beside the switch. */
+.stk-side-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-4);
+    margin-bottom: var(--space-3);
+}
+
+.stk-side-total {
+    margin: 0;
+    color: var(--ink);
+    font-size: 0.9375rem;
+}
+
+.stk-side-total b {
+    font-weight: 600;
+}
+
+/* Where the money from a sale went: kept in the portfolio, or taken out. */
+.stk-proceeds-tag {
+    display: inline-block;
+    padding: 0 8px;
+    border-radius: 10px;
+    background: var(--mint);
+    color: var(--ink);
+    font-size: 0.8125rem;
+    white-space: nowrap;
+}
+
+.stk-proceeds-tag.is-out {
+    background: var(--peach);
+}
+
+fieldset.stk-proceeds {
+    min-width: 0;
+    margin: 0 0 var(--space-3);
+    padding: 0;
+    border: 0;
+}
+
+.stk-proceeds .form-hint {
+    margin-bottom: var(--space-2);
+}
+
 .stk-cap {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

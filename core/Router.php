@@ -177,6 +177,7 @@ class Router
 
         // --- App Shares (Modules) ---
         $this->add('GET', '/shared/{token}',                     'AppShareController', 'viewShared', false);
+        $this->add('GET', '/shared/{token}/manifest.webmanifest', 'AppShareController', 'manifest',  false);
         $this->add('GET', '/exit-share',                         'AppShareController', 'exitShare',  false);
         $this->add('GET',    '/api/app-shares',                  'AppShareController', 'apiList',    true);
         $this->add('POST',   '/api/app-shares',                  'AppShareController', 'apiCreate',  true);

@@ -81,26 +81,46 @@ async function apiFetch(url, options = {}) {
 /* =====================================================
    Toast Notifications
 ===================================================== */
-function toast(message, type = 'success', duration = 3000) {
+const TOAST_MAX = 3;
+const TOAST_MS = 3500;
+const TOAST_ERROR_MS = 6000;   // ข้อผิดพลาดต้องอ่านว่าพลาดเพราะอะไร จึงอยู่นานกว่า
+const TOAST_MARK = { success: '✓', danger: '!', error: '!', warning: '!', info: 'i' };
+
+/**
+ * แสดงข้อความแจ้งผลแบบแผ่นโน้ตที่มุมล่าง แล้วหายไปเอง (กดปิดก่อนได้)
+ * @param {string} message สิ่งที่เพิ่งเกิด เช่น "บันทึกแล้ว"
+ * @param {'success'|'danger'|'error'|'warning'|'info'} [type='success']
+ * @param {number} [duration] มิลลิวินาที ไม่ใส่ = 3.5 วินาที (ผิดพลาด 6 วินาที)
+ * ผลข้างเคียง: เพิ่ม element ใน #toastContainer ถ้ามีครบ 3 อันแล้ว อันเก่าสุดหายก่อน
+ */
+function toast(message, type = 'success', duration) {
     const container = document.getElementById('toastContainer');
     if (!container) return;
+    const isError = type === 'danger' || type === 'error';
+
+    while (container.children.length >= TOAST_MAX) container.firstElementChild.remove();
 
     const el = document.createElement('div');
     el.className = 'toast toast-' + type;
-    el.setAttribute('role', type === 'danger' || type === 'error' ? 'alert' : 'status');
-    el.setAttribute('aria-live', type === 'danger' || type === 'error' ? 'assertive' : 'polite');
-    el.textContent = message;
+    el.setAttribute('role', isError ? 'alert' : 'status');
+    el.innerHTML = '<span class="toast-mark" aria-hidden="true"></span><span class="toast-text"></span>'
+        + '<button type="button" class="toast-close" aria-label="ปิดข้อความ">×</button>';
+    el.firstChild.textContent = TOAST_MARK[type] || TOAST_MARK.info;
+    el.querySelector('.toast-text').textContent = message;
     container.appendChild(el);
 
-    // Trigger animation
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => el.classList.add('show'));
-    });
-
-    setTimeout(() => {
+    // ปิด: เลื่อนออกก่อนแล้วค่อยลบ ให้ทันเห็นว่ามันไปไหน
+    let timer = null;
+    const dismiss = () => {
+        clearTimeout(timer);
         el.classList.remove('show');
         setTimeout(() => el.remove(), 250);
-    }, duration);
+    };
+    el.querySelector('.toast-close').addEventListener('click', dismiss);
+
+    // rAF สองชั้น: ให้เบราว์เซอร์วาดสถานะซ่อนก่อน การเลื่อนเข้าจึงเล่นจริง
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
+    timer = setTimeout(dismiss, duration || (isError ? TOAST_ERROR_MS : TOAST_MS));
 }
 
 /* =====================================================
@@ -155,65 +175,173 @@ document.addEventListener('click', function (e) {
 });
 
 /* =====================================================
-   SweetAlert2 — fetched on first use
-   The library and its stylesheet are ~90KB, and most page views never open a
-   dialog. The shim keeps every existing `Swal.fire(...)` call site working: the
-   real library replaces window.Swal as soon as it lands.
+   กล่องของ DayFlow: ยืนยัน / ถามข้อความ / แจ้งผล
+   ใช้ <dialog> ของเบราว์เซอร์ เพราะ showModal() ทำให้หน้าข้างหลังกดไม่ได้
+   (Tab จึงวนอยู่ในกล่อง) และ Esc ปิดได้เอง ทุกหน้าเรียกผ่าน confirmAction(),
+   askText() หรือ showNotice() ห้ามใช้ alert/confirm/prompt ของเบราว์เซอร์
+   หรือ library กล่องสำเร็จรูป (กฎใน CLAUDE.md)
 ===================================================== */
-// Pinned to an exact version with its SRI hash, so a compromised or changed
-// CDN file is refused instead of run. Bumping the version means new hashes:
-//   curl -fsSL <url> | openssl dgst -sha384 -binary | openssl base64 -A
-const SWAL_CSS = 'https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25/dist/sweetalert2.min.css';
-const SWAL_CSS_SRI = 'sha384-dCW5imOdApH6OwpFau8cZNKjqVbJYnCA5q+8YsMYP3XwXKsV6Jfz1u6MZLnXaBsS';
-const SWAL_JS  = 'https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25/dist/sweetalert2.all.min.js';
-const SWAL_JS_SRI = 'sha384-nLoOnA/BDh8A/jxqtckg4DumuCGOBYUnNJLZdQz/zfYNp3wcjGSoWTAzgko06G/2';
+let dialogEl = null;
+let dialogQueue = Promise.resolve();
 
-let swalLoader = null;
-function loadSwal() {
-    if (swalLoader) return swalLoader;
-    swalLoader = new Promise((resolve, reject) => {
-        const css = document.createElement('link');
-        css.rel = 'stylesheet';
-        css.href = SWAL_CSS;
-        css.integrity = SWAL_CSS_SRI;
-        css.crossOrigin = 'anonymous';
-        document.head.appendChild(css);
-
-        const js = document.createElement('script');
-        js.src = SWAL_JS;
-        js.integrity = SWAL_JS_SRI;
-        js.crossOrigin = 'anonymous';
-        js.onload = () => resolve(window.Swal);
-        js.onerror = () => {
-            swalLoader = null; // let a later dialog retry
-            reject(new Error('โหลด SweetAlert2 ไม่สำเร็จ'));
-        };
-        document.head.appendChild(js);
-    });
-    return swalLoader;
+/** สร้าง <dialog> ใบเดียวที่ทุกกล่องใช้ร่วมกันในครั้งแรกที่ถูกเรียก แล้วคืนใบเดิมทุกครั้งต่อไป */
+function dialogNode() {
+    if (dialogEl) return dialogEl;
+    dialogEl = document.createElement('dialog');
+    dialogEl.className = 'sheet df-dialog';
+    dialogEl.setAttribute('aria-labelledby', 'dfDialogTitle');
+    dialogEl.setAttribute('aria-describedby', 'dfDialogMsg');
+    dialogEl.innerHTML =
+        '<form class="df-dialog-card" method="dialog" novalidate>'
+        + '<h2 class="df-dialog-title" id="dfDialogTitle"></h2>'
+        + '<p class="df-dialog-msg" id="dfDialogMsg"></p>'
+        + '<div class="df-dialog-field">'
+        +   '<label class="form-label" for="dfDialogInput"></label>'
+        +   '<input class="form-control" id="dfDialogInput">'
+        +   '<p class="form-error" id="dfDialogError" role="alert" hidden></p>'
+        + '</div>'
+        + '<div class="df-dialog-actions">'
+        +   '<button type="button" class="btn btn-ghost" data-dialog-cancel></button>'
+        +   '<button type="submit" class="btn"></button>'
+        + '</div>'
+        + '</form>';
+    // Esc ของกล่องนี้ต้องไม่หลุดไปปิด modal ที่เปิดอยู่ข้างใต้ด้วย
+    // (ตัวปิด modal ฟัง Esc ที่ document) การ cancel ของ <dialog> ยังทำงานตามปกติ
+    dialogEl.addEventListener('keydown', e => { if (e.key === 'Escape') e.stopPropagation(); });
+    document.body.appendChild(dialogEl);
+    return dialogEl;
 }
 
-window.Swal = {
-    fire: (...args) => loadSwal().then(real => real.fire(...args)),
-};
+/**
+ * เปิดกล่องหนึ่งใบแล้วรอผู้ใช้ตอบ ถ้ามีกล่องเปิดอยู่ ใบใหม่จะรอจนใบเดิมปิดก่อน ไม่ซ้อนกัน
+ * @param {object} opts
+ * @param {string} opts.title หัวกล่อง
+ * @param {string} [opts.message] คำอธิบาย ขึ้นบรรทัดใหม่ด้วย \n ได้
+ * @param {'primary'|'danger'} [opts.tone='primary'] danger = ปุ่มยืนยันสีแดง และโฟกัสเริ่มที่ "ยกเลิก"
+ * @param {string} [opts.okLabel='ตกลง'] ชื่อปุ่มยืนยัน ควรบอกสิ่งที่จะเกิด เช่น "ลบรายการ"
+ * @param {string|null} [opts.cancelLabel='ยกเลิก'] null = กล่องแจ้งผลที่มีปุ่มเดียว
+ * @param {object} [opts.input] ใส่เมื่ออยากได้ช่องข้อความ { label, value, placeholder, type, required }
+ *   required คือข้อความเตือนใต้ช่องเมื่อเว้นว่าง (ไม่ใส่ = เว้นว่างได้)
+ * @returns {Promise<{ok: boolean, value: string}>} value คือข้อความในช่อง
+ *   (ตัดช่องว่างหัวท้ายแล้ว ยกเว้นช่องรหัสผ่าน)
+ */
+function showDialog(opts) {
+    const next = dialogQueue.then(() => openDialog(opts));
+    dialogQueue = next.catch(() => {});
+    return next;
+}
 
-/* =====================================================
-   Confirm Dialog (SweetAlert2)
-===================================================== */
-function confirmAction(message, okLabel, title) {
-    return Swal.fire({
-        title: title || 'ยืนยัน',
-        text: message,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: okLabel || 'ยืนยัน',
-        cancelButtonText: 'ยกเลิก',
-        confirmButtonColor: '#e05c4b',
-        cancelButtonColor: '#6b7280',
-        focusCancel: true,
-    }).then(function(result) {
-        return result.isConfirmed;
+/** ตัวทำงานจริงของ showDialog(): เติมเนื้อหา เปิดกล่อง และตอบผลครั้งเดียวเมื่อผู้ใช้เลือก */
+function openDialog(opts) {
+    const dlg = dialogNode();
+    const form = dlg.firstElementChild;
+    const msg = dlg.querySelector('.df-dialog-msg');
+    const field = dlg.querySelector('.df-dialog-field');
+    const input = dlg.querySelector('#dfDialogInput');
+    const error = dlg.querySelector('#dfDialogError');
+    const cancelBtn = dlg.querySelector('[data-dialog-cancel]');
+    const okBtn = dlg.querySelector('button[type="submit"]');
+    const isDanger = opts.tone === 'danger';
+    const hasCancel = opts.cancelLabel !== null;
+    const ask = opts.input || null;
+
+    // เติมเนื้อหาของกล่องใบนี้ (ใบเดียวใช้ซ้ำ จึงต้องล้างค่าของครั้งก่อนทุกช่อง)
+    dlg.dataset.tone = isDanger ? 'danger' : 'primary';
+    dlg.querySelector('.df-dialog-title').textContent = opts.title || 'ยืนยัน';
+    msg.textContent = opts.message || '';
+    msg.hidden = !opts.message;
+    okBtn.textContent = opts.okLabel || 'ตกลง';
+    okBtn.className = 'btn ' + (isDanger ? 'btn-danger' : 'btn-primary');
+    cancelBtn.textContent = opts.cancelLabel || 'ยกเลิก';
+    cancelBtn.hidden = !hasCancel;
+    field.hidden = !ask;
+    error.hidden = true;
+    input.removeAttribute('aria-invalid');
+    if (ask) {
+        field.querySelector('label').textContent = ask.label || opts.title || '';
+        input.type = ask.type || 'text';
+        input.autocomplete = input.type === 'password' ? 'current-password' : 'off';
+        input.value = ask.value || '';
+        input.placeholder = ask.placeholder || '';
+    }
+
+    const returnFocus = document.activeElement;
+    return new Promise(resolve => {
+        let settled = false;
+        const readValue = () => (input.type === 'password' ? input.value : input.value.trim());
+
+        // ปิดกล่องและตอบผลครั้งเดียว กดยืนยันสองครั้งเร็ว ๆ ก็ทำงานครั้งเดียว (EDGE-1)
+        const finish = ok => {
+            if (settled) return;
+            settled = true;
+            form.removeEventListener('submit', onSubmit);
+            cancelBtn.removeEventListener('click', onCancel);
+            dlg.removeEventListener('cancel', onEsc);
+            dlg.removeEventListener('click', onBackdrop);
+            dlg.close();
+            if (returnFocus && typeof returnFocus.focus === 'function') returnFocus.focus();
+            resolve({ ok, value: ask ? readValue() : '' });
+        };
+        // กดปุ่มยืนยัน หรือ Enter ในช่องข้อความ: ตรวจช่องว่างก่อนปิด
+        const onSubmit = e => {
+            e.preventDefault();
+            if (ask && ask.required && !input.value.trim()) {
+                error.textContent = ask.required;
+                error.hidden = false;
+                input.setAttribute('aria-invalid', 'true');
+                input.focus();
+                return;
+            }
+            finish(true);
+        };
+        const onCancel = () => finish(false);
+        // Esc และการคลิกพื้นมืดรอบการ์ด: กล่องแจ้งผลนับเป็น "รับทราบ" กล่องอื่นนับเป็นยกเลิก
+        const onEsc = e => { e.preventDefault(); finish(!hasCancel); };
+        const onBackdrop = e => { if (e.target === dlg) finish(!hasCancel); };
+
+        form.addEventListener('submit', onSubmit);
+        cancelBtn.addEventListener('click', onCancel);
+        dlg.addEventListener('cancel', onEsc);
+        dlg.addEventListener('click', onBackdrop);
+        dlg.showModal();
+
+        // โฟกัสเริ่ม: ช่องข้อความก่อน ถ้าเป็นเรื่องอันตรายให้อยู่ที่ "ยกเลิก" กันกด Enter พลาด
+        if (ask) { input.focus(); input.select(); }
+        else (isDanger && hasCancel ? cancelBtn : okBtn).focus();
     });
+}
+
+/**
+ * ถามยืนยันก่อนทำสิ่งที่ย้อนไม่ได้ หรือสิ่งที่ผู้ใช้ควรรู้ก่อนกด
+ * @param {string} message ผลที่จะเกิดเมื่อยืนยัน
+ * @param {string} [okLabel='ยืนยัน'] ชื่อปุ่มตามการกระทำ เช่น "ลบรายการ"
+ * @param {string} [title='ยืนยัน']
+ * @param {'danger'|'primary'} [tone='danger'] ค่าเริ่มเป็นอันตรายเพราะเกือบทุกจุดคือการลบ
+ *   ส่ง 'primary' เมื่อการกระทำไม่ทำลายข้อมูล (เช่น ชำระรอบบิล)
+ * @returns {Promise<boolean>} true เมื่อกดยืนยัน
+ */
+function confirmAction(message, okLabel, title, tone = 'danger') {
+    return showDialog({ title: title || 'ยืนยัน', message, okLabel: okLabel || 'ยืนยัน', tone })
+        .then(r => r.ok);
+}
+
+/**
+ * ถามข้อความหนึ่งช่อง เช่น เปลี่ยนชื่อหมวด ใส่คำอธิบายรูป ยืนยันรหัสผ่าน
+ * @param {object} opts { title, message, label, value, placeholder, type, okLabel, required }
+ * @returns {Promise<string|null>} ข้อความที่กรอก หรือ null เมื่อกดยกเลิก
+ */
+function askText(opts) {
+    return showDialog({
+        title: opts.title,
+        message: opts.message,
+        okLabel: opts.okLabel || 'บันทึก',
+        input: { label: opts.label, value: opts.value, placeholder: opts.placeholder, type: opts.type, required: opts.required },
+    }).then(r => (r.ok ? r.value : null));
+}
+
+/** แจ้งผลที่ผู้ใช้ควรอ่านก่อนไปต่อ (ปุ่มเดียว) ผลสั้น ๆ ที่ไม่ต้องอ่านให้ใช้ toast() แทน */
+function showNotice(title, message) {
+    return showDialog({ title, message, okLabel: 'รับทราบ', cancelLabel: null }).then(() => {});
 }
 
 /* =====================================================

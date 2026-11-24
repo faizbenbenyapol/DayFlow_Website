@@ -419,32 +419,103 @@ async function loadStockTransactions() {
     }
 }
 
+/** หัวตารางของแต่ละฝั่ง "ชื่อ|num" = คอลัมน์ตัวเลขชิดขวา */
+const TXN_COLUMNS = {
+    buy:  ['วันที่', 'หุ้น', 'จำนวน|num', 'ราคา|num', 'ค่าธรรมเนียม|num', 'จ่ายรวม|num'],
+    sell: ['วันที่', 'หุ้น', 'จำนวน|num', 'ราคา|num', 'ค่าธรรมเนียม|num', 'ได้รับ|num', 'กำไร/ขาดทุน|num', 'เงินที่ได้'],
+};
+
+/** ฝั่งที่กำลังดูในแท็บซื้อขาย: 'buy' หรือ 'sell' */
+function txnViewSide() {
+    return document.querySelector('input[name="stkTxnSide"]:checked')?.value || 'buy';
+}
+
+/** เงินที่ออกหรือเข้าพอร์ตจากรายการนี้: ซื้อ = จ่ายรวมค่าธรรมเนียม, ขาย = ได้รับหลังหักค่าธรรมเนียม */
+function txnCash(t) {
+    const gross = parseFloat(t.quantity) * parseFloat(t.price);
+    const fee = parseFloat(t.fee) || 0;
+    return t.side === 'buy' ? gross + fee : gross - fee;
+}
+
+/**
+ * วาดตารางของฝั่งที่เลือก (ซื้อหรือขาย) และบรรทัดยอดรวมเหนือตาราง
+ * กำไรต่อครั้ง (realized_pl) มาจากเซิร์ฟเวอร์ ซึ่งใช้สูตรเดียวกับหน้าสรุปพอร์ต
+ */
 function renderStockTxnList() {
     const tbody = document.getElementById('stkTxnList');
     if (!tbody) return;
+    const side = txnViewSide();
+    const columns = TXN_COLUMNS[side];
 
-    if (!stockTxns.length) {
+    document.getElementById('stkTxnHead').innerHTML = '<tr>'
+        + columns.map(c => {
+            const [label, kind] = c.split('|');
+            return '<th scope="col"' + (kind ? ' class="num"' : '') + '>' + label + '</th>';
+        }).join('')
+        + '<th scope="col"><span class="sr-only">แก้ไข</span></th></tr>';
+
+    const rows = stockTxns.filter(t => t.side === side);
+    renderTxnTotals(side, rows);
+
+    if (!rows.length) {
         const filtered = document.getElementById('stkTickerFilter')?.value || document.getElementById('stkMarketFilter')?.value;
-        tbody.innerHTML = '<tr><td colspan="8"><div class="stk-empty">'
-            + (filtered ? 'ไม่พบรายการที่ตรงกับตัวกรอง' : '<strong>ยังไม่มีรายการซื้อขาย</strong>กด "บันทึกรายการ" ด้านบนเพื่อเพิ่มรายการแรก')
-            + '</div></td></tr>';
+        const empty = side === 'buy'
+            ? '<strong>ยังไม่มีรายการซื้อ</strong>กด "บันทึกรายการ" ด้านบนเพื่อเพิ่มรายการแรก'
+            : '<strong>ยังไม่มีรายการขาย</strong>ขายแล้วจะเห็นกำไรของแต่ละครั้ง และเงินที่ได้ไปไหนที่นี่';
+        tbody.innerHTML = '<tr><td colspan="' + (columns.length + 1) + '"><div class="stk-empty">'
+            + (filtered ? 'ไม่พบรายการที่ตรงกับตัวกรอง' : empty) + '</div></td></tr>';
         return;
     }
 
-    tbody.innerHTML = stockTxns.map(t => {
-        const value = parseFloat(t.quantity) * parseFloat(t.price);
-        const side = t.side === 'buy' ? '<span class="badge badge-dark">ซื้อ</span>' : '<span class="badge badge-gray">ขาย</span>';
-        return '<tr>'
-            + '<td>' + escHtml(formatDate(t.txn_date)) + '</td>'
+    tbody.innerHTML = rows.map(t => {
+        const cur = '<small>' + escHtml(t.currency) + '</small>';
+        let cells = '<td>' + escHtml(formatDate(t.txn_date)) + '</td>'
             + '<td><span class="stk-ticker">' + escHtml(t.ticker) + '</span><span class="tag">' + escHtml(t.market) + '</span></td>'
-            + '<td>' + side + '</td>'
             + '<td class="num">' + fmtShares(t.quantity) + '</td>'
-            + '<td class="num">' + formatMoney(t.price) + '<small>' + escHtml(t.currency) + '</small></td>'
+            + '<td class="num">' + formatMoney(t.price) + cur + '</td>'
             + '<td class="num">' + formatMoney(t.fee) + '</td>'
-            + '<td class="num">' + formatMoney(value) + '</td>'
+            + '<td class="num">' + formatMoney(txnCash(t)) + cur + '</td>';
+        if (side === 'sell') {
+            const pl = Number(t.realized_pl) || 0;
+            cells += '<td class="num ' + (pl > 0 ? 'gain' : pl < 0 ? 'loss' : '') + '">' + signedMoney(pl) + cur + '</td>'
+                + '<td>' + proceedsLabel(t) + '</td>';
+        }
+        return '<tr>' + cells
             + '<td class="stk-act"><button type="button" class="icon-btn sm" data-act="openEditStock" data-args="[' + t.id + ']" aria-label="แก้ไขรายการ ' + escHtml(t.ticker) + '"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button></td>'
             + '</tr>';
     }).join('');
+}
+
+/** ป้ายบอกว่าเงินจากการขายครั้งนี้ไปไหน รายการขายเก่าที่ไม่ได้เลือกไว้แสดงว่า "ไม่ได้ระบุ" ไม่เดาให้ */
+function proceedsLabel(t) {
+    if (t.proceeds_action === 'reinvest') return '<span class="stk-proceeds-tag">ลงทุนต่อ</span>';
+    if (t.proceeds_action === 'withdraw') {
+        return '<span class="stk-proceeds-tag is-out">ถอน ' + formatMoney(t.withdraw_amount) + ' ' + escHtml(t.withdraw_currency || '') + '</span>';
+    }
+    return '<span class="dim">ไม่ได้ระบุ</span>';
+}
+
+/**
+ * บรรทัดยอดรวมของฝั่งที่ดูอยู่ แยกตามสกุลเงิน ไม่แปลงสกุล
+ * ซื้อ: "ซื้อรวม 1,000.00 USD" / ขาย: "ได้รับรวม 1,200.00 USD กำไร +200.00"
+ */
+function renderTxnTotals(side, rows) {
+    const line = document.getElementById('stkTxnTotal');
+    if (!line) return;
+    const byCurrency = {};
+    rows.forEach(t => {
+        const sum = byCurrency[t.currency] || (byCurrency[t.currency] = { cash: 0, pl: 0 });
+        sum.cash += txnCash(t);
+        sum.pl += Number(t.realized_pl) || 0;
+    });
+    const parts = Object.entries(byCurrency).map(([currency, sum]) => {
+        let text = '<b class="num">' + formatMoney(sum.cash) + '</b> ' + escHtml(currency);
+        if (side === 'sell') {
+            text += ' กำไร <b class="num ' + (sum.pl > 0 ? 'gain' : sum.pl < 0 ? 'loss' : '') + '">' + signedMoney(sum.pl) + '</b>';
+        }
+        return text;
+    });
+    line.innerHTML = parts.length ? (side === 'buy' ? 'ซื้อรวม ' : 'ได้รับรวม ') + parts.join(' · ') : '';
 }
 
 /* ── Charts ── */
@@ -604,6 +675,67 @@ function setStockSide(side) {
     if (radio) radio.checked = true;
 }
 
+/** ตัวเลือกเงินจากการขายที่ติ๊กอยู่ หรือ null (รายการขายเก่าที่ยังไม่เคยเลือก) */
+function proceedsChoice() {
+    return document.querySelector('input[name="stkProceeds"]:checked')?.value || null;
+}
+
+/** ติ๊กตัวเลือกเงินจากการขาย null = ไม่ติ๊กอะไร */
+function setProceedsChoice(value) {
+    document.querySelectorAll('input[name="stkProceeds"]').forEach(r => { r.checked = r.value === value; });
+}
+
+/** ยอดถอนที่คำนวณให้: เงินที่ได้จากการขายหลังหักค่าธรรมเนียม (จำนวน × ราคา − ค่าธรรมเนียม) */
+function defaultWithdrawAmount() {
+    const qty = parseFloat(document.getElementById('stkQty').value) || 0;
+    const price = parseFloat(document.getElementById('stkPrice').value) || 0;
+    const fee = parseFloat(document.getElementById('stkFee').value) || 0;
+    return Math.max(0, qty * price - fee);
+}
+
+/** สกุลที่ถอนที่คำนวณให้: สกุลของรายการถ้าเป็น THB/USD ไม่งั้น THB (แท็บเงินลงทุนรับแค่สองสกุลนี้) */
+function defaultWithdrawCurrency() {
+    const saleCurrency = document.getElementById('stkCurrency').value.trim().toUpperCase();
+    return ['THB', 'USD'].includes(saleCurrency) ? saleCurrency : 'THB';
+}
+
+/**
+ * เตรียมช่องยอดถอนตอนเปิดฟอร์ม (เรียกหลังเติมจำนวน ราคา ค่าธรรมเนียม และสกุลของรายการแล้ว)
+ * ยอดและสกุลเดิมที่ตรงกับค่าที่คำนวณได้ นับว่ายังเป็นค่าคำนวณ แก้จำนวนหุ้นแล้วจะเปลี่ยนตาม
+ * ส่วนค่าที่ผู้ใช้เคยแก้เอง (ไม่ตรง) คงไว้ ไม่คำนวณทับ
+ */
+function resetWithdrawFields(amount, currency) {
+    const amountInput = document.getElementById('stkWithdrawAmount');
+    const currencyInput = document.getElementById('stkWithdrawCurrency');
+    const hasSaved = amount != null;
+    amountInput.value = hasSaved ? Number(amount).toFixed(2) : '';
+    currencyInput.value = currency || defaultWithdrawCurrency();
+    const isCustom = hasSaved && (Math.abs(Number(amount) - defaultWithdrawAmount()) >= 0.005
+        || currencyInput.value !== defaultWithdrawCurrency());
+    amountInput.dataset.edited = isCustom ? '1' : '';
+}
+
+/**
+ * แสดงส่วน "เงินจากการขายนี้" เฉพาะการขาย และช่องยอดถอนเฉพาะเมื่อเลือกถอนออก
+ * ยอดและสกุลที่ถอนตามตัวเลข ตลาด และสกุลของรายการที่พิมพ์ จนกว่าผู้ใช้จะแก้ช่องถอนเอง
+ */
+function syncProceedsFields() {
+    const isSell = stockSide() === 'sell';
+    const isWithdraw = isSell && proceedsChoice() === 'withdraw';
+    document.getElementById('stkProceeds').hidden = !isSell;
+    document.getElementById('stkWithdrawFields').hidden = !isWithdraw;
+
+    const amountInput = document.getElementById('stkWithdrawAmount');
+    if (!isWithdraw || amountInput.dataset.edited === '1') return;
+    amountInput.value = defaultWithdrawAmount().toFixed(2);
+    document.getElementById('stkWithdrawCurrency').value = defaultWithdrawCurrency();
+}
+
+/** ผู้ใช้แก้ยอดหรือสกุลที่ถอนเอง: หยุดคำนวณทับทั้งสองช่อง */
+function markWithdrawEdited() {
+    document.getElementById('stkWithdrawAmount').dataset.edited = '1';
+}
+
 function openAddStock() {
     editingStockId = null;
     document.getElementById('stockModalTitle').textContent = 'บันทึกรายการหุ้น';
@@ -618,6 +750,9 @@ function openAddStock() {
     document.getElementById('stkDate').value     = todayISO();
     document.getElementById('stkNotes').value    = '';
     document.getElementById('deleteStockBtn').hidden = true;
+    setProceedsChoice('reinvest');
+    resetWithdrawFields(null, null);
+    syncProceedsFields();
     stkError('');
     openModal('stockModal');
 }
@@ -638,6 +773,10 @@ function openEditStock(id) {
     document.getElementById('stkDate').value     = t.txn_date;
     document.getElementById('stkNotes').value    = t.notes || '';
     document.getElementById('deleteStockBtn').hidden = false;
+    // รายการขายเก่าไม่มีตัวเลือก: ไม่ติ๊กให้ (EDGE-11) ส่วนรายการซื้อที่เปลี่ยนเป็นขาย เริ่มที่ลงทุนต่อ
+    setProceedsChoice(t.side === 'sell' ? t.proceeds_action : 'reinvest');
+    resetWithdrawFields(t.withdraw_amount, t.withdraw_currency);
+    syncProceedsFields();
     stkError('');
     openModal('stockModal');
 }
@@ -648,6 +787,7 @@ function onStkMarketChange() {
     if (!cur.value || ['USD', 'THB'].includes(cur.value)) {
         cur.value = m === 'SET' ? 'THB' : (m === 'US' ? 'USD' : cur.value || 'USD');
     }
+    syncProceedsFields();   // สกุลที่ถอนตามสกุลของรายการ (หุ้น SET = THB)
 }
 
 async function saveStock() {
@@ -669,11 +809,21 @@ async function saveStock() {
     if (!body.txn_date) { stkError('เลือกวันที่ก่อน'); return; }
     if (!/^[A-Z]{3}$/.test(body.currency)) { stkError('สกุลเงินต้องเป็นรหัส 3 ตัวอักษร เช่น USD, THB'); return; }
 
+    if (body.side === 'sell') {
+        body.proceeds_action = proceedsChoice();
+        if (body.proceeds_action === 'withdraw') {
+            body.withdraw_amount = document.getElementById('stkWithdrawAmount').value;
+            body.withdraw_currency = document.getElementById('stkWithdrawCurrency').value;
+            if (!(parseFloat(body.withdraw_amount) > 0)) { stkError('ใส่ยอดที่ถอนออกให้มากกว่า 0'); return; }
+        }
+    }
+
     try {
         const url = editingStockId ? BASE_URL + '/api/stocks/' + editingStockId : BASE_URL + '/api/stocks';
         await apiFetch(url, { method: editingStockId ? 'PUT' : 'POST', body: JSON.stringify(body) });
         closeModal('stockModal');
-        await Promise.all([loadStockPortfolio(), loadStockTransactions()]);
+        // การขายแบบถอนออกเพิ่ม/แก้/ลบรายการในแท็บเงินลงทุนด้วย
+        await Promise.all([loadStockPortfolio(), loadStockTransactions(), loadCapitalFlows()]);
         const year = document.getElementById('stkChartYear')?.value;
         if (year) await loadStockChart(year);
         toast('บันทึกรายการแล้ว');
@@ -687,7 +837,7 @@ async function deleteStock() {
     try {
         await apiFetch(BASE_URL + '/api/stocks/' + editingStockId, { method: 'DELETE' });
         closeModal('stockModal');
-        await Promise.all([loadStockPortfolio(), loadStockTransactions()]);
+        await Promise.all([loadStockPortfolio(), loadStockTransactions(), loadCapitalFlows()]);
         const year = document.getElementById('stkChartYear')?.value;
         if (year) await loadStockChart(year);
         toast('ลบรายการแล้ว');

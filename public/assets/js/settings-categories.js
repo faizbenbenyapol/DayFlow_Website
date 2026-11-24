@@ -54,18 +54,8 @@
         const id   = li.dataset.id;
         const type = li.dataset.type;
         const oldName = $('.cat-name', li).textContent;
-        const { value: newName } = await Swal.fire({
-            title: 'แก้ไขหมวดหมู่',
-            input: 'text',
-            inputValue: oldName,
-            showCancelButton: true,
-            confirmButtonText: 'บันทึก',
-            cancelButtonText: 'ยกเลิก',
-            confirmButtonColor: '#e05c4b',
-            cancelButtonColor: '#6b7280',
-            inputValidator: v => (!v || !v.trim()) ? 'กรุณากรอกชื่อ' : undefined,
-        });
-        if (!newName || newName.trim() === oldName) return;
+        const newName = await askText({ title: 'แก้ไขหมวดหมู่', label: 'ชื่อหมวดหมู่', value: oldName, required: 'กรุณากรอกชื่อ' });
+        if (!newName || newName === oldName) return;
         try {
             await apiFetch(BASE_URL + '/api/finance/categories/' + id, {
                 method: 'PUT',
@@ -129,18 +119,8 @@
     async function editNoteTag(li) {
         const id = li.dataset.id;
         const oldName = $('.cat-name', li).textContent;
-        const { value: newName } = await Swal.fire({
-            title: 'แก้ไขแท็ก',
-            input: 'text',
-            inputValue: oldName,
-            showCancelButton: true,
-            confirmButtonText: 'บันทึก',
-            cancelButtonText: 'ยกเลิก',
-            confirmButtonColor: '#e05c4b',
-            cancelButtonColor: '#6b7280',
-            inputValidator: v => (!v || !v.trim()) ? 'กรุณากรอกชื่อ' : undefined,
-        });
-        if (!newName || newName.trim() === oldName) return;
+        const newName = await askText({ title: 'แก้ไขแท็ก', label: 'ชื่อแท็ก', value: oldName, required: 'กรุณากรอกชื่อ' });
+        if (!newName || newName === oldName) return;
         try {
             await apiFetch(BASE_URL + '/api/notes/tags/' + id, {
                 method: 'PUT',
@@ -203,18 +183,8 @@
     async function editExCategory(li) {
         const id = li.dataset.id;
         const oldName = $('.cat-name', li).textContent;
-        const { value: newName } = await Swal.fire({
-            title: 'แก้ไขหมวดหมู่',
-            input: 'text',
-            inputValue: oldName,
-            showCancelButton: true,
-            confirmButtonText: 'บันทึก',
-            cancelButtonText: 'ยกเลิก',
-            confirmButtonColor: '#e05c4b',
-            cancelButtonColor: '#6b7280',
-            inputValidator: v => (!v || !v.trim()) ? 'กรุณากรอกชื่อ' : undefined,
-        });
-        if (!newName || newName.trim() === oldName) return;
+        const newName = await askText({ title: 'แก้ไขหมวดหมู่', label: 'ชื่อหมวดหมู่', value: oldName, required: 'กรุณากรอกชื่อ' });
+        if (!newName || newName === oldName) return;
         try {
             await apiFetch(BASE_URL + '/api/exercise/categories/' + id, {
                 method: 'PUT',

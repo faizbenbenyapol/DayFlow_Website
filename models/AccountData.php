@@ -57,7 +57,7 @@ final class AccountData
         'bookmarks'           => [],
         'stock_transactions'  => [],
         'stock_watchlists'    => [],
-        'stock_capital_flows' => [],
+        'stock_capital_flows' => ['sale_txn_id' => ['stock_transactions', false]],
         'ai_generations'      => [],
     ];
 

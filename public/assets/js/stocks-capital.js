@@ -33,8 +33,11 @@ function renderCapitalList() {
             + '<td class="num">' + formatMoney(f.amount) + '</td>'
             + '<td>' + escHtml(f.currency) + '</td>'
             + '<td>' + (f.notes ? escHtml(f.notes) : STK_DASH) + '</td>'
-            + '<td class="stk-act"><button type="button" class="icon-btn sm" data-act="openEditCapital" data-args="[' + f.id + ']" aria-label="แก้ไขรายการเงินลงทุน"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button></td>'
-            + '</tr>';
+            // รายการถอนที่มาจากการขายหุ้น แก้ที่รายการขาย (เซิร์ฟเวอร์ปฏิเสธการแก้ตรงนี้ด้วย 409)
+            + '<td class="stk-act">' + (f.sale_txn_id
+                ? '<span class="stk-proceeds-tag is-out" title="แก้หรือลบที่รายการขายในแท็บซื้อขาย">จากการขาย</span>'
+                : '<button type="button" class="icon-btn sm" data-act="openEditCapital" data-args="[' + f.id + ']" aria-label="แก้ไขรายการเงินลงทุน"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button>')
+            + '</td></tr>';
     }).join('');
 }
 
