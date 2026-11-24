@@ -66,6 +66,10 @@ class Router
         $this->add('GET',  '/api/review',              'ReviewController',    'apiSummary', true);
 
         // --- API: Browser notifications ---
+        // --- API: กระดิ่งแจ้งเตือน (ทุกเมนู) ---
+        $this->add('GET',    '/api/notifications',        'NotificationController', 'apiList',   true);
+        $this->add('GET',    '/api/notifications/unread', 'NotificationController', 'apiUnread', true);
+        $this->add('POST',   '/api/notifications/read',   'NotificationController', 'apiRead',   true);
         $this->add('GET',    '/api/push/config',      'PushController', 'apiConfig',      true);
         $this->add('POST',   '/api/push/subscribe',   'PushController', 'apiSubscribe',   true);
         $this->add('POST',   '/api/push/unsubscribe', 'PushController', 'apiUnsubscribe', true);

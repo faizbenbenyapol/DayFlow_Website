@@ -79,6 +79,12 @@ if ((int)date('G') >= 3 && DemoReset::hasSnapshot() && ($demo = User::findDemo()
     }
 }
 
+// 0.5. ลบการแจ้งเตือนในแอปที่เก่ากว่า 30 วัน (ก่อนส่วน Telegram ที่จบก่อนเมื่อไม่มีใครตั้งบอท)
+require_once ROOT . '/models/Notification.php';
+$purged = Notification::purgeOld();
+if ($purged > 0) echo "Notifications: removed {$purged} older than " . Notification::KEEP_DAYS . " days.
+";
+
 // 1. Web Push digest.
 //
 // This runs before the Telegram section because that one returns early when no

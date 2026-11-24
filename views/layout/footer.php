@@ -28,6 +28,7 @@ if (isset($pageScript) && in_array($pageScript, $sortablePages, true)):
 <script src="<?= APP_URL ?>/assets/js/actions.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/actions.js') ?>"></script>
 <script src="<?= APP_URL ?>/assets/js/app.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/app.js') ?>"></script>
 <script src="<?= APP_URL ?>/assets/js/shell.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/shell.js') ?>"></script>
+<script src="<?= APP_URL ?>/assets/js/notifications.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/notifications.js') ?>"></script>
 
 <script nonce="<?= h(Security::nonce()) ?>">
 // Service worker: caches the static shell only (CSS/JS/fonts), never pages or

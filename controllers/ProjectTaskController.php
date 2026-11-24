@@ -93,6 +93,9 @@ class ProjectTaskController
             self::fail($e);
         }
         ProjectActivity::log($projectId, $userId, 'เพิ่มงานย่อยใหม่: "' . $title . '"');
+        if (!empty($data['assignee_user_id'])) {
+            self::notifyAssigned($project, $taskId, $title, (int)$data['assignee_user_id'], $userId);
+        }
 
         Response::json(['ok' => true, 'id' => $taskId], 201);
     }
@@ -185,6 +188,12 @@ class ProjectTaskController
                 $actText .= ' (' . implode(', ', $changes) . ')';
             }
             ProjectActivity::log($task['project_id'], $userId, $actText);
+
+            // ผู้รับผิดชอบเปลี่ยนเป็นคนใหม่ → แจ้งคนนั้น (send() ข้ามเองถ้ามอบให้ตัวเอง)
+            $newAssignee = isset($data['assignee_user_id']) ? (int)$data['assignee_user_id'] : 0;
+            if ($newAssignee > 0 && $newAssignee !== (int)($task['assignee_user_id'] ?? 0)) {
+                self::notifyAssigned($project, $taskId, (string)($data['title'] ?? $task['title']), $newAssignee, $userId);
+            }
 
             // แจ้ง Telegram เมื่อย้ายงานเข้าคอลัมน์กลุ่ม done จากกลุ่มอื่น
             if ($moveTo !== null && $moveTo['grp'] === 'done' && $task['status'] !== 'Done') {
@@ -369,6 +378,27 @@ class ProjectTaskController
         $data['assignee_user_id'] = $assigneeUserId;
         $data['assignee'] = null;
         return $data;
+    }
+
+    /**
+     * แจ้งผู้รับผิดชอบคนใหม่ว่าได้งาน (กระดิ่ง Telegram Push) ไม่แจ้งเมื่อมอบให้ตัวเอง
+     *
+     * @param array<string, mixed> $project โปรเจคของงาน (ใช้ชื่อและ id ทำลิงก์)
+     * @param int $taskId งานที่ได้รับมอบหมาย
+     * @param string $title ชื่องาน
+     * @param int $assigneeId ผู้รับผิดชอบคนใหม่
+     * @param int $actorId คนที่มอบหมาย
+     */
+    private static function notifyAssigned(array $project, int $taskId, string $title, int $assigneeId, int $actorId): void
+    {
+        Notification::send(
+            $assigneeId,
+            $actorId,
+            'assign',
+            (self::assigneeName($actorId, null) ?? 'มีคน') . ' มอบหมาย "' . $title . '" ให้คุณ',
+            (string)$project['name'],
+            '/projects?project=' . (int)$project['id'] . '&task=' . $taskId
+        );
     }
 
     /**

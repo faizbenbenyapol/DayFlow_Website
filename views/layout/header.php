@@ -217,6 +217,11 @@ require ROOT . '/views/partials/icons.php';
                 <span class="top-label">ค้นหา</span>
                 <kbd class="top-label" data-shortcut>Ctrl K</kbd>
             </button>
+            <!-- กระดิ่งแจ้งเตือน: notifications.js นับที่ยังไม่อ่านทุก 60 วินาทีเมื่อแท็บเปิดอยู่ -->
+            <button type="button" class="top-btn notif-bell" id="notifBell" data-act="toggleNotifications" aria-haspopup="dialog" aria-expanded="false" aria-controls="notifPanel" aria-label="การแจ้งเตือน">
+                <svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg>
+                <span class="notif-count" id="notifCount" hidden></span>
+            </button>
             <button type="button" class="btn btn-primary top-add" data-act="openQuickAdd">
                 <svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>เพิ่ม
             </button>
@@ -226,6 +231,16 @@ require ROOT . '/views/partials/icons.php';
             </button>
         </div>
     </header>
+
+    <!-- รายการแจ้งเตือน เปิดจากกระดิ่ง -->
+    <section class="notif-panel" id="notifPanel" role="dialog" aria-labelledby="notifTitle" hidden>
+        <header class="notif-head">
+            <h2 id="notifTitle">การแจ้งเตือน</h2>
+            <button type="button" class="btn btn-link btn-sm" data-act="markAllNotificationsRead">ทำเครื่องหมายว่าอ่านแล้ว</button>
+        </header>
+        <div id="notifList" aria-live="polite"></div>
+        <p class="notif-foot">เก็บไว้ 30 วัน · ช่องทาง Push และ Telegram ตั้งได้ที่หน้าตั้งค่า</p>
+    </section>
 
     <!-- Phone: add from anywhere, within reach of the thumb -->
     <button type="button" class="fab" data-act="openQuickAdd" aria-label="เพิ่มงานหรือบันทึกรายรับรายจ่าย">
