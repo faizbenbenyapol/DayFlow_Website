@@ -128,6 +128,46 @@ test('a snapshot from before projects were covered leaves the projects alone', f
     });
 });
 
+test('a snapshot taken before board columns existed comes back with default columns', function (TestClient $_c): void {
+    withDemoAccount(function (int $demoId, int $_otherId): void {
+        // snapshot บน production ถ่ายด้วยโค้ดก่อน migration 038: ไม่มี project_columns และงานไม่มี column_id
+        DB::run("INSERT INTO projects (user_id, name, type) VALUES (?, 'โปรเจกต์ก่อนมีคอลัมน์', 'software')", [$demoId]);
+        $sampleId = (int)DB::conn()->lastInsertId();
+        foreach (['To Do', 'In Progress', 'Review', 'Done'] as $status) {
+            DB::run('INSERT INTO project_tasks (project_id, user_id, title, status) VALUES (?, ?, ?, ?)', [$sampleId, $demoId, 'งาน ' . $status, $status]);
+        }
+        demoScript('--snapshot');
+        $data = json_decode((string)file_get_contents(DemoReset::snapshotPath()), true);
+        unset($data['demo_projects']['project_columns']);
+        foreach ($data['demo_projects']['project_tasks'] as &$task) unset($task['column_id']);
+        unset($task);
+        file_put_contents(DemoReset::snapshotPath(), json_encode($data, JSON_UNESCAPED_UNICODE));
+
+        // demo-reset.php ไม่มี autoloader: ถ้า DemoReset ไม่ require model เอง บรรทัดนี้จะล้ม
+        assertStringContains('รีเซ็ตบัญชี demo แล้ว', demoScript());
+
+        $restoredId = (int)DB::run('SELECT id FROM projects WHERE user_id = ?', [$demoId])->fetchColumn();
+        $columns = DB::run(
+            "SELECT id, name, grp FROM project_columns WHERE project_id = ? ORDER BY FIELD(grp, 'todo', 'doing', 'done'), position, id",
+            [$restoredId]
+        )->fetchAll();
+        assertSame(['ต้องทำ', 'กำลังทำ', 'รอรีวิว', 'ทดสอบ', 'เสร็จ'], array_column($columns, 'name'), 'the software defaults are created');
+
+        // แต่ละสถานะเดิมลงคอลัมน์ตามกฎกลุ่ม และสถานะเป็นเงาของคอลัมน์ (Review = doing คอลัมน์สุดท้าย)
+        $want = ['งาน To Do' => ['ต้องทำ', 'To Do'], 'งาน In Progress' => ['กำลังทำ', 'In Progress'],
+                 'งาน Review' => ['ทดสอบ', 'Review'], 'งาน Done' => ['เสร็จ', 'Done']];
+        $got = DB::run(
+            'SELECT t.title, c.name, t.status FROM project_tasks t JOIN project_columns c ON c.id = t.column_id AND c.project_id = t.project_id
+             WHERE t.project_id = ?',
+            [$restoredId]
+        )->fetchAll();
+        assertSame(4, count($got), 'every task has a column of the restored project');
+        foreach ($got as $row) {
+            assertSame($want[$row['title']], [$row['name'], $row['status']], $row['title']);
+        }
+    });
+});
+
 test('the snapshot never carries the account row or its password hash', function (TestClient $_c): void {
     withDemoAccount(function (int $demoId, int $_otherId): void {
         demoScript('--snapshot');

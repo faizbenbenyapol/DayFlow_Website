@@ -1,21 +1,21 @@
 <?php
 // =====================================================
-// controllers/ProjectAccess.php — who may see and change a project
+// controllers/ProjectAccess.php — ใครเห็นและแก้โปรเจคได้
 // =====================================================
 
 /**
- * Shared by every project controller. Project::getById() scopes a project to
- * its owner, its members and a guest holding the share token, and returns
- * `user_role` and `is_owner` for the checks here.
+ * ใช้ร่วมกันทุก controller ของโปรเจค: โหลดโปรเจคที่ผู้เรียกมองเห็น แล้วตรวจบทบาท
+ * ด้วย requireRole() ที่เดียว
  */
 trait ProjectAccess
 {
     /**
-     * Loads a project the caller may see, or stops with a 404.
+     * โหลดโปรเจคที่ผู้เรียกมองเห็น หรือหยุดด้วย 404
      *
-     * Project::getById() already scopes to the owner, the members, and a guest
-     * holding the share token, and it returns `user_role` and `is_owner` for
-     * the checks below.
+     * Project::getById() กรองให้แล้วว่าเป็นเจ้าของ สมาชิก หรือแขกที่ถือลิงก์แชร์
+     * และคืน `user_role` กับ `is_owner` ไว้ให้ requireRole()
+     *
+     * @return array<string, mixed> แถวโปรเจค
      */
     private function loadProject(int $projectId): array
     {

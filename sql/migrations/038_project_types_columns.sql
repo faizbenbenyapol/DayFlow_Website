@@ -3,7 +3,7 @@
 --   - projects.type: ประเภทโปรเจกต์ (general/software/marketing/finance) โปรเจกต์เดิมเป็น general
 --   - project_columns: คอลัมน์บอร์ดของแต่ละโปรเจกต์
 --   - project_tasks.column_id: งานชี้คอลัมน์ของโปรเจกต์เดียวกัน (ลบคอลัมน์แล้วงานไม่หาย)
---   - seed 4 คอลัมน์ตั้งต้นให้โปรเจกต์ที่ยังไม่มีคอลัมน์ และ backfill column_id ตาม status เดิม
+--   - seed 4 คอลัมน์ตั้งต้นให้โปรเจกต์ที่ยังไม่มีคอลัมน์ backfill column_id ตามกลุ่มของ status เดิม แล้วตั้ง status เป็นเงาของคอลัมน์
 -- เงื่อนไขเป็นระดับแถว (NOT EXISTS ต่อโปรเจกต์) เพราะรันซ้ำทุกไฟล์: โปรเจกต์ที่มีคอลัมน์
 -- อยู่แล้วต้องไม่ถูกแตะ (รวมคอลัมน์ที่ผู้ใช้แก้เองภายหลัง) และงานที่ย้ายคอลัมน์แล้วต้องไม่ถูกเขียนทับ
 -- =====================================================
@@ -61,17 +61,40 @@ WHERE NOT EXISTS (
     SELECT 1 FROM `project_columns` c WHERE c.`project_id` = p.`id`
 );
 
--- 5. backfill column_id ตาม status เดิม เฉพาะงานที่ยังไม่มีคอลัมน์ (รอบที่ค้างกลางทางจึงถูกเก็บให้ครบ)
+-- 5. backfill column_id ตามกลุ่มของ status เดิม เฉพาะงานที่ยังไม่มีคอลัมน์ (รอบที่ค้างกลางทางจึงถูกเก็บให้ครบ)
+--    กฎเดียวกับ ProjectColumn::forLegacyStatus(): To Do = คอลัมน์แรกของ todo, In Progress = คอลัมน์แรก
+--    ของ doing, Review = คอลัมน์สุดท้ายของ doing, Done = คอลัมน์แรกของ done (แรก/สุดท้ายตาม position แล้ว id)
+--    ไม่จับคู่ด้วยเลข position ตายตัว เพราะโปรเจคที่โค้ดใหม่สร้าง (ซอฟต์แวร์ 5 คอลัมน์ หรือเรียงกลุ่มใหม่)
+--    ใช้ position คนละชุด ซึ่งเจอเมื่อถอยโค้ดแล้วรัน --force
+--    IF(...) DESC แทน -position เพราะ position เป็น UNSIGNED ติดลบไม่ได้
 --    updated_at = updated_at กัน ON UPDATE CURRENT_TIMESTAMP เปลี่ยน "แก้ไขล่าสุด" ของผู้ใช้
 UPDATE `project_tasks` t
-JOIN `project_columns` c
-  ON c.`project_id` = t.`project_id`
- AND c.`position` = CASE t.`status`
-        WHEN 'To Do' THEN 0
-        WHEN 'In Progress' THEN 1
-        WHEN 'Review' THEN 2
-        WHEN 'Done' THEN 3
-     END
-SET t.`column_id` = c.`id`,
+SET t.`column_id` = (
+        SELECT c.`id` FROM `project_columns` c
+        WHERE c.`project_id` = t.`project_id`
+          AND c.`grp` = CASE t.`status` WHEN 'To Do' THEN 'todo' WHEN 'Done' THEN 'done' ELSE 'doing' END
+        ORDER BY IF(t.`status` = 'Review', c.`position`, 0) DESC,
+                 IF(t.`status` = 'Review', c.`id`, 0) DESC,
+                 c.`position`, c.`id`
+        LIMIT 1
+    ),
     t.`updated_at` = t.`updated_at`
 WHERE t.`column_id` IS NULL;
+
+-- 6. status เป็นเงาของคอลัมน์ (กฎเดียวกับ ProjectTask::shadowStatusSql): done = Done, todo = To Do,
+--    doing คอลัมน์สุดท้าย = Review, doing อื่น = In Progress
+--    ข้อมูลเดิมที่เพิ่ง backfill ตรงกฎอยู่แล้วจึงไม่มีแถวเปลี่ยน ส่วนงานที่ backfill เข้าโปรเจคที่มี doing
+--    คอลัมน์เดียวจะได้ Review ตามกฎ
+UPDATE `project_tasks` t
+JOIN `project_columns` c ON c.`id` = t.`column_id`
+SET t.`status` = CASE c.`grp`
+        WHEN 'done' THEN 'Done'
+        WHEN 'todo' THEN 'To Do'
+        ELSE IF(c.`id` = (
+                SELECT d.`id` FROM `project_columns` d
+                WHERE d.`project_id` = c.`project_id` AND d.`grp` = 'doing'
+                ORDER BY d.`position` DESC, d.`id` DESC
+                LIMIT 1
+            ), 'Review', 'In Progress')
+    END,
+    t.`updated_at` = t.`updated_at`;

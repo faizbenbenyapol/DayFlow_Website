@@ -645,3 +645,130 @@ test('column names are compared with utf8mb4_bin', function (TestClient $_c): vo
     assertSame(201, $owner->post("/api/projects/{$projectId}/columns", ['name' => 'สมช้าย', 'grp' => 'todo'])['status']);
     assertSame(422, $owner->post("/api/projects/{$projectId}/columns", ['name' => 'สมชาย', 'grp' => 'todo'])['status']);
 });
+
+// =====================================================
+// สองคนกดพร้อมกัน (ผลตรวจอิสระ P0a ข้อ 1–2)
+// ต้องเป็นคนละ session: PHP ล็อก session ให้คำขอของ session เดียวกันเข้าคิวอยู่แล้ว
+// =====================================================
+
+/**
+ * สร้างโปรเจคใหม่ที่บัญชี editor ของชุดนี้เป็นผู้ดูแล
+ *
+ * @param array<string, TestClient|string> $users
+ * @return array{0: int, 1: TestClient, 2: TestClient} [รหัสโปรเจค, เจ้าของ, ผู้ดูแล]
+ */
+function columnAdminProject(array $users): array
+{
+    $projectId = columnProject($users);
+    $owner = $users['owner'];
+    $invite = $owner->post("/api/projects/{$projectId}/members", ['email_or_username' => $users['editorU'], 'role' => 'Admin']);
+    if ($invite['status'] !== 200) throw new RuntimeException('admin invite failed: ' . $invite['body']);
+    return [$projectId, $owner, $users['editor']];
+}
+
+/** นับคอลัมน์ของกลุ่มหนึ่งในโปรเจค */
+function columnGroupCount(int $projectId, string $grp): int
+{
+    return (int)DB::run('SELECT COUNT(*) FROM project_columns WHERE project_id = ? AND grp = ?', [$projectId, $grp])->fetchColumn();
+}
+
+test('two admins deleting the two done columns at once leave one of them', function (TestClient $_c): void {
+    $users = columnUsers();
+    for ($round = 0; $round < 5; $round++) {
+        [$projectId, $owner, $admin] = columnAdminProject($users);
+        $second = (int)($owner->json($owner->post("/api/projects/{$projectId}/columns", ['name' => 'ปิดงาน', 'grp' => 'done']))['id'] ?? 0);
+        $first = (int)columnOfGroup(columnList($owner, $projectId), 'done')['id'];
+
+        $results = TestClient::parallel([
+            [$owner, 'DELETE', "/api/projects/columns/{$first}", []],
+            [$admin, 'DELETE', "/api/projects/columns/{$second}", []],
+        ]);
+        $statuses = [$results[0]['status'], $results[1]['status']];
+        sort($statuses);
+        assertSame([200, 422], $statuses, "round {$round}: one delete wins, the other is refused");
+        assertSame(1, columnGroupCount($projectId, 'done'), "round {$round}: the done group keeps one column");
+    }
+});
+
+test('two admins moving both doing columns away at once leave one doing column', function (TestClient $_c): void {
+    $users = columnUsers();
+    for ($round = 0; $round < 5; $round++) {
+        [$projectId, $owner, $admin] = columnAdminProject($users);
+        $doing = array_values(array_filter(columnList($owner, $projectId), fn(array $c): bool => $c['grp'] === 'doing'));
+
+        $results = TestClient::parallel([
+            [$owner, 'PUT', '/api/projects/columns/' . (int)$doing[0]['id'], ['grp' => 'todo']],
+            [$admin, 'PUT', '/api/projects/columns/' . (int)$doing[1]['id'], ['grp' => 'todo']],
+        ]);
+        $statuses = [$results[0]['status'], $results[1]['status']];
+        sort($statuses);
+        assertSame([200, 422], $statuses, "round {$round}: one regroup wins, the other is refused");
+        assertSame(1, columnGroupCount($projectId, 'doing'), "round {$round}: the doing group keeps one column");
+        columnAssertShadow($projectId);
+    }
+});
+
+test('a task created while its column is deleted never loses its column', function (TestClient $_c): void {
+    $users = columnUsers();
+    for ($round = 0; $round < 5; $round++) {
+        [$projectId, $owner, $admin] = columnAdminProject($users);
+        $doomed = (int)($owner->json($owner->post("/api/projects/{$projectId}/columns", ['name' => 'ชั่วคราว', 'grp' => 'doing']))['id'] ?? 0);
+        $keep = (int)columnOfGroup(columnList($owner, $projectId), 'doing')['id'];
+
+        $results = TestClient::parallel([
+            [$owner, 'POST', "/api/projects/{$projectId}/tasks", ['title' => 'งานแข่ง', 'column_id' => $doomed]],
+            [$admin, 'DELETE', "/api/projects/columns/{$doomed}", ['move_to' => $keep]],
+        ]);
+        assertContains($results[0]['status'], [201, 404], "round {$round}: create either lands or finds the column gone");
+        assertSame(200, $results[1]['status'], "round {$round}: the delete goes through");
+
+        $loose = (int)DB::run(
+            'SELECT COUNT(*) FROM project_tasks t LEFT JOIN project_columns c ON c.id = t.column_id AND c.project_id = t.project_id
+             WHERE t.project_id = ? AND c.id IS NULL',
+            [$projectId]
+        )->fetchColumn();
+        assertSame(0, $loose, "round {$round}: no task is left without a column of its project");
+        columnAssertShadow($projectId);
+    }
+});
+
+// =====================================================
+// รัน migration 038 ซ้ำบนโปรเจคที่โค้ดใหม่สร้าง (ผลตรวจอิสระ P0a ข้อ 3)
+// ทางนี้ใช้จริงเมื่อถอยโค้ดแล้วกลับมาและรัน migrate.php --force
+// =====================================================
+
+/** กลุ่มของสถานะเดิม เขียนซ้ำโดยตั้งใจ: ค่าคาดหวังของ test ต้องไม่อ่านจากโค้ดที่กำลังทดสอบ */
+const COLUMN_TEST_LEGACY_GROUPS = ['To Do' => 'todo', 'In Progress' => 'doing', 'Review' => 'doing', 'Done' => 'done'];
+
+test('re-running migration 038 files loose tasks into columns by group, not by position', function (TestClient $_c): void {
+    $users = columnUsers();
+    $owner = $users['owner'];
+    $software = columnProject($users, 'software');
+    $general = columnProject($users);
+    // เรียงกลุ่ม doing ของโปรเจคทั่วไปกลับด้าน: position เริ่มใหม่ 0..n-1 ในกลุ่ม ชนกับ todo ที่ 0
+    $doing = array_values(array_filter(columnList($owner, $general), fn(array $c): bool => $c['grp'] === 'doing'));
+    assertSame(200, $owner->post("/api/projects/{$general}/columns/reorder", ['grp' => 'doing', 'ids' => [(int)$doing[1]['id'], (int)$doing[0]['id']]])['status']);
+
+    // งานที่โค้ดเก่าสร้างระหว่างถอยโค้ด: มี status แต่ไม่มี column_id
+    $taskIds = [];
+    foreach ([$software, $general] as $projectId) {
+        foreach (array_keys(COLUMN_TEST_LEGACY_GROUPS) as $status) {
+            DB::run('INSERT INTO project_tasks (project_id, title, status) VALUES (?, ?, ?)', [$projectId, 'เก่า ' . $status, $status]);
+            $taskIds[(int)DB::conn()->lastInsertId()] = [$projectId, $status];
+        }
+    }
+
+    $sql = (string)file_get_contents(dirname(__DIR__, 2) . '/sql/migrations/038_project_types_columns.sql');
+    DB::conn()->exec($sql);
+    $first = array_map(fn(int $id): array => columnDbTask($id), array_keys($taskIds));
+    DB::conn()->exec($sql);
+    $second = array_map(fn(int $id): array => columnDbTask($id), array_keys($taskIds));
+    assertSame($first, $second, 'a second run changes nothing');
+
+    foreach ($taskIds as $taskId => [$projectId, $status]) {
+        $expected = columnOfGroup(columnList($owner, $projectId), COLUMN_TEST_LEGACY_GROUPS[$status], $status === 'Review');
+        assertSame((int)$expected['id'], (int)columnDbTask($taskId)['column_id'], "{$status} in project {$projectId} lands in {$expected['name']}");
+    }
+    columnAssertShadow($software);
+    columnAssertShadow($general);
+});

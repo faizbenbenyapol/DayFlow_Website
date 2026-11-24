@@ -8,9 +8,15 @@ class ProjectTaskController
     use ProjectAccess;
 
     /**
-     * ดึงข้อมูลงานคัมบัง ประวัติ และผลสรุปความก้าวหน้า AI ของโครงการร่วมกัน
-     * GET /api/projects/{id}/tasks
+     * ส่งข้อความของ ProjectColumnException ออกเป็น JSON ด้วยรหัสเดิม
+     *
+     * @param ProjectColumnException $e ข้อยกเว้นที่ model โยนขณะถือ lock
      */
+    private static function fail(ProjectColumnException $e): never
+    {
+        Response::json(['error' => $e->getMessage()], $e->httpStatus);
+    }
+
     /**
      * ดึงข้อมูลงานคัมบัง ประวัติ และผลสรุปความก้าวหน้า AI ของโครงการร่วมกัน
      * GET /api/projects/{id}/tasks
@@ -81,7 +87,11 @@ class ProjectTaskController
             $data = self::applyAssigneeUserId($projectId, $data, $json['assignee_user_id']);
         }
 
-        $taskId = ProjectTask::create($userId, $projectId, $column, $data);
+        try {
+            $taskId = ProjectTask::create($userId, $projectId, $column, $data);
+        } catch (ProjectColumnException $e) {
+            self::fail($e);
+        }
         ProjectActivity::log($projectId, $userId, 'เพิ่มงานย่อยใหม่: "' . $title . '"');
 
         Response::json(['ok' => true, 'id' => $taskId], 201);
@@ -159,7 +169,11 @@ class ProjectTaskController
             $changed = ProjectTask::update($taskId, $data);
         }
         if ($moveTo !== null) {
-            ProjectTask::moveTo($taskId, (int)$task['project_id'], $moveTo);
+            try {
+                ProjectTask::moveTo($taskId, (int)$task['project_id'], $moveTo);
+            } catch (ProjectColumnException $e) {
+                self::fail($e);
+            }
             $changed = true;
             $changes[] = 'คอลัมน์ เปลี่ยนเป็น \'' . $moveTo['name'] . '\'';
         }
@@ -283,7 +297,11 @@ class ProjectTaskController
             ];
         }
 
-        ProjectTask::reorder($projectId, $normalized);
+        try {
+            ProjectTask::reorder($projectId, $normalized);
+        } catch (ProjectColumnException $e) {
+            self::fail($e);
+        }
         ProjectActivity::log($projectId, $userId, 'จัดตำแหน่งลำดับบอร์ดคัมบังใหม่');
 
         Response::json(['ok' => true]);

@@ -52,39 +52,51 @@ class ProjectTask
     public static function create(int $userId, int $projectId, array $column, array $data): int
     {
         $columnId = (int)$column['id'];
-        $maxPos = (int)DB::run(
-            'SELECT COALESCE(MAX(position), -1) FROM project_tasks
-             WHERE project_id = ? AND column_id = ?',
-            [$projectId, $columnId]
-        )->fetchColumn();
+        return (int)ProjectColumn::locked($projectId, static function () use ($userId, $projectId, $columnId, $data): int {
+            // อ่านคอลัมน์ซ้ำหลังได้ lock: ถ้าคำขอลบชนะไปแล้ว ต้องตอบ 404 ไม่ใช่
+            // ปล่อยให้ FK ON DELETE SET NULL ทำให้งานลอยอย่างไร้คอลัมน์
+            if (!ProjectColumn::findInProject($projectId, $columnId)) {
+                throw new ProjectColumnException(404, 'ไม่พบคอลัมน์');
+            }
 
-        $insertUserId = ($userId > 0) ? $userId : null;
-        $guestName = !empty($_SESSION['guest_name']) ? $_SESSION['guest_name'] : null;
-        $assigneeUserId = !empty($data['assignee_user_id']) ? (int)$data['assignee_user_id'] : null;
-        $assignee = ($assigneeUserId !== null) ? null : (!empty($data['assignee']) ? $data['assignee'] : null);
+            $maxPos = (int)DB::run(
+                'SELECT COALESCE(MAX(position), -1) FROM project_tasks
+                 WHERE project_id = ? AND column_id = ?',
+                [$projectId, $columnId]
+            )->fetchColumn();
 
-        DB::run(
-            'INSERT INTO project_tasks (project_id, user_id, guest_name, title, status, priority, due_date, category, assignee_user_id, assignee, column_id, position, checklist)
-             SELECT ?, ?, ?, ?, ' . self::shadowStatusSql() . ', ?, ?, ?, ?, ?, c.id, ?, ?
-             FROM project_columns c
-             WHERE c.id = ? AND c.project_id = ?',
-            [
-                $projectId,
-                $insertUserId,
-                $guestName,
-                $data['title'],
-                $data['priority'] ?? 'Medium',
-                !empty($data['due_date']) ? $data['due_date'] : null,
-                !empty($data['category']) ? $data['category'] : null,
-                $assigneeUserId,
-                $assignee,
-                $maxPos + 1,
-                !empty($data['checklist']) ? json_encode($data['checklist'], JSON_UNESCAPED_UNICODE) : null,
-                $columnId,
-                $projectId
-            ]
-        );
-        return (int)DB::conn()->lastInsertId();
+            $insertUserId = ($userId > 0) ? $userId : null;
+            $guestName = !empty($_SESSION['guest_name']) ? $_SESSION['guest_name'] : null;
+            $assigneeUserId = !empty($data['assignee_user_id']) ? (int)$data['assignee_user_id'] : null;
+            $assignee = ($assigneeUserId !== null) ? null : (!empty($data['assignee']) ? $data['assignee'] : null);
+
+            $insert = DB::run(
+                'INSERT INTO project_tasks (project_id, user_id, guest_name, title, status, priority, due_date, category, assignee_user_id, assignee, column_id, position, checklist)
+                 SELECT ?, ?, ?, ?, ' . self::shadowStatusSql() . ', ?, ?, ?, ?, ?, c.id, ?, ?
+                 FROM project_columns c
+                 WHERE c.id = ? AND c.project_id = ?',
+                [
+                    $projectId,
+                    $insertUserId,
+                    $guestName,
+                    $data['title'],
+                    $data['priority'] ?? 'Medium',
+                    !empty($data['due_date']) ? $data['due_date'] : null,
+                    !empty($data['category']) ? $data['category'] : null,
+                    $assigneeUserId,
+                    $assignee,
+                    $maxPos + 1,
+                    !empty($data['checklist']) ? json_encode($data['checklist'], JSON_UNESCAPED_UNICODE) : null,
+                    $columnId,
+                    $projectId
+                ]
+            );
+            // คอลัมน์หายไปจริง (เช่นถูกลบหลังอ่านครั้งแรก) → INSERT…SELECT ใส่ 0 แถว
+            if ($insert->rowCount() < 1) {
+                throw new ProjectColumnException(404, 'ไม่พบคอลัมน์');
+            }
+            return (int)DB::conn()->lastInsertId();
+        });
     }
 
     /**
@@ -144,19 +156,26 @@ class ProjectTask
     public static function moveTo(int $taskId, int $projectId, array $column): void
     {
         $columnId = (int)$column['id'];
-        $maxPos = (int)DB::run(
-            'SELECT COALESCE(MAX(position), -1) FROM project_tasks
-             WHERE project_id = ? AND column_id = ? AND id <> ?',
-            [$projectId, $columnId, $taskId]
-        )->fetchColumn();
+        ProjectColumn::locked($projectId, static function () use ($taskId, $projectId, $columnId): void {
+            // คอลัมน์ปลายทางต้องยังอยู่ในโปรเจคนี้ตอนได้ lock
+            if (!ProjectColumn::findInProject($projectId, $columnId)) {
+                throw new ProjectColumnException(404, 'ไม่พบคอลัมน์');
+            }
 
-        DB::run(
-            'UPDATE project_tasks t
-             JOIN project_columns c ON c.id = ? AND c.project_id = t.project_id
-             SET t.column_id = c.id, t.position = ?, t.status = ' . self::shadowStatusSql() . '
-             WHERE t.id = ? AND t.project_id = ?',
-            [$columnId, $maxPos + 1, $taskId, $projectId]
-        );
+            $maxPos = (int)DB::run(
+                'SELECT COALESCE(MAX(position), -1) FROM project_tasks
+                 WHERE project_id = ? AND column_id = ? AND id <> ?',
+                [$projectId, $columnId, $taskId]
+            )->fetchColumn();
+
+            DB::run(
+                'UPDATE project_tasks t
+                 JOIN project_columns c ON c.id = ? AND c.project_id = t.project_id
+                 SET t.column_id = c.id, t.position = ?, t.status = ' . self::shadowStatusSql() . '
+                 WHERE t.id = ? AND t.project_id = ?',
+                [$columnId, $maxPos + 1, $taskId, $projectId]
+            );
+        });
     }
 
     /**
@@ -169,17 +188,27 @@ class ProjectTask
     {
         if ($items === []) return;
 
-        $values = [];
-        $params = [];
-        foreach ($items as $item) {
-            $values[] = 'SELECT ? AS id, ? AS column_id, ? AS position';
-            array_push($params, (int)$item['id'], (int)$item['column_id'], (int)$item['position']);
-        }
-        $params[] = $projectId;
+        ProjectColumn::locked($projectId, static function () use ($projectId, $items): void {
+            // อ่านคอลัมน์ของโปรเจคซ้ำหลังได้ lock: รายการที่ client ถือมาอาจชี้
+            // คอลัมน์ที่เพิ่งถูกลบไปแล้ว
+            $validColumns = [];
+            foreach (ProjectColumn::listForProject($projectId) as $column) {
+                $validColumns[(int)$column['id']] = true;
+            }
+            foreach ($items as $item) {
+                if (!isset($validColumns[(int)$item['column_id']])) {
+                    throw new ProjectColumnException(404, 'ไม่พบคอลัมน์');
+                }
+            }
 
-        $db = DB::conn();
-        $db->beginTransaction();
-        try {
+            $values = [];
+            $params = [];
+            foreach ($items as $item) {
+                $values[] = 'SELECT ? AS id, ? AS column_id, ? AS position';
+                array_push($params, (int)$item['id'], (int)$item['column_id'], (int)$item['position']);
+            }
+            $params[] = $projectId;
+
             DB::run(
                 'UPDATE project_tasks t
                  JOIN (' . implode(' UNION ALL ', $values) . ') v ON v.id = t.id
@@ -188,11 +217,7 @@ class ProjectTask
                  WHERE t.project_id = ?',
                 $params
             );
-            $db->commit();
-        } catch (Throwable $e) {
-            $db->rollBack();
-            throw $e;
-        }
+        });
     }
 
     /**
@@ -205,34 +230,42 @@ class ProjectTask
      */
     public static function moveColumnTasks(int $projectId, int $fromColumnId, int $toColumnId): void
     {
-        $taskIds = DB::run(
-            'SELECT id FROM project_tasks WHERE project_id = ? AND column_id = ? ORDER BY position, id',
-            [$projectId, $fromColumnId]
-        )->fetchAll(PDO::FETCH_COLUMN);
-        if ($taskIds === []) return;
+        ProjectColumn::locked($projectId, static function () use ($projectId, $fromColumnId, $toColumnId): void {
+            // ทั้งต้นทางและปลายทางต้องเป็นคอลัมน์ของโปรเจคนี้ตอนได้ lock
+            if (!ProjectColumn::findInProject($projectId, $fromColumnId)
+                || !ProjectColumn::findInProject($projectId, $toColumnId)) {
+                throw new ProjectColumnException(404, 'ไม่พบคอลัมน์');
+            }
 
-        $base = (int)DB::run(
-            'SELECT COALESCE(MAX(position), -1) FROM project_tasks WHERE project_id = ? AND column_id = ?',
-            [$projectId, $toColumnId]
-        )->fetchColumn();
+            $taskIds = DB::run(
+                'SELECT id FROM project_tasks WHERE project_id = ? AND column_id = ? ORDER BY position, id',
+                [$projectId, $fromColumnId]
+            )->fetchAll(PDO::FETCH_COLUMN);
+            if ($taskIds === []) return;
 
-        $values = [];
-        $params = [];
-        foreach ($taskIds as $index => $taskId) {
-            $values[] = 'SELECT ? AS id, ? AS position';
-            array_push($params, (int)$taskId, $base + 1 + $index);
-        }
-        $params[] = $toColumnId;
-        $params[] = $projectId;
+            $base = (int)DB::run(
+                'SELECT COALESCE(MAX(position), -1) FROM project_tasks WHERE project_id = ? AND column_id = ?',
+                [$projectId, $toColumnId]
+            )->fetchColumn();
 
-        DB::run(
-            'UPDATE project_tasks t
-             JOIN (' . implode(' UNION ALL ', $values) . ') v ON v.id = t.id
-             JOIN project_columns c ON c.id = ? AND c.project_id = t.project_id
-             SET t.column_id = c.id, t.position = v.position, t.status = ' . self::shadowStatusSql() . ', t.updated_at = t.updated_at
-             WHERE t.project_id = ?',
-            $params
-        );
+            $values = [];
+            $params = [];
+            foreach ($taskIds as $index => $taskId) {
+                $values[] = 'SELECT ? AS id, ? AS position';
+                array_push($params, (int)$taskId, $base + 1 + $index);
+            }
+            $params[] = $toColumnId;
+            $params[] = $projectId;
+
+            DB::run(
+                'UPDATE project_tasks t
+                 JOIN (' . implode(' UNION ALL ', $values) . ') v ON v.id = t.id
+                 JOIN project_columns c ON c.id = ? AND c.project_id = t.project_id
+                 SET t.column_id = c.id, t.position = v.position, t.status = ' . self::shadowStatusSql() . ', t.updated_at = t.updated_at
+                 WHERE t.project_id = ?',
+                $params
+            );
+        });
     }
 
     /**

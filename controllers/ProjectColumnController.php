@@ -2,7 +2,7 @@
 // =====================================================
 // controllers/ProjectColumnController.php — คอลัมน์บอร์ดของโปรเจค
 //
-// ทุก endpoint ในไฟล์นี้ต้องมีสิทธิ์ระดับผู้ดูแล (เจ้าของก่อน slice ถัดไป)
+// ทุก endpoint ในไฟล์นี้ต้องมีสิทธิ์ระดับผู้ดูแล
 // และ id ของคอลัมน์/โปรเจคที่มองไม่เห็นต้องตอบเหมือน id ที่ไม่มีอยู่
 // =====================================================
 
@@ -13,23 +13,14 @@ class ProjectColumnController
     /** กลุ่มที่รับได้ของคอลัมน์ */
     private const GROUPS = ['todo', 'doing', 'done'];
 
-    /** จำนวนคอลัมน์สูงสุดต่อโปรเจค */
-    private const MAX_COLUMNS = 12;
-
     /**
-     * โหลดโปรเจคตามรหัสและบังคับสิทธิ์ระดับผู้ดูแล
+     * ส่งข้อความของ ProjectColumnException ออกเป็น JSON ด้วยรหัสเดิม
      *
-     * @param string $id รหัสโปรเจคจาก URL
-     * @return array<string, mixed> โปรเจคที่ผู้เรียกเห็นได้
+     * @param ProjectColumnException $e ข้อยกเว้นที่ model โยนขณะถือ lock
      */
-    private function loadAdminProject(string $id): array
+    private static function fail(ProjectColumnException $e): never
     {
-        $project = Project::getById((int)$id, Auth::userId());
-        if (!$project) {
-            Response::json(['error' => 'ไม่พบข้อมูลโปรเจค'], 404);
-        }
-        $this->requireRole($project, 'admin', 'จัดการคอลัมน์');
-        return $project;
+        Response::json(['error' => $e->getMessage()], $e->httpStatus);
     }
 
     /**
@@ -85,7 +76,8 @@ class ProjectColumnController
      */
     public function apiCreate(string $id): void
     {
-        $project = $this->loadAdminProject($id);
+        $project = $this->loadProject((int)$id);
+        $this->requireRole($project, 'admin', 'จัดการคอลัมน์');
         $projectId = (int)$project['id'];
 
         $name = self::normalizeName(Request::input('name', ''));
@@ -94,14 +86,12 @@ class ProjectColumnController
         if (!in_array($grp, self::GROUPS, true)) {
             Response::json(['error' => 'กลุ่มคอลัมน์ไม่ถูกต้อง'], 422);
         }
-        if (count(ProjectColumn::listForProject($projectId)) >= self::MAX_COLUMNS) {
-            Response::json(['error' => 'เพิ่มคอลัมน์ได้สูงสุด ' . self::MAX_COLUMNS . ' คอลัมน์ต่อโปรเจค'], 422);
-        }
-        if (ProjectColumn::nameExists($projectId, $name)) {
-            Response::json(['error' => 'มีชื่อคอลัมน์นี้อยู่แล้ว'], 422);
-        }
 
-        $columnId = ProjectColumn::create($projectId, $name, $grp);
+        try {
+            $columnId = ProjectColumn::create($projectId, $name, $grp);
+        } catch (ProjectColumnException $e) {
+            self::fail($e);
+        }
         ProjectActivity::log($projectId, Auth::userId(), 'เพิ่มคอลัมน์ "' . $name . '"');
         Response::json(['ok' => true, 'id' => $columnId], 201);
     }
@@ -129,9 +119,6 @@ class ProjectColumnController
         if ($nameInput !== null) {
             $newName = self::normalizeName($nameInput);
             self::assertName($newName);
-            if (ProjectColumn::nameExists($projectId, $newName, $columnId)) {
-                Response::json(['error' => 'มีชื่อคอลัมน์นี้อยู่แล้ว'], 422);
-            }
         }
 
         $newGrp = null;
@@ -140,22 +127,13 @@ class ProjectColumnController
             if (!in_array($newGrp, self::GROUPS, true)) {
                 Response::json(['error' => 'กลุ่มคอลัมน์ไม่ถูกต้อง'], 422);
             }
-            if ($newGrp !== $column['grp']) {
-                $inGroup = 0;
-                foreach (ProjectColumn::listForProject($projectId) as $other) {
-                    if ($other['grp'] === $column['grp']) $inGroup++;
-                }
-                if ($inGroup <= 1) {
-                    Response::json(['error' => 'แต่ละกลุ่มต้องมีอย่างน้อย 1 คอลัมน์'], 422);
-                }
-            }
         }
 
-        if ($newName !== null) {
-            ProjectColumn::rename($columnId, $newName);
-        }
-        if ($newGrp !== null && $newGrp !== $column['grp']) {
-            ProjectColumn::regroup($projectId, $columnId, $newGrp);
+        try {
+            // เปลี่ยนชื่อและย้ายกลุ่มใน lock เดียว: ถ้ากลุ่มจะว่าง ต้องไม่เหลือชื่อที่แก้แล้ว
+            ProjectColumn::update($projectId, $columnId, $newName, $newGrp);
+        } catch (ProjectColumnException $e) {
+            self::fail($e);
         }
 
         ProjectActivity::log($projectId, Auth::userId(), 'แก้ไขคอลัมน์ "' . ($newName ?? $column['name']) . '"');
@@ -169,7 +147,8 @@ class ProjectColumnController
      */
     public function apiReorder(string $id): void
     {
-        $project = $this->loadAdminProject($id);
+        $project = $this->loadProject((int)$id);
+        $this->requireRole($project, 'admin', 'จัดการคอลัมน์');
         $projectId = (int)$project['id'];
 
         $payload = Request::json();
@@ -180,18 +159,11 @@ class ProjectColumnController
             Response::json(['error' => 'ข้อมูลการจัดลำดับไม่ถูกต้อง'], 422);
         }
 
-        $groupIds = [];
-        foreach (ProjectColumn::listForProject($projectId) as $column) {
-            if ($column['grp'] === $grp) $groupIds[] = (int)$column['id'];
+        try {
+            ProjectColumn::reorderGroup($projectId, $grp, array_values($ids));
+        } catch (ProjectColumnException $e) {
+            self::fail($e);
         }
-        $given = array_map(static fn(mixed $value): int => (int)$value, array_values($ids));
-        sort($groupIds);
-        sort($given);
-        if ($groupIds !== $given) {
-            Response::json(['error' => 'รายการคอลัมน์ไม่ตรงกับกลุ่ม'], 422);
-        }
-
-        ProjectColumn::reorderGroup($projectId, $grp, array_values($ids));
         ProjectActivity::log($projectId, Auth::userId(), 'จัดลำดับคอลัมน์ในกลุ่ม ' . $grp);
         Response::json(['ok' => true]);
     }
@@ -209,28 +181,15 @@ class ProjectColumnController
         $projectId = (int)$project['id'];
         $columnId = (int)$column['id'];
 
-        $inGroup = 0;
-        foreach (ProjectColumn::listForProject($projectId) as $other) {
-            if ($other['grp'] === $column['grp']) $inGroup++;
-        }
-        if ($inGroup <= 1) {
-            Response::json(['error' => 'แต่ละกลุ่มต้องมีอย่างน้อย 1 คอลัมน์'], 422);
-        }
+        $moveInput = Request::input('move_to');
+        $moveToId = ($moveInput === null || (int)$moveInput <= 0) ? null : (int)$moveInput;
 
-        $moveToId = null;
-        if (ProjectTask::countInColumn($projectId, $columnId) > 0) {
-            $moveInput = Request::input('move_to');
-            if ($moveInput === null || (int)$moveInput <= 0) {
-                Response::json(['error' => 'เลือกคอลัมน์ที่จะย้ายงานไป'], 422);
-            }
-            $moveToId = (int)$moveInput;
-            $target = $moveToId === $columnId ? null : ProjectColumn::findInProject($projectId, $moveToId);
-            if (!$target) {
-                Response::json(['error' => 'ไม่พบคอลัมน์'], 404);
-            }
+        try {
+            // จำนวนงาน กลุ่มที่เหลือ และคอลัมน์ปลายทางถูกตรวจใน lock เดียวกับการลบ
+            ProjectColumn::delete($projectId, $columnId, $moveToId);
+        } catch (ProjectColumnException $e) {
+            self::fail($e);
         }
-
-        ProjectColumn::delete($projectId, $columnId, $moveToId);
         ProjectActivity::log($projectId, Auth::userId(), 'ลบคอลัมน์ "' . $column['name'] . '"');
         Response::json(['ok' => true]);
     }

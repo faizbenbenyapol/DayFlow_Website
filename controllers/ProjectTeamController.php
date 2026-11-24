@@ -173,15 +173,37 @@ class ProjectTeamController
         }
 
         $memberUser = User::findById($memberId);
-        if (!$memberUser) {
-            Response::json(['error' => 'ไม่พบสมาชิก'], 404);
-        }
+        $memberName = $memberUser['display_name'] ?? ('#' . $memberId);
+
+        // EDGE-P3: นับงานที่ผู้ถูกเอาออกถืออยู่ก่อนล้างผู้รับผิดชอบ
+        $assignedCount = (int)DB::run(
+            'SELECT COUNT(*) FROM project_tasks WHERE project_id = ? AND assignee_user_id = ?',
+            [$projectId, $memberId]
+        )->fetchColumn();
 
         if (ProjectMember::removeMember($projectId, $memberId)) {
             $actText = $isSelf
                 ? 'ออกจากการเข้าร่วมโครงการ'
-                : 'ลบสมาชิก "' . $memberUser['display_name'] . '" ออกจากโครงการ';
+                : 'ลบสมาชิก "' . $memberName . '" ออกจากโครงการ';
             ProjectActivity::log($projectId, $userId, $actText);
+
+            // แจ้งเจ้าของเมื่อคนอื่นเป็นผู้กระทำ (REQ-P10: ไม่แจ้งการกระทำของตัวเอง)
+            if (!$isOwner) {
+                $details = [
+                    'โปรเจค'  => htmlspecialchars((string)$project['name']),
+                    'สมาชิก'  => htmlspecialchars($memberName),
+                    'สถานะ'   => $isSelf ? 'ออกจากโครงการเอง' : 'ถูกนำออกจากโครงการ',
+                ];
+                if ($assignedCount > 0) {
+                    $details['งาน'] = $assignedCount . ' งานไม่มีผู้รับผิดชอบแล้ว';
+                }
+                TelegramService::sendNotification(
+                    (int)$project['user_id'],
+                    'project',
+                    TelegramService::formatMessage('👤 สมาชิกออกจากโปรเจค', $details, 'แจ้งเตือน')
+                );
+            }
+
             Response::json(['ok' => true]);
         } else {
             Response::json(['error' => 'ไม่สามารถนำสมาชิกออกได้'], 500);

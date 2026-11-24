@@ -15,6 +15,10 @@
 // upload files in the first place).
 // =====================================================
 
+// cron.php และ scripts/demo-reset.php ไม่มี autoloader จึงต้องโหลด model ที่ใช้ตอนกู้โปรเจคเอง
+require_once __DIR__ . '/../models/ProjectColumn.php';
+require_once __DIR__ . '/../models/ProjectTask.php';
+
 final class DemoReset
 {
     /**
@@ -121,6 +125,7 @@ final class DemoReset
 
             $newIds = [];
             $newColumnIds = [];
+            $projectsWithColumns = [];
             $counts = ['projects' => 0];
             foreach ((array)($snapshot['projects'] ?? []) as $row) {
                 // A visitor may not make project links, so none comes back.
@@ -147,6 +152,7 @@ final class DemoReset
                         // project_columns has no user_id of its own.
                         self::insert($table, $row);
                         $newColumnIds[$oldId] = (int)$conn->lastInsertId();
+                        $projectsWithColumns[] = $projectId;
                     } elseif ($table === 'project_tasks') {
                         // Point the task at the restored column, never the old one.
                         $row['column_id'] = $newColumnIds[(string)($row['column_id'] ?? '')] ?? null;
@@ -156,6 +162,20 @@ final class DemoReset
                     }
                     $counts[$table]++;
                 }
+            }
+
+            // snapshot ที่ถ่ายก่อนมีคอลัมน์ (migration 038) ไม่มี project_columns:
+            // สร้างคอลัมน์ตั้งต้นตามประเภทให้ แล้วจับคู่งานเข้าคอลัมน์ตามสถานะเดิม
+            $types = [];
+            foreach ((array)($snapshot['projects'] ?? []) as $row) {
+                $oldId = (string)(is_array($row) ? ($row['id'] ?? '') : '');
+                if (isset($newIds[$oldId])) $types[$newIds[$oldId]] = (string)($row['type'] ?? 'general');
+            }
+            foreach ($newIds as $projectId) {
+                if (!in_array($projectId, $projectsWithColumns, true)) {
+                    ProjectColumn::createDefaults($projectId, $types[$projectId] ?? 'general');
+                }
+                ProjectColumn::adoptLooseTasks($projectId);
             }
 
             $conn->commit();
