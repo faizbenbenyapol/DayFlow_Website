@@ -153,7 +153,7 @@ class ProjectTaskController
             self::fail($e);
         }
         $taskId = $created['id'];
-        ProjectActivity::log($projectId, $userId, 'เพิ่มงานย่อยใหม่: "' . $title . '"', $taskId);
+        ProjectActivity::log($projectId, $userId, 'เพิ่มงานใหม่: "' . $title . '"', $taskId);
         if (!empty($data['assignee_user_id'])) {
             self::notifyAssigned($project, $taskId, $title, (int)$data['assignee_user_id'], $userId);
         }
@@ -310,7 +310,7 @@ class ProjectTaskController
 
         $changed = $taskChanged || $customPatch;
         if ($changed) {
-            $actText = 'อัปเดตงานย่อย "' . ($data['title'] ?? $task['title']) . '"';
+            $actText = 'อัปเดตงาน "' . ($data['title'] ?? $task['title']) . '"';
             // กันบรรทัดสาธารณะว่างเมื่อเปลี่ยนเฉพาะช่อง
             if ($taskChanged && ($changes || !$customChanges)) {
                 ProjectActivity::log($task['project_id'], $userId, $actText . ($changes ? ' (' . implode(', ', $changes) . ')' : ''), $taskId);
@@ -390,7 +390,7 @@ class ProjectTaskController
         } catch (ProjectColumnException $e) {
             self::fail($e);
         }
-        ProjectActivity::log($task['project_id'], $userId, 'ลบงานย่อย: "' . $task['title'] . '"');
+        ProjectActivity::log($task['project_id'], $userId, 'ลบงาน: "' . $task['title'] . '"');
         Response::json(['ok' => true, 'deleted_subtasks' => $deleted['subtasks']]);
     }
 

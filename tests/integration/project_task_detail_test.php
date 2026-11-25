@@ -41,7 +41,7 @@ test('a task keeps its description and the history says it changed without copyi
     $history = $f['owner']->json($f['owner']->get('/api/projects/tasks/' . $f['taskId'] . '/history'))['items'];
     $actions = array_column($history, 'action');
     assertTrue(count(array_filter($actions, fn(string $a): bool => str_contains($a, 'แก้คำอธิบาย'))) === 1, 'the edit is in the task history once');
-    assertTrue(count(array_filter($actions, fn(string $a): bool => str_contains($a, 'เพิ่มงานย่อยใหม่'))) === 1, 'so is its creation');
+    assertTrue(count(array_filter($actions, fn(string $a): bool => str_contains($a, 'เพิ่มงานใหม่'))) === 1, 'so is its creation');
     foreach ($actions as $action) {
         assertFalse(str_contains($action, 'Excel'), 'the description text is not copied into the history');
     }
