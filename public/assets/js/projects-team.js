@@ -73,16 +73,23 @@ function isProjectAdmin() {
     return !!project && (!!project.is_owner || project.user_role === 'Admin');
 }
 
+const PROJECT_TABS = ['board', 'list', 'calendar', 'overview', 'settings'];
+const FILTERED_TABS = ['board', 'list', 'calendar'];   // the tabs that show tasks, so the filter bar shows with them
+
 /**
- * สลับระหว่างแท็บ "บอร์ด" กับ "ตั้งค่า" และจำแท็บไว้จนกว่าจะโหลดหน้าใหม่
- * รับชื่อแท็บ ไม่คืนค่า แก้ aria-selected และซ่อน/แสดงแผง
+ * สลับแท็บของโปรเจค (บอร์ด รายการ ปฏิทิน ภาพรวม ตั้งค่า) และจำแท็บไว้จนกว่าจะโหลดหน้าใหม่
+ * รับชื่อแท็บ ชื่อที่ไม่รู้จักหรือแท็บที่หน้านี้ไม่มี (แขกไม่มี "ตั้งค่า") กลับไปบอร์ด
+ * ไม่คืนค่า แก้ aria-selected ซ่อน/แสดงแผง และแสดงแถบตัวกรองเฉพาะแท็บที่มีงานให้กรอง
  */
 function showProjectTab(name) {
-    projectSettingsTab = name === 'settings' ? 'settings' : 'board';
-    const tabs = document.querySelectorAll('#projectTabs .tab');
-    tabs.forEach(tab => tab.setAttribute('aria-selected', String(tab.id === (projectSettingsTab === 'board' ? 'tabBoard' : 'tabSettings'))));
-    show('boardPanel', projectSettingsTab === 'board');
-    show('settingsPanel', projectSettingsTab === 'settings');
+    const tabId = key => 'tab' + key.charAt(0).toUpperCase() + key.slice(1);
+    projectSettingsTab = PROJECT_TABS.includes(name) && document.getElementById(tabId(name)) ? name : 'board';
+    PROJECT_TABS.forEach(key => {
+        const tab = document.getElementById(tabId(key));
+        if (tab) tab.setAttribute('aria-selected', String(key === projectSettingsTab));
+        show(key + 'Panel', key === projectSettingsTab);
+    });
+    show('taskFilters', FILTERED_TABS.includes(projectSettingsTab));
 }
 
 /** วาดแท็บที่จำไว้กลับมาหลังโหลดโปรเจค (ไม่คืนค่า) */

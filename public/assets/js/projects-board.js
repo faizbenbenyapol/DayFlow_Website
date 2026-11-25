@@ -60,9 +60,9 @@ function renderBoardColumns() {
     }).join('');
 }
 
-/** เติมการ์ดลงในคอลัมน์ของมันและอัปเดตตัวนับของแต่ละคอลัมน์ */
+/** เติมการ์ดที่ผ่านตัวกรองร่วม (projects-views.js) ลงในคอลัมน์ของมัน และนับเฉพาะการ์ดที่เห็น */
 function renderKanbanCards() {
-    const tasks = activeProjectData.tasks || [];
+    const tasks = filteredTasks();
     projectColumns().forEach(column => {
         const id = Number(column.id);
         const mine = tasks.filter(t => Number(t.column_id) === id);
@@ -117,12 +117,17 @@ function renderKanbanCardItem(task) {
 }
 
 /* ── Dragging ── */
-/** ผูก Sortable กับการ์ดทุกคอลัมน์ (ข้ามคอลัมน์ได้) และปิดไว้สำหรับผู้ดูอย่างเดียว */
+/**
+ * ผูก Sortable กับการ์ดทุกคอลัมน์ (ข้ามคอลัมน์ได้) ปิดไว้สำหรับผู้ดูอย่างเดียว
+ * และปิดระหว่างกรองอยู่ เพราะ saveBoardOrder ส่งลำดับเฉพาะการ์ดที่เห็น การ์ดที่ถูกซ่อนจะได้ตำแหน่งชนกัน
+ */
 function initSortable() {
     if (typeof Sortable === 'undefined') return;
     sortableInstances.forEach(inst => { try { inst.destroy(); } catch (_) { /* already gone */ } });
     sortableInstances = [];
-    if (isViewer()) return;
+    const filtered = hasTaskFilter();
+    show('boardFilterNote', filtered && !isViewer());
+    if (isViewer() || filtered) return;
 
     projectColumns().forEach(column => {
         const el = document.getElementById('col-' + Number(column.id) + '-list');

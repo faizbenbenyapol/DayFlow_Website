@@ -96,15 +96,125 @@
         </div>
     </div>
 
+    <!-- One filter for the board, the list and the calendar; it stays while switching (projects-views.js) -->
+    <div class="view-filters" id="taskFilters">
+        <input type="search" id="taskFilterQ" class="form-control grow" placeholder="ค้นหางาน" aria-label="ค้นหางาน" autocomplete="off" data-act="setTaskFilter" data-args='["q", "$value"]' data-on="input">
+        <select id="taskFilterWho" class="form-control" aria-label="ผู้รับผิดชอบ" data-act="setTaskFilter" data-args='["who", "$value"]' data-on="change"></select>
+        <select id="taskFilterGrp" class="form-control" aria-label="สถานะ" data-act="setTaskFilter" data-args='["grp", "$value"]' data-on="change">
+            <option value="">ทุกสถานะ</option>
+            <option value="todo">ยังไม่เริ่ม</option>
+            <option value="doing">กำลังทำ</option>
+            <option value="done">เสร็จ</option>
+        </select>
+        <select id="taskFilterDue" class="form-control" aria-label="ครบกำหนด" data-act="setTaskFilter" data-args='["due", "$value"]' data-on="change">
+            <option value="">ทุกวันส่ง</option>
+            <option value="over">เลยกำหนด</option>
+            <option value="week">7 วันข้างหน้า</option>
+            <option value="none">ไม่มีวันส่ง</option>
+        </select>
+        <span class="view-filter-state" id="taskFilterState" role="status" hidden></span>
+        <button class="btn btn-link btn-sm" type="button" id="taskFilterClear" data-act="clearTaskFilters" hidden>ล้างตัวกรอง</button>
+    </div>
+
     <div class="tabs" role="tablist" aria-label="มุมมองของโปรเจค" id="projectTabs">
         <button class="tab" role="tab" type="button" id="tabBoard" aria-selected="true" aria-controls="boardPanel" data-act="showProjectTab" data-args='["board"]'>บอร์ด</button>
+        <button class="tab" role="tab" type="button" id="tabList" aria-selected="false" aria-controls="listPanel" data-act="showProjectTab" data-args='["list"]'>รายการ</button>
+        <button class="tab" role="tab" type="button" id="tabCalendar" aria-selected="false" aria-controls="calendarPanel" data-act="showProjectTab" data-args='["calendar"]'>ปฏิทิน</button>
+        <button class="tab" role="tab" type="button" id="tabOverview" aria-selected="false" aria-controls="overviewPanel" data-act="showProjectTab" data-args='["overview"]'>ภาพรวม</button>
         <?php if (!$isGuest): /* a share-link guest has no settings to change */ ?>
         <button class="tab" role="tab" type="button" id="tabSettings" aria-selected="false" aria-controls="settingsPanel" data-act="showProjectTab" data-args='["settings"]'>ตั้งค่า</button>
         <?php endif; ?>
     </div>
 
     <div id="boardPanel" role="tabpanel" aria-labelledby="tabBoard">
+        <p class="proj-note" id="boardFilterNote" hidden>กรองอยู่ ลากการ์ดไม่ได้จนกว่าจะล้างตัวกรอง (เปลี่ยนคอลัมน์ในรายละเอียดงานได้)</p>
         <div class="kanban-board" id="kanbanBoard"></div>
+    </div>
+
+    <div class="proj-view" id="listPanel" role="tabpanel" aria-labelledby="tabList" hidden>
+        <div class="task-list-head">
+            <label class="text-sm" for="taskListGroup">จัดกลุ่มตาม</label>
+            <select id="taskListGroup" class="form-control" data-act="setTaskFilter" data-args='["group", "$value"]' data-on="change">
+                <option value="column">คอลัมน์</option>
+                <option value="who">ผู้รับผิดชอบ</option>
+                <option value="priority">ความสำคัญ</option>
+                <option value="">ไม่จัดกลุ่ม</option>
+            </select>
+        </div>
+        <div class="task-table-wrap">
+            <table class="task-table" id="taskListTable">
+                <thead><tr>
+                    <th scope="col" data-sort="title"><button class="th-sort" type="button" data-act="sortTaskList" data-args='["title"]'>งาน</button></th>
+                    <th scope="col" data-sort="column" class="c-col"><button class="th-sort" type="button" data-act="sortTaskList" data-args='["column"]'>คอลัมน์</button></th>
+                    <th scope="col" data-sort="who"><button class="th-sort" type="button" data-act="sortTaskList" data-args='["who"]'>ผู้รับผิดชอบ</button></th>
+                    <th scope="col" data-sort="due"><button class="th-sort" type="button" data-act="sortTaskList" data-args='["due"]'>ครบกำหนด</button></th>
+                    <th scope="col" data-sort="priority"><button class="th-sort" type="button" data-act="sortTaskList" data-args='["priority"]'>ความสำคัญ</button></th>
+                </tr></thead>
+                <tbody id="taskListBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="proj-view" id="calendarPanel" role="tabpanel" aria-labelledby="tabCalendar" hidden>
+        <div class="cal-wrap">
+            <div>
+                <div class="cal-head">
+                    <h3 id="taskCalTitle"></h3>
+                    <span class="cal-nav">
+                        <button class="btn btn-sm" type="button" data-act="navTaskCalendar" data-args="[-1]" aria-label="เดือนก่อน">&lsaquo;</button>
+                        <button class="btn btn-sm" type="button" data-act="taskCalendarToday">วันนี้</button>
+                        <button class="btn btn-sm" type="button" data-act="navTaskCalendar" data-args="[1]" aria-label="เดือนถัดไป">&rsaquo;</button>
+                    </span>
+                </div>
+                <div class="cal-grid-wrap"><div class="cal-grid" id="taskCalGrid"></div></div>
+                <div class="agenda" id="taskCalAgenda"></div>
+            </div>
+            <aside class="unscheduled" id="taskCalUnscheduled" aria-label="งานที่ยังไม่ลงวัน"></aside>
+        </div>
+    </div>
+
+    <div class="proj-view" id="overviewPanel" role="tabpanel" aria-labelledby="tabOverview" hidden>
+        <div class="ov-grid" id="overviewGrid">
+            <section id="aiSummaryCardWrap" class="sec" aria-labelledby="insightTitle" hidden>
+                <div class="sec-head"><h2 id="insightTitle">สรุปสถานะโปรเจค</h2></div>
+                <p class="proj-insight" id="aiInsightText"></p>
+                <p class="alert alert-warning" id="aiWarningBox" role="status" hidden></p>
+                <p class="proj-note">คำนวณจากจำนวนงาน ความสำคัญ และวันส่งของโปรเจคนี้ ไม่ได้ใช้ AI</p>
+            </section>
+
+            <section id="analyticsWidgetCard" class="sec" aria-labelledby="progressTitle" hidden>
+                <div class="sec-head"><h2 id="progressTitle">ความคืบหน้า</h2></div>
+                <div class="facts proj-facts">
+                    <div class="fact"><div class="k">เสร็จแล้ว</div><div class="v" id="statCompletedTasks">0</div></div>
+                    <div class="fact"><div class="k">ยังค้างอยู่</div><div class="v" id="statRemainingTasks">0</div></div>
+                    <div class="fact"><div class="k">สำเร็จ</div><div class="v" id="statProductivity">0%</div></div>
+                </div>
+                <div class="proj-status-bar" id="projectStatusBar" role="img" aria-label="สัดส่วนงานแต่ละคอลัมน์"></div>
+                <ul class="proj-legend" id="projectStatusLegend"></ul>
+            </section>
+
+            <section id="activityWidgetCard" class="sec" aria-labelledby="activityTitle" hidden>
+                <div class="sec-head"><h2 id="activityTitle">กิจกรรมล่าสุด</h2></div>
+                <ul class="activity-feed-list" id="projectActivityList"></ul>
+            </section>
+
+            <section id="chatWidgetCard" class="sec" aria-labelledby="chatTitle" hidden>
+                <div class="sec-head">
+                    <h2 id="chatTitle">แชทในโปรเจค</h2>
+                    <span class="chat-status-text" id="chatStatusText" role="status">กำลังเชื่อมต่อ</span>
+                </div>
+                <p id="guestRenameContainer" class="proj-note" hidden>
+                    <span id="lblGuestName">คุณ: …</span>
+                    <button class="btn btn-link btn-sm" type="button" data-act="changeGuestName">เปลี่ยนชื่อที่แสดง</button>
+                </p>
+                <div class="chat-messages-container" id="chatMessagesList" aria-live="polite"></div>
+                <form class="chat-input-wrap" id="chatForm" data-act="sendChatMessage" novalidate>
+                    <label class="sr-only" for="chatMessageInput">ข้อความ</label>
+                    <input type="text" id="chatMessageInput" class="form-control" placeholder="พิมพ์ข้อความถึงทีม" autocomplete="off" maxlength="1000">
+                    <button type="submit" class="btn btn-primary">ส่ง</button>
+                </form>
+            </section>
+        </div>
     </div>
 
     <div id="settingsPanel" role="tabpanel" aria-labelledby="tabSettings" hidden>
@@ -226,24 +336,6 @@
 </section>
 
 <div class="proj-widgets">
-    <section id="aiSummaryCardWrap" class="sec" aria-labelledby="insightTitle" hidden>
-        <div class="sec-head"><h2 id="insightTitle">สรุปสถานะโปรเจค</h2></div>
-        <p class="proj-insight" id="aiInsightText"></p>
-        <p class="alert alert-warning" id="aiWarningBox" role="status" hidden></p>
-        <p class="proj-note">คำนวณจากจำนวนงาน ความสำคัญ และวันส่งของโปรเจคนี้ ไม่ได้ใช้ AI</p>
-    </section>
-
-    <section id="analyticsWidgetCard" class="sec" aria-labelledby="progressTitle" hidden>
-        <div class="sec-head"><h2 id="progressTitle">ความคืบหน้า</h2></div>
-        <div class="facts proj-facts">
-            <div class="fact"><div class="k">เสร็จแล้ว</div><div class="v" id="statCompletedTasks">0</div></div>
-            <div class="fact"><div class="k">ยังค้างอยู่</div><div class="v" id="statRemainingTasks">0</div></div>
-            <div class="fact"><div class="k">สำเร็จ</div><div class="v" id="statProductivity">0%</div></div>
-        </div>
-        <div class="proj-status-bar" id="projectStatusBar" role="img" aria-label="สัดส่วนงานแต่ละคอลัมน์"></div>
-        <ul class="proj-legend" id="projectStatusLegend"></ul>
-    </section>
-
     <section id="miniCalendarWidgetCard" class="sec" aria-labelledby="calendarMonthTitle">
         <div class="sec-head">
             <h2 id="calendarMonthTitle">เดือนนี้</h2>
@@ -254,28 +346,6 @@
         </div>
         <div class="mini-cal-grid" id="miniCalendarGrid"></div>
         <p class="proj-note">วันที่ขีดเส้นใต้มีกำหนดส่งโปรเจคหรืองาน</p>
-    </section>
-
-    <section id="activityWidgetCard" class="sec" aria-labelledby="activityTitle" hidden>
-        <div class="sec-head"><h2 id="activityTitle">กิจกรรมล่าสุด</h2></div>
-        <ul class="activity-feed-list" id="projectActivityList"></ul>
-    </section>
-
-    <section id="chatWidgetCard" class="sec" aria-labelledby="chatTitle" hidden>
-        <div class="sec-head">
-            <h2 id="chatTitle">แชทในโปรเจค</h2>
-            <span class="chat-status-text" id="chatStatusText" role="status">กำลังเชื่อมต่อ</span>
-        </div>
-        <p id="guestRenameContainer" class="proj-note" hidden>
-            <span id="lblGuestName">คุณ: …</span>
-            <button class="btn btn-link btn-sm" type="button" data-act="changeGuestName">เปลี่ยนชื่อที่แสดง</button>
-        </p>
-        <div class="chat-messages-container" id="chatMessagesList" aria-live="polite"></div>
-        <form class="chat-input-wrap" id="chatForm" data-act="sendChatMessage" novalidate>
-            <label class="sr-only" for="chatMessageInput">ข้อความ</label>
-            <input type="text" id="chatMessageInput" class="form-control" placeholder="พิมพ์ข้อความถึงทีม" autocomplete="off" maxlength="1000">
-            <button type="submit" class="btn btn-primary">ส่ง</button>
-        </form>
     </section>
 </div>
 

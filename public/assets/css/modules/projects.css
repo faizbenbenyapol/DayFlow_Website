@@ -593,7 +593,8 @@
     line-height: 1.7;
 }
 
-.proj-widgets .alert {
+.proj-widgets .alert,
+.ov-grid .alert {
     margin-top: var(--space-3);
 }
 
@@ -1404,4 +1405,361 @@
 
 .task-files > .proj-note {
     margin-top: var(--space-2);
+}
+
+/* ---------------------------------------------------------------
+   แถบตัวกรองที่ใช้ร่วมทุกมุมมอง
+--------------------------------------------------------------- */
+.view-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    align-items: center;
+    margin: var(--space-3) 0;
+}
+
+.view-filters select.form-control,
+.view-filters input.form-control {
+    width: auto;
+    min-width: 0;
+    flex: 0 1 auto;
+}
+
+.view-filters input.form-control.grow {
+    flex: 1 1 220px;
+}
+
+.view-filter-state {
+    font-size: .75rem;
+    color: var(--pencil);
+}
+
+
+/* ---------------------------------------------------------------
+   มุมมองรายการ
+--------------------------------------------------------------- */
+/* The list, calendar and overview sit a little below the index tabs */
+.proj-view {
+    padding-top: var(--space-3);
+}
+
+.task-list-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+.task-list-head .form-control {
+    width: auto;
+}
+
+.task-table-wrap {
+    overflow-x: auto;
+}
+
+.task-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .875rem;
+}
+
+.task-table th {
+    text-align: left;
+    font-weight: 600;
+    font-size: .8125rem;
+    color: var(--pencil);
+    padding: 6px 8px;
+    border-bottom: 1.5px solid var(--rule-strong);
+    white-space: nowrap;
+}
+
+.task-table .th-sort {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    text-align: inherit;
+    cursor: pointer;
+}
+
+.task-table .th-sort:focus-visible,
+.task-open:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+}
+
+.task-table th[aria-sort="ascending"] .th-sort::after {
+    content: " ↑";
+}
+
+.task-table th[aria-sort="descending"] .th-sort::after {
+    content: " ↓";
+}
+
+.task-table td {
+    padding: 8px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+}
+
+.task-table tr.grp-row > th {
+    padding-top: var(--space-4);
+    font-weight: 600;
+    text-align: left;
+    border-bottom: 3px solid var(--g);
+}
+
+.task-table .grp-n {
+    color: var(--pencil);
+    font-weight: 400;
+}
+
+.task-table tr.row:hover td {
+    background: var(--paper-sunk);
+    cursor: pointer;
+}
+
+.task-open {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    color: var(--ink);
+    text-align: inherit;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.task-open:hover {
+    text-decoration: underline;
+}
+
+.task-table .num {
+    font-family: var(--font-num);
+    white-space: nowrap;
+}
+
+.task-table .over {
+    color: var(--stamp-red);
+    font-weight: 600;
+}
+
+.task-table .c-col {
+    white-space: nowrap;
+}
+
+.task-table .c-title .tag {
+    margin-left: 6px;
+}
+
+.gdot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--g);
+    margin-right: 6px;
+}
+
+/* ---------------------------------------------------------------
+   ปฏิทิน
+--------------------------------------------------------------- */
+.cal-wrap {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: var(--space-4);
+}
+
+.cal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-2);
+}
+
+.cal-head h3 {
+    margin: 0;
+    font-size: 1.0625rem;
+}
+
+.cal-nav {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.cal-nav button:focus-visible,
+.cal-chip:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+}
+
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    border-top: 1px solid var(--rule);
+    border-left: 1px solid var(--rule);
+}
+
+.cal-grid .dow {
+    padding: 4px 6px;
+    font-size: .75rem;
+    color: var(--pencil);
+    border-right: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+}
+
+.cal-cell {
+    min-height: 96px;
+    padding: 4px;
+    border-right: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+}
+
+.cal-cell .d {
+    font-size: .75rem;
+    font-family: var(--font-num);
+    color: var(--pencil);
+}
+
+.cal-cell.other .d {
+    opacity: .45;
+}
+
+.cal-cell.today {
+    background: var(--butter);
+}
+
+/* --butter is dark in the dark theme, so the day takes the theme's ink, not a fixed dark one */
+.cal-cell.today .d {
+    color: var(--ink);
+    font-weight: 700;
+}
+
+.cal-chip {
+    display: block;
+    width: 100%;
+    margin-top: 3px;
+    padding: 2px 6px;
+    border: 0;
+    border-left: 3px solid var(--g);
+    border-radius: 3px;
+    background: var(--paper-sunk);
+    font: inherit;
+    font-size: .75rem;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--ink);
+    cursor: pointer;
+}
+
+.cal-chip.done {
+    text-decoration: line-through;
+    color: var(--pencil);
+}
+
+.unscheduled {
+    border-left: 1.5px dashed var(--rule-strong);
+    padding-left: var(--space-3);
+}
+
+.unscheduled h4 {
+    margin: 0 0 var(--space-2);
+    font-size: .875rem;
+}
+
+.agenda {
+    display: none;
+}
+
+/* ---------------------------------------------------------------
+   แท็บภาพรวม
+--------------------------------------------------------------- */
+.ov-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+}
+
+.ov-grid > .sec {
+    margin-top: 0;
+}
+
+/* ---------------------------------------------------------------
+   มือถือ
+--------------------------------------------------------------- */
+@media (max-width: 720px) {
+    .cal-wrap {
+        grid-template-columns: 1fr;
+    }
+
+    .cal-grid-wrap {
+        display: none;
+    }
+
+    .agenda {
+        display: block;
+    }
+
+    .agenda h4 {
+        margin: var(--space-3) 0 var(--space-1);
+        font-size: .8125rem;
+        color: var(--pencil);
+    }
+
+    .unscheduled {
+        border-left: 0;
+        padding-left: 0;
+        border-top: 1.5px dashed var(--rule-strong);
+        padding-top: var(--space-3);
+    }
+
+    .task-table thead {
+        display: none;
+    }
+
+    .task-table,
+    .task-table tbody,
+    .task-table tr,
+    .task-table td {
+        display: block;
+    }
+
+    .task-table tr.row {
+        padding: var(--space-2) 0;
+        border-bottom: 1px solid var(--rule);
+    }
+
+    .task-table tr.row td {
+        display: inline-block;
+        border: 0;
+        padding: 0 var(--space-3) 0 0;
+        font-size: .8125rem;
+        color: var(--pencil);
+    }
+
+    .task-table tr.row td.c-title {
+        display: block;
+        padding-bottom: 2px;
+        font-size: .9375rem;
+        color: var(--ink);
+    }
+
+    .task-table tr.row td.c-col {
+        display: none;
+    }
+
+    /* เลยกำหนดต้องแดงบนมือถือด้วย (กฎสีเทาข้างบนหนักกว่า .over) */
+    .task-table tr.row td.over {
+        color: var(--stamp-red);
+    }
+
+    .ov-grid {
+        grid-template-columns: 1fr;
+    }
 }

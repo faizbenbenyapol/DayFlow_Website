@@ -244,8 +244,7 @@ async function selectProject(projectId) {
         }
 
         renderBoardColumns();
-        renderKanbanCards();
-        initSortable();
+        loadTaskView();               // the shared filter, then the board, the list and the calendar
         updateAnalyticsCharts();
         renderActivityFeed();
         renderAiInsights();
