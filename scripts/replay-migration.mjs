@@ -199,16 +199,32 @@ function injectFault() {
 // =====================================================
 
 /**
+ * สร้าง key ของแถวสำหรับเทียบข้าม snapshot (ใช้ร่วมกันทั้งการทำดัชนีและการค้นหา)
+ *
+ * รับ: row = แถวจาก snapshot
+ * คืน: string — id ของแถวถ้ามี; ตารางที่ไม่มี id (primary key แบบ composite)
+ *       ใช้ JSON.stringify(row) ทั้งแถวเป็น key
+ *       ผลคือ migration ที่เพิ่มคอลัมน์ให้ตารางแบบนี้จะทำให้ key ของทุกแถวเปลี่ยน
+ *       และแถวเดิมถูกรายงานเป็น "หาย" ทั้งแถว — เป็น failure แบบดัง ๆ ที่ยอมรับได้
+ * ผลข้างเคียง: ไม่มี
+ */
+function rowKey(row) {
+    return row.id === undefined ? JSON.stringify(row) : String(row.id);
+}
+
+/**
  * ทำดัชนีแถวด้วย id เพื่อเทียบข้าม snapshot
  *
  * รับ: rows = array ของแถวจาก snapshot
- * คืน: Map<string, object> จาก id (เป็น string) ไปยังแถว
+ * คืน: Map<string, object> จาก key ของแถว (ตาม rowKey) ไปยังแถว ตารางที่ไม่มี id
+ *       (เช่น primary key แบบ composite) ใช้ JSON.stringify(row) เป็น key แทน
+ *       แถวที่ค่าเปลี่ยนจึงกลายเป็น "แถวหาย" บวก "แถวใหม่" ซึ่ง compare ทั้งสองรายงานเป็น mismatch
  * ผลข้างเคียง: ไม่มี
  */
 function rowsById(rows) {
     const map = new Map();
     for (const row of rows) {
-        map.set(String(row.id), row);
+        map.set(rowKey(row), row);
     }
     return map;
 }
@@ -251,17 +267,18 @@ function compareKept(before, after1) {
         const afterById = rowsById(afterRows);
         for (const row of beforeRows) {
             rows++;
-            const next = afterById.get(String(row.id));
+            const key = rowKey(row);
+            const next = afterById.get(key);
             if (next === undefined) {
-                mismatches.push(`${table}#${row.id}: แถวหายไปใน after1`);
+                mismatches.push(`${table}#${key}: แถวหายไปใน after1`);
                 continue;
             }
             for (const [column, value] of Object.entries(row)) {
                 columns++;
                 if (!Object.hasOwn(next, column)) {
-                    mismatches.push(`${table}#${row.id} ${column}: ${show(value)} → (คอลัมน์หายไป)`);
+                    mismatches.push(`${table}#${key} ${column}: ${show(value)} → (คอลัมน์หายไป)`);
                 } else if (next[column] !== value) {
-                    mismatches.push(`${table}#${row.id} ${column}: ${show(value)} → ${show(next[column])}`);
+                    mismatches.push(`${table}#${key} ${column}: ${show(value)} → ${show(next[column])}`);
                 }
             }
         }

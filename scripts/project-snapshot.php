@@ -47,6 +47,29 @@ function projectTableNames(): array
 }
 
 /**
+ * หาตารางโปรเจกต์ที่มีคอลัมน์ id (เรียก information_schema ครั้งเดียว)
+ *
+ * รับ: ไม่มี (ใช้ DATABASE() ของ connection ปัจจุบัน)
+ * คืน: array<string, true> ชื่อตารางที่มี id ใช้เป็น set ด้วย isset()
+ * ผลข้างเคียง: อ่าน information_schema เท่านั้น ไม่แตะข้อมูลผู้ใช้
+ */
+function tablesWithId(): array
+{
+    $withId = [];
+    $rows = DB::conn()->query(
+        "SELECT TABLE_NAME FROM information_schema.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND COLUMN_NAME = 'id'
+            AND (TABLE_NAME = 'projects' OR TABLE_NAME LIKE 'project\\_%')"
+    )->fetchAll(PDO::FETCH_COLUMN);
+
+    foreach ($rows as $name) {
+        $withId[(string)$name] = true;
+    }
+    return $withId;
+}
+
+/**
  * ใส่ backtick ให้ชื่อตารางก่อนต่อเข้า SQL
  *
  * รับ: ชื่อตาราง
@@ -71,15 +94,18 @@ function quoteTable(string $table): string
  * รับ: ไม่มี
  * คืน: array{database: string, tables: array<string, array>} โดยค่าในแต่ละ
  *       แถวเป็นชนิดที่ PDO คืนมา (string/int/null) ตรง ๆ
+ *       ตารางที่มี id เรียงตาม id ส่วนตารางที่ไม่มี id (primary key แบบ composite)
+ *       อ่านด้วย SELECT * เปล่า ๆ เพราะลำดับไม่สำคัญสำหรับการเทียบ snapshot
  * ผลข้างเคียง: อ่านฐานข้อมูลหนึ่ง SELECT ต่อหนึ่งตาราง ไม่เขียนอะไรเลย
  */
 function snapshot(): array
 {
     $tables = [];
+    $withId = tablesWithId();
     foreach (projectTableNames() as $table) {
-        $tables[$table] = DB::conn()->query(
-            'SELECT * FROM ' . quoteTable($table) . ' ORDER BY id'
-        )->fetchAll();
+        $sql = 'SELECT * FROM ' . quoteTable($table)
+            . (isset($withId[$table]) ? ' ORDER BY id' : '');
+        $tables[$table] = DB::conn()->query($sql)->fetchAll();
     }
 
     return ['database' => DB_NAME, 'tables' => $tables];
