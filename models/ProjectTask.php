@@ -136,6 +136,23 @@ class ProjectTask
     }
 
     /**
+     * รวมค่าช่องข้อมูลที่เปลี่ยนเข้ากับค่าเดิมของงานในคำสั่งเดียว (JSON_MERGE_PATCH)
+     *
+     * คีย์ที่เป็น null ถูกลบ คีย์อื่นถูกใส่หรือแทน ช่องที่ไม่อยู่ในแพตช์ไม่ถูกแตะ
+     * สองคนแก้คนละช่องพร้อมกันจึงไม่เขียนทับค่าของกันและกัน
+     *
+     * @param int $taskId รหัสงาน
+     * @param array<string, mixed> $patch แพตช์ที่ตรวจแล้ว คีย์เป็นรหัสช่อง
+     */
+    public static function patchCustom(int $taskId, array $patch): void
+    {
+        DB::run(
+            "UPDATE project_tasks SET custom = JSON_MERGE_PATCH(COALESCE(custom, '{}'), ?) WHERE id = ?",
+            [json_encode((object)$patch, JSON_UNESCAPED_UNICODE), $taskId]
+        );
+    }
+
+    /**
      * ลบงานย่อย
      */
     public static function delete(int $id): bool

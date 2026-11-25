@@ -112,6 +112,7 @@
             <option value="week">7 วันข้างหน้า</option>
             <option value="none">ไม่มีวันส่ง</option>
         </select>
+        <span class="view-field-filters" id="taskFieldFilters"></span>
         <span class="view-filter-state" id="taskFilterState" role="status" hidden></span>
         <button class="btn btn-link btn-sm" type="button" id="taskFilterClear" data-act="clearTaskFilters" hidden>ล้างตัวกรอง</button>
     </div>
@@ -221,6 +222,7 @@
         <nav class="subnav proj-subnav" aria-label="ตั้งค่าโปรเจค">
             <button class="subnav-link" type="button" id="settingsNavTeam" aria-current="page" data-act="showSettingsSection" data-args='["team"]'>ทีมและสิทธิ์</button>
             <button class="subnav-link" type="button" id="settingsNavColumns" data-act="showSettingsSection" data-args='["columns"]'>คอลัมน์</button>
+            <button class="subnav-link" type="button" id="settingsNavFields" data-act="showSettingsSection" data-args='["fields"]'>ช่องข้อมูล</button>
             <button class="subnav-link" type="button" id="settingsNavType" data-act="showSettingsSection" data-args='["type"]'>ประเภท</button>
         </nav>
 
@@ -311,6 +313,40 @@
         <div class="proj-settings-pane" id="settingsColumns" hidden>
             <div id="columnsEditor"></div>
             <p class="alert alert-warning" id="columnsDenied" role="alert" hidden>คอลัมน์ตั้งได้เฉพาะเจ้าของและผู้ดูแล</p>
+        </div>
+
+        <!-- ช่องข้อมูลเพิ่มเติม (projects-fields.js) -->
+        <div class="proj-settings-pane" id="settingsFields" hidden>
+            <div id="fieldsEditor"></div>
+            <p class="alert alert-warning" id="fieldsDenied" role="alert" hidden>ช่องข้อมูลตั้งได้เฉพาะเจ้าของและผู้ดูแล</p>
+            <form class="sec" id="fieldAddForm" data-act="submitAddField" data-args='["$event"]' data-on="submit" novalidate>
+                <div class="sec-head"><h2>เพิ่มช่อง</h2></div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="fieldName">ชื่อช่อง</label>
+                        <input type="text" id="fieldName" class="form-control" maxlength="60" placeholder="เช่น ลูกค้า" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="fieldKind">ชนิด</label>
+                        <select id="fieldKind" class="form-control" data-act="toggleFieldOptions" data-args='["$value"]' data-on="change">
+                            <option value="text">ข้อความ</option>
+                            <option value="number">ตัวเลข</option>
+                            <option value="date">วันที่</option>
+                            <option value="select">ตัวเลือก</option>
+                            <option value="person">คน</option>
+                            <option value="check">ติ๊ก (ใช่/ไม่ใช่)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group" id="fieldOptionsGroup" hidden>
+                    <label class="form-label" for="fieldOptions">ตัวเลือก (บรรทัดละหนึ่ง)</label>
+                    <textarea id="fieldOptions" class="form-control" rows="3"></textarea>
+                </div>
+                <p class="form-hint">ชนิดเปลี่ยนไม่ได้หลังเพิ่ม ลบช่องแล้วค่าที่กรอกไว้ในทุกงานจะหายไปด้วย ระบบจะถามก่อนลบ</p>
+                <p class="form-error" id="fieldError" role="alert" hidden></p>
+                <p class="proj-note" id="fieldsFull" hidden>ครบ 10 ช่องแล้ว ลบช่องที่ไม่ใช้ก่อนจึงเพิ่มได้</p>
+                <button type="submit" class="btn btn-primary" id="fieldAddSubmit">เพิ่มช่อง</button>
+            </form>
         </div>
 
         <!-- ประเภท -->
@@ -544,6 +580,7 @@
                     <label class="form-label" for="editTaskDue">กำหนดส่ง</label>
                     <input type="date" id="editTaskDue" class="form-control">
                 </div>
+                <div class="task-custom" id="editTaskCustom" hidden></div>
 
                 <div class="modal-checklist-container">
                     <div class="checklist-header">

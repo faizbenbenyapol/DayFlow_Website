@@ -963,6 +963,51 @@ async function main() {
         await sleep(1200);
         check(await tab.eval(`document.getElementById('chatMessagesList').textContent.includes(${JSON.stringify(STAMP)})`), 'a chat message appears after sending');
 
+        // ---------- custom fields: set up in settings, filled in the panel, shown and filtered in the list ----------
+        console.log('Project fields');
+        await click(tab, '#tabSettings');
+        await click(tab, '#settingsNavFields');
+        await sleep(100);
+        check(await tab.eval(`!document.getElementById('settingsFields').hidden`), 'the settings have a fields section');
+        await fill(tab, '#fieldName', 'แพลตฟอร์ม');
+        await fill(tab, '#fieldKind', 'select');
+        check(await tab.eval(`!document.getElementById('fieldOptionsGroup').hidden`), 'a select field asks for its options');
+        await fill(tab, '#fieldOptions', 'iOS\nเว็บ');
+        await click(tab, '#fieldAddSubmit');
+        await sleep(1500);
+        check(await tab.eval(`[...document.querySelectorAll('#fieldLines .field-line input')].some(i => i.value === 'แพลตฟอร์ม')`), 'the new field is listed');
+        await fill(tab, '#fieldName', 'ชั่วโมง');
+        await fill(tab, '#fieldKind', 'number');
+        await click(tab, '#fieldAddSubmit');
+        await sleep(1500);
+        check(await tab.eval(`document.querySelectorAll('#fieldLines .field-line').length`) === 2, 'a second field is added');
+
+        await tab.eval(`openEditTask(activeProjectData.tasks.find(t => t.title === ${JSON.stringify('งาน ' + STAMP)}).id)`);
+        await sleep(400);
+        check(await tab.eval(`document.querySelectorAll('#editTaskCustom [data-field-id]').length`) === 2, 'the task panel shows both fields');
+        await tab.eval(`(() => { const [platform, hours] = document.querySelectorAll('#editTaskCustom [data-field-id]'); platform.value = 'เว็บ'; hours.value = '6'; })()`);
+        await click(tab, '#editTaskForm [type="submit"]');
+        await sleep(1500);
+        await click(tab, '#tabList');
+        await sleep(100);
+        check(await tab.eval(`[...document.querySelectorAll('#taskListTable thead th.c-field')].map(th => th.textContent).join(',')`) === 'แพลตฟอร์ม,ชั่วโมง', 'the list gets a column per field');
+        check(await tab.eval(`[...document.querySelectorAll('#taskListBody tr.row')].some(r => r.textContent.includes('เว็บ') && r.textContent.includes('6'))`), 'showing the values filled in the panel');
+        await fill(tab, '#taskFieldFilters select', 'iOS');
+        check(await visibleRows() === 0, 'a field filter narrows the list');
+        await fill(tab, '#taskFieldFilters select', 'เว็บ');
+        check(await visibleRows() === 1, 'to the tasks with that value');
+        await click(tab, '#taskFilterClear');
+
+        await click(tab, '#tabSettings');
+        await click(tab, '#settingsNavFields');
+        await click(tab, '#fieldLines [data-act="deleteField"]');
+        await sleep(200);
+        check(await tab.eval(`document.querySelector('.df-dialog[open]')?.textContent.includes('1 งาน')`), 'deleting a field says how many tasks lose a value');
+        await click(tab, '.df-dialog[open] button[type="submit"]');
+        await sleep(1500);
+        check(await tab.eval(`document.querySelectorAll('#fieldLines .field-line').length`) === 1, 'the field is gone');
+        await tab.eval(`showSettingsSection('team'); showProjectTab('board')`);
+
         // ---------- the settings tab: team, columns and type ----------
         console.log('Project settings');
         await click(tab, '#tabSettings');

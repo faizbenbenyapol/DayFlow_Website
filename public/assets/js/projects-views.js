@@ -49,6 +49,7 @@ function readTaskView() {
     }
     const view = { ...TASK_VIEW_DEFAULT, ...(saved && typeof saved === 'object' ? saved : {}) };
     if (Number(view.dir) !== -1) view.dir = 1;
+    view.cf = view.cf && typeof view.cf === 'object' && !Array.isArray(view.cf) ? { ...view.cf } : {};
     return view;
 }
 
@@ -88,7 +89,8 @@ function countActiveTaskFilters() {
     return (String(taskView.q || '').trim() ? 1 : 0)
         + (taskView.who ? 1 : 0)
         + (taskView.grp ? 1 : 0)
-        + (taskView.due ? 1 : 0);
+        + (taskView.due ? 1 : 0)
+        + Object.values(taskView.cf || {}).filter(Boolean).length;
 }
 
 /**
@@ -99,6 +101,8 @@ function loadTaskView() {
     taskView = readTaskView();
     taskCalResetMonth();
     buildTaskViewWhoOptions();
+    if (!isTaskSortKey(taskView.sort)) taskView.sort = 'due';
+    buildTaskFieldFilters();
     syncTaskFilterInputs();
     renderTaskViews();
 }
@@ -117,6 +121,8 @@ function clearTaskFilters() {
     taskView.who = '';
     taskView.grp = '';
     taskView.due = '';
+    taskView.cf = {};
+    buildTaskFieldFilters();
     syncTaskFilterInputs();
     saveTaskView();
     renderTaskViews();
@@ -137,8 +143,9 @@ function filteredTasks() {
         if (q) {
             const title = String(task.title || '').toLowerCase();
             const category = String(task.category || '').toLowerCase();
-            if (!title.includes(q) && !category.includes(q)) return false;
+            if (!title.includes(q) && !category.includes(q) && !taskTextFieldsInclude(task, q)) return false;
         }
+        if (!taskMatchesFieldFilters(task)) return false;
         if (taskView.who === 'me') {
             if (!CURRENT_USER_ID || Number(task.assignee_user_id) !== Number(CURRENT_USER_ID)) return false;
         } else if (taskView.who === 'none') {
@@ -158,6 +165,105 @@ function filteredTasks() {
         }
         return true;
     });
+}
+
+/* ── ช่องข้อมูลเพิ่มเติมในตัวกรองและรายการ (ฟังก์ชันอ่านค่าอยู่ใน projects-fields.js) ── */
+const FILTERABLE_FIELD_KINDS = ['select', 'person', 'check'];
+
+/** คีย์เรียงที่ใช้ได้: คอลัมน์ตายตัว หรือ 'f:<id>' ของช่องที่ยังอยู่ */
+function isTaskSortKey(key) {
+    if (TASK_SORT_KEYS.includes(key)) return true;
+    return String(key).startsWith('f:') && projectFields().some(field => String(field.id) === String(key).slice(2));
+}
+
+/** ตัวเลือกของตัวกรองหนึ่งช่อง [{value, label}] (ค่าว่าง = ทั้งหมด) */
+function fieldFilterChoices(field) {
+    const all = { value: '', label: field.name + ': ทั้งหมด' };
+    if (field.kind === 'check') return [all, { value: 'yes', label: field.name + ': ใช่' }, { value: 'no', label: field.name + ': ไม่ใช่' }];
+    const values = field.kind === 'person'
+        ? (projectMembers || []).map(member => ({ value: String(member.id), label: member.display_name || member.username }))
+        : (field.options || []).map(option => ({ value: option, label: option }));
+    return [all, ...values];
+}
+
+/**
+ * วาดตัวกรองของช่องแบบตัวเลือก/คน/ติ๊กลงใน #taskFieldFilters และทิ้งค่าที่จำไว้ซึ่งใช้ไม่ได้แล้ว
+ * (ช่องถูกลบ ตัวเลือกถูกเอาออก สมาชิกออก) ผลข้างเคียง: แก้ taskView.cf
+ */
+function buildTaskFieldFilters() {
+    const fields = projectFields().filter(field => FILTERABLE_FIELD_KINDS.includes(field.kind));
+    const kept = {};
+    const html = fields.map(field => {
+        const choices = fieldFilterChoices(field);
+        const current = (taskView.cf || {})[field.id] || '';
+        if (current && choices.some(choice => choice.value === current)) kept[field.id] = current;
+        return '<select class="form-control" aria-label="กรองตาม ' + escHtml(field.name) + '"'
+            + ' data-act="setTaskFieldFilter" data-args=\'[' + Number(field.id) + ', "$value"]\' data-on="change">'
+            + choices.map(choice => '<option value="' + escHtml(choice.value) + '"' + (choice.value === kept[field.id] ? ' selected' : '') + '>'
+                + escHtml(choice.label) + '</option>').join('')
+            + '</select>';
+    }).join('');
+    const box = document.getElementById('taskFieldFilters');
+    if (box) box.innerHTML = html;
+    taskView.cf = kept;
+}
+
+/** เปลี่ยนตัวกรองของช่องหนึ่งช่อง (ค่าว่าง = เลิกกรองช่องนั้น) บันทึกแล้ววาดใหม่ */
+function setTaskFieldFilter(fieldId, value) {
+    taskView.cf = { ...(taskView.cf || {}) };
+    if (value) taskView.cf[fieldId] = String(value);
+    else delete taskView.cf[fieldId];
+    saveTaskView();
+    renderTaskViews();
+}
+
+/** งานผ่านตัวกรองของทุกช่องที่ตั้งไว้หรือไม่ */
+function taskMatchesFieldFilters(task) {
+    const wanted = Object.entries(taskView.cf || {}).filter(([, value]) => value);
+    if (!wanted.length) return true;
+    const values = taskCustom(task);
+    return wanted.every(([fieldId, value]) => {
+        const field = projectFields().find(f => String(f.id) === fieldId);
+        if (!field) return true;
+        if (field.kind === 'check') return value === 'yes' ? values[fieldId] === true : values[fieldId] !== true;
+        return String(values[fieldId] ?? '') === value;
+    });
+}
+
+/** ช่องค้นหาเจอข้อความในช่องแบบข้อความของงานหรือไม่ (q เป็นตัวพิมพ์เล็กแล้ว) */
+function taskTextFieldsInclude(task, q) {
+    const values = taskCustom(task);
+    return projectFields().some(field => field.kind === 'text' && String(values[field.id] || '').toLowerCase().includes(q));
+}
+
+/** เทียบค่าช่องของสองงานเพื่อเรียง: ไม่มีค่าอยู่ท้ายเสมอ ตัวเลขเทียบเป็นตัวเลข */
+function compareFieldValues(fieldId, ta, tb, dir) {
+    const field = projectFields().find(f => String(f.id) === String(fieldId));
+    if (!field) return 0;
+    const a = fieldSortValue(field, taskCustom(ta)[field.id]);
+    const b = fieldSortValue(field, taskCustom(tb)[field.id]);
+    if (a === null || b === null) return a === b ? 0 : (a === null ? 1 : -1);
+    return (typeof a === 'number' && typeof b === 'number' ? a - b : String(a).localeCompare(String(b), 'th')) * dir;
+}
+
+/** จำนวนคอลัมน์ของตารางรายการ: 5 คอลัมน์ตายตัว + ช่องข้อมูล */
+function taskListColspan() {
+    return 5 + projectFields().length;
+}
+
+/** HTML ของช่องข้อมูลในแถวงาน หนึ่งเซลล์ต่อช่อง */
+function taskFieldCellsHtml(task) {
+    const values = taskCustom(task);
+    return projectFields().map(field => '<td class="c-field">' + escHtml(fieldValueText(field, values[field.id]) || '—') + '</td>').join('');
+}
+
+/** วาดหัวคอลัมน์ของช่องข้อมูลต่อท้ายหัวตารางเดิม (ลบของเก่าก่อน) */
+function renderTaskFieldHeaders() {
+    const row = document.querySelector('#taskListTable thead tr');
+    if (!row) return;
+    row.querySelectorAll('th.c-field').forEach(th => th.remove());
+    row.insertAdjacentHTML('beforeend', projectFields().map(field => '<th scope="col" class="c-field" data-sort="f:' + Number(field.id) + '">'
+        + '<button class="th-sort" type="button" data-act="sortTaskList" data-args=\'["f:' + Number(field.id) + '"]\'>' + escHtml(field.name) + '</button></th>').join(''));
 }
 
 /** อัปเดตข้อความสรุปตัวกรองและซ่อนปุ่ม/ข้อความเมื่อไม่ได้กรอง */
@@ -211,6 +317,7 @@ function sortedTasks(tasks) {
                     - (columnOrder.has(Number(tb.column_id)) ? columnOrder.get(Number(tb.column_id)) : 9999)) * dir;
             } else if (key === 'who') r = compareEmptyLast(ta.assignee_name, tb.assignee_name, dir);
             else if (key === 'due') r = compareEmptyLast(ta.due_date, tb.due_date, dir);
+            else if (key.startsWith('f:')) r = compareFieldValues(key.slice(2), ta, tb, dir);
             else if (key === 'priority') {
                 const pa = TASK_PRIORITY_ORDER[ta.priority] != null ? TASK_PRIORITY_ORDER[ta.priority] : 2;
                 const pb = TASK_PRIORITY_ORDER[tb.priority] != null ? TASK_PRIORITY_ORDER[tb.priority] : 2;
@@ -279,8 +386,9 @@ function taskListRowHtml(task, today) {
         + '</td>'
         + '<td class="c-col"><span class="gdot" aria-hidden="true"></span>' + escHtml(column ? column.name : '') + '</td>'
         + '<td class="c-who">' + (task.assignee_name ? escHtml(task.assignee_name) : '—') + '</td>'
-        + '<td class="c-due num' + (over ? ' over' : '') + '">' + dueText + '</td>'
+        + '<td class="c-due' + (over ? ' over' : '') + '">' + dueText + '</td>'
         + '<td class="c-pri">' + escHtml(PRIORITY_LABEL[priority] || priority) + '</td>'
+        + taskFieldCellsHtml(task)
         + '</tr>';
 }
 
@@ -297,7 +405,7 @@ function updateTaskListAriaSort() {
 
 /** กดหัวคอลัมน์เพื่อเรียง: คีย์เดิมสลับทิศ คีย์ใหม่เริ่มจากน้อยไปมาก */
 function sortTaskList(key) {
-    if (!TASK_SORT_KEYS.includes(key)) return;
+    if (!isTaskSortKey(key)) return;
     if (taskView.sort === key) {
         taskView.dir = taskView.dir === 1 ? -1 : 1;
     } else {
@@ -311,17 +419,18 @@ function sortTaskList(key) {
 /** วาดตารางมุมมองรายการ (จัดกลุ่มตาม taskView.group) และปรับ aria-sort */
 function renderTaskList() {
     if (!activeProjectData) return;
+    renderTaskFieldHeaders();
     updateTaskListAriaSort();
     const tbody = document.getElementById('taskListBody');
     if (!tbody) return;
     const all = activeProjectData.tasks || [];
     const tasks = filteredTasks();
     if (!all.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="kanban-empty">ยังไม่มีงานในโปรเจคนี้</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="' + taskListColspan() + '" class="kanban-empty">ยังไม่มีงานในโปรเจคนี้</td></tr>';
         return;
     }
     if (!tasks.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="kanban-empty">ไม่มีงานที่ตรงกับตัวกรอง '
+        tbody.innerHTML = '<tr><td colspan="' + taskListColspan() + '" class="kanban-empty">ไม่มีงานที่ตรงกับตัวกรอง '
             + '<button type="button" class="btn btn-link btn-sm" data-act="clearTaskFilters">ล้างตัวกรอง</button></td></tr>';
         return;
     }
@@ -329,7 +438,7 @@ function renderTaskList() {
     tbody.innerHTML = groupedTaskList(sortedTasks(tasks)).map(group => {
         const header = group.label
             ? '<tr class="grp-row"' + (group.grp ? ' data-g="' + escHtml(group.grp) + '"' : '') + '>'
-                + '<th colspan="5" scope="colgroup"><span class="gdot" aria-hidden="true"></span>'
+                + '<th colspan="' + taskListColspan() + '" scope="colgroup"><span class="gdot" aria-hidden="true"></span>'
                 + escHtml(group.label) + ' <span class="grp-n">' + group.tasks.length + '</span></th></tr>'
             : '';
         return header + group.tasks.map(task => taskListRowHtml(task, today)).join('');

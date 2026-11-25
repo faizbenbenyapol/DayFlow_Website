@@ -1172,6 +1172,11 @@
         grid-template-columns: 28px minmax(0, 1fr) auto;
     }
 
+    /* A field line: the kind and its options drop under the name */
+    .field-line .field-type {
+        grid-column: 2;
+    }
+
     .col-line .n {
         display: none;
     }
@@ -1429,6 +1434,11 @@
     flex: 1 1 220px;
 }
 
+/* The custom-field filters sit in the same row as the fixed ones */
+.view-field-filters {
+    display: contents;
+}
+
 .view-filter-state {
     font-size: .75rem;
     color: var(--pencil);
@@ -1538,8 +1548,7 @@
     text-decoration: underline;
 }
 
-.task-table .num {
-    font-family: var(--font-num);
+.task-table .c-due {
     white-space: nowrap;
 }
 
@@ -1750,7 +1759,8 @@
         color: var(--ink);
     }
 
-    .task-table tr.row td.c-col {
+    .task-table tr.row td.c-col,
+    .task-table tr.row td.c-field {
         display: none;
     }
 
@@ -1761,5 +1771,36 @@
 
     .ov-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+/* ---------------------------------------------------------------
+   Custom fields: the settings lines and the cells in the list
+--------------------------------------------------------------- */
+.col-line.field-line {
+    grid-template-columns: 28px minmax(0, 18rem) minmax(0, 16rem) auto;
+}
+
+.field-type {
+    font-size: .8125rem;
+    color: var(--pencil);
+}
+
+.field-actions {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.task-table .c-field {
+    white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+    .col-line.field-line {
+        grid-template-columns: 28px minmax(0, 1fr) auto;
+    }
+
+    .field-line .field-actions {
+        grid-column: 2 / -1;
     }
 }

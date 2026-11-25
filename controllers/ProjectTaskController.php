@@ -41,13 +41,20 @@ class ProjectTaskController
         $activities = ProjectActivity::getRecent($projectId, 8);
         $aiInsight  = Project::getAiInsight($projectId, $userId);
 
-        Response::json([
+        $payload = [
             'project'    => $project,
             'tasks'      => $tasks,
             'columns'    => ProjectColumn::listForProject($projectId),
             'activities' => $activities,
             'ai'         => $aiInsight
-        ]);
+        ];
+        // ลิงก์แชร์เปิดข้อมูลใหม่ของ P0b ตาม D-5 เท่านั้น: แขกไม่เห็นช่องข้อมูลเพิ่มเติมและค่าของมัน
+        if ($userId > 0) {
+            $payload['fields'] = ProjectField::listForProject($projectId);
+        } else {
+            $payload['tasks'] = array_map(static fn(array $task): array => array_merge($task, ['custom' => null]), $tasks);
+        }
+        Response::json($payload);
     }
 
     /**
@@ -178,13 +185,35 @@ class ProjectTaskController
             }
         }
 
-        if (empty($data) && $moveTo === null) {
+        // ช่องข้อมูลเพิ่มเติม: ตรวจตามชนิด แล้วเก็บเฉพาะช่องที่ค่าเปลี่ยนจริง
+        $customPatch = [];
+        if (array_key_exists('custom', $json)) {
+            if (!is_array($json['custom'])) {
+                Response::json(['error' => 'ข้อมูลช่องเพิ่มเติมไม่ถูกต้อง'], 422);
+            }
+            // ตรวจเฉพาะค่าที่ต่างจากเดิม: ค่าที่ไม่ได้แตะ (เช่นคนที่ออกจากโปรเจคไปแล้ว) ต้องไม่ทำให้บันทึกงานไม่ได้
+            $old = self::customValues($task);
+            $touched = array_filter($json['custom'], static fn(mixed $value, mixed $key): bool => ($old[$key] ?? null) !== $value, ARRAY_FILTER_USE_BOTH);
+            $fields = ProjectField::listForProject((int)$task['project_id']);
+            try {
+                $cleaned = ProjectField::cleanValues((int)$task['project_id'], $fields, $touched);
+            } catch (ProjectColumnException $e) {
+                self::fail($e);
+            }
+            $customPatch = self::customDiff($fields, $old, $cleaned, $changes);
+        }
+
+        if (empty($data) && $moveTo === null && !array_key_exists('custom', $json)) {
             Response::json(['error' => 'ไม่มีข้อมูลสำหรับแก้ไข'], 400);
         }
 
         $changed = false;
         if (!empty($data)) {
             $changed = ProjectTask::update($taskId, $data);
+        }
+        if ($customPatch) {
+            ProjectTask::patchCustom($taskId, $customPatch);
+            $changed = true;
         }
         if ($moveTo !== null) {
             try {
@@ -383,6 +412,49 @@ class ProjectTaskController
             Response::json(['error' => 'ไม่พบคอลัมน์'], 404);
         }
         return $column;
+    }
+
+    /**
+     * ค่าช่องข้อมูลเดิมของงาน (JSON ที่อ่านไม่ได้ถือว่าว่าง)
+     *
+     * @param array<string, mixed> $task แถวงาน
+     * @return array<mixed> {รหัสช่อง: ค่า}
+     */
+    private static function customValues(array $task): array
+    {
+        $values = json_decode((string)($task['custom'] ?? ''), true);
+        return is_array($values) ? $values : [];
+    }
+
+    /**
+     * เทียบค่าช่องข้อมูลที่ตรวจแล้วกับค่าเดิมของงาน คืนเฉพาะช่องที่เปลี่ยน
+     *
+     * แผงรายละเอียดส่งทุกช่องมาทุกครั้งที่บันทึก ถ้าไม่กรอง ประวัติจะมีบรรทัด "เปลี่ยน" ทั้งที่ไม่ได้แก้
+     *
+     * @param list<array<string, mixed>> $fields ช่องของโปรเจค
+     * @param array<mixed> $old ค่าเดิมของงานจาก customValues()
+     * @param array<string, mixed> $cleaned ผลของ ProjectField::cleanValues()
+     * @param list<string> $changes รายการข้อความประวัติ (เพิ่มบรรทัดของช่องที่เปลี่ยน)
+     * @return array<string, mixed> แพตช์สำหรับ ProjectTask::patchCustom()
+     */
+    private static function customDiff(array $fields, array $old, array $cleaned, array &$changes): array
+    {
+        $byId = array_column($fields, null, 'id');
+
+        $patch = [];
+        foreach ($cleaned as $key => $value) {
+            if (($old[$key] ?? null) === $value) continue;
+            $patch[$key] = $value;
+            $field = $byId[(int)$key];
+            $shown = match (true) {
+                $value === null => 'ว่าง',
+                $value === true => 'ใช่',
+                $field['kind'] === 'person' => self::assigneeName((int)$value, null) ?? 'ไม่ระบุ',
+                default => (string)$value,
+            };
+            $changes[] = $field['name'] . " เปลี่ยนเป็น '" . $shown . "'";
+        }
+        return $patch;
     }
 
     /**

@@ -340,6 +340,12 @@ class Router
         $this->add('PUT',    '/api/projects/columns/{cid}',        'ProjectColumnController', 'apiUpdate',  true);
         $this->add('DELETE', '/api/projects/columns/{cid}',        'ProjectColumnController', 'apiDelete',  true);
 
+        // --- API: Projects custom fields (REQ-P6) ---
+        $this->add('POST',   '/api/projects/{id}/fields',          'ProjectFieldController', 'apiCreate',  true);
+        $this->add('POST',   '/api/projects/{id}/fields/reorder',  'ProjectFieldController', 'apiReorder', true);
+        $this->add('PUT',    '/api/projects/fields/{fid}',         'ProjectFieldController', 'apiUpdate',  true);
+        $this->add('DELETE', '/api/projects/fields/{fid}',         'ProjectFieldController', 'apiDelete',  true);
+
         // --- API: Projects Collaboration & Chat ---
         $this->add('GET',    '/api/projects/{id}/members',      'ProjectTeamController', 'apiMemberList',   true);
         $this->add('POST',   '/api/projects/{id}/members',      'ProjectTeamController', 'apiMemberAdd',    true);

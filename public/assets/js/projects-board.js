@@ -257,6 +257,7 @@ function openEditTask(id) {
         try { currentChecklist = JSON.parse(task.checklist) || []; } catch (_) { /* an unreadable list starts empty */ }
     }
     renderChecklist();
+    renderTaskCustomFields(task);
     openModal('editTaskModal');
     setTaskParam(task.id);
     loadTaskHistory(task.id);
@@ -427,6 +428,8 @@ async function submitEditTask(e) {
         checklist: currentChecklist,
         ...assigneePayload,
     };
+    // ช่องข้อมูลเพิ่มเติม: ส่งทุกช่อง เซิร์ฟเวอร์เขียนเฉพาะช่องที่ค่าเปลี่ยน
+    if (projectFields().length) payload.custom = collectTaskCustom();
     if (columnSelect.value !== columnSelect.dataset.original) {
         payload.column_id = parseInt(columnSelect.value, 10);
     }

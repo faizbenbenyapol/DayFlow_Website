@@ -97,13 +97,15 @@ function applyProjectTab() {
     showProjectTab(projectSettingsTab);
 }
 
+const SETTINGS_SECTIONS = ['team', 'columns', 'fields', 'type'];
+
 /**
- * สลับหัวข้อย่อยในแท็บตั้งค่า: ทีมและสิทธิ์ / คอลัมน์ / ประเภท
+ * สลับหัวข้อย่อยในแท็บตั้งค่า: ทีมและสิทธิ์ / คอลัมน์ / ช่องข้อมูล / ประเภท
  * รับชื่อหัวข้อ ไม่คืนค่า แก้ aria-current และซ่อน/แสดงแผง
  */
 function showSettingsSection(name) {
-    projectSettingsSection = ['team', 'columns', 'type'].includes(name) ? name : 'team';
-    ['team', 'columns', 'type'].forEach(key => {
+    projectSettingsSection = SETTINGS_SECTIONS.includes(name) ? name : 'team';
+    SETTINGS_SECTIONS.forEach(key => {
         const button = document.getElementById('settingsNav' + key.charAt(0).toUpperCase() + key.slice(1));
         if (button) button.setAttribute('aria-current', key === projectSettingsSection ? 'page' : 'false');
         show('settings' + key.charAt(0).toUpperCase() + key.slice(1), key === projectSettingsSection);
@@ -587,6 +589,7 @@ async function changeProjectType(type) {
 function renderSettingsPanel() {
     if (!activeProjectData || !activeProjectData.project) return;
     renderColumnsSettings();
+    renderFieldsSettings();
     renderTypeSettings();
     applyProjectTab();
 }
