@@ -93,6 +93,8 @@ class ProjectTaskController
      * POST /api/projects/{id}/tasks
      *
      * สมาชิกขึ้นไปเพิ่มงานได้ ผู้ดูอย่างเดียวอ่านได้อย่างเดียว
+     * ชนิดงาน งานแม่ และแต้มที่ส่งมาถูกตรวจใน model ภายใต้ lock ของโปรเจค
+     * คืนรหัสงานและเลขงานในโปรเจค (number)
      */
     public function apiTaskCreate(string $id): void
     {
@@ -135,24 +137,32 @@ class ProjectTaskController
         if (array_key_exists('assignee_user_id', $json)) {
             $data = self::applyAssigneeUserId($projectId, $data, $json['assignee_user_id']);
         }
+        // ส่งค่าที่ไม่ได้ระบุไปให้ model ตรวจใน lock: kind ว่าง = task, parent/แต้ม null = ไม่มี
+        foreach (['kind', 'parent_id', 'story_points'] as $field) {
+            if (array_key_exists($field, $json)) {
+                $data[$field] = $json[$field];
+            }
+        }
 
         try {
-            $taskId = ProjectTask::create($userId, $projectId, $column, $data);
+            $created = ProjectTask::create($userId, $projectId, $column, $data);
         } catch (ProjectColumnException $e) {
             self::fail($e);
         }
+        $taskId = $created['id'];
         ProjectActivity::log($projectId, $userId, 'เพิ่มงานย่อยใหม่: "' . $title . '"', $taskId);
         if (!empty($data['assignee_user_id'])) {
             self::notifyAssigned($project, $taskId, $title, (int)$data['assignee_user_id'], $userId);
         }
 
-        Response::json(['ok' => true, 'id' => $taskId], 201);
+        Response::json(['ok' => true, 'id' => $taskId, 'number' => $created['number']], 201);
     }
 
     /**
      * PUT /api/projects/tasks/{tid}
      *
      * สมาชิกขึ้นไปแก้งานได้ ผู้ดูอย่างเดียวและแขกถูกปฏิเสธ
+     * ชนิดงาน งานแม่ และแต้มถูกตรวจและเขียนใน lock เดียวกันของโปรเจค
      */
     public function apiTaskUpdate(string $tid): void
     {
@@ -251,12 +261,37 @@ class ProjectTaskController
             $customPatch = self::customDiff($fields, $old, $cleaned, $customChanges);
         }
 
-        if (empty($data) && $moveTo === null && !array_key_exists('custom', $json)) {
+        // ชนิดงาน งานแม่ และแต้มอ่านจาก JSON ตรง ๆ: null/'' ของสองอย่างหลังคือสั่งล้างค่า
+        $structure = [];
+        foreach (['kind', 'parent_id', 'story_points'] as $field) {
+            if (array_key_exists($field, $json)) {
+                $structure[$field] = $json[$field];
+            }
+        }
+
+        if (empty($data) && $moveTo === null && $structure === [] && !array_key_exists('custom', $json)) {
             Response::json(['error' => 'ไม่มีข้อมูลสำหรับแก้ไข'], 400);
         }
 
+        // ชนิด/งานแม่/แต้ม: model ตรวจและเขียนในล็อกโปรเจคเดียวกัน จึงไม่เห็นงานแม่หรือลูกที่เก่าไปแล้ว
+        $structureChanges = [];
+        $taskChanged = false;
+        if ($structure !== []) {
+            try {
+                $updated = ProjectTask::updateStructure($taskId, (int)$task['project_id'], $structure);
+            } catch (ProjectColumnException $e) {
+                self::fail($e);
+            }
+            $structureChanges = $updated['changes'];
+            $taskChanged = $updated['changed'];
+        }
+        if (!empty($data) && ProjectTask::update($taskId, $data)) {
+            $taskChanged = true;
+        }
+        if ($structureChanges !== []) {
+            $changes = array_merge($changes, $structureChanges);
+        }
         // แยก "งานเปลี่ยน" กับ "ค่าช่องเปลี่ยน" เพราะสองเรื่องนี้ลงฟีดกิจกรรมคนละบรรทัด
-        $taskChanged = !empty($data) && ProjectTask::update($taskId, $data);
         if ($customPatch) {
             ProjectTask::patchCustom($taskId, $customPatch);
         }
@@ -327,6 +362,7 @@ class ProjectTaskController
      * DELETE /api/projects/tasks/{tid}
      *
      * สมาชิกขึ้นไปลบงานได้ ผู้ดูอย่างเดียวและแขกถูกปฏิเสธ
+     * งานย่อย (sub) ของงานนี้ถูกลบตามไปด้วย และคืนจำนวนที่ลบตาม (deleted_subtasks)
      */
     public function apiTaskDelete(string $tid): void
     {
@@ -346,13 +382,13 @@ class ProjectTaskController
 
         $this->requireRole($project, 'member', 'ลบงาน');
 
-        if (ProjectTask::delete($taskId)) {
-            ProjectActivity::log($task['project_id'], $userId, 'ลบงานย่อย: "' . $task['title'] . '"');
-            Response::json(['ok' => true]);
-        } else {
-            // อีกคำขอลบงานนี้ไปก่อนแล้ว: ตอบแบบ id ที่ถูกลบ (EDGE-P4) ไม่ใช่ 500
-            Response::json(['error' => 'ไม่พบข้อมูลงาน'], 404);
+        try {
+            $deleted = ProjectTask::delete($taskId, (int)$task['project_id']);
+        } catch (ProjectColumnException $e) {
+            self::fail($e);
         }
+        ProjectActivity::log($task['project_id'], $userId, 'ลบงานย่อย: "' . $task['title'] . '"');
+        Response::json(['ok' => true, 'deleted_subtasks' => $deleted['subtasks']]);
     }
 
     /**

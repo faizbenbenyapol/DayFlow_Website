@@ -5,6 +5,15 @@
 
 class ProjectTask
 {
+    /** ชนิดงานที่รับได้ (ตรงกับ ENUM ของ project_tasks.kind) */
+    public const KINDS = ['epic', 'story', 'task', 'bug', 'sub'];
+
+    /** ชื่อไทยของชนิดงาน (ใช้ในบรรทัดประวัติ) */
+    public const KIND_LABELS = ['epic' => 'งานใหญ่', 'story' => 'เรื่องผู้ใช้', 'task' => 'งาน', 'bug' => 'บั๊ก', 'sub' => 'งานย่อย'];
+
+    /** ชุดแต้มที่รับได้ตามสเกลของโปรเจค */
+    public const POINT_SCALES = ['fib' => [1, 2, 3, 5, 8, 13, 21], 'ten' => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]];
+
     /**
      * ดึงข้อมูลงานทั้งหมดในโครงการ จัดกลุ่มและเรียงตามตำแหน่งการลากวาง (สำหรับผู้ใช้ร่วมทีมทุกคน รวมถึงแขกสาธารณะ)
      *
@@ -43,21 +52,40 @@ class ProjectTask
      * ตำแหน่งคือต่อท้ายคอลัมน์นั้น ส่วนสถานะเดิมถูกคำนวณจากคอลัมน์ด้วย
      * นิพจน์เดียวกับ moveTo() (เป็นฟังก์ชันของคอลัมน์ ไม่ขึ้นกับสถานะเดิม)
      *
+     * เลขงานและตัวนับถูกอ่าน/เขียนใน lock ของโปรเจคเดียวกับที่ตรวจงานแม่
+     * จึงไม่มีคำขออื่นแทรกเลขซ้ำหรือเห็นงานแม่ที่เพิ่งเปลี่ยนชนิดไปแล้ว
+     *
      * @param int $userId ผู้สร้าง (0 = guest)
      * @param int $projectId รหัสโปรเจค
      * @param array<string, mixed> $column คอลัมน์ที่ตรวจแล้ว (ต้องมี id)
-     * @param array<string, mixed> $data ข้อมูลงาน
-     * @return int รหัสงานใหม่
+     * @param array<string, mixed> $data ข้อมูลงาน (kind, parent_id, story_points ไม่บังคับ)
+     * @return array{id: int, number: int} รหัสงานใหม่และเลขงานในโปรเจค
      */
-    public static function create(int $userId, int $projectId, array $column, array $data): int
+    public static function create(int $userId, int $projectId, array $column, array $data): array
     {
         $columnId = (int)$column['id'];
-        return (int)ProjectColumn::locked($projectId, static function () use ($userId, $projectId, $columnId, $data): int {
+        /** @var array{id: int, number: int} $created */
+        $created = ProjectColumn::locked($projectId, static function () use ($userId, $projectId, $columnId, $data): array {
             // อ่านคอลัมน์ซ้ำหลังได้ lock: ถ้าคำขอลบชนะไปแล้ว ต้องตอบ 404 ไม่ใช่
             // ปล่อยให้ FK ON DELETE SET NULL ทำให้งานลอยอย่างไร้คอลัมน์
             if (!ProjectColumn::findInProject($projectId, $columnId)) {
                 throw new ProjectColumnException(404, 'ไม่พบคอลัมน์');
             }
+
+            $project = DB::run(
+                'SELECT next_task_number, point_scale FROM projects WHERE id = ?',
+                [$projectId]
+            )->fetch();
+            if (!$project) {
+                throw new ProjectColumnException(404, 'ไม่พบข้อมูลโปรเจค');
+            }
+
+            // ตรวจชนิด/งานแม่/แต้มก่อน insert: งานแม่หายหรือชนิดผิดต้องไม่ทิ้งงานครึ่ง ๆ กลาง ๆ
+            $kind = array_key_exists('kind', $data) ? self::checkedKind($data['kind']) : 'task';
+            $parentId = array_key_exists('parent_id', $data) ? self::parentIdFromInput($data['parent_id']) : null;
+            self::checkedParent($projectId, 0, $kind, $parentId);
+            $points = self::checkedPoints($data['story_points'] ?? null, (string)$project['point_scale'], $kind);
+            $number = (int)$project['next_task_number'];
 
             $maxPos = (int)DB::run(
                 'SELECT COALESCE(MAX(position), -1) FROM project_tasks
@@ -71,12 +99,13 @@ class ProjectTask
             $assignee = ($assigneeUserId !== null) ? null : (!empty($data['assignee']) ? $data['assignee'] : null);
 
             $insert = DB::run(
-                'INSERT INTO project_tasks (project_id, user_id, guest_name, title, status, priority, due_date, category, assignee_user_id, assignee, column_id, position, checklist)
-                 SELECT ?, ?, ?, ?, ' . self::shadowStatusSql() . ', ?, ?, ?, ?, ?, c.id, ?, ?
+                'INSERT INTO project_tasks (project_id, number, user_id, guest_name, title, status, priority, due_date, category, assignee_user_id, assignee, kind, parent_id, story_points, column_id, position, checklist)
+                 SELECT ?, ?, ?, ?, ?, ' . self::shadowStatusSql() . ', ?, ?, ?, ?, ?, ?, ?, ?, c.id, ?, ?
                  FROM project_columns c
                  WHERE c.id = ? AND c.project_id = ?',
                 [
                     $projectId,
+                    $number,
                     $insertUserId,
                     $guestName,
                     $data['title'],
@@ -85,6 +114,9 @@ class ProjectTask
                     !empty($data['category']) ? $data['category'] : null,
                     $assigneeUserId,
                     $assignee,
+                    $kind,
+                    $parentId,
+                    $points,
                     $maxPos + 1,
                     !empty($data['checklist']) ? json_encode($data['checklist'], JSON_UNESCAPED_UNICODE) : null,
                     $columnId,
@@ -95,8 +127,17 @@ class ProjectTask
             if ($insert->rowCount() < 1) {
                 throw new ProjectColumnException(404, 'ไม่พบคอลัมน์');
             }
-            return (int)DB::conn()->lastInsertId();
+            $taskId = (int)DB::conn()->lastInsertId();
+
+            // ตัวนับเพิ่มอย่างเดียว: เลขที่เคยออกแล้วจึงไม่ถูกนำกลับมาใช้ แม้งานจะถูกลบ
+            DB::run(
+                'UPDATE projects SET next_task_number = next_task_number + 1, updated_at = updated_at WHERE id = ?',
+                [$projectId]
+            );
+
+            return ['id' => $taskId, 'number' => $number];
         });
+        return $created;
     }
 
     /**
@@ -136,6 +177,212 @@ class ProjectTask
     }
 
     /**
+     * ตรวจและเขียนชนิดงาน งานแม่ และแต้มของงานในล็อกของโปรเจค
+     *
+     * อ่านงานและงานแม่ซ้ำหลังได้ lock (และอ่านงานลูกเมื่อส่งชนิดหรืองานแม่มา)
+     * เพราะคำขออื่นอาจเปลี่ยนหรือลบไปแล้ว
+     * ตรวจเฉพาะค่าที่ client ส่งมา แต่ตรวจผลรวมกับค่าเดิม (เช่น เปลี่ยนเป็นงานใหญ่ต้องล้างแต้ม)
+     * โยน ProjectColumnException(422) เมื่อผลรวมผิดกฎ และ 404 เมื่องานหายไป
+     *
+     * @param int $taskId รหัสงาน
+     * @param int $projectId รหัสโปรเจคของงาน
+     * @param array<string, mixed> $input เฉพาะคีย์ที่ client ส่งมา: kind, parent_id, story_points
+     * @return array{changed: bool, changes: list<string>} ค่าที่เปลี่ยนและข้อความสำหรับบรรทัดประวัติ
+     */
+    public static function updateStructure(int $taskId, int $projectId, array $input): array
+    {
+        /** @var array{changed: bool, changes: list<string>} $result */
+        $result = ProjectColumn::locked($projectId, static function () use ($taskId, $projectId, $input): array {
+            $task = DB::run(
+                'SELECT kind, parent_id, story_points FROM project_tasks WHERE id = ? AND project_id = ?',
+                [$taskId, $projectId]
+            )->fetch();
+            if (!$task) {
+                throw new ProjectColumnException(404, 'ไม่พบข้อมูลงาน');
+            }
+            $project = DB::run(
+                'SELECT point_scale, key_prefix FROM projects WHERE id = ?',
+                [$projectId]
+            )->fetch();
+            if (!$project) {
+                throw new ProjectColumnException(404, 'ไม่พบข้อมูลโปรเจค');
+            }
+
+            $oldKind = (string)$task['kind'];
+            $oldParent = $task['parent_id'] === null ? null : (int)$task['parent_id'];
+            $oldPoints = $task['story_points'] === null ? null : (int)$task['story_points'];
+            $kindSent = array_key_exists('kind', $input);
+            $parentSent = array_key_exists('parent_id', $input);
+
+            $kind = $kindSent ? self::checkedKind($input['kind']) : $oldKind;
+            $parentId = $parentSent ? self::parentIdFromInput($input['parent_id']) : $oldParent;
+
+            // งานแม่ต้องถูกอ่านซ้ำใน lock: คำขออื่นอาจเปลี่ยนชนิดหรือลบงานแม่ไปแล้ว
+            $parent = null;
+            if ($kindSent || $parentSent) {
+                $parent = self::checkedParent($projectId, $taskId, $kind, $parentId);
+            }
+
+            // งานใหญ่ไม่มีแต้ม: เปลี่ยนเป็นงานใหญ่ล้างแต้มเดิม แต่แต้มที่ client ส่งมาเองยังผิดกฎ
+            // แต้มที่ไม่ได้ส่งมาไม่ถูกตรวจซ้ำ: สลับสเกลแล้วแก้ชนิดงานต้องทำได้โดยแต้มเดิมยังอยู่
+            $pointsSent = array_key_exists('story_points', $input);
+            $points = $oldPoints;
+            if ($kind === 'epic') {
+                if ($pointsSent && $input['story_points'] !== null && $input['story_points'] !== '') {
+                    throw new ProjectColumnException(422, 'งานใหญ่ไม่มีแต้มของตัวเอง รวมจากงานลูก');
+                }
+                $points = null;
+            } elseif ($pointsSent) {
+                $points = self::checkedPoints($input['story_points'], (string)$project['point_scale'], $kind);
+            }
+
+            $kindDiffers = $kind !== $oldKind;
+            // อ่านงานลูกซ้ำใน lock เดียวกับการตัดสิน: คำขออื่นอาจย้ายหรือลบลูกไปแล้ว
+            $childKinds = [];
+            if ($kindSent || $parentSent) {
+                $childKinds = array_map(
+                    static fn(mixed $childKind): string => (string)$childKind,
+                    DB::run('SELECT kind FROM project_tasks WHERE parent_id = ?', [$taskId])->fetchAll(PDO::FETCH_COLUMN)
+                );
+            }
+            if ($kindDiffers) {
+                // งานลูกที่ค้างอยู่ต้องยังอยู่ใต้ชนิดใหม่ได้ ไม่งั้นให้ย้ายลูกออกก่อน
+                $hasSub = in_array('sub', $childKinds, true);
+                $hasOther = array_intersect($childKinds, ['story', 'task', 'bug']) !== [];
+                if ($kind === 'epic' ? $hasSub : ($hasOther || ($kind === 'sub' && $childKinds !== []))) {
+                    throw new ProjectColumnException(422, 'ย้ายงานลูกออกก่อนเปลี่ยนชนิดงาน');
+                }
+            }
+
+            $changes = [];
+            if ($kindDiffers) {
+                $changes[] = "ชนิด เปลี่ยนเป็น '" . self::KIND_LABELS[$kind] . "'";
+            }
+            if ($points !== $oldPoints) {
+                $changes[] = "แต้ม เปลี่ยนเป็น '" . ($points === null ? 'ว่าง' : (string)$points) . "'";
+            }
+            if ($parentId !== $oldParent) {
+                if ($parentId !== null && $parent === null) {
+                    // ไม่ควรเกิด: parentId เปลี่ยนได้เฉพาะเมื่อตรวจงานแม่แล้ว
+                    throw new ProjectColumnException(422, 'ไม่พบงานแม่ในโปรเจคนี้');
+                }
+                $label = 'ไม่มี';
+                if ($parentId !== null) {
+                    $prefix = (string)($project['key_prefix'] ?? '');
+                    $label = ($prefix !== '' ? $prefix : 'PRJ') . '-' . (int)$parent['number'];
+                }
+                $changes[] = "งานแม่ เปลี่ยนเป็น '" . $label . "'";
+            }
+
+            if ($changes !== []) {
+                DB::run(
+                    'UPDATE project_tasks SET kind = ?, parent_id = ?, story_points = ? WHERE id = ? AND project_id = ?',
+                    [$kind, $parentId, $points, $taskId, $projectId]
+                );
+            }
+            return ['changed' => $changes !== [], 'changes' => $changes];
+        });
+        return $result;
+    }
+
+    /**
+     * ตรวจชนิดงานว่าอยู่ในห้าชนิดที่ฐานข้อมูลรับ
+     *
+     * @param mixed $value ค่าที่ client ส่งมา
+     * @return string ชนิดงานที่ถูกต้อง
+     */
+    private static function checkedKind(mixed $value): string
+    {
+        if (!is_string($value) || !in_array($value, self::KINDS, true)) {
+            throw new ProjectColumnException(422, 'ชนิดงานไม่ถูกต้อง');
+        }
+        return $value;
+    }
+
+    /**
+     * แปลงค่า parent_id จาก client เป็นรหัสงาน หรือ null เมื่อสั่งล้างงานแม่
+     *
+     * @param mixed $value ค่าที่ส่งมา (null/'' = ล้าง, เลขจำนวนเต็ม = รหัสงานแม่)
+     * @return int|null รหัสงานแม่ หรือ null
+     */
+    private static function parentIdFromInput(mixed $value): ?int
+    {
+        if ($value === null || $value === '') return null;
+        if (is_int($value) || (is_string($value) && ctype_digit($value))) return (int)$value;
+        return 0;
+    }
+
+    /**
+     * ตรวจงานแม่ตามชนิดของงาน แล้วคืนแถวงานแม่เมื่อมี
+     *
+     * งานแม่ที่ไม่มี ลบไปแล้ว หรืออยู่คนละโปรเจคให้ข้อความเดียวกันเสมอ
+     * เพื่อไม่ให้ client เดาได้ว่ารหัสใดมีอยู่จริง
+     *
+     * @param int $projectId รหัสโปรเจค
+     * @param int $taskId งานที่กำลังตรวจ (0 = ยังไม่มีงาน)
+     * @param string $kind ชนิดงานของงานนี้
+     * @param int|null $parentId รหัสงานแม่ (null = ไม่มี)
+     * @return array<string, mixed>|null แถวงานแม่ หรือ null
+     */
+    private static function checkedParent(int $projectId, int $taskId, string $kind, ?int $parentId): ?array
+    {
+        if ($kind === 'epic' && $parentId !== null) {
+            throw new ProjectColumnException(422, 'งานใหญ่อยู่ใต้งานอื่นไม่ได้');
+        }
+        if ($parentId === null) {
+            if ($kind === 'sub') {
+                throw new ProjectColumnException(422, 'งานย่อยต้องมีงานแม่');
+            }
+            return null;
+        }
+        if ($taskId > 0 && $parentId === $taskId) {
+            throw new ProjectColumnException(422, 'งานอยู่ใต้ตัวเองไม่ได้');
+        }
+
+        $parent = DB::run(
+            'SELECT id, kind, number FROM project_tasks WHERE id = ? AND project_id = ?',
+            [$parentId, $projectId]
+        )->fetch();
+        if (!$parent) {
+            throw new ProjectColumnException(422, 'ไม่พบงานแม่ในโปรเจคนี้');
+        }
+        if ($kind === 'sub') {
+            if (!in_array($parent['kind'], ['story', 'task', 'bug'], true)) {
+                throw new ProjectColumnException(422, 'งานย่อยต้องอยู่ใต้เรื่องผู้ใช้ งาน หรือบั๊ก');
+            }
+        } elseif ($parent['kind'] !== 'epic') {
+            // kind epic ที่มีงานแม่ถูกกันไปแล้วด้านบน จึงเหลือ story/task/bug
+            throw new ProjectColumnException(422, 'งานนี้อยู่ได้เฉพาะใต้งานใหญ่');
+        }
+        return $parent;
+    }
+
+    /**
+     * ตรวจแต้มตามชุดของโปรเจคและชนิดงาน
+     *
+     * @param mixed $value ค่าที่ส่งมา (null/'' = ไม่มีแต้ม)
+     * @param string $scale ชุดแต้มของโปรเจค fib/ten
+     * @param string $kind ชนิดงานของงานนี้
+     * @return int|null แต้มที่ถูกต้อง หรือ null
+     */
+    private static function checkedPoints(mixed $value, string $scale, string $kind): ?int
+    {
+        if ($value === null || $value === '') return null;
+        if ($kind === 'epic') {
+            throw new ProjectColumnException(422, 'งานใหญ่ไม่มีแต้มของตัวเอง รวมจากงานลูก');
+        }
+        if (!is_int($value) && !(is_string($value) && ctype_digit($value))) {
+            throw new ProjectColumnException(422, 'แต้มต้องเป็นค่าในชุดแต้มของโปรเจค');
+        }
+        $points = (int)$value;
+        $allowed = self::POINT_SCALES[$scale] ?? self::POINT_SCALES['fib'];
+        if (!in_array($points, $allowed, true)) {
+            throw new ProjectColumnException(422, 'แต้มต้องเป็นค่าในชุดแต้มของโปรเจค');
+        }
+        return $points;
+    }
+
+    /**
      * รวมค่าช่องข้อมูลที่เปลี่ยนเข้ากับค่าเดิมของงานในคำสั่งเดียว (JSON_MERGE_PATCH)
      *
      * คีย์ที่เป็น null ถูกลบ คีย์อื่นถูกใส่หรือแทน ช่องที่ไม่อยู่ในแพตช์ไม่ถูกแตะ
@@ -153,14 +400,40 @@ class ProjectTask
     }
 
     /**
-     * ลบงานย่อย
+     * ลบงานพร้อมงานย่อยชนิด sub ของมัน ในล็อกโปรเจคเดียวกับที่อ่านรายการลูก
+     *
+     * งานย่อยที่ไม่มีงานแม่ไม่ได้ตามกฎ จึงลบตามไปด้วย ส่วนงานลูกของงานใหญ่
+     * (story/task/bug) เก็บไว้และ FK จะตั้ง parent_id เป็น NULL ให้เอง
+     *
+     * @param int $id รหัสงาน
+     * @param int $projectId รหัสโปรเจคของงาน
+     * @return array{deleted: bool, subtasks: int} ผลการลบและจำนวนงานย่อยที่ลบตาม
      */
-    public static function delete(int $id): bool
+    public static function delete(int $id, int $projectId): array
     {
-        return DB::run(
-            'DELETE FROM project_tasks WHERE id = ?',
-            [$id]
-        )->rowCount() > 0;
+        /** @var array{deleted: bool, subtasks: int} $result */
+        $result = ProjectColumn::locked($projectId, static function () use ($id, $projectId): array {
+            // อ่านซ้ำใน lock: อีกคำขออาจลบงานนี้ไปก่อนแล้ว (EDGE-P4 ต้องได้ 404)
+            if (DB::run('SELECT id FROM project_tasks WHERE id = ? AND project_id = ?', [$id, $projectId])->fetchColumn() === false) {
+                throw new ProjectColumnException(404, 'ไม่พบข้อมูลงาน');
+            }
+
+            $subIds = DB::run(
+                "SELECT id FROM project_tasks WHERE parent_id = ? AND project_id = ? AND kind = 'sub'",
+                [$id, $projectId]
+            )->fetchAll(PDO::FETCH_COLUMN);
+            if ($subIds !== []) {
+                $placeholders = implode(',', array_fill(0, count($subIds), '?'));
+                DB::run(
+                    'DELETE FROM project_tasks WHERE id IN (' . $placeholders . ') AND project_id = ?',
+                    array_merge($subIds, [$projectId])
+                );
+            }
+
+            DB::run('DELETE FROM project_tasks WHERE id = ? AND project_id = ?', [$id, $projectId]);
+            return ['deleted' => true, 'subtasks' => count($subIds)];
+        });
+        return $result;
     }
 
     /**

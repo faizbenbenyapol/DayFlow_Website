@@ -82,6 +82,21 @@ class Project
     }
 
     /**
+     * สร้างคำนำหน้ารหัสงานจากชื่อโปรเจค (ตัวพิมพ์ใหญ่ เอาเฉพาะ A–Z สี่ตัวแรก)
+     *
+     * ตัวอักษรที่ไม่ใช่ A–Z (เช่นอักษรไทย) ถูกตัดออก ถ้าเหลือไม่ถึงสองตัวใช้ PRJ
+     * เพื่อให้รหัสงานอ่านออกเสมอ ตรงกับ backfill ของ migration 042
+     *
+     * @param string $name ชื่อโปรเจค
+     * @return string คำนำหน้า 2–4 ตัว
+     */
+    public static function defaultKeyPrefix(string $name): string
+    {
+        $letters = (string)preg_replace('/[^A-Z]/', '', strtoupper($name));
+        return strlen($letters) < 2 ? 'PRJ' : substr($letters, 0, 4);
+    }
+
+    /**
      * สร้างโครงการใหม่พร้อมคอลัมน์ตั้งต้นตามประเภท ใน transaction เดียว
      *
      * @param int $userId เจ้าของโปรเจค
@@ -95,8 +110,8 @@ class Project
         $db->beginTransaction();
         try {
             DB::run(
-                'INSERT INTO projects (user_id, name, description, type, status, priority, due_date)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)',
+                'INSERT INTO projects (user_id, name, description, type, status, priority, due_date, key_prefix)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
                 [
                     $userId,
                     $data['name'],
@@ -104,7 +119,8 @@ class Project
                     $type,
                     $data['status'] ?? 'Planning',
                     $data['priority'] ?? 'Medium',
-                    !empty($data['due_date']) ? $data['due_date'] : null
+                    !empty($data['due_date']) ? $data['due_date'] : null,
+                    self::defaultKeyPrefix((string)$data['name'])
                 ]
             );
             $projectId = (int)$db->lastInsertId();
@@ -120,7 +136,8 @@ class Project
     /**
      * อัปเดตโครงการ
      *
-     * รับรหัสโปรเจคและฟิลด์ที่อนุญาต (ชื่อ คำอธิบาย ประเภท สถานะ ความสำคัญ วันครบกำหนด)
+     * รับรหัสโปรเจคและฟิลด์ที่อนุญาต (ชื่อ คำอธิบาย ประเภท สถานะ ความสำคัญ วันครบกำหนด
+     * ตัวย่อเลขงาน และชุดแต้ม)
      * ผู้เรียกต้องตรวจสิทธิ์มาก่อนแล้ว (ผู้ดูแลแก้ฟิลด์ทั่วไป เจ้าของเปลี่ยนประเภท)
      * คืน true เมื่อมีแถวที่ตรงรหัส ไม่มีผลข้างเคียงอื่น
      *
@@ -132,7 +149,7 @@ class Project
         $fields = [];
         $params = [];
 
-        $allowed = ['name', 'description', 'type', 'status', 'priority', 'due_date'];
+        $allowed = ['name', 'description', 'type', 'status', 'priority', 'due_date', 'key_prefix', 'point_scale'];
         foreach ($allowed as $field) {
             if (array_key_exists($field, $data)) {
                 $fields[] = "`$field` = ?";

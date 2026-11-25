@@ -14,6 +14,16 @@ class ProjectController
     private const PROJECT_STATUSES = ['Planning', 'In Progress', 'Review', 'Completed'];
     private const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
 
+    /**
+     * ตรวจและปรับค่าฟิลด์โปรเจคที่ผู้ใช้แก้ (ชื่อ สถานะ ความสำคัญ วันครบกำหนด
+     * ตัวย่อเลขงาน และชุดแต้ม)
+     *
+     * ค่าที่ไม่ผ่านปิดคำขอด้วย 422 ทันที เพราะ Response::json ไม่คืนค่า
+     *
+     * @param array<string, mixed> $data ฟิลด์ที่จะบันทึก
+     * @param bool $create true เมื่อสร้างโปรเจคใหม่ (ชื่อบังคับ)
+     * @return array<string, mixed> ฟิลด์ที่ตรวจแล้ว
+     */
     private function validateProjectData(array $data, bool $create = false): array
     {
         if ($create || array_key_exists('name', $data)) {
@@ -26,6 +36,14 @@ class ProjectController
         if (array_key_exists('due_date', $data) && $data['due_date'] !== '') {
             $date = DateTime::createFromFormat('Y-m-d', (string)$data['due_date']);
             if (!$date || $date->format('Y-m-d') !== $data['due_date']) Response::json(['error' => 'วันครบกำหนดไม่ถูกต้อง'], 422);
+        }
+        if (array_key_exists('key_prefix', $data)) {
+            $prefix = strtoupper(trim((string)$data['key_prefix']));
+            if (preg_match('/^[A-Z]{2,6}$/', $prefix) !== 1) Response::json(['error' => 'ตัวย่อเลขงานต้องเป็นตัวอักษรอังกฤษ 2–6 ตัว'], 422);
+            $data['key_prefix'] = $prefix;
+        }
+        if (array_key_exists('point_scale', $data) && !in_array($data['point_scale'], ['fib', 'ten'], true)) {
+            Response::json(['error' => 'ชุดแต้มไม่ถูกต้อง'], 422);
         }
         return $data;
     }
@@ -128,6 +146,7 @@ class ProjectController
      *
      * ฟิลด์ทั่วไปแก้ได้ตั้งแต่ผู้ดูแลขึ้นไป ส่วนการเปลี่ยนประเภทเป็นของเจ้าของ
      * และการเปลี่ยนประเภทไม่แตะคอลัมน์หรืองาน (ข้อมูลเฉพาะประเภทซ่อนไว้ ไม่ลบ)
+     * ตัวย่อเลขงานและชุดแต้มเป็นฟิลด์ทั่วไปของผู้ดูแล
      */
     public function apiUpdate(string $id): void
     {
@@ -164,9 +183,24 @@ class ProjectController
             }
         }
 
+        // ตัวย่อเลขงานและชุดแต้มเป็นฟิลด์ทั่วไปของผู้ดูแล ค่าถูกตรวจ/ปรับใน validateProjectData
+        $settings = ['key_prefix' => 'ตัวย่อเลขงาน', 'point_scale' => 'ชุดแต้ม'];
+        foreach (array_keys($settings) as $field) {
+            $val = Request::input($field);
+            if ($val !== null) {
+                $data[$field] = $val;
+            }
+        }
+
         $data = $this->validateProjectData($data);
         if (empty($data)) {
             Response::json(['error' => 'ไม่มีข้อมูลสำหรับแก้ไข'], 400);
+        }
+
+        foreach ($settings as $field => $label) {
+            if (array_key_exists($field, $data) && (string)($project[$field] ?? '') !== (string)$data[$field]) {
+                $changes[] = $label . " เปลี่ยนจาก '" . (($project[$field] ?? '') ?: 'ไม่มี') . "' เป็น '" . $data[$field] . "'";
+            }
         }
 
         if (Project::update($projectId, $data)) {
