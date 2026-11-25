@@ -569,7 +569,7 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label" for="editTaskCategory">หมวดหรือแท็ก</label>
-                        <input type="text" id="editTaskCategory" class="form-control" maxlength="100" placeholder="เช่น ดีไซน์, โค้ด, เนื้อหา" autocomplete="off">
+                        <input type="text" id="editTaskCategory" class="form-control" maxlength="50" placeholder="เช่น ดีไซน์, โค้ด, เนื้อหา" autocomplete="off">
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="editTaskAssignee">ผู้รับผิดชอบ</label>

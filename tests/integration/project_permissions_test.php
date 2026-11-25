@@ -653,3 +653,16 @@ test('an anonymous caller gets nothing', function (TestClient $_c): void {
     assertContains($anonymous->get("/api/projects/{$id}/tasks")['status'], [401, 302, 404]);
     assertContains($anonymous->get('/api/projects')['status'], [401, 302]);
 });
+
+test('the member list shows names but no email addresses, to members or to share guests', function (TestClient $_c): void {
+    $f = projectFixture();
+    $id = $f['projectId'];
+    foreach (['guest', 'viewer', 'owner'] as $who) {
+        $res = $f[$who]->get("/api/projects/{$id}/members");
+        assertSame(200, $res['status'], "{$who} can still list the team");
+        $members = $f[$who]->json($res)['members'] ?? [];
+        assertTrue(count($members) >= 4, "{$who} sees the whole team");
+        assertTrue(in_array($f['editorU'], array_column($members, 'username'), true), "{$who} still sees usernames for @mentions and assigning");
+        assertFalse(str_contains($res['body'], '"email"'), "{$who} gets no email field: " . substr($res['body'], 0, 200));
+    }
+});

@@ -64,13 +64,16 @@ class ProjectMember
     }
 
     /**
-     * ดึงรายชื่อสมาชิกทั้งหมดในโครงการ (รวมรายละเอียดผู้ใช้)
+     * ดึงรายชื่อสมาชิกทั้งหมดในโครงการ (ชื่อ รูป และบทบาท)
+     *
+     * จงใจไม่คืนอีเมล เพราะรายการนี้ถูกอ่านโดยสมาชิกทุกคนและแขกที่เปิดลิงก์แชร์
+     * ส่วนหน้าจอไม่เคยแสดงอีเมลอยู่แล้ว
      */
     public static function getMembers(int $projectId): array
     {
         // ดึงตัวเจ้าของโครงการก่อน
         $owner = DB::run(
-            'SELECT p.user_id AS id, u.username, u.email, u.display_name, u.avatar_path, "Owner" AS role
+            'SELECT p.user_id AS id, u.username, u.display_name, u.avatar_path, "Owner" AS role
              FROM projects p
              JOIN users u ON p.user_id = u.id
              WHERE p.id = ?',
@@ -79,7 +82,7 @@ class ProjectMember
 
         // ดึงผู้ร่วมงานคนอื่นๆ
         $members = DB::run(
-            'SELECT pm.user_id AS id, u.username, u.email, u.display_name, u.avatar_path, pm.role, pm.created_at
+            'SELECT pm.user_id AS id, u.username, u.display_name, u.avatar_path, pm.role, pm.created_at
              FROM project_members pm
              JOIN users u ON pm.user_id = u.id
              WHERE pm.project_id = ?

@@ -63,3 +63,24 @@ test('task history is shown to the project only; others get the same 404 as a mi
     assertSame($missing['status'], $foreign['status']);
     assertSame($missing['body'], $foreign['body'], 'same body, so the id does not leak');
 });
+
+test('task text longer than its column is refused with a message, not a server error', function (TestClient $_c): void {
+    $f = detailFixture();
+    $base = "/api/projects/{$f['projectId']}/tasks";
+    $put = static fn(array $body): array => $f['owner']->request('PUT', '/api/projects/tasks/' . $f['taskId'], $body);
+    $cases = [
+        'a 256-character title on create' => $f['owner']->post($base, ['title' => str_repeat('ก', 256)]),
+        'a 51-character category on create' => $f['owner']->post($base, ['title' => 'งานหมวดยาว', 'category' => str_repeat('ข', 51)]),
+        'a 256-character title on edit' => $put(['title' => str_repeat('ก', 256)]),
+        'a blank title on edit' => $put(['title' => '   ']),
+        'a 51-character category on edit' => $put(['category' => str_repeat('ข', 51)]),
+        'a 51-character assignee name on edit' => $put(['assignee' => str_repeat('ค', 51)]),
+    ];
+    foreach ($cases as $what => $res) {
+        assertSame(422, $res['status'], "{$what}: " . substr($res['body'], 0, 200));
+    }
+    assertSame('งานมีคำอธิบาย', (string)DB::run('SELECT title FROM project_tasks WHERE id = ?', [$f['taskId']])->fetchColumn(), 'the task is untouched');
+
+    $ok = $f['owner']->post($base, ['title' => '  ' . str_repeat('ก', 255) . '  ', 'category' => str_repeat('ข', 50)]);
+    assertSame(201, $ok['status'], 'exactly at the limit still saves, spaces around the title ignored: ' . $ok['body']);
+});

@@ -24,6 +24,37 @@ class ProjectTaskController
     }
 
     /**
+     * ตรวจความยาวข้อความของงานหนึ่งช่องตามความยาวคอลัมน์ในฐานข้อมูล
+     *
+     * title ต้องไม่ว่างและไม่เกิน 255 ตัวอักษร ส่วน category กับ assignee ไม่เกิน 50 ตัวอักษร
+     * ค่าที่ไม่ผ่านจะปิดคำขอด้วย Response::json(..., 422) ทันที เพราะ Response::json ไม่คืนค่า
+     *
+     * @param string $field ช่องที่ตรวจ: title, category หรือ assignee
+     * @param mixed $value ค่าดิบที่ client ส่งมา
+     * @return string ข้อความหลังตัดช่องว่างหัวท้ายแล้ว
+     */
+    private static function checkedTaskText(string $field, mixed $value): string
+    {
+        $text = trim((string)$value);
+        if ($field === 'title') {
+            if ($text === '') {
+                Response::json(['error' => 'กรุณาระบุชื่องาน'], 422);
+            }
+            if (mb_strlen($text) > 255) {
+                Response::json(['error' => 'ชื่องานยาวได้ไม่เกิน 255 ตัวอักษร'], 422);
+            }
+            return $text;
+        }
+
+        if (mb_strlen($text) > 50) {
+            Response::json([
+                'error' => $field === 'category' ? 'หมวดยาวได้ไม่เกิน 50 ตัวอักษร' : 'ชื่อผู้รับผิดชอบยาวได้ไม่เกิน 50 ตัวอักษร',
+            ], 422);
+        }
+        return $text;
+    }
+
+    /**
      * ดึงข้อมูลงานคัมบัง ประวัติ และผลสรุปความก้าวหน้า AI ของโครงการร่วมกัน
      * GET /api/projects/{id}/tasks
      */
@@ -79,6 +110,10 @@ class ProjectTaskController
         if (!$title) {
             Response::json(['error' => 'กรุณาระบุชื่องาน'], 422);
         }
+        // ข้อความที่ยาวเกินคอลัมน์จะทำให้ฐานข้อมูลโยน error เป็น 500: ปฏิเสธเป็น 422 ก่อน
+        $title = self::checkedTaskText('title', $title);
+        self::checkedTaskText('category', Request::input('category', ''));
+        self::checkedTaskText('assignee', Request::input('assignee', ''));
 
         // column_id มาก่อน ถ้าไม่ส่งจึงแปลสถานะเดิม ถ้าไม่ส่งทั้งคู่ให้ลงคอลัมน์แรกของ todo
         $column = self::resolveColumn(
@@ -156,6 +191,12 @@ class ProjectTaskController
         foreach ($allowed as $field) {
             $val = $field === 'checklist' ? Request::list($field) : Request::input($field);
             if ($val !== null) {
+                // ชื่องาน หมวด และผู้รับผิดชอบต้องไม่ยาวเกินคอลัมน์: ตรวจก่อนเขียนฐานข้อมูล (ชื่องานเก็บแบบตัดช่องว่าง)
+                if ($field === 'title') {
+                    $val = self::checkedTaskText($field, $val);
+                } elseif ($field === 'category' || $field === 'assignee') {
+                    self::checkedTaskText($field, $val);
+                }
                 $data[$field] = $val;
                 if ($field === 'checklist') {
                     // ไม่ต้องเทียบข้อความความแตกต่างสำหรับการอัปเดตสถานะเช็คลิสต์ด่วน
