@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light" data-desk="sage" data-place="work">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mockup — โปรเจค v2 เฟส P1 ซอฟต์แวร์</title>
+<!-- ใช้ CSS ตัวจริงของแอป (หลัง P0b) หน้าตาจึงต่อจากของที่ทำเสร็จแล้ว เปิดผ่าน server ที่ root ของ repo -->
+<link rel="stylesheet" href="../../public/assets/css/fonts.css">
+<link rel="stylesheet" href="../../public/assets/css/tokens.css">
+<link rel="stylesheet" href="../../public/assets/css/base.css">
+<link rel="stylesheet" href="../../public/assets/css/components.css">
+<link rel="stylesheet" href="../../public/assets/css/shell.css">
+<link rel="stylesheet" href="../../public/assets/css/modules/projects.css">
+<style>
+/* ---------- แถบควบคุมของ mockup (ไม่ใช่ส่วนของแอป) ---------- */
+.mk-bar { position: sticky; top: 0; z-index: 10000; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center;
+    padding: 8px 16px; background: var(--ink); color: var(--paper); font-size: .8125rem; }
+.mk-bar label { display: inline-flex; gap: 6px; align-items: center; }
+.mk-bar select { font: inherit; padding: 2px 4px; border-radius: 4px; }
+.mk-note { margin: 0 0 var(--space-4); padding: var(--space-3) var(--space-4); border: 1.5px dashed var(--rule-strong);
+    border-radius: var(--r-card); background: var(--paper); font-size: .875rem; color: var(--pencil); }
+.mk-note strong { color: var(--ink); }
+.mk-note ul { margin: var(--space-2) 0 0; padding-left: 1.2em; }
+[data-view] { display: none; }
+body[data-screen="board"] [data-view~="board"], body[data-screen="backlog"] [data-view~="backlog"],
+body[data-screen="detail"] [data-view~="detail"], body[data-screen="close"] [data-view~="close"],
+body[data-screen="reports"] [data-view~="reports"], body[data-screen="roadmap"] [data-view~="roadmap"],
+body[data-screen="releases"] [data-view~="releases"], body[data-screen="settings"] [data-view~="settings"] { display: block; }
+
+/* ---------- ไอคอนชนิดงาน: รูปทรงต่างกันจึงแยกได้แม้ไม่เห็นสี ---------- */
+.ticon { display: inline-grid; place-items: center; width: 18px; height: 18px; flex: none; color: var(--t); vertical-align: -3px; }
+.ticon svg { width: 16px; height: 16px; }
+[data-type="epic"] { --t: var(--place-2); } [data-type="story"] { --t: var(--ledger-green); }
+[data-type="task"] { --t: var(--ink); } [data-type="bug"] { --t: var(--stamp-red); } [data-type="sub"] { --t: var(--pencil); }
+.key { font: .75rem var(--font-mono); color: var(--pencil); white-space: nowrap; }
+.pts { display: inline-grid; place-items: center; min-width: 22px; height: 20px; padding: 0 6px; border-radius: 10px;
+    background: var(--paper-sunk); border: 1px solid var(--rule); font: 600 .75rem/1 var(--font-num); color: var(--ink); }
+.pts.empty { color: var(--pencil); font-weight: 400; }
+.epic-tag { display: inline-block; max-width: 11rem; padding: 0 6px; border-radius: 4px; background: var(--lilac); color: var(--ink);
+    font-size: .6875rem; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+.stuck { display: inline-flex; gap: 3px; align-items: center; padding: 0 6px; border-radius: 4px; background: var(--stamp-red); color: var(--paper);
+    font-size: .6875rem; font-weight: 600; line-height: 18px; }
+.avatar-xs { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--paper-sunk);
+    border: 1px solid var(--rule-strong); font-size: .6875rem; color: var(--ink); flex: none; }
+
+/* ---------- หัวรอบงานเหนือบอร์ด ---------- */
+.sprint-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-4); align-items: center;
+    margin: var(--space-3) 0; padding: var(--space-3) var(--space-4); border: 1.5px solid var(--edge); border-radius: var(--r-card); background: var(--paper); }
+.sprint-bar h3 { margin: 0; font-size: 1rem; }
+.sprint-bar .goal { margin: 2px 0 0; font-size: .875rem; color: var(--pencil); }
+.sprint-meta { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; font-size: .8125rem; }
+.sprint-meta b { font-family: var(--font-num); }
+.meter { width: 120px; height: 8px; border-radius: 4px; background: var(--paper-sunk); overflow: hidden; display: inline-block; vertical-align: middle; }
+.meter i { display: block; height: 100%; background: var(--ledger-green); }
+
+/* ---------- การ์ดบนบอร์ด (เพิ่มจากการ์ดเดิม) ---------- */
+.kcard-top { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
+.kcard-top .sp { flex: 1; }
+.kcard-foot { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+.kcard-foot .sp { flex: 1; }
+.kcard-parent { display: block; font-size: .6875rem; color: var(--pencil); margin-bottom: 2px; }
+.kanban-card.is-sub { margin-left: var(--space-3); border-style: dashed; }
+.kanban-card .kanban-card-title { padding-right: 0; cursor: pointer; }
+
+/* ---------- คลังงาน + รอบงาน ---------- */
+.bl-block { margin-bottom: var(--space-4); border: 1.5px solid var(--edge); border-radius: var(--r-card); background: var(--paper); }
+.bl-block.backlog { border-style: dashed; }
+.bl-head { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--rule); }
+.bl-head h3 { margin: 0; font-size: .9375rem; }
+.bl-head .sub { font-size: .8125rem; color: var(--pencil); }
+.bl-head .sp { flex: 1; }
+.bl-row { display: grid; grid-template-columns: 14px 18px auto minmax(0, 1fr) auto 22px 30px; gap: var(--space-2); align-items: center;
+    padding: 7px var(--space-4); border-bottom: 1px solid var(--rule); font-size: .875rem; background: var(--paper); }
+.bl-row:last-child { border-bottom: 0; }
+.bl-row:hover { background: var(--paper-sunk); }
+.bl-row .grip { color: var(--rule-strong); cursor: grab; font-size: .75rem; letter-spacing: -2px; }
+.bl-row .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bl-row.done .title { color: var(--pencil); text-decoration: line-through; }
+.bl-row.dragging { box-shadow: 0 6px 18px rgb(0 0 0 / .18); transform: rotate(-.6deg); position: relative; z-index: 2; border: 1.5px solid var(--edge); }
+.bl-drop { height: 3px; margin: 0 var(--space-4); background: var(--place-2); border-radius: 2px; }
+.bl-add { padding: var(--space-2) var(--space-4); }
+.bl-empty { padding: var(--space-4); font-size: .875rem; color: var(--pencil); text-align: center; }
+.bl-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+body[data-layout="A"] .bl-split { display: block; }
+body[data-layout="A"] .bl-col-title { display: none; }
+.bl-col-title { margin: 0 0 var(--space-2); font-size: .8125rem; color: var(--pencil); font-weight: 600; }
+
+/* ---------- กล่อง (ปิดรอบ) ---------- */
+.mk-modal-wrap { position: fixed; inset: var(--mk-top, 37px) 0 0 0; z-index: 9998; background: rgb(0 0 0 / .32); place-items: center; padding: 16px; }
+body[data-screen="close"] .mk-modal-wrap { display: grid; }
+.mk-modal { width: min(480px, 100%); max-height: 100%; overflow: auto; border: 1.5px solid var(--edge); border-radius: var(--r-sheet); background: var(--paper); color: var(--ink); }
+.mk-modal header { padding: var(--space-4) var(--space-4) 0; }
+.mk-modal h2 { margin: 0; font-size: 1.125rem; }
+.mk-modal .body { display: grid; gap: var(--space-3); padding: var(--space-4); font-size: .875rem; }
+.mk-modal footer { display: flex; justify-content: flex-end; gap: var(--space-2); padding: 0 var(--space-4) var(--space-4); }
+.close-sum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); text-align: center; }
+.close-sum div { padding: var(--space-2); border-radius: var(--r-control); background: var(--paper-sunk); }
+.close-sum b { display: block; font: 700 1.25rem var(--font-num); }
+.left-list { margin: 0; padding: 0; list-style: none; border: 1px solid var(--rule); border-radius: var(--r-control); }
+.left-list li { display: flex; gap: var(--space-2); align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--rule); }
+.left-list li:last-child { border-bottom: 0; }
+.choice { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: var(--space-2); align-items: start; padding: var(--space-2) var(--space-3);
+    border: 1.5px solid var(--rule); border-radius: var(--r-control); cursor: pointer; }
+.choice:has(input:checked) { border-color: var(--edge); background: var(--highlighter); color: var(--ink); }
+.choice small { display: block; color: inherit; opacity: .75; }
+
+/* ---------- กราฟ ---------- */
+.rep-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--space-4); }
+.chart-card { padding: var(--space-4); border: 1.5px solid var(--edge); border-radius: var(--r-card); background: var(--paper); }
+.chart-card h3 { margin: 0; font-size: .9375rem; }
+.chart-card .sub { margin: 2px 0 var(--space-3); font-size: .8125rem; color: var(--pencil); }
+.chart { width: 100%; height: auto; display: block; font: 11px var(--font-num); }
+.chart .grid line { stroke: var(--rule); }
+.chart .axis text { fill: var(--pencil); }
+.chart .ideal { stroke: var(--rule-strong); stroke-dasharray: 4 4; fill: none; stroke-width: 1.5; }
+.chart .actual { stroke: var(--place-2); fill: none; stroke-width: 2.5; }
+.chart .dot { fill: var(--place-2); }
+.chart .today line { stroke: var(--ink); stroke-dasharray: 2 3; }
+.chart .today text, .chart .lbl { fill: var(--ink); font-weight: 600; }
+.chart .bar-plan { fill: var(--paper-sunk); stroke: var(--rule-strong); }
+.chart .bar-done { fill: var(--ledger-green); }
+.chart .avg { stroke: var(--ink); stroke-dasharray: 5 4; }
+.legend { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-2); font-size: .75rem; color: var(--pencil); }
+.legend i { display: inline-block; width: 14px; height: 3px; margin-right: 4px; vertical-align: middle; background: var(--c); }
+.data-table { width: 100%; margin-top: var(--space-3); border-collapse: collapse; font-size: .8125rem; }
+.data-table th, .data-table td { padding: 4px 6px; border-bottom: 1px solid var(--rule); text-align: right; font-family: var(--font-num); }
+.data-table th:first-child, .data-table td:first-child { text-align: left; font-family: inherit; }
+
+/* ---------- แผนงาน (roadmap) ---------- */
+.rm-scroll { overflow-x: auto; border: 1.5px solid var(--edge); border-radius: var(--r-card); background: var(--paper); }
+.rm { display: grid; grid-template-columns: 200px repeat(5, minmax(120px, 1fr)); min-width: 820px; position: relative; }
+.rm-month { padding: 8px; border-left: 1px solid var(--rule); border-bottom: 1.5px solid var(--rule-strong); font-size: .8125rem; color: var(--pencil); }
+.rm-month.now { color: var(--ink); font-weight: 600; }
+.rm-name { position: sticky; left: 0; z-index: 2; display: flex; gap: 6px; align-items: center; padding: 10px 8px; border-bottom: 1px solid var(--rule); background: var(--paper); font-size: .875rem; }
+.rm-name .pct { margin-left: auto; font: .75rem var(--font-num); color: var(--pencil); }
+.rm-lane { grid-column: 2 / -1; position: relative; border-bottom: 1px solid var(--rule);
+    background: repeating-linear-gradient(90deg, transparent 0 calc(20% - 1px), var(--rule) calc(20% - 1px) 20%); }
+.rm-bar { position: absolute; top: 8px; bottom: 8px; display: flex; align-items: center; padding: 0 12px; border-radius: 6px; background: var(--lilac);
+    border: 1.5px solid var(--place-2); color: var(--ink); font-size: .75rem; white-space: nowrap; overflow: hidden; cursor: grab; }
+.rm-bar .fill { position: absolute; inset: 0 auto 0 0; background: var(--lilac-2); z-index: 0; }
+.rm-bar span { position: relative; }
+.rm-bar::before, .rm-bar::after { content: ""; position: absolute; top: 4px; bottom: 4px; width: 4px; border-radius: 2px; background: var(--place-2); cursor: ew-resize; z-index: 1; }
+.rm-bar::before { left: 2px; } .rm-bar::after { right: 2px; }
+.rm-bar.dragging { box-shadow: 0 6px 18px rgb(0 0 0 / .2); }
+.rm-today { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid var(--stamp-red); z-index: 1; pointer-events: none; }
+.rm-tip { position: absolute; top: -26px; padding: 2px 8px; border-radius: 4px; background: var(--ink); color: var(--paper); font-size: .75rem; white-space: nowrap; }
+.rm-undated { margin-top: var(--space-3); font-size: .875rem; }
+
+/* ---------- เวอร์ชัน ---------- */
+.rel-wrap { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--space-4); align-items: start; }
+.rel-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--rule); cursor: pointer; }
+.rel-row[aria-current="true"] { background: var(--paper-sunk); box-shadow: inset 3px 0 0 var(--place-2); }
+.rel-row h4 { margin: 0; font-size: .9375rem; }
+.rel-row .sub { font-size: .8125rem; color: var(--pencil); }
+.changelog h4 { margin: var(--space-4) 0 var(--space-2); font-size: .875rem; display: flex; gap: 6px; align-items: center; }
+.changelog ul { margin: 0; padding-left: 1.2em; font-size: .875rem; }
+.changelog li { margin-bottom: 4px; }
+.copy-box { width: 100%; min-height: 150px; font: .75rem/1.5 var(--font-mono); }
+
+/* ---------- รายละเอียดงาน (แบบ A ที่เลือกใน P0b) ---------- */
+.detail-backdrop { position: fixed; inset: var(--mk-top, 37px) 0 0 0; z-index: 9998; background: rgb(0 0 0 / .12); justify-content: flex-end; }
+body[data-screen="detail"] .detail-backdrop { display: flex; }
+.detail { width: min(500px, 100vw); height: 100%; overflow: auto; border-left: 1.5px solid var(--edge); background: var(--paper); color: var(--ink); }
+.detail-top { display: flex; gap: var(--space-2); align-items: center; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--rule); }
+.detail-top .sp { flex: 1; }
+.detail-title { margin: 0; padding: var(--space-3) var(--space-4) 0; font-size: 1.25rem; }
+/* คอลัมน์ต้องหดได้ถึง 0 ไม่งั้นช่องกรอกดันให้แผงกว้างเกินจอมือถือ */
+.detail-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5); padding: var(--space-4); }
+.fields { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 6px var(--space-3); align-items: center; font-size: .875rem; margin: 0; }
+.fields dt { color: var(--pencil); }
+.fields dd { margin: 0; }
+.fields .form-control { min-height: 36px; padding: 4px 8px; }
+.dsec h3 { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 var(--space-2); font-size: .9375rem; }
+.dsec h3 small { font-weight: 400; color: var(--pencil); font-size: .8125rem; }
+.link-row, .dep-row, .child-row { display: flex; gap: var(--space-2); align-items: center; padding: 6px 0; border-bottom: 1px solid var(--rule); font-size: .875rem; }
+.dep-row .rel { width: 4.5rem; flex: none; font-size: .75rem; color: var(--pencil); }
+.dep-row .title, .child-row .title, .link-row a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.state { font-size: .75rem; padding: 0 6px; border-radius: 4px; background: var(--paper-sunk); white-space: nowrap; }
+.state.open { background: var(--butter); color: var(--ink); }
+.state.done { background: var(--mint); color: var(--ink); }
+.dep-err { margin: var(--space-2) 0 0; padding: var(--space-2) var(--space-3); border-radius: var(--r-control); background: var(--rose); color: var(--ink); font-size: .8125rem; }
+.comp-chip { display: inline-flex; gap: 4px; align-items: center; padding: 1px 8px; border: 1px solid var(--rule-strong); border-radius: 12px; font-size: .75rem; margin: 0 4px 4px 0; }
+[data-only] { display: none; }
+body[data-dtype="bug"] [data-only~="bug"], body[data-dtype="story"] [data-only~="story"], body[data-dtype="epic"] [data-only~="epic"] { display: block; }
+body[data-dtype="bug"] dt[data-only~="bug"], body[data-dtype="bug"] dd[data-only~="bug"],
+body[data-dtype="story"] dt[data-only~="story"], body[data-dtype="story"] dd[data-only~="story"],
+body[data-dtype="epic"] dt[data-only~="epic"], body[data-dtype="epic"] dd[data-only~="epic"] { display: block; }
+.severity-crit { color: var(--stamp-red); font-weight: 600; }
+
+/* ---------- ตั้งค่า ---------- */
+.set-row { display: grid; grid-template-columns: 12rem minmax(0, 1fr); gap: var(--space-3); align-items: start; padding: var(--space-3) 0; border-bottom: 1px solid var(--rule); }
+.set-row h4 { margin: 0; font-size: .875rem; }
+.set-row p { margin: 4px 0 0; font-size: .8125rem; color: var(--pencil); }
+.prefix-demo { font: 600 1rem var(--font-mono); }
+.switch-row { display: flex; gap: var(--space-2); align-items: center; }
+
+@media (max-width: 720px) {
+    .sprint-bar { grid-template-columns: 1fr; }
+    .sprint-bar > .btn { justify-self: start; }
+    /* มือถือ: คอลัมน์ชื่อแคบลง เหลือที่ให้แถบเวลา เลขงานซ่อน (ยังเห็นในรายละเอียด) */
+    .rm { grid-template-columns: 128px repeat(5, minmax(110px, 1fr)); min-width: 680px; }
+    .rm-name { font-size: .8125rem; }
+    .rm-name .key { display: none; }
+    .bl-split { display: block; }
+    .bl-col-title { display: block !important; margin-top: var(--space-3); }
+    .bl-row { grid-template-columns: 18px auto minmax(0, 1fr) 30px; row-gap: 2px; }
+    .bl-row .grip, .bl-row .avatar-xs { display: none; }
+    .bl-row .epic-cell { grid-column: 3; grid-row: 2; }
+    .rep-grid, .rel-wrap { grid-template-columns: 1fr; }
+    .detail { width: 100vw; border: 0; }
+    .set-row { grid-template-columns: 1fr; }
+    .close-sum b { font-size: 1.0625rem; }
+}
+</style>
+</head>
+<body data-screen="board" data-layout="A" data-dtype="story">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-epic" viewBox="0 0 16 16"><path d="M9 1 3 9h4l-1 6 6-8H8z" fill="currentColor"/></symbol>
+    <symbol id="i-story" viewBox="0 0 16 16"><path d="M4 1.5h8v13l-4-3-4 3z" fill="currentColor"/></symbol>
+    <symbol id="i-task" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m5 8.2 2 2 4-4.2" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="i-bug" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.2" fill="currentColor"/><circle cx="8" cy="8" r="2.2" fill="var(--paper)"/></symbol>
+    <symbol id="i-sub" viewBox="0 0 16 16"><path d="M4 2v6.5a2 2 0 0 0 2 2h7M10 7.5l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+</svg>
+
+<div class="mk-bar" role="region" aria-label="ตัวควบคุม mockup">
+    <b>mockup P1 ซอฟต์แวร์</b>
+    <label>หน้าจอ
+        <select id="mkScreen">
+            <option value="board">1 บอร์ดของรอบที่กำลังทำ</option>
+            <option value="backlog">2 คลังงาน + รอบงาน</option>
+            <option value="detail">3 รายละเอียดงาน</option>
+            <option value="close">4 ปิดรอบงาน</option>
+            <option value="reports">5 กราฟ (ในแท็บภาพรวม)</option>
+            <option value="roadmap">6 แผนงาน (roadmap)</option>
+            <option value="releases">7 เวอร์ชัน + changelog</option>
+            <option value="settings">8 ตั้งค่า: เลขงาน ส่วนของระบบ</option>
+        </select>
+    </label>
+    <label>คลังงาน
+        <select id="mkLayout">
+            <option value="A">แบบ A ซ้อนบน-ล่าง</option>
+            <option value="B">แบบ B สองฝั่ง</option>
+        </select>
+    </label>
+    <label>ชนิดงานที่เปิด
+        <select id="mkDtype">
+            <option value="story">เรื่องผู้ใช้ (story)</option>
+            <option value="bug">บั๊ก</option>
+            <option value="epic">งานใหญ่ (epic)</option>
+        </select>
+    </label>
+    <label>ธีม <select id="mkTheme"><option value="light">สว่าง</option><option value="dark">มืด</option></select></label>
+</div>
+
+<header class="desk-top">
+    <a class="brand" href="#">DayFlow</a>
+    <nav class="flags" aria-label="ที่หลัก">
+        <a class="flag" data-place="today" href="#"><span>วันนี้</span></a>
+        <a class="flag" data-place="work" href="#" aria-current="page"><span>งาน</span></a>
+        <a class="flag" data-place="life" href="#"><span>ชีวิต</span></a>
+        <a class="flag" data-place="money" href="#"><span>เงิน</span></a>
+        <a class="flag" data-place="vault" href="#"><span>คลัง</span></a>
+    </nav>
+    <div class="top-actions"><button type="button" class="btn btn-primary top-add">เพิ่ม</button></div>
+</header>
+
+<main class="app-main">
+    <nav class="subnav" aria-label="งาน">
+        <a class="subnav-link" href="#">งาน</a>
+        <a class="subnav-link" href="#" aria-current="page">โปรเจค</a>
+        <a class="subnav-link" href="#">แพลนเนอร์</a>
+    </nav>
+    <div class="app-content">
+        <div class="mk-note" id="mkNote"></div>
+
+        <section class="sec">
+            <div class="proj-head" data-ptype="software">
+                <span class="type-ear">ซอฟต์แวร์</span>
+                <div class="proj-head-row">
+                    <h2 class="proj-head-title">แอป DayFlow รุ่นมือถือ</h2>
+                    <span class="text-sm text-muted">คุณเป็น <b>เจ้าของ</b> · 4 คน</span>
+                </div>
+            </div>
+
+            <!-- โปรเจคซอฟต์แวร์มี 3 แท็บเพิ่ม: คลังงาน แผนงาน เวอร์ชัน (ประเภทอื่นไม่เห็น) -->
+            <div class="tabs" role="tablist" aria-label="มุมมองของโปรเจค" id="mkTabs">
+                <button class="tab" role="tab" type="button" data-go="board">บอร์ด</button>
+                <button class="tab" role="tab" type="button" data-go="backlog">คลังงาน</button>
+                <button class="tab" role="tab" type="button">รายการ</button>
+                <button class="tab" role="tab" type="button">ปฏิทิน</button>
+                <button class="tab" role="tab" type="button" data-go="roadmap">แผนงาน</button>
+                <button class="tab" role="tab" type="button" data-go="releases">เวอร์ชัน</button>
+                <button class="tab" role="tab" type="button" data-go="reports">ภาพรวม</button>
+                <button class="tab" role="tab" type="button" data-go="settings">ตั้งค่า</button>
+            </div>
+
+            <!-- ================= 1 บอร์ด ================= -->
+            <div data-view="board detail close">
+                <div class="sprint-bar">
+                    <div>
+                        <h3>รอบ 7 · 16–29 พ.ย.</h3>
+                        <p class="goal">เป้าหมาย: ล็อกอินด้วยลายนิ้วมือใช้ได้ และส่งออก CSV ขึ้นทดสอบ</p>
+                    </div>
+                    <button class="btn btn-sm" type="button" data-go="close">ปิดรอบ</button>
+                    <div class="sprint-meta" style="grid-column: 1 / -1">
+                        <span>เหลือ <b>4</b> วัน</span>
+                        <span>เสร็จ <b>17</b> จาก <b>34</b> แต้ม <span class="meter" aria-hidden="true"><i style="width:50%"></i></span></span>
+                        <span>งานติด <b>1</b></span>
+                        <a href="#" data-go="reports">ดูกราฟ</a>
+                    </div>
+                </div>
+                <div class="view-filters">
+                    <input class="form-control grow" type="search" placeholder="ค้นหาชื่อหรือเลขงาน เช่น DF-49" aria-label="ค้นหางาน">
+                    <select class="form-control" aria-label="ชนิดงาน"><option>ทุกชนิด</option><option>เรื่องผู้ใช้</option><option>งาน</option><option>บั๊ก</option><option>งานย่อย</option></select>
+                    <select class="form-control" aria-label="งานใหญ่"><option>ทุกงานใหญ่</option><option>ล็อกอินแบบใหม่</option><option>ส่งออกข้อมูล</option></select>
+                    <select class="form-control" aria-label="ส่วนของระบบ"><option>ทุกส่วนของระบบ</option><option>เว็บ</option><option>API</option><option>Android</option></select>
+                </div>
+                <div class="kanban-board" id="board"></div>
+            </div>
+
+            <!-- ================= 2 คลังงาน + รอบงาน ================= -->
+            <div data-view="backlog" class="mt-3">
+                <div class="view-filters">
+                    <input class="form-control grow" type="search" placeholder="ค้นหาชื่อหรือเลขงาน" aria-label="ค้นหางาน">
+                    <select class="form-control" aria-label="ชนิดงาน"><option>ทุกชนิด</option></select>
+                    <button class="btn btn-sm" type="button">+ สร้างรอบงาน</button>
+                </div>
+                <div class="bl-split" id="backlog"></div>
+            </div>
+
+            <!-- ================= 5 กราฟ (อยู่ในแท็บภาพรวม เหนือวิดเจ็ตเดิมของ P0b) ================= -->
+            <div data-view="reports" class="mt-3">
+                <div class="rep-grid">
+                    <div class="chart-card">
+                        <h3>งานคงเหลือรายวัน · รอบ 7</h3>
+                        <p class="sub">แต้มที่ยังไม่เสร็จ ณ สิ้นวัน เทียบกับเส้นที่ควรเป็น</p>
+                        <svg class="chart" id="burndown" viewBox="0 0 460 240" role="img" aria-labelledby="bdDesc"><desc id="bdDesc">กราฟงานคงเหลือ รอบ 7 เริ่ม 34 แต้ม วันนี้เหลือ 17 แต้ม</desc></svg>
+                        <div class="legend"><span><i style="--c: var(--place-2)"></i>จริง</span><span><i style="--c: var(--rule-strong)"></i>เส้นที่ควรเป็น</span><span>วันหยุดนับด้วย (เส้นแบนได้)</span></div>
+                        <details class="mt-2"><summary class="text-sm">ดูเป็นตาราง</summary><table class="data-table" id="bdTable"></table></details>
+                    </div>
+                    <div class="chart-card">
+                        <h3>ความเร็วทีม 5 รอบล่าสุด</h3>
+                        <p class="sub">แต้มที่วางแผนตอนเริ่มรอบ เทียบกับที่เสร็จ · เฉลี่ย 3 รอบล่าสุด <b>24</b> แต้ม</p>
+                        <svg class="chart" id="velocity" viewBox="0 0 320 240" role="img" aria-label="กราฟแท่ง ความเร็วทีม 5 รอบ"></svg>
+                        <div class="legend"><span><i style="--c: var(--rule-strong)"></i>วางแผน</span><span><i style="--c: var(--ledger-green)"></i>เสร็จ</span><span><i style="--c: var(--ink)"></i>เฉลี่ย</span></div>
+                    </div>
+                </div>
+                <p class="proj-note mt-3">ใต้กราฟคือวิดเจ็ตเดิมของแท็บภาพรวม (ความคืบหน้า สรุป กิจกรรม แชท) ไม่เปลี่ยน</p>
+            </div>
+
+            <!-- ================= 6 แผนงาน ================= -->
+            <div data-view="roadmap" class="mt-3">
+                <div class="flex justify-between items-center gap-3 flex-wrap mb-3">
+                    <span class="text-sm text-muted">งานใหญ่ 4 งาน · ลากแถบเพื่อเลื่อน ลากขอบเพื่อยืด/หด</span>
+                    <select class="form-control" style="width:auto" aria-label="ช่วงเวลา"><option>พ.ย. 69 – มี.ค. 70</option><option>ทั้งปี 2570</option></select>
+                </div>
+                <div class="rm-scroll"><div class="rm" id="roadmap"></div></div>
+                <div class="rm-undated"><b>ยังไม่ลงวัน:</b> <span class="ticon" data-type="epic"><svg><use href="#i-epic"/></svg></span> DF-33 หน้าตั้งค่าใหม่ · <a href="#">ใส่วันเริ่ม-จบ</a></div>
+            </div>
+
+            <!-- ================= 7 เวอร์ชัน ================= -->
+            <div data-view="releases" class="mt-3">
+                <div class="rel-wrap">
+                    <div class="bl-block">
+                        <div class="bl-head"><h3>เวอร์ชัน</h3><span class="sp"></span><button class="btn btn-sm" type="button">+ เวอร์ชัน</button></div>
+                        <div class="rel-row"><div><h4>v1.6</h4><span class="sub">วางแผน · ยังไม่กำหนดวัน · 2 งาน</span></div><span class="state">วางแผน</span></div>
+                        <div class="rel-row"><div><h4>v1.5</h4><span class="sub">ออก 4 ธ.ค. · เสร็จ 7 จาก 11 งาน</span><span class="meter" style="width:100%; margin-top:4px"><i style="width:64%"></i></span></div><span class="state open">กำลังทำ</span></div>
+                        <div class="rel-row" aria-current="true"><div><h4>v1.4</h4><span class="sub">ออกแล้ว 10 พ.ย. · 9 งาน</span></div><span class="state done">ออกแล้ว</span></div>
+                    </div>
+                    <div class="chart-card changelog">
+                        <div class="flex justify-between items-center gap-2 flex-wrap">
+                            <h3>สิ่งที่เปลี่ยนใน v1.4 · 10 พ.ย. 2569</h3>
+                            <button class="btn btn-sm btn-primary" type="button" id="copyLog">คัดลอกเป็นข้อความ</button>
+                        </div>
+                        <p class="sub">สร้างจากงานที่เสร็จและผูกกับเวอร์ชันนี้ตอนกด "ออกเวอร์ชัน" แก้ชื่องานได้ก่อนคัดลอก</p>
+                        <h4><span class="ticon" data-type="story"><svg><use href="#i-story"/></svg></span>ของใหม่</h4>
+                        <ul><li>หน้าแรกแบบใหม่ (DF-51)</li><li>แท็บรายการและปฏิทินในโปรเจค (DF-38)</li><li>ไฟล์แนบในงาน (DF-39)</li></ul>
+                        <h4><span class="ticon" data-type="task"><svg><use href="#i-task"/></svg></span>ปรับปรุง</h4>
+                        <ul><li>ย้ายฐานข้อมูลไป MariaDB 11 (DF-52)</li><li>หน้าเข้าสู่ระบบโหลดเร็วขึ้น (DF-40)</li></ul>
+                        <h4><span class="ticon" data-type="bug"><svg><use href="#i-bug"/></svg></span>แก้บั๊ก</h4>
+                        <ul><li>กราฟไม่ขึ้นบน Safari (DF-53)</li><li>วันที่เพี้ยนตอนเที่ยงคืน (DF-47)</li><li>ปุ่มบันทึกกดซ้ำได้ (DF-41)</li><li>อีโมจิในชื่องานตัด (DF-42)</li></ul>
+                        <details class="mt-3"><summary class="text-sm">ดูข้อความที่จะคัดลอก</summary>
+<textarea class="form-control copy-box mt-2" readonly aria-label="ข้อความ changelog">v1.4 (10 พ.ย. 2569)
+
+ของใหม่
+- หน้าแรกแบบใหม่ (DF-51)
+- แท็บรายการและปฏิทินในโปรเจค (DF-38)
+- ไฟล์แนบในงาน (DF-39)
+
+ปรับปรุง
+- ย้ายฐานข้อมูลไป MariaDB 11 (DF-52)
+- หน้าเข้าสู่ระบบโหลดเร็วขึ้น (DF-40)
+
+แก้บั๊ก
+- กราฟไม่ขึ้นบน Safari (DF-53)
+- วันที่เพี้ยนตอนเที่ยงคืน (DF-47)
+- ปุ่มบันทึกกดซ้ำได้ (DF-41)
+- อีโมจิในชื่องานตัด (DF-42)</textarea></details>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= 8 ตั้งค่า (ส่วนที่เพิ่มของซอฟต์แวร์) ================= -->
+            <div data-view="settings" class="mt-3">
+                <div class="set-row">
+                    <div><h4>ตัวย่อเลขงาน</h4><p>ตัวอักษรอังกฤษ 2–6 ตัว</p></div>
+                    <div><input class="form-control" style="max-width:10rem" value="DF" aria-label="ตัวย่อเลขงาน">
+                        <p>งานถัดไปจะเป็น <span class="prefix-demo">DF-62</span> · เปลี่ยนตัวย่อแล้วเลขงานเดิมเปลี่ยนตามทั้งหมด (เลขข้างหลังคงเดิม) ลิงก์งานที่แชร์ไปแล้วยังเปิดได้ · เลขที่ใช้แล้วไม่กลับมาใช้ซ้ำแม้ลบงาน</p></div>
+                </div>
+                <div class="set-row">
+                    <div><h4>ทำงานเป็นรอบ (sprint)</h4><p>ปิดได้ถ้าทำงานคนเดียวแบบไหลต่อเนื่อง</p></div>
+                    <div><label class="switch-row"><input type="checkbox" checked> ใช้รอบงาน</label>
+                        <p>เปิด: บอร์ดแสดงเฉพาะงานในรอบที่กำลังทำ งานอื่นอยู่ในแท็บคลังงาน · ปิด: บอร์ดแสดงทุกงานเหมือนเดิม ไม่มีกราฟงานคงเหลือ (แต้ม เลขงาน เวอร์ชัน แผนงานยังใช้ได้)</p></div>
+                </div>
+                <div class="set-row">
+                    <div><h4>ส่วนของระบบ (component)</h4><p>ป้ายที่ติดกับงาน ใช้กรอง</p></div>
+                    <div><span class="comp-chip">เว็บ ×</span><span class="comp-chip">API ×</span><span class="comp-chip">Android ×</span><span class="comp-chip">iOS ×</span>
+                        <div class="flex gap-2 mt-2"><input class="form-control" style="max-width:14rem" placeholder="ชื่อส่วนใหม่" aria-label="ชื่อส่วนของระบบใหม่"><button class="btn btn-sm" type="button">เพิ่ม</button></div></div>
+                </div>
+                <div class="set-row">
+                    <div><h4>แต้มความยาก</h4><p>ตัวเลือกในช่องแต้ม</p></div>
+                    <div><select class="form-control" style="max-width:20rem" aria-label="ชุดแต้ม"><option>ฟีโบนัชชี 1 2 3 5 8 13 21</option><option>1–10</option></select></div>
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+
+<!-- ================= 3 รายละเอียดงาน (แผงขวา แบบ A ของ P0b + ช่องของซอฟต์แวร์) ================= -->
+<div class="detail-backdrop" data-view="detail">
+    <article class="detail" role="dialog" aria-labelledby="dTitle">
+        <div class="detail-top">
+            <select class="form-control" style="width:auto" aria-label="ชนิดงาน" id="dType"><option value="epic">งานใหญ่</option><option value="story">เรื่องผู้ใช้</option><option value="task">งาน</option><option value="bug">บั๊ก</option><option value="sub">งานย่อย</option></select>
+            <span class="key" id="dKey">DF-49</span>
+            <span class="sp"></span>
+            <button class="icon-btn" type="button" aria-label="คัดลอกลิงก์งาน">⧉</button>
+            <button class="icon-btn" type="button" aria-label="ปิด" data-go="board">×</button>
+        </div>
+        <h2 class="detail-title" id="dTitle">ส่งออกไฟล์ CSV</h2>
+        <div class="detail-body">
+            <dl class="fields">
+                <dt data-only="story bug">คอลัมน์</dt><dd data-only="story bug"><select class="form-control"><option>ทดสอบ</option></select></dd>
+                <dt data-only="epic">สถานะ</dt><dd data-only="epic">กำลังทำ <span class="text-sm text-muted">(คิดจากงานลูก งานใหญ่ไม่ขึ้นบอร์ด)</span></dd>
+                <dt>ผู้รับผิดชอบ</dt><dd><select class="form-control"><option>ฟ้าใส</option></select></dd>
+                <dt data-only="story bug">แต้ม</dt><dd data-only="story bug"><select class="form-control" style="max-width:7rem"><option>—</option><option>1</option><option>2</option><option>3</option><option selected>5</option><option>8</option><option>13</option><option>21</option></select></dd>
+                <dt data-only="epic">แต้มรวม</dt><dd data-only="epic"><b>21</b> แต้ม จากงานลูก (แก้ที่งานลูก)</dd>
+                <dt data-only="epic">ช่วงเวลา</dt><dd data-only="epic"><div class="grid gap-2" style="grid-template-columns: repeat(2, minmax(0, 1fr))"><input class="form-control" type="date" value="2026-11-01" aria-label="วันเริ่ม"><input class="form-control" type="date" value="2026-12-15" aria-label="วันจบ"></div></dd>
+                <dt data-only="story bug">งานใหญ่</dt><dd data-only="story bug"><select class="form-control"><option>DF-31 ส่งออกข้อมูล</option><option>ไม่มี</option></select></dd>
+                <dt data-only="story bug">รอบงาน</dt><dd data-only="story bug"><select class="form-control"><option>รอบ 7 (กำลังทำ)</option><option>รอบ 8</option><option>คลังงาน</option></select></dd>
+                <dt>เวอร์ชัน</dt><dd><select class="form-control"><option>v1.5</option><option>ไม่ผูก</option></select></dd>
+                <dt>ส่วนของระบบ</dt><dd><span class="comp-chip">เว็บ ×</span><span class="comp-chip">API ×</span> <button class="btn btn-link btn-sm" type="button">+ เพิ่ม</button></dd>
+                <dt data-only="bug">ความรุนแรง</dt><dd data-only="bug"><select class="form-control severity-crit" style="max-width:12rem"><option>วิกฤต — ใช้ไม่ได้เลย</option><option>สูง</option><option>ปานกลาง</option><option>ต่ำ</option></select></dd>
+                <dt data-only="bug">สภาพแวดล้อม</dt><dd data-only="bug"><input class="form-control" value="Safari 18 / iPhone 15 / แอป 1.4.2"></dd>
+            </dl>
+
+            <section class="dsec" data-only="bug">
+                <h3>ขั้นตอนทำซ้ำ</h3>
+                <textarea class="form-control" rows="3">1. เปิดหน้ารายรับรายจ่าย
+2. กด "ส่งออก" เลือกเดือน พ.ย.
+3. เปิดไฟล์ใน Excel</textarea>
+                <div class="grid gap-2 mt-2" style="grid-template-columns: repeat(2, minmax(0, 1fr))">
+                    <label class="text-sm">ผลที่คาด<textarea class="form-control" rows="2">ภาษาไทยอ่านได้ปกติ</textarea></label>
+                    <label class="text-sm">ผลจริง<textarea class="form-control" rows="2">ตัวอักษรเพี้ยนเป็น à¸</textarea></label>
+                </div>
+            </section>
+
+            <section class="dsec" data-only="epic">
+                <h3>งานในงานใหญ่นี้ <small>เสร็จ 2/5 งาน · 40%</small></h3>
+                <span class="meter" style="width:100%; margin-bottom: var(--space-2)"><i style="width:40%"></i></span>
+                <div class="child-row" data-type="story"><span class="ticon"><svg><use href="#i-story"/></svg></span><span class="key">DF-49</span><span class="title">ส่งออกไฟล์ CSV</span><span class="state open">ทดสอบ</span></div>
+                <div class="child-row" data-type="task"><span class="ticon"><svg><use href="#i-task"/></svg></span><span class="key">DF-50</span><span class="title">ปุ่มส่งออกในหน้ารายรับรายจ่าย</span><span class="state">ต้องทำ</span></div>
+                <div class="child-row" data-type="story"><span class="ticon"><svg><use href="#i-story"/></svg></span><span class="key">DF-59</span><span class="title">ส่งออก PDF</span><span class="state">คลังงาน</span></div>
+                <div class="child-row" data-type="story"><span class="ticon"><svg><use href="#i-story"/></svg></span><span class="key">DF-36</span><span class="title">เลือกช่วงวันที่ก่อนส่งออก</span><span class="state done">เสร็จ</span></div>
+                <div class="child-row" data-type="task"><span class="ticon"><svg><use href="#i-task"/></svg></span><span class="key">DF-37</span><span class="title">หัวคอลัมน์ภาษาไทย</span><span class="state done">เสร็จ</span></div>
+                <button class="btn btn-link btn-sm mt-2" type="button">+ เพิ่มงานเข้างานใหญ่นี้</button>
+            </section>
+
+            <section class="dsec" data-only="story bug">
+                <h3>งานย่อย <small>1/2</small></h3>
+                <div class="child-row" data-type="sub"><span class="ticon"><svg><use href="#i-sub"/></svg></span><span class="key">DF-60</span><span class="title">ใส่ BOM หัวไฟล์</span><span class="avatar-xs">ฟ</span><span class="state done">เสร็จ</span></div>
+                <div class="child-row" data-type="sub"><span class="ticon"><svg><use href="#i-sub"/></svg></span><span class="key">DF-61</span><span class="title">ทดสอบไฟล์ 10,000 แถว</span><span class="avatar-xs">ต</span><span class="state open">กำลังทำ</span></div>
+                <button class="btn btn-link btn-sm mt-2" type="button">+ งานย่อย</button>
+                <p class="form-hint">งานย่อยมีเลข มีผู้รับผิดชอบ และเดินบนบอร์ดเองได้ ต่างจากเช็กลิสต์ซึ่งเป็นแค่ข้อติ๊กในงานนี้</p>
+            </section>
+
+            <section class="dsec">
+                <h3>งานขวาง <small>ยังติด 1</small></h3>
+                <div class="dep-row"><span class="rel">ต้องรอ</span><span class="key">DF-47</span><span class="title">วันที่เพี้ยนตอนเที่ยงคืน</span><span class="state open">รอรีวิว</span><button class="icon-btn" type="button" aria-label="เอาออก">×</button></div>
+                <div class="dep-row"><span class="rel">ขวาง</span><span class="key">DF-50</span><span class="title">ปุ่มส่งออกในหน้ารายรับรายจ่าย</span><span class="state">ต้องทำ</span><button class="icon-btn" type="button" aria-label="เอาออก">×</button></div>
+                <div class="flex gap-2 mt-2"><select class="form-control" style="width:auto" aria-label="ความสัมพันธ์"><option>ต้องรอ</option><option>ขวาง</option></select><input class="form-control" placeholder="เลขหรือชื่องาน" value="DF-50" aria-label="งานที่จะผูก"><button class="btn btn-sm" type="button">ผูก</button></div>
+                <p class="dep-err" role="alert">ผูกไม่ได้: DF-50 รอ DF-49 อยู่แล้ว ถ้า DF-49 รอ DF-50 อีก งานทั้งสองจะรอกันเองไม่มีวันเริ่ม</p>
+            </section>
+
+            <section class="dsec">
+                <h3>ลิงก์ <small>2</small></h3>
+                <div class="link-row"><span class="key">PR</span><a href="#">github.com/faiz/dayflow/pull/88 · ส่งออก CSV</a><button class="icon-btn" type="button" aria-label="เอาออก">×</button></div>
+                <div class="link-row"><span class="key">URL</span><a href="#">staging.dayflow.app/export</a><button class="icon-btn" type="button" aria-label="เอาออก">×</button></div>
+                <div class="flex gap-2 mt-2"><input class="form-control" placeholder="วาง URL ของ PR commit หรือเอกสาร" aria-label="ลิงก์ใหม่"><button class="btn btn-sm" type="button">เพิ่ม</button></div>
+            </section>
+
+            <p class="proj-note">ด้านล่างคือส่วนเดิมจาก P0b: คำอธิบาย เช็กลิสต์ ไฟล์แนบ ความเห็น ประวัติ</p>
+        </div>
+    </article>
+</div>
+
+<!-- ================= 4 ปิดรอบงาน ================= -->
+<div class="mk-modal-wrap" data-view="close" style="display:none">
+    <div class="mk-modal" role="dialog" aria-labelledby="closeTitle">
+        <header><h2 id="closeTitle">ปิดรอบ 7</h2></header>
+        <div class="body">
+            <div class="close-sum">
+                <div><b>17</b>แต้มเสร็จ</div>
+                <div><b>4</b>งานเสร็จ</div>
+                <div><b>5</b>งานยังไม่เสร็จ</div>
+            </div>
+            <div>
+                <p class="mb-2"><b>งานที่ยังไม่เสร็จ (17 แต้ม)</b></p>
+                <ul class="left-list" id="leftList"></ul>
+            </div>
+            <fieldset class="grid gap-2" style="border:0; padding:0; margin:0">
+                <legend class="mb-2"><b>ย้ายงานที่ยังไม่เสร็จไป</b></legend>
+                <label class="choice"><input type="radio" name="carry" checked><span>รอบ 8 (วางแผนอยู่ เริ่ม 30 พ.ย.)<small>รอบ 8 จะมี 27 แต้ม สูงกว่าความเร็วเฉลี่ย 24</small></span></label>
+                <label class="choice"><input type="radio" name="carry"><span>คลังงาน<small>วางแผนใหม่ทีหลัง</small></span></label>
+            </fieldset>
+            <p class="proj-note">งานที่เสร็จแล้วยังผูกกับรอบ 7 ไว้ ใช้คิดความเร็วทีม · คอลัมน์ของงานที่ย้ายไม่เปลี่ยน</p>
+        </div>
+        <footer><button class="btn" type="button" data-go="board">ยกเลิก</button><button class="btn btn-primary" type="button" data-go="backlog">ปิดรอบ</button></footer>
+    </div>
+</div>
+
+<script>
+/* ข้อมูลตัวอย่างชุดเดียว ใช้วาดทั้งบอร์ดและคลังงาน:
+   [เลข, ชื่อ, ชนิด, คอลัมน์, คน, แต้ม, งานใหญ่, รอบ ('7' | '8' | ''), ติดงานขวาง, งานแม่] */
+var TASKS = [
+    ['DF-46', 'หน้าตั้งค่าลายนิ้วมือ', 'sub', 'ต้องทำ', 'ม', 2, '', '7', false, 'DF-45'],
+    ['DF-50', 'ปุ่มส่งออกในหน้ารายรับรายจ่าย', 'task', 'ต้องทำ', 'ต', 2, 'ส่งออกข้อมูล', '7', true, ''],
+    ['DF-45', 'ล็อกอินด้วยลายนิ้วมือ', 'story', 'กำลังทำ', 'ฟ', 5, 'ล็อกอินแบบใหม่', '7', false, ''],
+    ['DF-47', 'วันที่เพี้ยนตอนเที่ยงคืน', 'bug', 'รอรีวิว', 'ฟ', 3, '', '7', false, ''],
+    ['DF-49', 'ส่งออกไฟล์ CSV', 'story', 'ทดสอบ', 'ฟ', 5, 'ส่งออกข้อมูล', '7', false, ''],
+    ['DF-51', 'หน้าแรกแบบใหม่', 'story', 'เสร็จ', 'ฟ', 8, '', '7', false, ''],
+    ['DF-52', 'ย้ายฐานข้อมูล', 'task', 'เสร็จ', 'ต', 5, '', '7', false, ''],
+    ['DF-53', 'กราฟไม่ขึ้นบน Safari', 'bug', 'เสร็จ', 'ม', 3, '', '7', false, ''],
+    ['DF-48', 'แก้ข้อความหน้าเข้าสู่ระบบ', 'task', 'เสร็จ', 'ต', 1, '', '7', false, ''],
+    ['DF-54', 'โหมดออฟไลน์: เก็บงานในเครื่อง', 'story', 'ต้องทำ', 'ฟ', 8, 'โหมดออฟไลน์', '8', false, ''],
+    ['DF-55', 'ไอคอนแอปใหม่', 'task', 'ต้องทำ', 'ม', 2, '', '8', false, ''],
+    ['DF-56', 'แจ้งเตือนซ้ำสองครั้ง', 'bug', 'ต้องทำ', '', 3, '', '', false, ''],
+    ['DF-59', 'ส่งออก PDF', 'story', 'ต้องทำ', '', 5, 'ส่งออกข้อมูล', '', false, ''],
+    ['DF-57', 'ซิงก์เมื่อกลับมาออนไลน์', 'story', 'ต้องทำ', '', 0, 'โหมดออฟไลน์', '', false, ''],
+    ['DF-58', 'เขียนคู่มือ API', 'task', 'ต้องทำ', '', 0, '', '', false, '']
+];
+var COLUMNS = ['ต้องทำ', 'กำลังทำ', 'รอรีวิว', 'ทดสอบ', 'เสร็จ'];
+/* แต้มคงเหลือ ณ สิ้นวัน 16–25 พ.ย. (วันนี้ = 25) รอบยาว 14 วัน */
+var BURN = [34, 34, 31, 29, 29, 29, 26, 21, 20, 17], SPRINT_DAYS = 14, SPRINT_START = 16;
+var VELOCITY = [['รอบ 2', 20, 16], ['รอบ 3', 24, 22], ['รอบ 4', 26, 19], ['รอบ 5', 28, 27], ['รอบ 6', 30, 26]];
+/* แผนงาน: [เลข, ชื่อ, เริ่ม, จบ, % เสร็จ] วันเป็นจำนวนวันนับจาก 1 พ.ย. 69 (ช่วงที่แสดง 151 วัน ถึง 31 มี.ค. 70) */
+var EPICS = [['DF-31', 'ส่งออกข้อมูล', 0, 44, 40], ['DF-30', 'ล็อกอินแบบใหม่', 9, 60, 55], ['DF-32', 'โหมดออฟไลน์', 30, 91, 5], ['DF-34', 'แอป iOS', 65, 139, 0]];
+var RM_DAYS = 151, RM_TODAY = 24;
+
+var NOTES = {
+    board: '<strong>บอร์ดของรอบที่กำลังทำ (REQ-S1 S2 S3 S8):</strong> หัวบอร์ดบอกรอบ เป้าหมาย วันที่เหลือ และแต้มที่เสร็จ การ์ดมีไอคอนชนิดงาน (รูปทรงต่างกัน ไม่พึ่งสีอย่างเดียว) เลขงาน แต้ม ป้ายงานใหญ่ และป้าย <span class="stuck">ติด</span> เมื่องานที่ต้องรอยังไม่เสร็จ งานย่อยเป็นการ์ดของตัวเอง ขอบประ บอกงานแม่ด้านบน ค้นหาด้วยเลขงานได้ กดการ์ดเพื่อเปิดรายละเอียด',
+    backlog: '<strong>คลังงาน + รอบงาน (REQ-S4) — เลือกแบบ:</strong><ul><li><b>A ซ้อนบน-ล่าง</b> (แนะนำ): รอบที่กำลังทำอยู่บนสุด รอบที่วางแผนต่อลงมา คลังงานล่างสุด ลากแถวขึ้น-ลงระหว่างกล่อง บนมือถือใช้แบบเดียวกันได้เลย เพราะเป็นรายการยาวเส้นเดียว</li><li><b>B สองฝั่ง</b>: คลังงานซ้าย รอบงานขวา ลากข้ามฝั่ง เห็นทั้งสองพร้อมกันบนจอกว้าง แต่บนมือถือต้องกลับเป็นซ้อนอยู่ดี และรอบหลายรอบในฝั่งขวาจะยาวเกินจอ</li></ul>ตัวอย่าง: แถว DF-59 กำลังถูกลากเข้ารอบ 8 (เส้นม่วงคือที่จะวาง) · ลากเรียงในคลังงานได้ (ลำดับ = ความสำคัญ) · ปุ่ม "เริ่มรอบ" กดไม่ได้ถ้ามีรอบกำลังทำอยู่ (EDGE-S2) · มือถือที่ลากไม่สะดวก ใช้ช่อง "รอบงาน" ในรายละเอียดงานแทน',
+    detail: '<strong>รายละเอียดงาน (แผงขวาแบบ A ที่เลือกใน P0b):</strong> เปลี่ยน "ชนิดงานที่เปิด" ด้านบนเพื่อดูช่องที่ต่างกัน · เรื่องผู้ใช้/งาน: แต้ม งานใหญ่ รอบงาน งานย่อย · บั๊ก: เพิ่มความรุนแรง ขั้นตอนทำซ้ำ ผลที่คาด/ผลจริง สภาพแวดล้อม (REQ-S9) · งานใหญ่: ช่วงเวลาสำหรับแผนงาน รายการงานลูกพร้อม % เสร็จ แต้มรวมจากงานลูก (REQ-S1) · งานขวางห้ามผูกวน ตัวอย่างข้อความเมื่อผูกวนอยู่ใต้ช่องผูก (REQ-S8) · ลิงก์ภายนอกและป้ายส่วนของระบบ (REQ-S10)',
+    close: '<strong>ปิดรอบงาน (REQ-S4, EDGE-S2):</strong> สรุปผลรอบ แล้วเลือกว่างานที่ไม่เสร็จไปรอบถัดไปหรือกลับคลังงาน ถ้ายังไม่มีรอบถัดไป ตัวเลือกแรกเป็น "สร้างรอบ 8 แล้วย้ายเข้าไป" รอบที่ไม่มีงานเลยก็ปิดได้ เตือนเมื่อรอบถัดไปมีแต้มเกินความเร็วเฉลี่ย กด "ปิดรอบ" แล้วไปที่คลังงานเพื่อเริ่มรอบถัดไป',
+    reports: '<strong>กราฟ (REQ-S5) อยู่บนสุดของแท็บภาพรวม:</strong> งานคงเหลือรายวันคิดจาก "แต้มที่ยังไม่เสร็จ ณ สิ้นวัน" ตามประวัติการย้ายคอลัมน์ ไม่ใช่สถานะตอนนี้ จึงย้อนดูรอบเก่าได้ถูก งานที่เพิ่มเข้ารอบกลางทางทำให้เส้นขึ้น (เห็นได้ว่าขอบเขตงอก) · ความเร็วทีมเทียบแต้มที่วางแผนตอนเริ่มรอบกับที่เสร็จ เส้นประคือค่าเฉลี่ย 3 รอบล่าสุด ใช้ตอนวางแผนรอบถัดไป · ทุกกราฟกด "ดูเป็นตาราง" ได้ (คนที่อ่านกราฟไม่ได้ก็อ่านตัวเลขได้)',
+    roadmap: '<strong>แผนงาน (REQ-S7):</strong> แถบของงานใหญ่รายเดือน ความทึบในแถบคือ % งานลูกที่เสร็จ ลากทั้งแถบเพื่อเลื่อน ลากขอบซ้าย/ขวาเพื่อเปลี่ยนวันเริ่ม/จบ ระหว่างลากมีป้ายบอกวันที่ใหม่ ปล่อยแล้วบันทึกทันที เส้นแดงคือวันนี้ · มือถือเลื่อนแนวนอน ชื่องานใหญ่ค้างอยู่ซ้าย · งานใหญ่ที่ยังไม่มีวันอยู่ใต้ตาราง · ลองลากแถบใน mockup นี้ได้',
+    releases: '<strong>เวอร์ชัน (REQ-S6):</strong> เวอร์ชันมีชื่อ วันออก สถานะ (วางแผน / กำลังทำ / ออกแล้ว) ผูกงานจากช่อง "เวอร์ชัน" ในรายละเอียดงาน กด "ออกเวอร์ชัน" แล้วได้ changelog จากงานที่เสร็จ จัดกลุ่ม: เรื่องผู้ใช้ = ของใหม่, งาน = ปรับปรุง, บั๊ก = แก้บั๊ก (งานย่อยและงานใหญ่ไม่ขึ้น) คัดลอกเป็นข้อความธรรมดาได้ งานที่ยังไม่เสร็จตอนออกเวอร์ชันจะถามว่าย้ายไปเวอร์ชันไหน',
+    settings: '<strong>ตั้งค่าเพิ่มของซอฟต์แวร์ (REQ-S2 S10):</strong> ตัวย่อเลขงาน สวิตช์ใช้รอบงาน ส่วนของระบบ ชุดแต้ม อยู่ในแท็บตั้งค่าเดิม ต่อจากคอลัมน์และช่องข้อมูลของ P0b · ประเภทอื่นไม่เห็นส่วนนี้'
+};
+var b = document.body;
+
+/* หนีอักขระ HTML: รับข้อความ คืนข้อความที่ใส่ innerHTML ได้ */
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+/* ไอคอนชนิดงาน: รับชนิด คืน HTML ของ svg ที่อ้าง symbol */
+function icon(type) { return '<span class="ticon" data-type="' + type + '" title="' + { epic: 'งานใหญ่', story: 'เรื่องผู้ใช้', task: 'งาน', bug: 'บั๊ก', sub: 'งานย่อย' }[type] + '"><svg><use href="#i-' + type + '"/></svg></span>'; }
+function pts(n) { return n ? '<span class="pts" title="' + n + ' แต้ม">' + n + '</span>' : '<span class="pts empty" title="ยังไม่ใส่แต้ม">–</span>'; }
+function sumPts(list) { return list.reduce(function (s, t) { return s + t[5]; }, 0); }
+
+/* วาดบอร์ดของรอบ 7: งานอยู่ในคอลัมน์ตามลำดับใน TASKS */
+function renderBoard() {
+    document.getElementById('board').innerHTML = COLUMNS.map(function (col) {
+        var cards = TASKS.filter(function (t) { return t[7] === '7' && t[3] === col; });
+        return '<div class="kanban-column"><div class="kanban-column-header"><span class="kanban-column-title">' + col + '</span><span class="kanban-column-count">' + cards.length + ' · ' + sumPts(cards) + ' แต้ม</span></div><div class="kanban-cards-list">'
+            + cards.map(function (t) {
+                return '<div class="kanban-card' + (t[2] === 'sub' ? ' is-sub' : '') + '" data-go="detail">'
+                    + (t[9] ? '<span class="kcard-parent">↳ ' + t[9] + ' ล็อกอินด้วยลายนิ้วมือ</span>' : '')
+                    + '<div class="kcard-top">' + icon(t[2]) + '<span class="key">' + t[0] + '</span><span class="sp"></span>' + (t[8] ? '<span class="stuck" title="รอ DF-49 ส่งออกไฟล์ CSV">ติด</span>' : '') + '</div>'
+                    + '<div class="kanban-card-title">' + esc(t[1]) + '</div>'
+                    + '<div class="kcard-foot">' + (t[6] ? '<span class="epic-tag">' + esc(t[6]) + '</span>' : '') + '<span class="sp"></span>' + pts(t[5]) + '<span class="avatar-xs">' + t[4] + '</span></div></div>';
+            }).join('') + '</div></div>';
+    }).join('');
+}
+
+/* แถวในคลังงาน: รับงานและว่าถูกลากอยู่ไหม คืน HTML หนึ่งแถว */
+function row(t, dragging) {
+    return '<div class="bl-row' + (t[3] === 'เสร็จ' ? ' done' : '') + (dragging ? ' dragging' : '') + '" data-go="detail"><span class="grip" aria-hidden="true">⋮⋮</span>' + icon(t[2])
+        + '<span class="key">' + t[0] + '</span><span class="title">' + esc(t[1]) + '</span><span class="epic-cell">' + (t[6] ? '<span class="epic-tag">' + esc(t[6]) + '</span>' : '') + '</span>'
+        + (t[4] ? '<span class="avatar-xs">' + t[4] + '</span>' : '<span></span>') + pts(t[5]) + '</div>';
+}
+
+/* วาดคลังงาน: รอบ 7 (กำลังทำ) รอบ 8 (วางแผน) แล้วคลังงาน แบบ B แยกคลังงานไปฝั่งซ้าย */
+function renderBacklog() {
+    var s7 = TASKS.filter(function (t) { return t[7] === '7'; }), s8 = TASKS.filter(function (t) { return t[7] === '8'; }),
+        bl = TASKS.filter(function (t) { return t[7] === '' && t[0] !== 'DF-59'; }), moving = TASKS.filter(function (t) { return t[0] === 'DF-59'; })[0];
+    var sprints = '<div><p class="bl-col-title">รอบงาน</p>'
+        + '<div class="bl-block"><div class="bl-head"><h3>รอบ 7</h3><span class="state open">กำลังทำ</span><span class="sub">16–29 พ.ย. · ' + s7.length + ' งาน · ' + sumPts(s7) + ' แต้ม</span><span class="sp"></span><button class="btn btn-sm" type="button" data-go="close">ปิดรอบ</button></div>'
+        + s7.map(function (t) { return row(t); }).join('') + '</div>'
+        + '<div class="bl-block"><div class="bl-head"><h3>รอบ 8</h3><span class="state">วางแผน</span><span class="sub">30 พ.ย.–13 ธ.ค. · ' + s8.length + ' งาน · ' + sumPts(s8) + ' แต้ม · เป้าหมาย: เริ่มโหมดออฟไลน์</span><span class="sp"></span>'
+        + '<button class="btn btn-sm" type="button" disabled title="ปิดรอบ 7 ก่อน จึงเริ่มรอบ 8 ได้">เริ่มรอบ</button><button class="icon-btn" type="button" aria-label="แก้ชื่อ วัน และเป้าหมายของรอบ 8">✎</button></div>'
+        + s8.map(function (t) { return row(t); }).join('') + '<div class="bl-drop" aria-hidden="true"></div>' + row(moving, true) + '</div></div>';
+    var backlog = '<div><p class="bl-col-title">คลังงาน</p><div class="bl-block backlog"><div class="bl-head"><h3>คลังงาน</h3><span class="sub">' + (bl.length + 1) + ' งาน · 2 งานยังไม่มีแต้ม</span></div>'
+        + bl.map(function (t) { return row(t); }).join('')
+        + '<div class="bl-add"><input class="form-control" placeholder="+ พิมพ์ชื่องานแล้วกด Enter (ใส่ ! นำหน้าเป็นบั๊ก)" aria-label="เพิ่มงานเข้าคลัง"></div></div></div>';
+    document.getElementById('backlog').innerHTML = b.dataset.layout === 'B' ? backlog + sprints : sprints + backlog;
+}
+
+/* วาดกราฟงานคงเหลือ: แกน x = วันในรอบ แกน y = แต้ม เส้นที่ควรเป็นลากจากแต้มเริ่มถึง 0 */
+function renderBurndown() {
+    var W = 460, H = 240, L = 34, R = 12, T = 12, B = 28, max = 35;
+    var x = function (i) { return L + i * (W - L - R) / (SPRINT_DAYS - 1); }, y = function (v) { return T + (1 - v / max) * (H - T - B); };
+    var g = '<g class="grid">' + [0, 10, 20, 30].map(function (v) { return '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '"/>'; }).join('') + '</g>';
+    var ax = '<g class="axis">' + [0, 10, 20, 30].map(function (v) { return '<text x="' + (L - 6) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + v + '</text>'; }).join('')
+        + [0, 3, 6, 9, 13].map(function (i) { return '<text x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="middle">' + (SPRINT_START + i) + '</text>'; }).join('') + '</g>';
+    var ideal = '<line class="ideal" x1="' + x(0) + '" y1="' + y(BURN[0]) + '" x2="' + x(SPRINT_DAYS - 1) + '" y2="' + y(0) + '"/>';
+    var pts2 = BURN.map(function (v, i) { return x(i) + ',' + y(v); }).join(' ');
+    var last = BURN.length - 1;
+    var today = '<g class="today"><line x1="' + x(last) + '" x2="' + x(last) + '" y1="' + T + '" y2="' + (H - B) + '"/><text x="' + (x(last) + 4) + '" y="' + (T + 10) + '">วันนี้</text></g>';
+    var dots = BURN.map(function (v, i) { return '<circle class="dot" cx="' + x(i) + '" cy="' + y(v) + '" r="3"/>'; }).join('');
+    document.getElementById('burndown').innerHTML += g + ax + ideal + today + '<polyline class="actual" points="' + pts2 + '"/>' + dots
+        + '<text class="lbl" x="' + (x(last) + 6) + '" y="' + (y(BURN[last]) + 4) + '">17</text>';
+    document.getElementById('bdTable').innerHTML = '<tr><th>วันที่</th><th>คงเหลือ</th><th>ที่ควรเป็น</th></tr>' + BURN.map(function (v, i) {
+        return '<tr><td>' + (SPRINT_START + i) + ' พ.ย.</td><td>' + v + '</td><td>' + Math.round(BURN[0] * (1 - i / (SPRINT_DAYS - 1))) + '</td></tr>';
+    }).join('');
+}
+
+/* วาดกราฟความเร็วทีม: แท่งคู่ วางแผน/เสร็จ ต่อรอบ และเส้นเฉลี่ย 3 รอบล่าสุด */
+function renderVelocity() {
+    var W = 320, H = 240, L = 28, T = 12, B = 28, max = 32, slot = (W - L - 8) / VELOCITY.length;
+    var y = function (v) { return T + (1 - v / max) * (H - T - B); };
+    var avg = Math.round(VELOCITY.slice(-3).reduce(function (s, v) { return s + v[2]; }, 0) / 3);
+    var out = '<g class="grid">' + [0, 10, 20, 30].map(function (v) { return '<line x1="' + L + '" x2="' + (W - 8) + '" y1="' + y(v) + '" y2="' + y(v) + '"/>'; }).join('') + '</g><g class="axis">'
+        + [0, 10, 20, 30].map(function (v) { return '<text x="' + (L - 6) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + v + '</text>'; }).join('') + '</g>';
+    VELOCITY.forEach(function (v, i) {
+        var x0 = L + i * slot + 6, w = (slot - 16) / 2;
+        out += '<rect class="bar-plan" x="' + x0 + '" y="' + y(v[1]) + '" width="' + w + '" height="' + (y(0) - y(v[1])) + '" rx="2"><title>' + v[0] + ' วางแผน ' + v[1] + '</title></rect>'
+            + '<rect class="bar-done" x="' + (x0 + w + 2) + '" y="' + y(v[2]) + '" width="' + w + '" height="' + (y(0) - y(v[2])) + '" rx="2"><title>' + v[0] + ' เสร็จ ' + v[2] + '</title></rect>'
+            + '<g class="axis"><text x="' + (x0 + w) + '" y="' + (H - 8) + '" text-anchor="middle">' + v[0] + '</text></g>';
+    });
+    document.getElementById('velocity').innerHTML = out + '<line class="avg" x1="' + L + '" x2="' + (W - 8) + '" y1="' + y(avg) + '" y2="' + y(avg) + '"/>';
+}
+
+/* วาดแผนงาน: หัวเดือน 5 คอลัมน์ แล้วงานใหญ่ละแถว แถบวางตาม % ของช่วงที่แสดง */
+function renderRoadmap() {
+    var months = ['พ.ย. 69', 'ธ.ค. 69', 'ม.ค. 70', 'ก.พ. 70', 'มี.ค. 70'];
+    var html = '<div class="rm-name" style="border-bottom:1.5px solid var(--rule-strong)"><b class="text-sm">งานใหญ่</b></div>'
+        + months.map(function (m, i) { return '<div class="rm-month' + (i === 0 ? ' now' : '') + '">' + m + '</div>'; }).join('');
+    EPICS.forEach(function (e, i) {
+        var left = e[2] / RM_DAYS * 100, width = (e[3] - e[2]) / RM_DAYS * 100;
+        html += '<div class="rm-name">' + icon('epic') + '<span><span class="key">' + e[0] + '</span> ' + esc(e[1]) + '</span><span class="pct">' + e[4] + '%</span></div>'
+            + '<div class="rm-lane"><div class="rm-bar" data-epic="' + i + '" style="left:' + left + '%; width:' + width + '%"><i class="fill" style="width:' + e[4] + '%"></i><span>' + esc(e[1]) + '</span></div>'
+            + '<i class="rm-today" style="left:' + (RM_TODAY / RM_DAYS * 100) + '%"></i></div>';
+    });
+    document.getElementById('roadmap').innerHTML = html;
+}
+
+/* แปลงวันที่นับจาก 1 พ.ย. 69 เป็นข้อความไทยสั้น ๆ */
+function rmDate(d) {
+    var lens = [30, 31, 31, 28, 31], names = ['พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.'], m = 0;
+    while (m < 4 && d >= lens[m]) { d -= lens[m]; m++; }
+    return (d + 1) + ' ' + names[m];
+}
+
+/* ลากแถบแผนงาน: กลางแถบ = เลื่อนทั้งช่วง, ขอบ 10px = ยืด/หดด้านนั้น ป้ายบอกวันที่ใหม่ระหว่างลาก */
+function dragRoadmap(e) {
+    var bar = e.target.closest('.rm-bar'); if (!bar) return;
+    e.preventDefault();
+    var ep = EPICS[bar.dataset.epic], lane = bar.parentNode.getBoundingClientRect(), r = bar.getBoundingClientRect();
+    var mode = e.clientX - r.left < 10 ? 'start' : r.right - e.clientX < 10 ? 'end' : 'move';
+    var x0 = e.clientX, s0 = ep[2], e0 = ep[3], tip = document.createElement('span');
+    tip.className = 'rm-tip'; bar.parentNode.appendChild(tip); bar.classList.add('dragging');
+    function move(ev) {
+        var dd = Math.round((ev.clientX - x0) / lane.width * RM_DAYS);
+        if (mode !== 'end') ep[2] = Math.min(Math.max(0, s0 + dd), mode === 'start' ? ep[3] - 1 : RM_DAYS);
+        if (mode !== 'start') ep[3] = Math.max(Math.min(RM_DAYS, e0 + dd), ep[2] + 1);
+        if (mode === 'move') ep[3] = ep[2] + (e0 - s0);
+        bar.style.left = ep[2] / RM_DAYS * 100 + '%'; bar.style.width = (ep[3] - ep[2]) / RM_DAYS * 100 + '%';
+        tip.style.left = bar.style.left; tip.textContent = rmDate(ep[2]) + ' – ' + rmDate(ep[3] - 1);
+    }
+    function up() { document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); tip.remove(); bar.classList.remove('dragging'); }
+    document.addEventListener('pointermove', move); document.addEventListener('pointerup', up);
+}
+
+function render() {
+    document.getElementById('leftList').innerHTML = TASKS.filter(function (t) { return t[7] === '7' && t[3] !== 'เสร็จ'; })
+        .map(function (t) { return '<li>' + icon(t[2]) + '<span class="key">' + t[0] + '</span><span style="flex:1">' + esc(t[1]) + '</span>' + pts(t[5]) + '</li>'; }).join('');
+    renderBacklog();
+    var dt = b.dataset.dtype, sample = { story: ['DF-49', 'ส่งออกไฟล์ CSV'], bug: ['DF-56', 'ส่งออก CSV แล้วภาษาไทยเพี้ยน'], epic: ['DF-31', 'ส่งออกข้อมูล'] }[dt];
+    document.getElementById('dType').value = dt; document.getElementById('dKey').textContent = sample[0]; document.getElementById('dTitle').textContent = sample[1];
+    document.querySelector('.mk-modal-wrap').style.display = b.dataset.screen === 'close' ? 'grid' : 'none';
+    document.documentElement.style.setProperty('--mk-top', document.querySelector('.mk-bar').offsetHeight + 'px');
+    document.getElementById('mkNote').innerHTML = NOTES[b.dataset.screen];
+    var tab = { detail: 'board', close: 'board' }[b.dataset.screen] || b.dataset.screen;
+    document.querySelectorAll('#mkTabs .tab').forEach(function (t) { t.setAttribute('aria-selected', String(t.dataset.go === tab)); });
+}
+function go(s) { b.dataset.screen = s; document.getElementById('mkScreen').value = s; render(); window.scrollTo(0, 0); }
+document.getElementById('mkScreen').addEventListener('change', function (e) { go(e.target.value); });
+document.getElementById('mkLayout').addEventListener('change', function (e) { b.dataset.layout = e.target.value; render(); });
+document.getElementById('mkDtype').addEventListener('change', function (e) { b.dataset.dtype = e.target.value; render(); });
+document.getElementById('dType').addEventListener('change', function (e) { if (e.target.value in { story: 1, bug: 1, epic: 1 }) { b.dataset.dtype = e.target.value; document.getElementById('mkDtype').value = e.target.value; render(); } });
+document.getElementById('mkTheme').addEventListener('change', function (e) { document.documentElement.dataset.theme = e.target.value; });
+document.getElementById('copyLog').addEventListener('click', function (e) { e.target.textContent = 'คัดลอกแล้ว'; });
+document.addEventListener('pointerdown', dragRoadmap);
+document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-go]');
+    if (el && !e.target.closest('select, input, button[disabled]')) { e.preventDefault(); go(el.dataset.go); }
+});
+new URLSearchParams(location.search).forEach(function (v, k) {
+    if (k === 'theme') document.documentElement.dataset.theme = v; else b.dataset[k] = v;
+    var s = document.getElementById('mk' + k[0].toUpperCase() + k.slice(1)); if (s) s.value = v;
+});
+renderBoard(); renderBurndown(); renderVelocity(); renderRoadmap(); render();
+</script>
+</body>
+</html>
