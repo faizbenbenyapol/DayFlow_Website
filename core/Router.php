@@ -334,6 +334,15 @@ class Router
         $this->add('DELETE', '/api/projects/tasks/{tid}/files/{fid}', 'ProjectAttachmentController', 'apiUnlink',   true);
         $this->add('POST',   '/api/projects/tasks/reorder','ProjectTaskController', 'apiTaskReorder', true);
 
+        // --- API: Projects Sprints & Backlog Planning ---
+        $this->add('GET',    '/api/projects/{id}/sprints',              'ProjectSprintController', 'apiList',   true);
+        $this->add('POST',   '/api/projects/{id}/sprints',              'ProjectSprintController', 'apiCreate', true);
+        $this->add('PUT',    '/api/projects/sprints/{sid}',             'ProjectSprintController', 'apiUpdate', true);
+        $this->add('DELETE', '/api/projects/sprints/{sid}',             'ProjectSprintController', 'apiDelete', true);
+        $this->add('POST',   '/api/projects/sprints/{sid}/start',       'ProjectSprintController', 'apiStart',  true);
+        $this->add('POST',   '/api/projects/sprints/{sid}/close',       'ProjectSprintController', 'apiClose',  true);
+        $this->add('POST',   '/api/projects/{id}/plan',                 'ProjectSprintController', 'apiPlan',   true);
+
         // --- API: Projects Board Columns ---
         $this->add('POST',   '/api/projects/{id}/columns',         'ProjectColumnController', 'apiCreate',  true);
         $this->add('POST',   '/api/projects/{id}/columns/reorder', 'ProjectColumnController', 'apiReorder', true);

@@ -146,7 +146,8 @@ class ProjectController
      *
      * ฟิลด์ทั่วไปแก้ได้ตั้งแต่ผู้ดูแลขึ้นไป ส่วนการเปลี่ยนประเภทเป็นของเจ้าของ
      * และการเปลี่ยนประเภทไม่แตะคอลัมน์หรืองาน (ข้อมูลเฉพาะประเภทซ่อนไว้ ไม่ลบ)
-     * ตัวย่อเลขงานและชุดแต้มเป็นฟิลด์ทั่วไปของผู้ดูแล
+     * ตัวย่อเลขงาน ชุดแต้ม และสวิตช์ใช้รอบงานเป็นฟิลด์ทั่วไปของผู้ดูแล
+     * การปิดสวิตช์ไม่ลบรอบงานหรืองานใด ๆ
      */
     public function apiUpdate(string $id): void
     {
@@ -192,8 +193,22 @@ class ProjectController
             }
         }
 
+        // สวิตช์ใช้รอบงานเก็บตรงในตาราง เพราะ Project::update รับเฉพาะฟิลด์ทั่วไป
+        // การปิดสวิตช์ไม่ลบรอบงานหรืองานใด ๆ
+        $useSprints = null;
+        $rawUseSprints = Request::input('use_sprints');
+        if ($rawUseSprints !== null) {
+            if (is_bool($rawUseSprints)) {
+                $rawUseSprints = $rawUseSprints ? 1 : 0;
+            }
+            if (!in_array((string)$rawUseSprints, ['0', '1'], true)) {
+                Response::json(['error' => 'ค่าการใช้รอบงานไม่ถูกต้อง'], 422);
+            }
+            $useSprints = (int)$rawUseSprints;
+        }
+
         $data = $this->validateProjectData($data);
-        if (empty($data)) {
+        if (empty($data) && $useSprints === null) {
             Response::json(['error' => 'ไม่มีข้อมูลสำหรับแก้ไข'], 400);
         }
 
@@ -203,7 +218,14 @@ class ProjectController
             }
         }
 
-        if (Project::update($projectId, $data)) {
+        $updated = Project::update($projectId, $data);
+        if ($useSprints !== null && (int)($project['use_sprints'] ?? 1) !== $useSprints) {
+            DB::run('UPDATE projects SET use_sprints = ? WHERE id = ?', [$useSprints, $projectId]);
+            $changes[] = 'ใช้รอบงาน เปลี่ยนเป็น ' . ($useSprints === 1 ? 'เปิด' : 'ปิด');
+            $updated = true;
+        }
+
+        if ($updated) {
             if (!empty($changes)) {
                 ProjectActivity::log($projectId, $userId, 'อัปเดตข้อมูลโปรเจค: ' . implode(', ', $changes));
             }

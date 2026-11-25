@@ -14,6 +14,9 @@ class ProjectTask
     /** ชุดแต้มที่รับได้ตามสเกลของโปรเจค */
     public const POINT_SCALES = ['fib' => [1, 2, 3, 5, 8, 13, 21], 'ten' => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]];
 
+    /** จำนวนงานสูงสุดที่วางแผนเข้า/ออกรอบงานได้ในคำขอเดียว */
+    public const MAX_PLAN_TASKS = 500;
+
     /**
      * ดึงข้อมูลงานทั้งหมดในโครงการ จัดกลุ่มและเรียงตามตำแหน่งการลากวาง (สำหรับผู้ใช้ร่วมทีมทุกคน รวมถึงแขกสาธารณะ)
      *
@@ -58,7 +61,7 @@ class ProjectTask
      * @param int $userId ผู้สร้าง (0 = guest)
      * @param int $projectId รหัสโปรเจค
      * @param array<string, mixed> $column คอลัมน์ที่ตรวจแล้ว (ต้องมี id)
-     * @param array<string, mixed> $data ข้อมูลงาน (kind, parent_id, story_points ไม่บังคับ)
+     * @param array<string, mixed> $data ข้อมูลงาน (kind, parent_id, story_points, sprint_id ไม่บังคับ)
      * @return array{id: int, number: int} รหัสงานใหม่และเลขงานในโปรเจค
      */
     public static function create(int $userId, int $projectId, array $column, array $data): array
@@ -80,11 +83,12 @@ class ProjectTask
                 throw new ProjectColumnException(404, 'ไม่พบข้อมูลโปรเจค');
             }
 
-            // ตรวจชนิด/งานแม่/แต้มก่อน insert: งานแม่หายหรือชนิดผิดต้องไม่ทิ้งงานครึ่ง ๆ กลาง ๆ
+            // ตรวจชนิด/งานแม่/แต้ม/รอบงานก่อน insert: งานแม่หายหรือชนิดผิดต้องไม่ทิ้งงานครึ่ง ๆ กลาง ๆ
             $kind = array_key_exists('kind', $data) ? self::checkedKind($data['kind']) : 'task';
             $parentId = array_key_exists('parent_id', $data) ? self::parentIdFromInput($data['parent_id']) : null;
-            self::checkedParent($projectId, 0, $kind, $parentId);
+            $parent = self::checkedParent($projectId, 0, $kind, $parentId);
             $points = self::checkedPoints($data['story_points'] ?? null, (string)$project['point_scale'], $kind);
+            $sprintId = self::sprintForCreate($projectId, $kind, $parent, $data);
             $number = (int)$project['next_task_number'];
 
             $maxPos = (int)DB::run(
@@ -99,8 +103,8 @@ class ProjectTask
             $assignee = ($assigneeUserId !== null) ? null : (!empty($data['assignee']) ? $data['assignee'] : null);
 
             $insert = DB::run(
-                'INSERT INTO project_tasks (project_id, number, user_id, guest_name, title, status, priority, due_date, category, assignee_user_id, assignee, kind, parent_id, story_points, column_id, position, checklist)
-                 SELECT ?, ?, ?, ?, ?, ' . self::shadowStatusSql() . ', ?, ?, ?, ?, ?, ?, ?, ?, c.id, ?, ?
+                'INSERT INTO project_tasks (project_id, number, user_id, guest_name, title, status, priority, due_date, category, assignee_user_id, assignee, kind, parent_id, story_points, sprint_id, column_id, position, checklist)
+                 SELECT ?, ?, ?, ?, ?, ' . self::shadowStatusSql() . ', ?, ?, ?, ?, ?, ?, ?, ?, ?, c.id, ?, ?
                  FROM project_columns c
                  WHERE c.id = ? AND c.project_id = ?',
                 [
@@ -117,6 +121,7 @@ class ProjectTask
                     $kind,
                     $parentId,
                     $points,
+                    $sprintId,
                     $maxPos + 1,
                     !empty($data['checklist']) ? json_encode($data['checklist'], JSON_UNESCAPED_UNICODE) : null,
                     $columnId,
@@ -177,16 +182,18 @@ class ProjectTask
     }
 
     /**
-     * ตรวจและเขียนชนิดงาน งานแม่ และแต้มของงานในล็อกของโปรเจค
+     * ตรวจและเขียนชนิดงาน งานแม่ แต้ม และรอบงานของงานในล็อกของโปรเจค
      *
      * อ่านงานและงานแม่ซ้ำหลังได้ lock (และอ่านงานลูกเมื่อส่งชนิดหรืองานแม่มา)
      * เพราะคำขออื่นอาจเปลี่ยนหรือลบไปแล้ว
      * ตรวจเฉพาะค่าที่ client ส่งมา แต่ตรวจผลรวมกับค่าเดิม (เช่น เปลี่ยนเป็นงานใหญ่ต้องล้างแต้ม)
+     * งานย่อยใช้รอบงานของงานแม่เสมอ ค่าที่ client ส่งให้ sub จึงถูกเมิน
+     * งานใหญ่ไม่มีรอบงาน และงานที่ย้ายรอบจะพางานย่อยของมันไปด้วย
      * โยน ProjectColumnException(422) เมื่อผลรวมผิดกฎ และ 404 เมื่องานหายไป
      *
      * @param int $taskId รหัสงาน
      * @param int $projectId รหัสโปรเจคของงาน
-     * @param array<string, mixed> $input เฉพาะคีย์ที่ client ส่งมา: kind, parent_id, story_points
+     * @param array<string, mixed> $input เฉพาะคีย์ที่ client ส่งมา: kind, parent_id, story_points, sprint_id
      * @return array{changed: bool, changes: list<string>} ค่าที่เปลี่ยนและข้อความสำหรับบรรทัดประวัติ
      */
     public static function updateStructure(int $taskId, int $projectId, array $input): array
@@ -194,7 +201,7 @@ class ProjectTask
         /** @var array{changed: bool, changes: list<string>} $result */
         $result = ProjectColumn::locked($projectId, static function () use ($taskId, $projectId, $input): array {
             $task = DB::run(
-                'SELECT kind, parent_id, story_points FROM project_tasks WHERE id = ? AND project_id = ?',
+                'SELECT kind, parent_id, story_points, sprint_id FROM project_tasks WHERE id = ? AND project_id = ?',
                 [$taskId, $projectId]
             )->fetch();
             if (!$task) {
@@ -211,8 +218,10 @@ class ProjectTask
             $oldKind = (string)$task['kind'];
             $oldParent = $task['parent_id'] === null ? null : (int)$task['parent_id'];
             $oldPoints = $task['story_points'] === null ? null : (int)$task['story_points'];
+            $oldSprint = $task['sprint_id'] === null ? null : (int)$task['sprint_id'];
             $kindSent = array_key_exists('kind', $input);
             $parentSent = array_key_exists('parent_id', $input);
+            $sprintSent = array_key_exists('sprint_id', $input);
 
             $kind = $kindSent ? self::checkedKind($input['kind']) : $oldKind;
             $parentId = $parentSent ? self::parentIdFromInput($input['parent_id']) : $oldParent;
@@ -234,6 +243,27 @@ class ProjectTask
                 $points = null;
             } elseif ($pointsSent) {
                 $points = self::checkedPoints($input['story_points'], (string)$project['point_scale'], $kind);
+            }
+
+            // รอบงาน: งานใหญ่ไม่มีรอบ งานย่อยใช้รอบของงานแม่ ที่เหลือรับรหัสที่ตรวจแล้ว
+            $sprint = $oldSprint;
+            if ($kind === 'epic') {
+                if ($sprintSent && !self::isBlankId($input['sprint_id'])) {
+                    throw new ProjectColumnException(422, 'งานใหญ่ไม่อยู่ในรอบงาน');
+                }
+                $sprint = null;
+            } elseif ($kind === 'sub') {
+                // งานย่อย: ค่าที่ client ส่งมาตรง ๆ ถูกเมิน ใช้รอบของงานแม่เท่านั้น
+                if (($kindSent || $parentSent) && $parentId !== null) {
+                    $taskParent = $parent ?? self::checkedParent($projectId, $taskId, $kind, $parentId);
+                    $sprint = ($taskParent !== null && $taskParent['sprint_id'] !== null)
+                        ? (int)$taskParent['sprint_id']
+                        : null;
+                }
+            } elseif ($sprintSent) {
+                $sprint = self::isBlankId($input['sprint_id'])
+                    ? null
+                    : self::checkedSprint($projectId, $input['sprint_id']);
             }
 
             $kindDiffers = $kind !== $oldKind;
@@ -273,12 +303,19 @@ class ProjectTask
                 }
                 $changes[] = "งานแม่ เปลี่ยนเป็น '" . $label . "'";
             }
+            if ($sprint !== $oldSprint) {
+                $changes[] = "รอบงาน เปลี่ยนเป็น '" . self::sprintLabel($projectId, $sprint) . "'";
+            }
 
             if ($changes !== []) {
                 DB::run(
-                    'UPDATE project_tasks SET kind = ?, parent_id = ?, story_points = ? WHERE id = ? AND project_id = ?',
-                    [$kind, $parentId, $points, $taskId, $projectId]
+                    'UPDATE project_tasks SET kind = ?, parent_id = ?, story_points = ?, sprint_id = ? WHERE id = ? AND project_id = ?',
+                    [$kind, $parentId, $points, $sprint, $taskId, $projectId]
                 );
+            }
+            // งานย่อยต้องตามงานแม่ไปรอบเดียวกันเสมอ
+            if ($sprint !== $oldSprint) {
+                self::syncSubSprints($projectId, [$taskId], $sprint);
             }
             return ['changed' => $changes !== [], 'changes' => $changes];
         });
@@ -322,7 +359,7 @@ class ProjectTask
      * @param int $taskId งานที่กำลังตรวจ (0 = ยังไม่มีงาน)
      * @param string $kind ชนิดงานของงานนี้
      * @param int|null $parentId รหัสงานแม่ (null = ไม่มี)
-     * @return array<string, mixed>|null แถวงานแม่ หรือ null
+     * @return array<string, mixed>|null แถวงานแม่ (รวม sprint_id) หรือ null
      */
     private static function checkedParent(int $projectId, int $taskId, string $kind, ?int $parentId): ?array
     {
@@ -340,7 +377,7 @@ class ProjectTask
         }
 
         $parent = DB::run(
-            'SELECT id, kind, number FROM project_tasks WHERE id = ? AND project_id = ?',
+            'SELECT id, kind, number, sprint_id FROM project_tasks WHERE id = ? AND project_id = ?',
             [$parentId, $projectId]
         )->fetch();
         if (!$parent) {
@@ -380,6 +417,192 @@ class ProjectTask
             throw new ProjectColumnException(422, 'แต้มต้องเป็นค่าในชุดแต้มของโปรเจค');
         }
         return $points;
+    }
+
+    /**
+     * หา sprint_id ของงานใหม่ตามชนิด งานแม่ และค่าที่ client ส่งมา
+     *
+     * งานใหญ่ไม่มีรอบงาน (ส่งรหัสมาเป็น 422) งานย่อยใช้รอบของงานแม่โดยเมินค่าที่ส่งมา
+     * ส่วนงานอื่นรับเฉพาะรหัสรอบงาน planned/active ของโปรเจคนี้
+     *
+     * @param int $projectId รหัสโปรเจค
+     * @param string $kind ชนิดงานของงานใหม่
+     * @param array<string, mixed>|null $parent แถวงานแม่ (มี sprint_id) หรือ null
+     * @param array<string, mixed> $data ข้อมูลงานที่ client ส่งมา
+     * @return int|null รหัสรอบงาน หรือ null สำหรับ backlog
+     */
+    private static function sprintForCreate(int $projectId, string $kind, ?array $parent, array $data): ?int
+    {
+        $sent = array_key_exists('sprint_id', $data);
+        $raw = $sent ? $data['sprint_id'] : null;
+
+        if ($kind === 'epic') {
+            if ($sent && !self::isBlankId($raw)) {
+                throw new ProjectColumnException(422, 'งานใหญ่ไม่อยู่ในรอบงาน');
+            }
+            return null;
+        }
+        if ($kind === 'sub') {
+            return ($parent !== null && $parent['sprint_id'] !== null) ? (int)$parent['sprint_id'] : null;
+        }
+        if (!$sent || self::isBlankId($raw)) return null;
+        return self::checkedSprint($projectId, $raw);
+    }
+
+    /**
+     * ตรวจรหัสรอบงานที่ client ส่งมาว่าเป็น planned/active ของโปรเจคนี้
+     *
+     * รหัสที่ไม่มี อยู่คนละโปรเจค หรือปิดแล้ว ตอบ 404 "ไม่พบรอบงาน" เหมือนกันเสมอ
+     *
+     * @param int $projectId รหัสโปรเจค
+     * @param mixed $raw ค่าที่ client ส่งมา
+     * @return int รหัสรอบงานที่ตรวจแล้ว
+     */
+    private static function checkedSprint(int $projectId, mixed $raw): int
+    {
+        if (is_int($raw)) {
+            $id = $raw;
+        } elseif (is_string($raw) && ctype_digit($raw)) {
+            $id = (int)$raw;
+        } else {
+            $id = 0;
+        }
+        if ($id <= 0) {
+            throw new ProjectColumnException(404, 'ไม่พบรอบงาน');
+        }
+        $state = DB::run(
+            'SELECT state FROM project_sprints WHERE id = ? AND project_id = ?',
+            [$id, $projectId]
+        )->fetchColumn();
+        if ($state === false || !in_array((string)$state, ProjectSprint::PLANNABLE_STATES, true)) {
+            throw new ProjectColumnException(404, 'ไม่พบรอบงาน');
+        }
+        return $id;
+    }
+
+    /**
+     * ค่าว่างของรหัส (null หรือสตริงว่าง) หมายถึงไม่มีรอบงาน/ย้ายเข้า backlog
+     *
+     * @param mixed $value ค่าที่ client ส่งมา
+     * @return bool true เมื่อถือว่าไม่ได้ระบุรหัส
+     */
+    private static function isBlankId(mixed $value): bool
+    {
+        return $value === null || $value === '';
+    }
+
+    /**
+     * ตั้ง sprint_id ของงานย่อยทุกงานใต้ parent ที่ระบุในคำสั่งเดียว
+     *
+     * งานย่อยต้องอยู่รอบเดียวกับงานแม่เสมอ จึงเรียกทุกครั้งที่รอบของงานแม่เปลี่ยน
+     *
+     * @param int $projectId รหัสโปรเจค
+     * @param array<int, int> $parentIds รหัสงานแม่
+     * @param int|null $sprintId รอบงานปลายทาง (null = backlog)
+     */
+    private static function syncSubSprints(int $projectId, array $parentIds, ?int $sprintId): void
+    {
+        if ($parentIds === []) return;
+        $placeholders = implode(',', array_fill(0, count($parentIds), '?'));
+        DB::run(
+            "UPDATE project_tasks SET sprint_id = ?
+             WHERE project_id = ? AND kind = 'sub' AND parent_id IN (" . $placeholders . ')',
+            array_merge([$sprintId, $projectId], array_values($parentIds))
+        );
+    }
+
+    /**
+     * ชื่อรอบงานสำหรับบรรทัดประวัติ ('คลังงาน' เมื่ออยู่ backlog)
+     *
+     * @param int $projectId รหัสโปรเจค
+     * @param int|null $sprintId รหัสรอบงาน
+     * @return string ชื่อรอบงานหรือคำว่า คลังงาน
+     */
+    private static function sprintLabel(int $projectId, ?int $sprintId): string
+    {
+        if ($sprintId === null) return 'คลังงาน';
+        $name = DB::run(
+            'SELECT name FROM project_sprints WHERE id = ? AND project_id = ?',
+            [$sprintId, $projectId]
+        )->fetchColumn();
+        return $name === false ? 'คลังงาน' : (string)$name;
+    }
+
+    /**
+     * ย้ายงานที่เลือกเข้า/ออกรอบงานและกำหนดลำดับใน backlog ในล็อกของโปรเจค
+     *
+     * ตรวจรหัสงานทั้งหมดในคำสั่งเดียว: งานที่ไม่มี อยู่คนละโปรเจค หรือเป็นงานใหญ่/งานย่อย
+     * ตอบ 422 ข้อความเดียวกันเพื่อไม่ให้ client เดารหัสที่มีอยู่ได้ แล้วเขียนรอบงานและ
+     * backlog_rank ตามลำดับที่ส่งมา จากนั้นตั้งรอบของงานย่อยให้ตามงานแม่
+     *
+     * @param int $projectId รหัสโปรเจค
+     * @param mixed $sprintId รหัสรอบงานปลายทาง หรือ null สำหรับ backlog
+     * @param array<mixed> $ids รหัสงานตามลำดับที่ต้องการ
+     * @return array{moved: int, sprint_id: int|null} จำนวนงานและรอบงานปลายทาง
+     */
+    public static function plan(int $projectId, mixed $sprintId, array $ids): array
+    {
+        if (count($ids) > self::MAX_PLAN_TASKS) {
+            throw new ProjectColumnException(422, 'วางแผนได้ครั้งละไม่เกิน ' . self::MAX_PLAN_TASKS . ' งาน');
+        }
+
+        $ordered = [];
+        foreach ($ids as $raw) {
+            if (!is_int($raw) && !(is_string($raw) && ctype_digit($raw))) {
+                throw new ProjectColumnException(422, 'วางแผนได้เฉพาะเรื่องผู้ใช้ งาน และบั๊ก');
+            }
+            $taskId = (int)$raw;
+            if ($taskId > 0 && !in_array($taskId, $ordered, true)) {
+                $ordered[] = $taskId;
+            }
+        }
+
+        /** @var array{moved: int, sprint_id: int|null} $result */
+        $result = ProjectColumn::locked($projectId, static function () use ($projectId, $sprintId, $ordered): array {
+            $target = null;
+            if ($sprintId !== null && $sprintId !== '') {
+                $target = self::checkedSprint($projectId, $sprintId);
+            }
+
+            if ($ordered !== []) {
+                $placeholders = implode(',', array_fill(0, count($ordered), '?'));
+                $rows = DB::run(
+                    'SELECT id, kind FROM project_tasks
+                     WHERE project_id = ? AND id IN (' . $placeholders . ')',
+                    array_merge([$projectId], $ordered)
+                )->fetchAll();
+
+                $kinds = [];
+                foreach ($rows as $row) {
+                    $kinds[(int)$row['id']] = (string)$row['kind'];
+                }
+                foreach ($ordered as $taskId) {
+                    if (!isset($kinds[$taskId]) || !in_array($kinds[$taskId], ['story', 'task', 'bug'], true)) {
+                        throw new ProjectColumnException(422, 'วางแผนได้เฉพาะเรื่องผู้ใช้ งาน และบั๊ก');
+                    }
+                }
+
+                $values = [];
+                $params = [];
+                foreach ($ordered as $index => $taskId) {
+                    $values[] = 'SELECT ? AS id, ? AS rank';
+                    array_push($params, $taskId, $index);
+                }
+                $params[] = $target;
+                $params[] = $projectId;
+                DB::run(
+                    'UPDATE project_tasks t
+                     JOIN (' . implode(' UNION ALL ', $values) . ') v ON v.id = t.id
+                     SET t.sprint_id = ?, t.backlog_rank = v.rank
+                     WHERE t.project_id = ?',
+                    $params
+                );
+                self::syncSubSprints($projectId, $ordered, $target);
+            }
+
+            return ['moved' => count($ordered), 'sprint_id' => $target];
+        });
+        return $result;
     }
 
     /**

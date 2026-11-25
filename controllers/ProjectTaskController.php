@@ -55,8 +55,10 @@ class ProjectTaskController
     }
 
     /**
-     * ดึงข้อมูลงานคัมบัง ประวัติ และผลสรุปความก้าวหน้า AI ของโครงการร่วมกัน
+     * ดึงข้อมูลงานคัมบัง รอบงาน ประวัติ และผลสรุปความก้าวหน้า AI ของโครงการร่วมกัน
      * GET /api/projects/{id}/tasks
+     *
+     * ทุกคนที่เห็นโปรเจค (รวมแขกลิงก์แชร์) เห็นรายการรอบงานด้วย
      */
     public function apiTasksList(string $id): void
     {
@@ -77,6 +79,7 @@ class ProjectTaskController
             'project'    => $project,
             'tasks'      => $tasks,
             'columns'    => ProjectColumn::listForProject($projectId),
+            'sprints'    => ProjectSprint::listForProject($projectId),
             'activities' => $activities,
             'ai'         => $aiInsight
         ];
@@ -93,7 +96,7 @@ class ProjectTaskController
      * POST /api/projects/{id}/tasks
      *
      * สมาชิกขึ้นไปเพิ่มงานได้ ผู้ดูอย่างเดียวอ่านได้อย่างเดียว
-     * ชนิดงาน งานแม่ และแต้มที่ส่งมาถูกตรวจใน model ภายใต้ lock ของโปรเจค
+     * ชนิดงาน งานแม่ แต้ม และรอบงานที่ส่งมาถูกตรวจใน model ภายใต้ lock ของโปรเจค
      * คืนรหัสงานและเลขงานในโปรเจค (number)
      */
     public function apiTaskCreate(string $id): void
@@ -137,8 +140,8 @@ class ProjectTaskController
         if (array_key_exists('assignee_user_id', $json)) {
             $data = self::applyAssigneeUserId($projectId, $data, $json['assignee_user_id']);
         }
-        // ส่งค่าที่ไม่ได้ระบุไปให้ model ตรวจใน lock: kind ว่าง = task, parent/แต้ม null = ไม่มี
-        foreach (['kind', 'parent_id', 'story_points'] as $field) {
+        // ส่งค่าที่ไม่ได้ระบุไปให้ model ตรวจใน lock: kind ว่าง = task, parent/แต้ม/รอบงาน null = ไม่มี
+        foreach (['kind', 'parent_id', 'story_points', 'sprint_id'] as $field) {
             if (array_key_exists($field, $json)) {
                 $data[$field] = $json[$field];
             }
@@ -162,7 +165,7 @@ class ProjectTaskController
      * PUT /api/projects/tasks/{tid}
      *
      * สมาชิกขึ้นไปแก้งานได้ ผู้ดูอย่างเดียวและแขกถูกปฏิเสธ
-     * ชนิดงาน งานแม่ และแต้มถูกตรวจและเขียนใน lock เดียวกันของโปรเจค
+     * ชนิดงาน งานแม่ แต้ม และรอบงานถูกตรวจและเขียนใน lock เดียวกันของโปรเจค
      */
     public function apiTaskUpdate(string $tid): void
     {
@@ -261,9 +264,9 @@ class ProjectTaskController
             $customPatch = self::customDiff($fields, $old, $cleaned, $customChanges);
         }
 
-        // ชนิดงาน งานแม่ และแต้มอ่านจาก JSON ตรง ๆ: null/'' ของสองอย่างหลังคือสั่งล้างค่า
+        // ชนิดงาน งานแม่ แต้ม และรอบงานอ่านจาก JSON ตรง ๆ: null/'' ของค่าที่ล้างได้คือสั่งล้างค่า
         $structure = [];
-        foreach (['kind', 'parent_id', 'story_points'] as $field) {
+        foreach (['kind', 'parent_id', 'story_points', 'sprint_id'] as $field) {
             if (array_key_exists($field, $json)) {
                 $structure[$field] = $json[$field];
             }
