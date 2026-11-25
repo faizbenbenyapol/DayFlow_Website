@@ -12,6 +12,8 @@ final class ProjectComment
 
     /**
      * ความเห็นของงาน เก่าไปใหม่ เฉพาะที่ id มากกว่า $afterId (polling ดึงเฉพาะของใหม่)
+     * เปิดแผงได้ 200 รายการล่าสุด งานที่มีความเห็นมากจึงเห็นของใหม่สุดตั้งแต่เปิดแผง
+     * polling ได้ 200 รายการถัดจาก $afterId ตามลำดับ
      *
      * @param int $taskId รหัสงาน
      * @param int $afterId ดึงเฉพาะ id ที่มากกว่านี้ (0 = ทั้งหมด)
@@ -19,15 +21,21 @@ final class ProjectComment
      */
     public static function listForTask(int $taskId, int $afterId = 0): array
     {
+        // เปิดแผง (after=0) เอา 200 ล่าสุด, polling เอา 200 ถัดไปตามลำดับ รอบหน้าดึงต่อ รายการตรงกลางจึงไม่หาย
+        $order = $afterId > 0 ? 'ASC' : 'DESC';
         return DB::run(
             "SELECT c.id, c.user_id, c.body, c.created_at,
                     COALESCE(NULLIF(u.display_name, ''), u.username, 'ผู้ใช้ที่ลบแล้ว') AS author_name,
                     u.username AS author_username
-             FROM project_task_comments c
+             FROM (
+                 SELECT c.id, c.user_id, c.body, c.created_at
+                 FROM project_task_comments c
+                 WHERE c.task_id = ? AND c.id > ?
+                 ORDER BY c.id {$order}
+                 LIMIT 200
+             ) AS c
              LEFT JOIN users u ON u.id = c.user_id
-             WHERE c.task_id = ? AND c.id > ?
-             ORDER BY c.id ASC
-             LIMIT 200",
+             ORDER BY c.id ASC",
             [$taskId, $afterId]
         )->fetchAll();
     }

@@ -198,3 +198,54 @@ test("a file kept in the attacher's Google Drive downloads for everyone in the p
     assertSame(200, $download['status'], 'a viewer without Drive downloads it');
     assertSame(md5($bytes), md5($download['body']), 'and gets the same bytes back');
 });
+
+test('share-link guests do not see attachment names in the activity feed or task history (D-5)', function (TestClient $_c): void {
+    $f = attachFixture();
+    $taskId = (int)($f['owner']->json($f['owner']->post('/api/projects/' . $f['projectId'] . '/tasks', ['title' => 'งานสัญญา']))['id'] ?? 0);
+    assertSame(201, $f['member']->upload('/api/projects/tasks/' . $taskId . '/files', 'file', 'สัญญาลับ.txt', 'x')['status']);
+
+    $feed = array_column($f['guest']->json($f['guest']->get('/api/projects/' . $f['projectId'] . '/tasks'))['activities'] ?? [], 'action');
+    $history = array_column($f['guest']->json($f['guest']->get('/api/projects/tasks/' . $taskId . '/history'))['items'] ?? [], 'action');
+    assertFalse(str_contains(implode("\n", $feed), 'สัญญาลับ'), 'the guest feed hides the file name');
+    assertFalse(str_contains(implode("\n", $history), 'สัญญาลับ'), 'the guest history hides the file name');
+    $memberHistory = array_column($f['member']->json($f['member']->get('/api/projects/tasks/' . $taskId . '/history'))['items'] ?? [], 'action');
+    assertStringContains('สัญญาลับ', implode("\n", $memberHistory), 'people in the project still see it');
+});
+
+test('two people attaching the 20th file at the same moment cannot go past 20', function (TestClient $_c): void {
+    $f = attachFixture();
+    $taskId = (int)($f['owner']->json($f['owner']->post('/api/projects/' . $f['projectId'] . '/tasks', ['title' => 'งานแนบพร้อมกัน']))['id'] ?? 0);
+    for ($i = 1; $i <= 19; $i++) {
+        DB::run("INSERT INTO files (user_id, name, type, mime_type, file_size) VALUES (?, ?, 'file', 'text/plain', 1)", [$f['memberId'], "เติม {$i}.txt"]);
+        DB::run('INSERT INTO project_task_files (task_id, file_id, added_by) VALUES (?, ?, ?)', [$taskId, (int)DB::conn()->lastInsertId(), $f['memberId']]);
+    }
+    $path = '/api/projects/tasks/' . $taskId . '/files/link';
+    for ($round = 0; $round < 3; $round++) {
+        $results = TestClient::parallel([
+            [$f['member'], 'POST', $path, ['file_id' => libraryFile($f['member'], "แข่ง {$round} ก.txt", 'x')]],
+            [$f['owner'], 'POST', $path, ['file_id' => libraryFile($f['owner'], "แข่ง {$round} ข.txt", 'x')]],
+        ]);
+        assertSame(20, (int)DB::run('SELECT COUNT(*) FROM project_task_files WHERE task_id = ?', [$taskId])->fetchColumn(),
+            "round {$round}: still 20 attachments (" . $results[0]['status'] . ',' . $results[1]['status'] . ')');
+    }
+});
+
+test('deleting a folder warns about attachments of the files inside it', function (TestClient $_c): void {
+    $f = attachFixture();
+    // โปรเจคของตัวเอง โฟลเดอร์ไฟล์แนบจึงไม่ปนกับไฟล์ของ test อื่น
+    $name = 'โฟลเดอร์แนบ ' . TEST_RUN_ID;
+    $projectId = (int)($f['member']->json($f['member']->post('/api/projects', ['name' => $name]))['id'] ?? 0);
+    $first = (int)($f['member']->json($f['member']->post("/api/projects/{$projectId}/tasks", ['title' => 'งานแรก']))['id'] ?? 0);
+    $second = (int)($f['member']->json($f['member']->post("/api/projects/{$projectId}/tasks", ['title' => 'งานสอง']))['id'] ?? 0);
+    assertSame(201, $f['member']->upload('/api/projects/tasks/' . $first . '/files', 'file', 'ในโฟลเดอร์.txt', 'x')['status']);
+    $folderId = (int)DB::run("SELECT id FROM files WHERE user_id = ? AND type = 'folder' AND name = ?", [$f['memberId'], 'ไฟล์แนบ · ' . $name])->fetchColumn();
+    // ซ้อนอีกชั้น: ไฟล์ในโฟลเดอร์ย่อยก็ต้องนับ
+    DB::run("INSERT INTO files (user_id, name, type, parent_id) VALUES (?, 'ชั้นใน', 'folder', ?)", [$f['memberId'], $folderId]);
+    $innerId = (int)DB::conn()->lastInsertId();
+    DB::run("INSERT INTO files (user_id, name, type, mime_type, file_size, parent_id) VALUES (?, 'ลึก.txt', 'file', 'text/plain', 1, ?)", [$f['memberId'], $innerId]);
+    DB::run('INSERT INTO project_task_files (task_id, file_id, added_by) VALUES (?, ?, ?)', [$second, (int)DB::conn()->lastInsertId(), $f['memberId']]);
+
+    $rows = $f['member']->json($f['member']->get('/api/files'))['files'] ?? [];
+    $folder = array_values(array_filter($rows, static fn(array $x): bool => (int)$x['id'] === $folderId))[0] ?? [];
+    assertSame(2, (int)($folder['attached_tasks'] ?? -1), 'the folder row counts the 2 tasks its files are attached to');
+});

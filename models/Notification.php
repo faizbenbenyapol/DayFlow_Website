@@ -23,7 +23,7 @@ final class Notification
      * แจ้งเตือนผู้ใช้หนึ่งคน ทั้งในแอป Telegram และ Push
      *
      * @param int $toUserId ผู้รับ
-     * @param int|null $actorId คนที่ทำให้เกิดเรื่องนี้ (null = ระบบ) ถ้าเท่ากับผู้รับจะไม่แจ้ง
+     * @param int|null $actorId คนที่ทำให้เกิดเรื่องนี้ (null หรือ <= 0 = ระบบหรือแขกลิงก์แชร์) ถ้าเท่ากับผู้รับจะไม่แจ้ง
      * @param string $kind ชนิด เช่น assign, mention, member_left
      * @param string $title ข้อความหลักที่แสดงในกระดิ่ง
      * @param string|null $body บรรทัดรอง เช่น ชื่อโปรเจค
@@ -33,6 +33,8 @@ final class Notification
      */
     public static function send(int $toUserId, ?int $actorId, string $kind, string $title, ?string $body = null, ?string $url = null): bool
     {
+        // แขกลิงก์แชร์มี user id 0 แต่ actor_id มี FK ไป users จึงเก็บเป็น null (ไม่มีผู้กระทำ)
+        $actorId = ($actorId !== null && $actorId > 0) ? $actorId : null;
         if ($actorId !== null && $actorId === $toUserId) {
             return false;
         }

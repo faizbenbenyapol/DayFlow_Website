@@ -115,3 +115,29 @@ test('writers delete their own comments, admins delete anyone\'s, others cannot'
     assertSame(200, $f['admin']->request('DELETE', '/api/projects/comments/' . $other, [])['status'], 'an admin deletes someone else\'s');
     assertSame(404, $f['admin']->request('DELETE', '/api/projects/comments/' . $other, [])['status'], 'a deleted one is gone');
 });
+
+test('opening a task with hundreds of comments shows the newest ones first time', function (TestClient $_c): void {
+    $f = commentFixture();
+    $taskId = (int)($f['owner']->json($f['owner']->post('/api/projects/' . $f['projectId'] . '/tasks', ['title' => 'งานคุยเยอะ']))['id'] ?? 0);
+    for ($i = 1; $i <= 250; $i++) {
+        DB::run('INSERT INTO project_task_comments (task_id, project_id, user_id, body) VALUES (?, ?, ?, ?)', [$taskId, $f['projectId'], $f['ownerId'], "ความเห็น {$i}"]);
+    }
+    $items = $f['member']->json($f['member']->get('/api/projects/tasks/' . $taskId . '/comments'))['items'] ?? [];
+    assertSame('ความเห็น 250', (string)(end($items)['body'] ?? ''), 'the newest comment is there when the panel opens');
+    assertSame('ความเห็น 51', (string)($items[0]['body'] ?? ''), 'and the list still reads oldest to newest');
+});
+
+test('polling after a burst of more than 200 comments misses none of them', function (TestClient $_c): void {
+    $f = commentFixture();
+    $taskId = (int)($f['owner']->json($f['owner']->post('/api/projects/' . $f['projectId'] . '/tasks', ['title' => 'งานคุยรัว']))['id'] ?? 0);
+    $add = static fn(string $body): int => (int)DB::run('INSERT INTO project_task_comments (task_id, project_id, user_id, body) VALUES (?, ?, ?, ?)', [$taskId, $f['projectId'], $f['ownerId'], $body])->rowCount();
+    $add('ก่อนเปิดแผง');
+    $opened = $f['member']->json($f['member']->get('/api/projects/tasks/' . $taskId . '/comments'))['items'] ?? [];
+    $lastId = (int)end($opened)['id'];
+    for ($i = 1; $i <= 250; $i++) $add("รัว {$i}");
+
+    $poll = $f['member']->json($f['member']->get('/api/projects/tasks/' . $taskId . '/comments?after=' . $lastId))['items'] ?? [];
+    assertSame('รัว 1', (string)($poll[0]['body'] ?? ''), 'the next poll starts right after what the panel has');
+    $next = $f['member']->json($f['member']->get('/api/projects/tasks/' . $taskId . '/comments?after=' . (int)end($poll)['id']))['items'] ?? [];
+    assertSame(250, count($poll) + count($next), 'two polls bring all 250');
+});

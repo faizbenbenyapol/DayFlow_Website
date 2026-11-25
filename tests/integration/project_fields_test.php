@@ -193,3 +193,113 @@ test('a task whose person field points at someone who left can still be saved', 
     assertSame($leaverId, fieldValues($taskId)[(string)$ids['person']], 'and it stays until someone changes it');
     assertSame(422, $f['owner']->request('PUT', "/api/projects/tasks/{$taskId}", ['custom' => [$ids['person'] => $f['outsiderId']]])['status'], 'a new value is still checked');
 });
+
+test('share-link guests see no field names or values in the activity feed or task history (D-5)', function (TestClient $_c): void {
+    $f = fieldFixture();
+    $taskId = (int)($f['owner']->json($f['owner']->post("/api/projects/{$f['projectId']}/tasks", ['title' => 'งานงบลับ']))['id'] ?? 0);
+    $save = $f['owner']->request('PUT', "/api/projects/tasks/{$taskId}", ['title' => 'งานงบลับ แก้ชื่อ', 'custom' => [$f['ids']['number'] => 987654]]);
+    assertSame(200, $save['status'], $save['body']);
+
+    $actions = static fn(array $rows): string => implode("\n", array_column($rows, 'action'));
+    $feed = $actions($f['guest']->json($f['guest']->get("/api/projects/{$f['projectId']}/tasks"))['activities'] ?? []);
+    $history = $actions($f['guest']->json($f['guest']->get("/api/projects/tasks/{$taskId}/history"))['items'] ?? []);
+    foreach (['feed' => $feed, 'history' => $history] as $where => $text) {
+        assertFalse(str_contains($text, '987654'), "the guest {$where} does not show the value: {$text}");
+        assertFalse(str_contains($text, 'ชั่วโมง'), "the guest {$where} does not name the field: {$text}");
+    }
+    assertStringContains('แก้ชื่อ', $history, 'the guest still sees the ordinary change');
+    $memberHistory = $actions($f['member']->json($f['member']->get("/api/projects/tasks/{$taskId}/history"))['items'] ?? []);
+    assertStringContains("ชั่วโมง เปลี่ยนเป็น '987654'", $memberHistory, 'people in the project still see the value change');
+});
+
+test('a field name or option sent as a list is refused and nothing changes', function (TestClient $_c): void {
+    $f = fieldFixture();
+    $id = $f['ids']['select'];
+    $before = DB::run('SELECT name, options FROM project_fields WHERE id = ?', [$id])->fetch();
+    assertSame(422, $f['owner']->request('PUT', "/api/projects/fields/{$id}", ['name' => ['x']])['status'], 'a list as the name');
+    assertSame(422, $f['owner']->request('PUT', "/api/projects/fields/{$id}", ['options' => [['x']]])['status'], 'a list inside the options');
+    assertSame(422, $f['owner']->post("/api/projects/{$f['projectId']}/fields", ['name' => ['x'], 'kind' => 'text'])['status'], 'a list as a new name');
+    assertSame($before, DB::run('SELECT name, options FROM project_fields WHERE id = ?', [$id])->fetch(), 'the field is unchanged');
+});
+
+test('a share link that can edit tasks still cannot read or write field values (D-5)', function (TestClient $_c): void {
+    $f = fieldFixture();
+    $projectId = (int)($f['owner']->json($f['owner']->post('/api/projects', ['name' => 'แชร์แก้ไขได้ ' . TEST_RUN_ID]))['id'] ?? 0);
+    $fieldId = (int)($f['owner']->json($f['owner']->post("/api/projects/{$projectId}/fields", ['name' => 'งบลับ', 'kind' => 'number']))['id'] ?? 0);
+    $taskId = (int)($f['owner']->json($f['owner']->post("/api/projects/{$projectId}/tasks", ['title' => 'งานลับ']))['id'] ?? 0);
+    $f['owner']->request('PUT', "/api/projects/tasks/{$taskId}", ['custom' => [$fieldId => 987654]]);
+    $share = $f['owner']->json($f['owner']->post("/api/projects/{$projectId}/share", ['share_role' => 'Editor']));
+    $guest = new TestClient(TEST_BASE_URL);
+    $guest->get('/project/shared/' . ($share['share_token'] ?? ''));
+    $guest->get('/projects');
+
+    $probes = [
+        'a wrong type' => [$fieldId => ['x']],
+        'a guessed value' => [$fieldId => 987654],
+        'a new value' => [$fieldId => 1],
+        'an unknown field' => [999999999 => 1],
+    ];
+    $bodies = [];
+    foreach ($probes as $what => $custom) {
+        $res = $guest->request('PUT', "/api/projects/tasks/{$taskId}", ['custom' => $custom]);
+        assertSame(403, $res['status'], "{$what} is refused: " . $res['body']);
+        $bodies[] = $res['body'];
+    }
+    assertSame(1, count(array_unique($bodies)), 'every probe gets the same answer');
+    assertFalse(str_contains($bodies[0], 'งบลับ'), 'the answer does not name the field');
+    assertSame(987654, fieldValues($taskId)[(string)$fieldId] ?? null, 'the value is untouched');
+    assertSame(200, $guest->request('PUT', "/api/projects/tasks/{$taskId}", ['title' => 'แขกแก้ชื่อได้'])['status'], 'the guest can still edit the task itself');
+});
+
+test('saving the panel with only a field changed adds one private history line', function (TestClient $_c): void {
+    $f = fieldFixture();
+    $taskId = (int)($f['owner']->json($f['owner']->post("/api/projects/{$f['projectId']}/tasks", ['title' => 'งานแผง']))['id'] ?? 0);
+    $count = static fn(): int => (int)DB::run('SELECT COUNT(*) FROM project_activities WHERE task_id = ?', [$taskId])->fetchColumn();
+    $before = $count();
+    // แผงรายละเอียดส่งข้อมูลงานครบทุกครั้ง แม้ผู้ใช้แก้แค่ค่าช่อง (projects-board.js submitEditTask)
+    $task = DB::run('SELECT title, description, priority, due_date, assignee FROM project_tasks WHERE id = ?', [$taskId])->fetch();
+    $save = $f['owner']->request('PUT', "/api/projects/tasks/{$taskId}", [
+        'title' => $task['title'], 'description' => (string)$task['description'], 'priority' => $task['priority'],
+        'due_date' => (string)$task['due_date'], 'custom' => [$f['ids']['number'] => 5000],
+    ]);
+    assertSame(200, $save['status'], $save['body']);
+    assertSame($before + 1, $count(), 'one history line, not an extra empty one');
+    assertSame(1, (int)DB::run('SELECT private FROM project_activities WHERE task_id = ? ORDER BY id DESC LIMIT 1', [$taskId])->fetchColumn(), 'and it is private');
+});
+
+test('a long text value saves and its history line is shortened', function (TestClient $_c): void {
+    $f = fieldFixture();
+    $taskId = (int)($f['owner']->json($f['owner']->post("/api/projects/{$f['projectId']}/tasks", ['title' => 'งานข้อความยาว']))['id'] ?? 0);
+    // ช่องข้อความของตัวเอง เพราะ test ก่อนหน้าลบช่องข้อความของ fixture ไปแล้ว
+    $fieldId = (int)($f['owner']->json($f['owner']->post("/api/projects/{$f['projectId']}/fields", ['name' => 'บันทึกยาว', 'kind' => 'text']))['id'] ?? 0);
+    $long = str_repeat('ก', 500);
+    $save = $f['owner']->request('PUT', "/api/projects/tasks/{$taskId}", ['custom' => [$fieldId => $long]]);
+    assertSame(200, $save['status'], 'a 500-character value is allowed: ' . $save['body']);
+    assertSame($long, fieldValues($taskId)[(string)$fieldId] ?? null, 'and stored in full');
+    $line = (string)DB::run('SELECT action FROM project_activities WHERE task_id = ? ORDER BY id DESC LIMIT 1', [$taskId])->fetchColumn();
+    assertStringContains('บันทึกยาว เปลี่ยนเป็น', $line, 'the history still records the change');
+});
+
+test('a share link that can edit tasks assigns a teammate and they are notified', function (TestClient $_c): void {
+    $f = fieldFixture();
+    $projectId = (int)($f['owner']->json($f['owner']->post('/api/projects', ['name' => 'แชร์มอบหมาย ' . TEST_RUN_ID]))['id'] ?? 0);
+    $f['owner']->post("/api/projects/{$projectId}/members", ['email_or_username' => 'fld_member_' . TEST_RUN_ID, 'role' => 'Editor']);
+    $taskId = (int)($f['owner']->json($f['owner']->post("/api/projects/{$projectId}/tasks", ['title' => 'งานให้แขกมอบ']))['id'] ?? 0);
+    $share = $f['owner']->json($f['owner']->post("/api/projects/{$projectId}/share", ['share_role' => 'Editor']));
+    $guest = new TestClient(TEST_BASE_URL);
+    $guest->get('/project/shared/' . ($share['share_token'] ?? ''));
+    $guest->get('/projects');
+
+    $notified = static fn(): int => (int)DB::run("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND url LIKE ?", [$f['memberId'], '%task=' . $taskId . '%'])->fetchColumn();
+    $res = $guest->request('PUT', "/api/projects/tasks/{$taskId}", ['title' => 'งานให้แขกมอบ', 'assignee_user_id' => $f['memberId']]);
+    assertSame(200, $res['status'], 'a guest assigning a teammate is not a server error: ' . $res['body']);
+    assertSame(1, $notified(), 'and the teammate gets the notification');
+    assertSame(null, DB::run('SELECT actor_id FROM notifications WHERE user_id = ? ORDER BY id DESC LIMIT 1', [$f['memberId']])->fetchColumn() ?: null, 'with no actor, since a guest is not a user');
+});
+
+test('share-link guests get the same not-found for every field id', function (TestClient $_c): void {
+    $f = fieldFixture();
+    $own = $f['guest']->request('PUT', '/api/projects/fields/' . $f['ids']['number'], ['name' => 'x']);
+    $missing = $f['guest']->request('PUT', '/api/projects/fields/999999999', ['name' => 'x']);
+    assertSame([404, $missing['body']], [$own['status'], $own['body']], 'a field of the shared project looks missing too');
+});

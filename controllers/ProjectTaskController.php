@@ -38,7 +38,8 @@ class ProjectTaskController
         }
 
         $tasks      = ProjectTask::getByProject($projectId);
-        $activities = ProjectActivity::getRecent($projectId, 8);
+        // แขกลิงก์แชร์ไม่เห็นบรรทัดลับ (ไฟล์แนบ ช่องข้อมูลเพิ่มเติม) ตาม D-5
+        $activities = ProjectActivity::getRecent($projectId, 8, $userId > 0);
         $aiInsight  = Project::getAiInsight($projectId, $userId);
 
         $payload = [
@@ -187,7 +188,13 @@ class ProjectTaskController
 
         // ช่องข้อมูลเพิ่มเติม: ตรวจตามชนิด แล้วเก็บเฉพาะช่องที่ค่าเปลี่ยนจริง
         $customPatch = [];
+        $customChanges = [];
         if (array_key_exists('custom', $json)) {
+            // แขกแชร์แก้ไขไม่เห็น/ไม่แตะช่องข้อมูลเพิ่มเติม (D-5)
+            if ($userId <= 0) {
+                Response::json(['error' => 'ลิงก์แชร์แก้ช่องข้อมูลเพิ่มเติมไม่ได้'], 403);
+            }
+
             if (!is_array($json['custom'])) {
                 Response::json(['error' => 'ข้อมูลช่องเพิ่มเติมไม่ถูกต้อง'], 422);
             }
@@ -200,20 +207,17 @@ class ProjectTaskController
             } catch (ProjectColumnException $e) {
                 self::fail($e);
             }
-            $customPatch = self::customDiff($fields, $old, $cleaned, $changes);
+            $customPatch = self::customDiff($fields, $old, $cleaned, $customChanges);
         }
 
         if (empty($data) && $moveTo === null && !array_key_exists('custom', $json)) {
             Response::json(['error' => 'ไม่มีข้อมูลสำหรับแก้ไข'], 400);
         }
 
-        $changed = false;
-        if (!empty($data)) {
-            $changed = ProjectTask::update($taskId, $data);
-        }
+        // แยก "งานเปลี่ยน" กับ "ค่าช่องเปลี่ยน" เพราะสองเรื่องนี้ลงฟีดกิจกรรมคนละบรรทัด
+        $taskChanged = !empty($data) && ProjectTask::update($taskId, $data);
         if ($customPatch) {
             ProjectTask::patchCustom($taskId, $customPatch);
-            $changed = true;
         }
         if ($moveTo !== null) {
             try {
@@ -221,17 +225,21 @@ class ProjectTaskController
             } catch (ProjectColumnException $e) {
                 self::fail($e);
             }
-            $changed = true;
+            $taskChanged = true;
             $changes[] = 'คอลัมน์ เปลี่ยนเป็น \'' . $moveTo['name'] . '\'';
         }
 
+        $changed = $taskChanged || $customPatch;
         if ($changed) {
-            // ดึงกิจกรรม
             $actText = 'อัปเดตงานย่อย "' . ($data['title'] ?? $task['title']) . '"';
-            if (!empty($changes)) {
-                $actText .= ' (' . implode(', ', $changes) . ')';
+            // กันบรรทัดสาธารณะว่างเมื่อเปลี่ยนเฉพาะช่อง
+            if ($taskChanged && ($changes || !$customChanges)) {
+                ProjectActivity::log($task['project_id'], $userId, $actText . ($changes ? ' (' . implode(', ', $changes) . ')' : ''), $taskId);
             }
-            ProjectActivity::log($task['project_id'], $userId, $actText, $taskId);
+            // ค่าช่องข้อมูลเพิ่มเติมแยกเป็นบรรทัดลับของตัวเอง แขกลิงก์แชร์จึงไม่เห็นชื่อและค่า (D-5)
+            if ($customChanges) {
+                ProjectActivity::log($task['project_id'], $userId, $actText . ' (' . implode(', ', $customChanges) . ')', $taskId, true);
+            }
 
             // ผู้รับผิดชอบเปลี่ยนเป็นคนใหม่ → แจ้งคนนั้น (send() ข้ามเองถ้ามอบให้ตัวเอง)
             $newAssignee = isset($data['assignee_user_id']) ? (int)$data['assignee_user_id'] : 0;
@@ -271,7 +279,7 @@ class ProjectTaskController
         if (!$task || !$project) {
             Response::json(['error' => 'ไม่พบข้อมูลงาน'], 404);
         }
-        Response::json(['items' => ProjectActivity::forTask($taskId)]);
+        Response::json(['items' => ProjectActivity::forTask($taskId, 50, Auth::userId() > 0)]);
     }
 
     /**
@@ -452,6 +460,8 @@ class ProjectTaskController
                 $field['kind'] === 'person' => self::assigneeName((int)$value, null) ?? 'ไม่ระบุ',
                 default => (string)$value,
             };
+            // action เป็น VARCHAR(255); เก็บแค่ตัวอย่างค่า
+            $shown = mb_strimwidth($shown, 0, 60, '…');
             $changes[] = $field['name'] . " เปลี่ยนเป็น '" . $shown . "'";
         }
         return $patch;

@@ -72,9 +72,19 @@ class ProjectField
      */
     public static function normalizeOptions(mixed $raw): array
     {
-        $items = is_array($raw) ? $raw : preg_split('/\R/u', (string)$raw);
+        // ตรวจชนิดข้อมูลก่อนแปลง เพื่อไม่ให้ array กลายเป็นคำว่า "Array"
+        if (!is_array($raw) && !is_string($raw)) {
+            throw new ProjectColumnException(422, 'ตัวเลือกไม่ถูกต้อง');
+        }
+
+        $items = is_array($raw) ? $raw : preg_split('/\R/u', $raw);
         $clean = [];
         foreach ($items ?: [] as $item) {
+            // อนุญาตเฉพาะ string/int/float สำหรับแต่ละตัวเลือก
+            if (!is_string($item) && !is_int($item) && !is_float($item)) {
+                throw new ProjectColumnException(422, 'ตัวเลือกไม่ถูกต้อง');
+            }
+
             $option = trim(str_replace("\xC2\xA0", ' ', (string)$item));
             if ($option === '' || in_array($option, $clean, true)) continue;
             if (mb_strlen($option) > self::MAX_OPTION_LENGTH) {

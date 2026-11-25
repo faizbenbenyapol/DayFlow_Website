@@ -9,6 +9,10 @@ class FileModel
     // PRIVATE (authenticated) helpers
     // ------------------------------------------------------------------ //
 
+    /**
+     * คืนรายการไฟล์/โฟลเดอร์ในโฟลเดอร์ที่กำหนด พร้อมจำนวนงานที่แนบไฟล์
+     * โดยโฟลเดอร์จะนับงานที่แนบไฟล์ภายในโฟลเดอร์นั้นรวมทุกชั้นย่อย
+     */
     public static function listFolder(int $userId, ?int $parentId): array
     {
         if ($parentId === null) {
@@ -28,7 +32,69 @@ class FileModel
                 [$userId, $parentId]
             );
         }
-        return $stmt->fetchAll();
+
+        $rows = $stmt->fetchAll();
+
+        // รวบรวม id ของโฟลเดอร์ในผลลัพธ์ เพื่อคำนวณจำนวนงานแนบครั้งเดียวหลัง fetchAll
+        $folderIds = [];
+        foreach ($rows as $row) {
+            if (($row['type'] ?? '') === 'folder') {
+                $folderIds[] = (int)$row['id'];
+            }
+        }
+
+        // เติมจำนวนงานที่แนบไฟล์ในโฟลเดอร์รวมชั้นย่อยทับค่าเดิมของแถวที่เป็นโฟลเดอร์
+        $folderTaskCounts = self::attachedTasksInFolders($userId, $folderIds);
+        foreach ($rows as $i => $row) {
+            if (($row['type'] ?? '') === 'folder') {
+                $rows[$i]['attached_tasks'] = $folderTaskCounts[(int)$row['id']] ?? 0;
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * นับจำนวนงานไม่ซ้ำที่แนบไฟล์ใด ๆ ภายในโฟลเดอร์ที่ระบุรวมทุกชั้นย่อย
+     *
+     * @param int $userId เจ้าของไฟล์
+     * @param list<int> $folderIds รายการ id ของโฟลเดอร์ต้นทาง
+     * @return array<int,int> map [folder_id => จำนวนงานไม่ซ้ำ]
+     */
+    private static function attachedTasksInFolders(int $userId, array $folderIds): array
+    {
+        // แปลง id เป็น int และตัดค่าซ้ำ ก่อนสร้าง placeholders
+        $folderIds = array_values(array_unique(array_map('intval', $folderIds)));
+        if ($folderIds === []) {
+            return [];
+        }
+
+        // สร้าง placeholders ตามจำนวน id โดยไม่ต่อค่าจากผู้ใช้ลงใน SQL
+        $placeholders = implode(',', array_fill(0, count($folderIds), '?'));
+        $sql = "WITH RECURSIVE tree AS (
+                    SELECT id AS root, id
+                    FROM files
+                    WHERE user_id = ? AND id IN ($placeholders)
+                    UNION ALL
+                    SELECT t.root, f.id
+                    FROM files f
+                    JOIN tree t ON f.parent_id = t.id
+                )
+                SELECT t.root AS folder_id, COUNT(DISTINCT a.task_id) AS task_count
+                FROM tree t
+                JOIN project_task_files a ON a.file_id = t.id
+                GROUP BY t.root";
+
+        $params = array_merge([$userId], $folderIds);
+        $rows = DB::run($sql, $params)->fetchAll();
+
+        // เริ่มค่าทุกโฟลเดอร์เป็น 0 เพื่อให้โฟลเดอร์ที่ไม่มีไฟล์แนบยังได้ค่า 0
+        $counts = array_fill_keys($folderIds, 0);
+        foreach ($rows as $row) {
+            $counts[(int)$row['folder_id']] = (int)$row['task_count'];
+        }
+
+        return $counts;
     }
 
     public static function getById(int $id, int $userId): ?array

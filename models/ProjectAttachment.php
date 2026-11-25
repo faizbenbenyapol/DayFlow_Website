@@ -45,14 +45,24 @@ final class ProjectAttachment
     }
 
     /**
-     * ผูกไฟล์กับงาน ผูกซ้ำไม่เกิดแถวใหม่
+     * ผูกไฟล์กับงานเมื่องานยังมีที่ว่าง ผูกซ้ำไม่เกิดแถวใหม่
+     *
+     * นับและเพิ่มภายใน lock ของโปรเจค สองคนแนบพร้อมกันตอนเหลือที่เดียวจึงได้แค่คนเดียว
+     *
+     * @return bool false เมื่องานมีไฟล์แนบครบ MAX_PER_TASK แล้ว (ไม่ได้เพิ่มแถว)
      */
-    public static function link(int $taskId, int $fileId, int $addedBy): void
+    public static function linkIfRoom(int $projectId, int $taskId, int $fileId, int $addedBy): bool
     {
-        DB::run(
-            'INSERT IGNORE INTO project_task_files (task_id, file_id, added_by) VALUES (?, ?, ?)',
-            [$taskId, $fileId, $addedBy]
-        );
+        return ProjectColumn::locked($projectId, static function () use ($taskId, $fileId, $addedBy): bool {
+            if (self::countForTask($taskId) >= self::MAX_PER_TASK) {
+                return false;
+            }
+            DB::run(
+                'INSERT IGNORE INTO project_task_files (task_id, file_id, added_by) VALUES (?, ?, ?)',
+                [$taskId, $fileId, $addedBy]
+            );
+            return true;
+        });
     }
 
     /**

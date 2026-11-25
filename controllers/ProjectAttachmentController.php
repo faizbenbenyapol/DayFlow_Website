@@ -31,12 +31,18 @@ class ProjectAttachmentController
         return [$task, $project];
     }
 
-    /** หยุดด้วย 422 เมื่องานมีไฟล์แนบครบจำนวนแล้ว */
+    /** หยุดด้วย 422 เมื่องานมีไฟล์แนบครบจำนวนแล้ว (ตรวจก่อนอัปโหลดให้รู้เร็ว ตัวตัดสินจริงคือ linkIfRoom ใน lock) */
     private static function assertRoom(int $taskId): void
     {
         if (ProjectAttachment::countForTask($taskId) >= ProjectAttachment::MAX_PER_TASK) {
-            Response::json(['error' => 'แนบได้สูงสุด ' . ProjectAttachment::MAX_PER_TASK . ' ไฟล์ต่องาน'], 422);
+            self::full();
         }
+    }
+
+    /** ตอบ 422 งานมีไฟล์แนบครบแล้ว */
+    private static function full(): never
+    {
+        Response::json(['error' => 'แนบได้สูงสุด ' . ProjectAttachment::MAX_PER_TASK . ' ไฟล์ต่องาน'], 422);
     }
 
     /**
@@ -68,8 +74,11 @@ class ProjectAttachmentController
         } catch (RuntimeException) {
             Response::json(['error' => 'บันทึกไฟล์ไม่สำเร็จ'], 500);
         }
-        ProjectAttachment::link((int)$task['id'], $fileId, $userId);
-        ProjectActivity::log((int)$project['id'], $userId, 'แนบไฟล์ "' . $upload['name'] . '"', (int)$task['id']);
+        // ระหว่างอัปโหลดอีกคนอาจแนบจนครบ ไฟล์ยังอยู่ในคลังของคนแนบ แค่ไม่ได้ผูกกับงาน
+        if (!ProjectAttachment::linkIfRoom((int)$project['id'], (int)$task['id'], $fileId, $userId)) {
+            self::full();
+        }
+        ProjectActivity::log((int)$project['id'], $userId, 'แนบไฟล์ "' . $upload['name'] . '"', (int)$task['id'], true);
         Response::json(['ok' => true, 'file_id' => $fileId], 201);
     }
 
@@ -88,8 +97,10 @@ class ProjectAttachmentController
             Response::json(['error' => 'ไม่พบไฟล์'], 404);
         }
         self::assertRoom((int)$task['id']);
-        ProjectAttachment::link((int)$task['id'], (int)$file['id'], $userId);
-        ProjectActivity::log((int)$project['id'], $userId, 'แนบไฟล์ "' . $file['name'] . '"', (int)$task['id']);
+        if (!ProjectAttachment::linkIfRoom((int)$project['id'], (int)$task['id'], (int)$file['id'], $userId)) {
+            self::full();
+        }
+        ProjectActivity::log((int)$project['id'], $userId, 'แนบไฟล์ "' . $file['name'] . '"', (int)$task['id'], true);
         Response::json(['ok' => true, 'file_id' => (int)$file['id']], 201);
     }
 
@@ -125,7 +136,7 @@ class ProjectAttachmentController
         }
         $this->requireRole($project, (int)$link['added_by'] === Auth::userId() ? 'member' : 'admin', 'ถอดไฟล์แนบ');
         ProjectAttachment::unlink((int)$task['id'], (int)$fid);
-        ProjectActivity::log((int)$project['id'], Auth::userId(), 'ถอดไฟล์แนบ "' . $link['name'] . '"', (int)$task['id']);
+        ProjectActivity::log((int)$project['id'], Auth::userId(), 'ถอดไฟล์แนบ "' . $link['name'] . '"', (int)$task['id'], true);
         Response::json(['ok' => true]);
     }
 }

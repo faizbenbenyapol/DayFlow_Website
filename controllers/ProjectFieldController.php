@@ -30,7 +30,8 @@ class ProjectFieldController
      */
     private function loadAdminField(string $fid): array
     {
-        $field = ProjectField::find((int)$fid);
+        // แขกลิงก์แชร์ได้ 404 เดียวกันทุก id ไม่ค้นช่องเลย จึงนับจำนวนช่องจาก 403/404 ไม่ได้ (D-5)
+        $field = Auth::userId() > 0 ? ProjectField::find((int)$fid) : null;
         if (!$field) {
             Response::json(['error' => 'ไม่พบช่องข้อมูล'], 404);
         }
@@ -50,6 +51,10 @@ class ProjectFieldController
      */
     private static function normalizeName(mixed $raw): string
     {
+        // array/object จาก JSON ผิดรูปต้องไม่กลายเป็นคำว่า "Array" คืนว่างให้ตัวตรวจชื่อตอบ 422
+        if (!is_string($raw) && !is_int($raw) && !is_float($raw)) {
+            return '';
+        }
         return trim(str_replace("\xC2\xA0", ' ', (string)$raw));
     }
 
@@ -95,7 +100,7 @@ class ProjectFieldController
             self::fail($e);
         }
 
-        ProjectActivity::log($projectId, Auth::userId(), 'เพิ่มช่องข้อมูล "' . $name . '"');
+        ProjectActivity::log($projectId, Auth::userId(), 'เพิ่มช่องข้อมูล "' . $name . '"', null, true);
         Response::json(['ok' => true, 'id' => $fieldId], 201);
     }
 
@@ -137,7 +142,7 @@ class ProjectFieldController
         }
 
         $logName = $newName ?? (string)$field['name'];
-        ProjectActivity::log($projectId, Auth::userId(), 'แก้ไขช่องข้อมูล "' . $logName . '"');
+        ProjectActivity::log($projectId, Auth::userId(), 'แก้ไขช่องข้อมูล "' . $logName . '"', null, true);
         Response::json(['ok' => true]);
     }
 
@@ -166,7 +171,7 @@ class ProjectFieldController
             self::fail($e);
         }
 
-        ProjectActivity::log($projectId, Auth::userId(), 'จัดลำดับช่องข้อมูล');
+        ProjectActivity::log($projectId, Auth::userId(), 'จัดลำดับช่องข้อมูล', null, true);
         Response::json(['ok' => true]);
     }
 
@@ -191,7 +196,7 @@ class ProjectFieldController
             self::fail($e);
         }
 
-        ProjectActivity::log($projectId, Auth::userId(), 'ลบช่องข้อมูล "' . (string)$field['name'] . '"');
+        ProjectActivity::log($projectId, Auth::userId(), 'ลบช่องข้อมูล "' . (string)$field['name'] . '"', null, true);
         Response::json(['ok' => true]);
     }
 }
