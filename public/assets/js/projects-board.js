@@ -60,9 +60,14 @@ function renderBoardColumns() {
     }).join('');
 }
 
-/** เติมการ์ดที่ผ่านตัวกรองร่วม (projects-views.js) ลงในคอลัมน์ของมัน และนับเฉพาะการ์ดที่เห็น */
+/**
+ * เติมการ์ดที่ผ่านตัวกรองร่วม (projects-views.js) ลงในคอลัมน์ของมัน และนับเฉพาะการ์ดที่เห็น
+ * งานใหญ่ไม่ขึ้นบอร์ดเพราะไม่มีงานในคอลัมน์ แต่ยังเห็นได้ในมุมมองรายการ
+ */
 function renderKanbanCards() {
-    const tasks = filteredTasks();
+    buildTaskIndex();
+    let tasks = filteredTasks();
+    if (isSoftwareProject()) tasks = tasks.filter(task => task.kind !== 'epic');
     projectColumns().forEach(column => {
         const id = Number(column.id);
         const mine = tasks.filter(t => Number(t.column_id) === id);
@@ -96,7 +101,12 @@ function taskChecklist(task) {
     return '<span class="kcard-check' + (done === list.length ? ' all' : '') + '">เช็กลิสต์ ' + done + '/' + list.length + '</span>';
 }
 
+/**
+ * วาดการ์ดงานหนึ่งใบ: งานซอฟต์แวร์มีไอคอนชนิดงาน เลขงาน งานแม่ และแต้ม
+ * ส่วนโปรเจคประเภทอื่นยังใช้การ์ดเดิมทุกช่อง
+ */
 function renderKanbanCardItem(task) {
+    if (isSoftwareProject()) return renderSoftwareKanbanCard(task);
     const viewer = isViewer();
     const title = escHtml(task.title);
     const priority = (task.priority || 'Medium');
@@ -108,6 +118,44 @@ function renderKanbanCardItem(task) {
         + (task.category ? '<span class="tag kcard-tag">' + escHtml(task.category) + '</span>' : '')
         + taskChecklist(task) + taskDue(task)
         + (task.assignee_name ? '<span class="kcard-who" title="ผู้รับผิดชอบ: ' + escHtml(task.assignee_name) + '">' + escHtml(task.assignee_name) + '</span>' : '')
+        + '</div>'
+        + (viewer ? '' : '<div class="kcard-actions">'
+            + '<button type="button" class="icon-btn sm" data-act="openEditTask" data-args="[' + task.id + ']" aria-label="แก้ไขงาน: ' + title + '"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button>'
+            + '<button type="button" class="icon-btn sm" data-act="deleteTask" data-args="[' + task.id + ']" aria-label="ลบงาน: ' + title + '"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>'
+            + '</div>')
+        + '</div>';
+}
+
+/**
+ * การ์ดงานของโปรเจคซอฟต์แวร์: ชนิดงานกับเลขงานบนสุด งานย่อยบอกงานแม่
+ * และท้ายการ์ดมีป้ายงานใหญ่กับแต้ม
+ */
+function renderSoftwareKanbanCard(task) {
+    const viewer = isViewer();
+    const title = escHtml(task.title);
+    const priority = (task.priority || 'Medium');
+    const kind = task.kind || 'task';
+    const key = taskKey(task);
+    const parent = task.parent_id == null ? null : softwareTaskIndex.byId.get(Number(task.parent_id)) || null;
+    const epic = parent && parent.kind === 'epic' ? parent : null;
+
+    return '<div class="kanban-card' + (kind === 'sub' ? ' is-sub' : '') + '" data-id="' + task.id + '" data-priority="' + escHtml(priority.toLowerCase()) + '">'
+        + (kind === 'sub' && parent
+            ? '<span class="kcard-parent">↳ ' + escHtml(taskKey(parent)) + ' ' + escHtml(parent.title || '') + '</span>'
+            : '')
+        + '<div class="kcard-top">' + kindIcon(kind)
+        + (key ? '<span class="key">' + escHtml(key) + '</span>' : '')
+        + '</div>'
+        + '<div class="kanban-card-title">' + title + '</div>'
+        + '<div class="kcard-meta">'
+        + '<span class="kcard-priority">' + escHtml(PRIORITY_LABEL[priority] || priority) + '</span>'
+        + (task.category ? '<span class="tag kcard-tag">' + escHtml(task.category) + '</span>' : '')
+        + taskChecklist(task) + taskDue(task)
+        + (task.assignee_name ? '<span class="kcard-who" title="ผู้รับผิดชอบ: ' + escHtml(task.assignee_name) + '">' + escHtml(task.assignee_name) + '</span>' : '')
+        + '</div>'
+        + '<div class="kcard-foot">'
+        + (epic ? '<span class="epic-tag" title="' + escHtml(epic.title) + '">' + escHtml(epic.title) + '</span>' : '')
+        + '<span class="sp"></span>' + pointsPill(task.story_points)
         + '</div>'
         + (viewer ? '' : '<div class="kcard-actions">'
             + '<button type="button" class="icon-btn sm" data-act="openEditTask" data-args="[' + task.id + ']" aria-label="แก้ไขงาน: ' + title + '"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button>'
@@ -192,16 +240,19 @@ function handleQuickAddKey(columnId, e) {
     else if (e.key === 'Escape') toggleQuickAddForm(columnId, false);
 }
 
-/** สร้างงานในคอลัมน์ที่กำหนดด้วย column_id แล้วโหลดบอร์ดใหม่ */
+/** สร้างงานในคอลัมน์ที่กำหนดด้วย column_id แล้วโหลดบอร์ดใหม่ (โปรเจคซอฟต์แวร์สร้างเป็นงานธรรมดา) */
 async function submitQuickAdd(columnId) {
     const input = document.getElementById('quickadd-col-' + Number(columnId) + '-input');
     const title = input.value.trim();
     if (!title) { input.focus(); return; }
 
+    const body = { title, column_id: Number(columnId), priority: 'Medium' };
+    if (isSoftwareProject()) body.kind = 'task';
+
     try {
         await apiFetch(BASE_URL + '/api/projects/' + activeProjectId + '/tasks', {
             method: 'POST',
-            body: JSON.stringify({ title, column_id: Number(columnId), priority: 'Medium' })
+            body: JSON.stringify(body)
         });
         toggleQuickAddForm(columnId, false);
         await selectProject(activeProjectId);
@@ -233,8 +284,10 @@ function fillAssignees(task) {
 /**
  * เปิดกล่องแก้งาน: เติมช่องต่างๆ และสร้างตัวเลือกคอลัมน์จากคอลัมน์จริงของโปรเจค
  * เก็บคอลัมน์เดิมไว้ใน data-original เพื่อส่ง column_id เฉพาะเมื่อผู้ใช้เปลี่ยน
+ * โปรเจคซอฟต์แวร์เติมชนิดงาน งานแม่ แต้ม และรายการงานลูกในแผงเดียวกัน
  */
 function openEditTask(id) {
+    buildTaskIndex();
     const task = (activeProjectData.tasks || []).find(t => t.id === id);
     if (!task) return;
 
@@ -251,6 +304,7 @@ function openEditTask(id) {
     fillAssignees(task);
     document.getElementById('editTaskDue').value = task.due_date || '';
     formErrorLine('taskError', '');
+    fillSoftwareTaskFields(task);
 
     currentChecklist = [];
     if (task.checklist) {
@@ -258,11 +312,173 @@ function openEditTask(id) {
     }
     renderChecklist();
     renderTaskCustomFields(task);
+    renderSoftwareTaskSections(task);
     openModal('editTaskModal');
     setTaskParam(task.id);
     loadTaskHistory(task.id);
     loadTaskComments(task.id);
     loadTaskFiles(task.id);
+}
+
+/**
+ * เติมช่องเฉพาะงานซอฟต์แวร์ในแผงรายละเอียด: ชนิดงาน แต้ม งานใหญ่ และงานแม่
+ * ซ่อนทั้งชุดเมื่อโปรเจคไม่ใช่ซอฟต์แวร์
+ */
+function fillSoftwareTaskFields(task) {
+    const software = isSoftwareProject();
+    const keyEl = document.getElementById('editTaskKey');
+    if (keyEl) {
+        const key = software ? taskKey(task) : '';
+        keyEl.textContent = key;
+        keyEl.hidden = !key;
+    }
+    const wrap = document.getElementById('editTaskSoftware');
+    if (!wrap) return;
+    wrap.hidden = !software;
+    if (!software) return;
+
+    const tasks = (activeProjectData && activeProjectData.tasks) || [];
+    const kind = task.kind || 'task';
+
+    const kindSelect = document.getElementById('editTaskKind');
+    kindSelect.innerHTML = Object.keys(KIND_LABEL).map(value =>
+        '<option value="' + escHtml(value) + '">' + escHtml(KIND_LABEL[value]) + '</option>').join('');
+    kindSelect.value = kind;
+
+    const pointsSelect = document.getElementById('editTaskPoints');
+    const currentPoints = task.story_points == null || task.story_points === '' ? '' : String(task.story_points);
+    const choices = pointChoices().map(String);
+    pointsSelect.innerHTML = '<option value="">—</option>' + choices.map(value =>
+        '<option value="' + escHtml(value) + '">' + escHtml(value) + '</option>').join('');
+    if (currentPoints && !choices.includes(currentPoints)) {
+        pointsSelect.insertAdjacentHTML('beforeend', '<option value="' + escHtml(currentPoints) + '">' + escHtml(currentPoints) + '</option>');
+    }
+    pointsSelect.value = currentPoints;
+
+    const epicSelect = document.getElementById('editTaskEpic');
+    const epics = tasks.filter(item => (item.kind || 'task') === 'epic' && Number(item.id) !== Number(task.id));
+    epicSelect.innerHTML = '<option value="">ไม่มี</option>' + epics.map(item =>
+        '<option value="' + Number(item.id) + '">' + escHtml(taskKey(item) + ' ' + (item.title || '')) + '</option>').join('');
+    const parent = task.parent_id == null ? null : softwareTaskIndex.byId.get(Number(task.parent_id)) || null;
+    epicSelect.value = parent && parent.kind === 'epic' ? String(parent.id) : '';
+
+    const parentSelect = document.getElementById('editTaskParent');
+    const parents = tasks.filter(item => ['story', 'task', 'bug'].includes(item.kind || 'task') && Number(item.id) !== Number(task.id));
+    parentSelect.innerHTML = '<option value="">เลือกงานแม่</option>' + parents.map(item =>
+        '<option value="' + Number(item.id) + '">' + escHtml(taskKey(item) + ' ' + (item.title || '')) + '</option>').join('');
+    parentSelect.value = parent && parent.kind !== 'epic' ? String(parent.id) : '';
+
+    toggleSoftwareTaskFields(kind);
+}
+
+/** แสดงช่องที่ใช้กับชนิดงานที่เลือก: แต้มสำหรับทุกชนิดยกเว้นงานใหญ่ และช่องงานใหญ่หรืองานแม่ตามชนิด */
+function toggleSoftwareTaskFields(kind) {
+    const pointsGroup = document.getElementById('editTaskPointsGroup');
+    const epicGroup = document.getElementById('editTaskEpicGroup');
+    const parentGroup = document.getElementById('editTaskParentGroup');
+    if (pointsGroup) pointsGroup.hidden = kind === 'epic';
+    if (epicGroup) epicGroup.hidden = !['story', 'task', 'bug'].includes(kind);
+    if (parentGroup) parentGroup.hidden = kind !== 'sub';
+    const parentSelect = document.getElementById('editTaskParent');
+    if (parentSelect) parentSelect.required = kind === 'sub';
+}
+
+/** เปลี่ยนชนิดงานในแผงรายละเอียดแล้วแสดง/ซ่อนช่องที่เกี่ยวข้องทันที */
+function handleTaskKindChange(value) {
+    toggleSoftwareTaskFields(value);
+}
+
+/** วาดส่วนงานย่อยของเรื่องผู้ใช้/งาน/บั๊ก และส่วนงานลูกของงานใหญ่ในแผงรายละเอียด */
+function renderSoftwareTaskSections(task) {
+    const subtasks = document.getElementById('taskSubtasksSection');
+    const epicSection = document.getElementById('taskEpicChildrenSection');
+    if (!subtasks || !epicSection) return;
+    if (!isSoftwareProject()) {
+        subtasks.hidden = true;
+        epicSection.hidden = true;
+        return;
+    }
+
+    const kind = task.kind || 'task';
+    if (['story', 'task', 'bug'].includes(kind)) {
+        subtasks.hidden = false;
+        epicSection.hidden = true;
+        const children = childrenOf(task.id).filter(item => item.kind === 'sub');
+        const done = children.filter(isDoneTask).length;
+        document.getElementById('taskSubtasksHeading').innerHTML = 'งานย่อย <small>' + done + '/' + children.length + '</small>';
+        document.getElementById('taskSubtasksList').innerHTML = children.length
+            ? children.map(softwareChildRow).join('')
+            : '<p class="proj-note">ยังไม่มีงานย่อย</p>';
+        show('taskAddSubtaskButton', !isViewer());
+        return;
+    }
+
+    if (kind === 'epic') {
+        subtasks.hidden = true;
+        epicSection.hidden = false;
+        const progress = epicProgress(task.id);
+        const percent = progress.total ? Math.round(progress.done / progress.total * 100) : 0;
+        document.getElementById('taskEpicChildrenHeading').innerHTML = 'งานในงานใหญ่นี้ <small>เสร็จ '
+            + progress.done + '/' + progress.total + ' · ' + percent + '%</small>';
+        const meter = document.getElementById('taskEpicChildrenMeter');
+        meter.max = progress.total || 1;
+        meter.value = progress.done;
+        meter.setAttribute('aria-label', 'เสร็จ ' + progress.done + ' จาก ' + progress.total + ' งาน');
+        document.getElementById('taskEpicChildrenList').innerHTML = progress.total
+            ? childrenOf(task.id).map(softwareChildRow).join('')
+            : '<p class="proj-note">ยังไม่มีงานในงานใหญ่นี้</p>';
+        return;
+    }
+
+    subtasks.hidden = true;
+    epicSection.hidden = true;
+}
+
+/** แถวงานลูกในแผงรายละเอียด: ไอคอน เลขงาน ชื่องาน และชื่อคอลัมน์ */
+function softwareChildRow(task) {
+    const column = columnById(task.column_id);
+    const key = taskKey(task);
+    return '<div class="child-row" data-type="' + escHtml(task.kind || 'task') + '">'
+        + kindIcon(task.kind || 'task')
+        + (key ? '<span class="key">' + escHtml(key) + '</span>' : '')
+        + '<span class="title">' + escHtml(task.title || '') + '</span>'
+        + '<span class="state">' + escHtml(column ? column.name : '') + '</span>'
+        + '</div>';
+}
+
+/** เพิ่มงานย่อยใต้งานที่เปิดอยู่: ถามชื่อแล้ว POST เข้าคอลัมน์เดียวกับงานแม่ */
+async function addSubtask() {
+    if (!isSoftwareProject() || isViewer()) return;
+    const parentId = parseInt(document.getElementById('editTaskId').value, 10);
+    const parent = softwareTaskIndex.byId.get(parentId);
+    if (!parent) return;
+
+    const title = (await askText({
+        title: 'เพิ่มงานย่อย',
+        message: 'งานย่อยจะอยู่คอลัมน์เดียวกับงานแม่ และมีเลขงานของตัวเอง',
+        label: 'ชื่องานย่อย',
+        okLabel: 'เพิ่ม',
+        required: true
+    }) || '').trim();
+    if (!title) return;
+
+    try {
+        await apiFetch(BASE_URL + '/api/projects/' + activeProjectId + '/tasks', {
+            method: 'POST',
+            body: JSON.stringify({
+                title,
+                kind: 'sub',
+                parent_id: parentId,
+                column_id: Number(parent.column_id)
+            })
+        });
+        toast('เพิ่มงานย่อยแล้ว');
+        await selectProject(activeProjectId);
+        await refreshProjectList();
+        openEditTask(parentId);
+    } catch (err) {
+        formErrorLine('taskError', err.message || 'เพิ่มงานย่อยไม่สำเร็จ ลองอีกครั้ง');
+    }
 }
 
 /**
@@ -403,6 +619,7 @@ async function saveChecklistQuickly() {
 /**
  * บันทึกงานจากกล่องแก้ไข: ส่ง column_id เฉพาะเมื่อผู้ใช้เปลี่ยนคอลัมน์
  * ฟิลด์อื่นส่งตามปกติ แล้วโหลดบอร์ดและรายการโปรเจคใหม่
+ * โปรเจคซอฟต์แวร์ส่งชนิดงาน งานแม่ และแต้มเฉพาะช่องที่ค่าเปลี่ยนจากตอนเปิดแผง
  */
 async function submitEditTask(e) {
     e.preventDefault();
@@ -433,6 +650,24 @@ async function submitEditTask(e) {
     if (columnSelect.value !== columnSelect.dataset.original) {
         payload.column_id = parseInt(columnSelect.value, 10);
     }
+    if (isSoftwareProject()) {
+        const loaded = (activeProjectData.tasks || []).find(task => Number(task.id) === id) || null;
+        const loadedKind = loaded && loaded.kind ? loaded.kind : 'task';
+        const loadedParent = loaded && loaded.parent_id != null && loaded.parent_id !== '' ? Number(loaded.parent_id) : null;
+        const loadedPoints = loaded && loaded.story_points != null && loaded.story_points !== '' ? Number(loaded.story_points) : null;
+
+        const kind = document.getElementById('editTaskKind').value;
+        let parentId = null;
+        if (kind === 'sub' || ['story', 'task', 'bug'].includes(kind)) {
+            const select = kind === 'sub' ? document.getElementById('editTaskParent') : document.getElementById('editTaskEpic');
+            parentId = parseInt(select.value, 10) || null;
+        }
+        const points = kind === 'epic' ? null : (parseInt(document.getElementById('editTaskPoints').value, 10) || null);
+
+        if (kind !== loadedKind) payload.kind = kind;
+        if (parentId !== loadedParent) payload.parent_id = parentId;
+        if (points !== loadedPoints) payload.story_points = points;
+    }
 
     try {
         await apiFetch(BASE_URL + '/api/projects/tasks/' + id, {
@@ -448,9 +683,16 @@ async function submitEditTask(e) {
     }
 }
 
+/** ลบงานหลังยืนยัน และบอกถ้างานนั้นมีงานย่อยที่จะถูกลบตามไปด้วย */
 async function deleteTask(id) {
+    buildTaskIndex();
     const task = (activeProjectData.tasks || []).find(t => t.id === id);
-    if (!await confirmAction('ลบ' + (task ? ' "' + task.title + '"' : 'งานนี้') + ' ออกจากบอร์ดแล้วกู้คืนไม่ได้', 'ลบงาน', 'ลบงานนี้?')) return;
+    let message = 'ลบ' + (task ? ' "' + task.title + '"' : 'งานนี้') + ' ออกจากบอร์ดแล้วกู้คืนไม่ได้';
+    if (isSoftwareProject()) {
+        const subs = childrenOf(id).filter(item => item.kind === 'sub');
+        if (subs.length) message += ' · งานย่อย ' + subs.length + ' งานจะถูกลบด้วย';
+    }
+    if (!await confirmAction(message, 'ลบงาน', 'ลบงานนี้?')) return;
 
     try {
         await apiFetch(BASE_URL + '/api/projects/tasks/' + id, { method: 'DELETE' });

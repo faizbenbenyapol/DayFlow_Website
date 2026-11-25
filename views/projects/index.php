@@ -112,6 +112,15 @@
             <option value="week">7 วันข้างหน้า</option>
             <option value="none">ไม่มีวันส่ง</option>
         </select>
+        <select id="taskFilterKind" class="form-control" aria-label="ชนิดงาน" data-act="setTaskFilter" data-args='["kind", "$value"]' data-on="change" hidden>
+            <option value="">ทุกชนิด</option>
+            <option value="epic">งานใหญ่</option>
+            <option value="story">เรื่องผู้ใช้</option>
+            <option value="task">งาน</option>
+            <option value="bug">บั๊ก</option>
+            <option value="sub">งานย่อย</option>
+        </select>
+        <select id="taskFilterEpic" class="form-control" aria-label="งานใหญ่" data-act="setTaskFilter" data-args='["epic", "$value"]' data-on="change" hidden></select>
         <span class="view-field-filters" id="taskFieldFilters"></span>
         <span class="view-filter-state" id="taskFilterState" role="status" hidden></span>
         <button class="btn btn-link btn-sm" type="button" id="taskFilterClear" data-act="clearTaskFilters" hidden>ล้างตัวกรอง</button>
@@ -224,6 +233,7 @@
             <button class="subnav-link" type="button" id="settingsNavColumns" data-act="showSettingsSection" data-args='["columns"]'>คอลัมน์</button>
             <button class="subnav-link" type="button" id="settingsNavFields" data-act="showSettingsSection" data-args='["fields"]'>ช่องข้อมูล</button>
             <button class="subnav-link" type="button" id="settingsNavType" data-act="showSettingsSection" data-args='["type"]'>ประเภท</button>
+            <button class="subnav-link" type="button" id="settingsNavSoftware" data-act="showSettingsSection" data-args='["software"]' hidden>ซอฟต์แวร์</button>
         </nav>
 
         <!-- ทีมและสิทธิ์ -->
@@ -366,6 +376,42 @@
                     </div>
                 </div>
                 <p class="alert alert-warning" id="typeDenied" role="alert" hidden>เปลี่ยนประเภทได้เฉพาะเจ้าของ</p>
+            </div>
+        </div>
+
+        <!-- ซอฟต์แวร์: ตัวย่อเลขงานและชุดแต้ม (เห็นเฉพาะโปรเจคซอฟต์แวร์) -->
+        <div class="proj-settings-pane" id="settingsSoftware" hidden>
+            <div class="sec">
+                <div class="sec-head"><h2>ซอฟต์แวร์</h2></div>
+                <div class="set-row">
+                    <div>
+                        <h4>ตัวย่อเลขงาน</h4>
+                        <p>ตัวอักษรอังกฤษ 2–6 ตัว</p>
+                    </div>
+                    <div>
+                        <label class="form-label" for="softwareKeyPrefix">ตัวย่อเลขงาน</label>
+                        <div class="software-prefix-row">
+                            <input type="text" id="softwareKeyPrefix" class="form-control" maxlength="6" autocomplete="off"
+                                   data-act="updateSoftwarePrefixPreview" data-on="input" aria-describedby="softwarePrefixPreview">
+                            <button type="button" class="btn btn-sm btn-primary" id="softwarePrefixSave" data-act="saveSoftwarePrefix">บันทึก</button>
+                        </div>
+                        <p class="proj-note" id="softwarePrefixPreview">งานถัดไปจะเป็น <span class="prefix-demo" id="softwarePrefixDemo">-</span></p>
+                    </div>
+                </div>
+                <div class="set-row">
+                    <div>
+                        <h4>ชุดแต้ม</h4>
+                        <p>ตัวเลือกในช่องแต้มของงาน</p>
+                    </div>
+                    <div>
+                        <label class="sr-only" for="softwarePointScale">ชุดแต้ม</label>
+                        <select id="softwarePointScale" class="form-control" data-act="saveSoftwarePointScale" data-args='["$value"]' data-on="change">
+                            <option value="fib">ฟีโบนัชชี 1 2 3 5 8 13 21</option>
+                            <option value="ten">1–10</option>
+                        </select>
+                    </div>
+                </div>
+                <p class="alert alert-warning" id="softwareDenied" role="alert" hidden>ตัวย่อเลขงานและชุดแต้มตั้งได้เฉพาะเจ้าของและผู้ดูแล</p>
             </div>
         </div>
     </div>
@@ -534,7 +580,7 @@
 <div class="modal-backdrop task-panel" id="editTaskModal" aria-hidden="true">
     <div class="modal modal-task" role="dialog" aria-labelledby="editTaskTitleHeading">
         <div class="modal-header">
-            <h2 class="modal-title" id="editTaskTitleHeading">รายละเอียดงาน</h2>
+            <h2 class="modal-title" id="editTaskTitleHeading">รายละเอียดงาน <span class="key" id="editTaskKey" hidden></span></h2>
             <button class="icon-btn" type="button" data-act="copyTaskLink" aria-label="คัดลอกลิงก์ของงานนี้" title="คัดลอกลิงก์ของงานนี้">
                 <svg class="icon" aria-hidden="true"><use href="#i-link"/></svg>
             </button>
@@ -550,6 +596,36 @@
                 <div class="form-group">
                     <label class="form-label" for="editTaskDescription">คำอธิบาย</label>
                     <textarea id="editTaskDescription" class="form-control" rows="4" maxlength="10000" placeholder="รายละเอียด ลิงก์ หรือเงื่อนไขที่ทีมต้องรู้"></textarea>
+                </div>
+
+                <!-- ช่องเฉพาะโปรเจคซอฟต์แวร์: ชนิดงาน แต้ม งานใหญ่ และงานแม่ -->
+                <div id="editTaskSoftware" hidden>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="editTaskKind">ชนิดงาน</label>
+                            <select id="editTaskKind" class="form-control" data-act="handleTaskKindChange" data-args='["$value"]' data-on="change">
+                                <option value="epic">งานใหญ่</option>
+                                <option value="story">เรื่องผู้ใช้</option>
+                                <option value="task">งาน</option>
+                                <option value="bug">บั๊ก</option>
+                                <option value="sub">งานย่อย</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="editTaskPointsGroup">
+                            <label class="form-label" for="editTaskPoints">แต้ม</label>
+                            <select id="editTaskPoints" class="form-control"></select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group" id="editTaskEpicGroup">
+                            <label class="form-label" for="editTaskEpic">งานใหญ่</label>
+                            <select id="editTaskEpic" class="form-control"></select>
+                        </div>
+                        <div class="form-group" id="editTaskParentGroup" hidden>
+                            <label class="form-label" for="editTaskParent">งานแม่</label>
+                            <select id="editTaskParent" class="form-control"></select>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -581,6 +657,18 @@
                     <input type="date" id="editTaskDue" class="form-control">
                 </div>
                 <div class="task-custom" id="editTaskCustom" hidden></div>
+
+                <!-- งานย่อยของเรื่องผู้ใช้/งาน/บั๊ก และงานลูกของงานใหญ่ (โปรเจคซอฟต์แวร์) -->
+                <section class="dsec" id="taskSubtasksSection" hidden>
+                    <h3 id="taskSubtasksHeading">งานย่อย <small>0/0</small></h3>
+                    <div id="taskSubtasksList"></div>
+                    <button type="button" class="btn btn-link btn-sm" id="taskAddSubtaskButton" data-act="addSubtask" hidden>+ งานย่อย</button>
+                </section>
+                <section class="dsec" id="taskEpicChildrenSection" hidden>
+                    <h3 id="taskEpicChildrenHeading">งานในงานใหญ่นี้ <small>เสร็จ 0/0 · 0%</small></h3>
+                    <progress class="task-epic-meter" id="taskEpicChildrenMeter" max="1" value="0"></progress>
+                    <div id="taskEpicChildrenList"></div>
+                </section>
 
                 <div class="modal-checklist-container">
                     <div class="checklist-header">

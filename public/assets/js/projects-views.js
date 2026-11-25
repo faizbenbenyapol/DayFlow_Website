@@ -4,7 +4,7 @@
  * เป็น classic script แชร์ global กับไฟล์อื่น ไม่มีการเรียก API และไม่ผูก event เอง
  */
 
-const TASK_VIEW_DEFAULT = { q: '', who: '', grp: '', due: '', sort: 'due', dir: 1, group: 'column' };
+const TASK_VIEW_DEFAULT = { q: '', who: '', grp: '', due: '', kind: '', epic: '', sort: 'due', dir: 1, group: 'column' };
 const TASK_SORT_KEYS = ['title', 'column', 'who', 'due', 'priority'];
 const TASK_PRIORITY_ORDER = { Critical: 0, High: 1, Medium: 2, Low: 3 };
 const TASK_CAL_DOW = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
@@ -61,7 +61,7 @@ function taskCalResetMonth() {
 
 /** ใส่ค่า taskView ลงช่องกรอก/เลือกในแถบตัวกรอง (ข้ามช่องที่ไม่มีในหน้า) */
 function syncTaskFilterInputs() {
-    const map = { taskFilterQ: 'q', taskFilterWho: 'who', taskFilterGrp: 'grp', taskFilterDue: 'due', taskListGroup: 'group' };
+    const map = { taskFilterQ: 'q', taskFilterWho: 'who', taskFilterGrp: 'grp', taskFilterDue: 'due', taskFilterKind: 'kind', taskFilterEpic: 'epic', taskListGroup: 'group' };
     Object.keys(map).forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = taskView[map[id]];
@@ -84,44 +84,71 @@ function buildTaskViewWhoOptions() {
     }
 }
 
+/** สร้างตัวเลือกงานใหญ่ของโปรเจคซอฟต์แวร์ และล้างค่าที่ไม่มีในรายการแล้ว */
+function buildTaskViewSoftwareFilters() {
+    const software = isSoftwareProject();
+    const kindSelect = document.getElementById('taskFilterKind');
+    const epicSelect = document.getElementById('taskFilterEpic');
+    if (kindSelect) kindSelect.hidden = !software;
+    if (epicSelect) epicSelect.hidden = !software;
+    if (!software) {
+        taskView.kind = '';
+        taskView.epic = '';
+        return;
+    }
+
+    const epics = ((activeProjectData && activeProjectData.tasks) || []).filter(task => (task.kind || 'task') === 'epic');
+    if (!epics.some(task => String(task.id) === String(taskView.epic))) taskView.epic = '';
+    if (epicSelect) {
+        epicSelect.innerHTML = '<option value="">ทุกงานใหญ่</option>' + epics.map(task =>
+            '<option value="' + Number(task.id) + '">' + escHtml(taskKey(task) + ' ' + (task.title || '')) + '</option>').join('');
+    }
+}
+
 /** คืนจำนวนตัวกรองที่เปิดใช้อยู่ (0 = ไม่ได้กรอง) */
 function countActiveTaskFilters() {
     return (String(taskView.q || '').trim() ? 1 : 0)
         + (taskView.who ? 1 : 0)
         + (taskView.grp ? 1 : 0)
         + (taskView.due ? 1 : 0)
+        + (taskView.kind ? 1 : 0)
+        + (taskView.epic ? 1 : 0)
         + Object.values(taskView.cf || {}).filter(Boolean).length;
 }
 
 /**
  * โหลดมุมมองงานของโปรเจคที่เปิดอยู่: อ่าน sessionStorage ตั้งเดือนปฏิทิน
- * สร้างตัวเลือกผู้รับผิดชอบ เติมค่าในฟอร์ม แล้ววาดทุกมุมมอง
+ * สร้างตัวเลือกผู้รับผิดชอบและงานใหญ่ เติมค่าในฟอร์ม แล้ววาดทุกมุมมอง
  */
 function loadTaskView() {
     taskView = readTaskView();
     taskCalResetMonth();
     buildTaskViewWhoOptions();
+    buildTaskViewSoftwareFilters();
     if (!isTaskSortKey(taskView.sort)) taskView.sort = 'due';
     buildTaskFieldFilters();
     syncTaskFilterInputs();
     renderTaskViews();
 }
 
-/** เปลี่ยนตัวกรองหนึ่งตัว (q/who/grp/due/group) บันทึกแล้ววาดใหม่ */
+/** เปลี่ยนตัวกรองหนึ่งตัว (q/who/grp/due/kind/epic/group) บันทึกแล้ววาดใหม่ */
 function setTaskFilter(key, value) {
-    if (!['q', 'who', 'grp', 'due', 'group'].includes(key)) return;
+    if (!['q', 'who', 'grp', 'due', 'kind', 'epic', 'group'].includes(key)) return;
     taskView[key] = value == null ? '' : String(value);
     saveTaskView();
     renderTaskViews();
 }
 
-/** ล้างตัวกรอง q/who/grp/due (คง sort/dir/group) แล้ววาดใหม่ */
+/** ล้างตัวกรอง q/who/grp/due/kind/epic (คง sort/dir/group) แล้ววาดใหม่ */
 function clearTaskFilters() {
     taskView.q = '';
     taskView.who = '';
     taskView.grp = '';
     taskView.due = '';
+    taskView.kind = '';
+    taskView.epic = '';
     taskView.cf = {};
+    buildTaskViewSoftwareFilters();
     buildTaskFieldFilters();
     syncTaskFilterInputs();
     saveTaskView();
@@ -133,19 +160,41 @@ function hasTaskFilter() {
     return countActiveTaskFilters() > 0;
 }
 
-/** คืนงานที่ผ่านตัวกรองทั้งหมด ตามลำดับเดิมของ activeProjectData.tasks */
+/**
+ * คืนงานที่ผ่านตัวกรองทั้งหมด ตามลำดับเดิมของ activeProjectData.tasks
+ * โปรเจคซอฟต์แวร์ค้นด้วยเลขงานได้ เช่น df-49 กรองตามชนิดงานได้
+ * และกรองงานใหญ่โดยนับงานลูกตรงและงานย่อยของเรื่องผู้ใช้ในงานใหญ่นั้นด้วย
+ */
 function filteredTasks() {
     const tasks = (activeProjectData && activeProjectData.tasks) || [];
     const q = String(taskView.q || '').trim().toLowerCase();
     const today = serverToday();
     const weekEnd = addDaysIso(today, 7);
+    const software = isSoftwareProject();
+    if (software) buildTaskIndex();
+    const prefix = software ? String((activeProjectData.project.key_prefix || '')).toLowerCase() : '';
+    const keyMatch = software ? q.match(/^([a-z]{2,6})-(\d+)$/) : null;
+    const keyNumber = keyMatch && keyMatch[1] === prefix ? Number(keyMatch[2]) : null;
     return tasks.filter(task => {
         if (q) {
-            const title = String(task.title || '').toLowerCase();
-            const category = String(task.category || '').toLowerCase();
-            if (!title.includes(q) && !category.includes(q) && !taskTextFieldsInclude(task, q)) return false;
+            if (keyNumber !== null) {
+                if (Number(task.number) !== keyNumber) return false;
+            } else {
+                const title = String(task.title || '').toLowerCase();
+                const category = String(task.category || '').toLowerCase();
+                if (!title.includes(q) && !category.includes(q) && !taskTextFieldsInclude(task, q)) return false;
+            }
         }
         if (!taskMatchesFieldFilters(task)) return false;
+        if (software) {
+            if (taskView.kind && (task.kind || 'task') !== taskView.kind) return false;
+            if (taskView.epic) {
+                const parentId = task.parent_id == null || task.parent_id === '' ? null : Number(task.parent_id);
+                const parent = parentId === null ? null : softwareTaskIndex.byId.get(parentId) || null;
+                const grandParentId = parent && parent.parent_id != null && parent.parent_id !== '' ? Number(parent.parent_id) : null;
+                if (parentId !== Number(taskView.epic) && grandParentId !== Number(taskView.epic)) return false;
+            }
+        }
         if (taskView.who === 'me') {
             if (!CURRENT_USER_ID || Number(task.assignee_user_id) !== Number(CURRENT_USER_ID)) return false;
         } else if (taskView.who === 'none') {
@@ -368,7 +417,7 @@ function groupedTaskList(tasks) {
     return [{ label: '', grp: '', tasks }];
 }
 
-/** HTML ของแถวงานหนึ่งแถวในตารางรายการ */
+/** HTML ของแถวงานหนึ่งแถวในตารางรายการ; โปรเจคซอฟต์แวร์มีไอคอนชนิดงานและเลขงานนำหน้าชื่อ */
 function taskListRowHtml(task, today) {
     const id = Number(task.id);
     const column = columnById(task.column_id);
@@ -379,9 +428,13 @@ function taskListRowHtml(task, today) {
         ? escHtml(formatDate(task.due_date)) + (over ? ' · เลยกำหนด' : '')
         : '—';
     const priority = task.priority || 'Medium';
+    const key = isSoftwareProject() ? taskKey(task) : '';
+    const leading = isSoftwareProject()
+        ? kindIcon(task.kind || 'task') + (key ? '<span class="key">' + escHtml(key) + '</span> ' : '')
+        : '';
     return '<tr class="row" data-g="' + escHtml(grp) + '" data-act="openEditTask" data-args="[' + id + ']">'
         + '<td class="c-title"><button type="button" class="task-open" data-act="openEditTask" data-args="[' + id + ']">'
-        + escHtml(task.title || '') + '</button>'
+        + leading + escHtml(task.title || '') + '</button>'
         + (task.category ? '<span class="tag">' + escHtml(task.category) + '</span>' : '')
         + '</td>'
         + '<td class="c-col"><span class="gdot" aria-hidden="true"></span>' + escHtml(column ? column.name : '') + '</td>'

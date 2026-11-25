@@ -48,4 +48,10 @@
     <symbol id="i-grip" viewBox="0 0 24 24"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></symbol>
     <symbol id="i-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol>
     <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <!-- ชนิดงานของโปรเจคซอฟต์แวร์: รูปทรงต่างกันจึงแยกได้แม้ไม่เห็นสี -->
+    <symbol id="i-kind-epic" viewBox="0 0 16 16"><path d="M9 1 3 9h4l-1 6 6-8H8z" fill="currentColor"/></symbol>
+    <symbol id="i-kind-story" viewBox="0 0 16 16"><path d="M4 1.5h8v13l-4-3-4 3z" fill="currentColor"/></symbol>
+    <symbol id="i-kind-task" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m5 8.2 2 2 4-4.2" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="i-kind-bug" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.2" fill="currentColor"/><circle cx="8" cy="8" r="2.2" fill="var(--paper)"/></symbol>
+    <symbol id="i-kind-sub" viewBox="0 0 16 16"><path d="M4 2v6.5a2 2 0 0 0 2 2h7M10 7.5l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
 </svg>

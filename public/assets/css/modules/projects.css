@@ -1804,3 +1804,204 @@
         grid-column: 2 / -1;
     }
 }
+
+/* ---------------------------------------------------------------
+   งานชนิดซอฟต์แวร์: ไอคอนชนิดงาน เลขงาน แต้ม งานใหญ่ และงานย่อย
+--------------------------------------------------------------- */
+.ticon {
+    display: inline-grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    flex: none;
+    vertical-align: -3px;
+}
+
+.ticon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.ticon[data-type="epic"] {
+    color: var(--place-2);
+}
+
+.ticon[data-type="story"] {
+    color: var(--ledger-green);
+}
+
+.ticon[data-type="task"] {
+    color: var(--ink);
+}
+
+.ticon[data-type="bug"] {
+    color: var(--stamp-red);
+}
+
+.ticon[data-type="sub"] {
+    color: var(--pencil);
+}
+
+.key {
+    font: 0.75rem var(--font-mono);
+    color: var(--pencil);
+    white-space: nowrap;
+}
+
+.pts {
+    display: inline-grid;
+    place-items: center;
+    min-width: 22px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 10px;
+    border: 1px solid var(--rule);
+    background: var(--paper-sunk);
+    font: 600 0.75rem/1 var(--font-num);
+    color: var(--ink);
+}
+
+.pts.empty {
+    color: var(--pencil);
+    font-weight: 400;
+}
+
+.epic-tag {
+    display: inline-block;
+    max-width: 11rem;
+    padding: 0 6px;
+    border-radius: 4px;
+    background: var(--lilac);
+    color: var(--ink);
+    font-size: 0.6875rem;
+    line-height: 18px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+}
+
+.kcard-top {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.kcard-foot {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+.kcard-top .sp,
+.kcard-foot .sp {
+    flex: 1;
+}
+
+.kcard-parent {
+    display: block;
+    margin-bottom: 2px;
+    font-size: 0.6875rem;
+    color: var(--pencil);
+}
+
+.kanban-card.is-sub {
+    margin-left: var(--space-3);
+    border-style: dashed;
+}
+
+/* แผงรายละเอียดงาน: งานย่อยและงานในงานใหญ่ */
+.dsec h3 {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin: 0 0 var(--space-2);
+    font-size: 0.9375rem;
+}
+
+.dsec h3 small {
+    font-weight: 400;
+    font-size: 0.8125rem;
+    color: var(--pencil);
+}
+
+.child-row {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.875rem;
+}
+
+.child-row .title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.state {
+    padding: 0 6px;
+    border-radius: 4px;
+    background: var(--paper-sunk);
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.task-epic-meter {
+    display: block;
+    width: 100%;
+    height: 8px;
+    margin: 0 0 var(--space-2);
+    accent-color: var(--ledger-green);
+}
+
+/* ตั้งค่า: ตัวย่อเลขงานและชุดแต้ม */
+.set-row {
+    display: grid;
+    grid-template-columns: 12rem minmax(0, 1fr);
+    gap: var(--space-3);
+    align-items: start;
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--rule);
+}
+
+.set-row h4 {
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+.set-row p {
+    margin: 4px 0 0;
+    font-size: 0.8125rem;
+    color: var(--pencil);
+}
+
+.software-prefix-row {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+}
+
+.software-prefix-row .form-control {
+    max-width: 10rem;
+}
+
+#softwarePointScale {
+    max-width: 20rem;
+}
+
+.prefix-demo {
+    font: 600 1rem var(--font-mono);
+}
+
+@media (max-width: 720px) {
+    .set-row {
+        grid-template-columns: 1fr;
+    }
+}

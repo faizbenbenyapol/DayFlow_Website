@@ -97,10 +97,10 @@ function applyProjectTab() {
     showProjectTab(projectSettingsTab);
 }
 
-const SETTINGS_SECTIONS = ['team', 'columns', 'fields', 'type'];
+const SETTINGS_SECTIONS = ['team', 'columns', 'fields', 'type', 'software'];
 
 /**
- * สลับหัวข้อย่อยในแท็บตั้งค่า: ทีมและสิทธิ์ / คอลัมน์ / ช่องข้อมูล / ประเภท
+ * สลับหัวข้อย่อยในแท็บตั้งค่า: ทีมและสิทธิ์ / คอลัมน์ / ช่องข้อมูล / ประเภท / ซอฟต์แวร์
  * รับชื่อหัวข้อ ไม่คืนค่า แก้ aria-current และซ่อน/แสดงแผง
  */
 function showSettingsSection(name) {
@@ -585,11 +585,89 @@ async function changeProjectType(type) {
     }
 }
 
-/** วาดแผงตั้งค่าทั้งสามหัวข้อและคืนแท็บที่จำไว้ */
+/**
+ * เติมแผงตั้งค่า "ซอฟต์แวร์": ตัวย่อเลขงาน ชุดแต้ม และสิทธิ์ของเจ้าของ/ผู้ดูแล
+ * คนที่ไม่ใช่ผู้ดูแลเห็นค่าเดิมแบบอ่านอย่างเดียวพร้อมคำอธิบาย
+ */
+function renderSoftwareSettings() {
+    const project = activeProjectData && activeProjectData.project;
+    const software = !!project && project.type === 'software';
+    const nav = document.getElementById('settingsNavSoftware');
+    if (nav) nav.hidden = !software;
+    if (!software) {
+        if (projectSettingsSection === 'software') showSettingsSection('team');
+        return;
+    }
+
+    const admin = isProjectAdmin();
+    const prefixInput = document.getElementById('softwareKeyPrefix');
+    const saveButton = document.getElementById('softwarePrefixSave');
+    const scaleSelect = document.getElementById('softwarePointScale');
+    if (prefixInput) {
+        prefixInput.value = project.key_prefix || '';
+        prefixInput.disabled = !admin;
+    }
+    if (saveButton) saveButton.hidden = !admin;
+    if (scaleSelect) {
+        scaleSelect.value = project.point_scale === 'ten' ? 'ten' : 'fib';
+        scaleSelect.disabled = !admin;
+    }
+    show('softwareDenied', !admin);
+    updateSoftwarePrefixPreview();
+}
+
+/** อัปเดตตัวอย่างเลขงานถัดไปจากค่าที่พิมพ์ในช่องตัวย่อ */
+function updateSoftwarePrefixPreview() {
+    const input = document.getElementById('softwareKeyPrefix');
+    const preview = document.getElementById('softwarePrefixDemo');
+    if (!input || !preview) return;
+    const project = activeProjectData && activeProjectData.project;
+    const prefix = (input.value || '').trim().toUpperCase() || 'PRJ';
+    const next = project && project.next_task_number ? project.next_task_number : 1;
+    preview.textContent = prefix + '-' + next;
+}
+
+/** บันทึกตัวย่อเลขงานผ่าน PUT แล้วโหลดโปรเจคใหม่ให้เลขงานทุกใบเปลี่ยนตาม */
+async function saveSoftwarePrefix() {
+    if (!activeProjectId || !isProjectAdmin()) return;
+    const input = document.getElementById('softwareKeyPrefix');
+    const keyPrefix = input.value.trim().toUpperCase();
+    try {
+        await apiFetch(BASE_URL + '/api/projects/' + activeProjectId, {
+            method: 'PUT',
+            body: JSON.stringify({ key_prefix: keyPrefix })
+        });
+        toast('บันทึกตัวย่อเลขงานแล้ว');
+        await selectProject(activeProjectId);
+        await refreshProjectList();
+    } catch (err) {
+        toast(err.message || 'บันทึกตัวย่อเลขงานไม่สำเร็จ', 'danger');
+    }
+}
+
+/** บันทึกชุดแต้มของโปรเจคผ่าน PUT แล้วโหลดโปรเจคใหม่ */
+async function saveSoftwarePointScale(value) {
+    if (!activeProjectId || !isProjectAdmin()) return;
+    try {
+        await apiFetch(BASE_URL + '/api/projects/' + activeProjectId, {
+            method: 'PUT',
+            body: JSON.stringify({ point_scale: value })
+        });
+        toast('บันทึกชุดแต้มแล้ว');
+        await selectProject(activeProjectId);
+        await refreshProjectList();
+    } catch (err) {
+        renderSoftwareSettings();
+        toast(err.message || 'บันทึกชุดแต้มไม่สำเร็จ', 'danger');
+    }
+}
+
+/** วาดแผงตั้งค่าทั้งสี่หัวข้อและคืนแท็บที่จำไว้ */
 function renderSettingsPanel() {
     if (!activeProjectData || !activeProjectData.project) return;
     renderColumnsSettings();
     renderFieldsSettings();
     renderTypeSettings();
+    renderSoftwareSettings();
     applyProjectTab();
 }

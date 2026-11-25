@@ -1151,6 +1151,82 @@ async function main() {
         check(await tab.eval(`document.getElementById('col-${testingColumnId}-list').textContent.includes(${JSON.stringify('ทดสอบระบบ ' + STAMP)})`), 'a quick-added task is still in "ทดสอบ" after a reload');
         check(await tab.eval(`document.querySelector('.proj-row[data-args="[${softwareProject?.id}]"]')?.textContent.includes('พัฒนาซอฟต์แวร์')`), 'the project row names its type');
 
+        // งานชนิดซอฟต์แวร์: งานใหญ่/เรื่องผู้ใช้/งานย่อย เลขงาน และตัวกรองเลขงาน
+        console.log('Software tasks');
+        const softwareTaskList = await api(tab, `/api/projects/${softwareProject.id}/tasks`);
+        const softwarePrefix = softwareTaskList.body?.project?.key_prefix || '';
+        const epicRes = await api(tab, `/api/projects/${softwareProject.id}/tasks`, { method: 'POST', body: JSON.stringify({ title: `งานใหญ่ ${STAMP}`, kind: 'epic' }) });
+        check(epicRes.status === 201, 'an epic can be created', JSON.stringify(epicRes.body));
+        const epicId = epicRes.body.id;
+        const storyRes = await api(tab, `/api/projects/${softwareProject.id}/tasks`, {
+            method: 'POST',
+            body: JSON.stringify({ title: `เรื่องผู้ใช้ ${STAMP}`, kind: 'story', parent_id: epicId, story_points: 5, column_id: Number(testingColumnId) })
+        });
+        check(storyRes.status === 201, 'a story with five points sits under the epic', JSON.stringify(storyRes.body));
+        const storyId = storyRes.body.id;
+        const storyNumber = storyRes.body.number;
+        const storyKey = `${softwarePrefix}-${storyNumber}`;
+        const subRes = await api(tab, `/api/projects/${softwareProject.id}/tasks`, {
+            method: 'POST',
+            body: JSON.stringify({ title: `งานย่อย ${STAMP}`, kind: 'sub', parent_id: storyId, column_id: Number(testingColumnId) })
+        });
+        check(subRes.status === 201, 'a sub-task sits under the story', JSON.stringify(subRes.body));
+        const subId = subRes.body.id;
+
+        await tab.goto(`${BASE}/projects?project=${softwareProject.id}`);
+        await sleep(1500);
+        check(await tab.eval(`document.querySelector('.kanban-card[data-id="${storyId}"]')?.textContent.includes(${JSON.stringify(storyKey)})`), 'a card shows the story key');
+        check(await tab.eval(`(() => { const card = document.querySelector('.kanban-card[data-id="${subId}"]'); return !!card && card.classList.contains('is-sub') && card.textContent.includes(${JSON.stringify('↳ ' + storyKey)}); })()`), 'the sub card is dashed and names its parent key');
+        check(await tab.eval(`!document.querySelector('.kanban-card[data-id="${epicId}"]')`), 'the epic has no board card');
+
+        await fill(tab, '#taskFilterQ', storyKey);
+        await sleep(500);
+        check(await tab.eval(`document.querySelectorAll('#kanbanBoard .kanban-card').length`) === 1, 'searching the story key leaves exactly one card');
+        await fill(tab, '#taskFilterQ', '');
+        await sleep(300);
+
+        await tab.eval(`openEditTask(${storyId})`);
+        await sleep(500);
+        check(await tab.eval(`document.getElementById('taskSubtasksSection').hidden === false && document.getElementById('taskSubtasksSection').textContent.includes('งานย่อย 0/1')`), 'the story panel counts its one sub-task');
+        await key(tab, 'Escape');
+        await sleep(300);
+
+        await click(tab, '#tabSettings');
+        await sleep(300);
+        await click(tab, '#settingsNavSoftware');
+        await sleep(300);
+        await fill(tab, '#softwareKeyPrefix', 'QA');
+        await click(tab, '#softwarePrefixSave');
+        await sleep(2000);
+        check(await tab.eval(`document.querySelector('.kanban-card[data-id="${storyId}"] .key')?.textContent`) === `QA-${storyNumber}`, 'changing the key prefix changes the story card key');
+
+        // สลับชุดแต้มแล้วบันทึกเฉพาะชื่อ: แต้มเดิม 13 ต้องไม่ถูกส่งซ้ำจน 422
+        console.log('Software scale change');
+        const thirteen = await api(tab, `/api/projects/tasks/${storyId}`, { method: 'PUT', body: JSON.stringify({ story_points: 13 }) });
+        check(thirteen.status === 200, 'the story can take 13 points on the fib scale', JSON.stringify(thirteen.body));
+        const tenScale = await api(tab, `/api/projects/${softwareProject.id}`, { method: 'PUT', body: JSON.stringify({ point_scale: 'ten' }) });
+        check(tenScale.status === 200, 'the project can switch to the ten scale', JSON.stringify(tenScale.body));
+        await tab.goto(`${BASE}/projects?project=${softwareProject.id}`);
+        await sleep(1500);
+        await tab.eval(`openEditTask(${storyId})`);
+        await sleep(400);
+        const changedTitle = `ชื่อใหม่ ${STAMP}`;
+        await fill(tab, '#editTaskTitle', changedTitle);
+        await click(tab, '#editTaskForm button[type="submit"]');
+        await sleep(1800);
+        const afterTitle = await api(tab, `/api/projects/${softwareProject.id}/tasks`);
+        const savedStory = (afterTitle.body.tasks || []).find(task => Number(task.id) === Number(storyId));
+        check(savedStory?.title === changedTitle, 'changing only the title saves after the scale changed', JSON.stringify(savedStory && savedStory.title));
+        check(await tab.eval(`document.getElementById('taskError').hidden && !document.getElementById('taskError').textContent.trim()`), 'the panel reports no error after saving');
+
+        // ตัวกรองงานใหญ่ต้องเห็นทั้งเรื่องผู้ใช้และงานย่อยของเรื่องนั้น
+        await fill(tab, '#taskFilterEpic', String(epicId));
+        await sleep(400);
+        check(await tab.eval(`!!document.querySelector('.kanban-card[data-id="${storyId}"]')`), 'the epic filter keeps the story card');
+        check(await tab.eval(`!!document.querySelector('.kanban-card[data-id="${subId}"]')`), 'the epic filter keeps the sub card under that story');
+        await fill(tab, '#taskFilterEpic', '');
+        await sleep(300);
+
         await tab.viewport({ width: 360, height: 800, mobile: true });
         await tab.goto(BASE + '/projects');
         await tab.settle();

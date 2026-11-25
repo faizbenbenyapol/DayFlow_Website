@@ -51,7 +51,7 @@ if ('serviceWorker' in navigator) {
         'ai'         => ['ai-chat'],
         'finance'    => ['finance-report'],
         'settings'   => ['settings-categories', 'settings-stock-keys', 'settings-menus', 'settings-telegram', 'settings-two-factor', 'settings-push', 'settings-app-shares', 'settings-install', 'settings-drive', 'shares'],
-        'projects'   => ['projects-board', 'projects-team', 'projects-share', 'projects-comments', 'projects-files', 'projects-fields', 'projects-views'],
+        'projects'   => ['projects-board', 'projects-team', 'projects-share', 'projects-comments', 'projects-files', 'projects-fields', 'projects-software', 'projects-views'],
         'stocks'     => ['stocks-analysis', 'stocks-capital', 'stocks-screenshots'],
         'calculator' => ['calculator-finance', 'calculator-convert', 'calculator-math'],
         'file-tools' => ['file-tools-pdf', 'file-tools-image', 'file-tools-data', 'file-tools-zip'],

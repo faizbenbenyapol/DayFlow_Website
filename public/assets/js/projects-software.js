@@ -1,0 +1,79 @@
+/* =====================================================
+   projects-software.js — helpers shared by the software-only screens
+   Loaded on the projects page before projects-views.js; shares its state.
+
+   Everything here is only used when the open project's type is 'software'.
+   Other project types keep the board, list and panel they have always had.
+===================================================== */
+
+/** ชื่อภาษาไทยของชนิดงาน ใช้ทั้งป้ายตัวเลือกและคำอธิบายไอคอน */
+const KIND_LABEL = { epic: 'งานใหญ่', story: 'เรื่องผู้ใช้', task: 'งาน', bug: 'บั๊ก', sub: 'งานย่อย' };
+
+let softwareTaskIndex = { byId: new Map(), children: new Map() };
+
+/** true เมื่อโปรเจคที่เปิดอยู่เป็นประเภทซอฟต์แวร์ */
+function isSoftwareProject() {
+    return !!(activeProjectData && activeProjectData.project && activeProjectData.project.type === 'software');
+}
+
+/** เลขงานพร้อมตัวย่อของโปรเจค เช่น DF-49 หรือคืนสตริงว่างเมื่องานยังไม่มีเลข */
+function taskKey(task) {
+    if (!task || !task.number || !isSoftwareProject()) return '';
+    const prefix = activeProjectData.project.key_prefix || '';
+    return prefix ? prefix + '-' + task.number : '';
+}
+
+/** ไอคอนชนิดงาน ใช้รูปทรงที่ต่างกันจึงแยกได้แม้ไม่เห็นสี */
+function kindIcon(kind) {
+    if (!KIND_LABEL[kind]) return '';
+    return '<span class="ticon" data-type="' + escHtml(kind) + '" title="' + escHtml(KIND_LABEL[kind]) + '">'
+        + '<svg aria-hidden="true"><use href="#i-kind-' + escHtml(kind) + '"/></svg></span>';
+}
+
+/** ตัวเลือกแต้มของโปรเจคตามชุดแต้มที่ตั้งไว้ */
+function pointChoices() {
+    const project = activeProjectData && activeProjectData.project;
+    return project && project.point_scale === 'ten'
+        ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        : [1, 2, 3, 5, 8, 13, 21];
+}
+
+/** ป้ายแต้มกลม แสดง – เมื่อยังไม่ได้ใส่แต้ม */
+function pointsPill(points) {
+    if (points == null || points === '' || Number(points) <= 0) {
+        return '<span class="pts empty" title="ยังไม่ใส่แต้ม">–</span>';
+    }
+    return '<span class="pts" title="' + escHtml(String(points)) + ' แต้ม">' + escHtml(String(points)) + '</span>';
+}
+
+/**
+ * สร้างดัชนีงานของโปรเจคที่โหลดอยู่ครั้งเดียวต่อการวาดหนึ่งครั้ง
+ * ใช้แทนการค้นงานซ้ำด้วย find ในลูปงานทุกงาน
+ */
+function buildTaskIndex() {
+    const byId = new Map();
+    const children = new Map();
+    ((activeProjectData && activeProjectData.tasks) || []).forEach(task => {
+        byId.set(Number(task.id), task);
+        if (task.parent_id == null) return;
+        const parent = Number(task.parent_id);
+        if (!children.has(parent)) children.set(parent, []);
+        children.get(parent).push(task);
+    });
+    softwareTaskIndex = { byId, children };
+    return softwareTaskIndex;
+}
+
+/** งานลูกโดยตรงของงานหนึ่ง จากดัชนีที่สร้างไว้ต่อการวาดหนึ่งครั้ง */
+function childrenOf(taskId) {
+    return softwareTaskIndex.children.get(Number(taskId)) || [];
+}
+
+/** จำนวนงานลูกที่เสร็จและทั้งหมดของงานใหญ่ คิดจากงานลูกโดยตรง */
+function epicProgress(epicId) {
+    const children = childrenOf(epicId);
+    return {
+        done: children.filter(isDoneTask).length,
+        total: children.length
+    };
+}
