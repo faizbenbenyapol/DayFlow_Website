@@ -573,7 +573,10 @@ async function uploadFiles(fileList) {
 async function deleteFile(id) {
     const f = getFileObj(id);
     const what = f ? '"' + f.name + '"' : 'รายการนี้';
-    const extra = f && f.type === 'folder' ? ' และทุกอย่างในโฟลเดอร์' : '';
+    const attached = f ? Number(f.attached_tasks || 0) : 0;
+    // ไฟล์แนบของงานลิงก์มาที่ไฟล์นี้ ลบแล้วไฟล์แนบในงานหายด้วย (D-4)
+    const extra = (f && f.type === 'folder' ? ' และทุกอย่างในโฟลเดอร์' : '')
+        + (attached > 0 ? (f.type === 'folder' ? ' ไฟล์ในโฟลเดอร์นี้' : ' ไฟล์นี้') + 'แนบอยู่ในงาน ' + attached + ' งาน ไฟล์แนบในงานจะหายไปด้วย' : '');
     if (!await confirmAction('ลบ ' + what + extra + ' แล้วกู้คืนไม่ได้', 'ลบ', 'ลบรายการนี้?')) return;
     try {
         await apiFetch(BASE_URL + '/api/files/' + id, { method: 'DELETE' });
@@ -587,7 +590,11 @@ async function deleteFile(id) {
 async function deleteFilesBatch() {
     const count = selectedFileIds.length;
     if (!count) return;
-    if (!await confirmAction('ลบ ' + count + ' รายการที่เลือก (รวมของในโฟลเดอร์) แล้วกู้คืนไม่ได้', 'ลบ ' + count + ' รายการ', 'ลบรายการที่เลือก?')) return;
+    // งานเดียวกันอาจนับซ้ำ จึงเช็คแค่ว่ามีรายการที่แนบอยู่
+    const hasAttached = selectedFileIds.some(id => Number(getFileObj(id)?.attached_tasks || 0) > 0);
+    const msg = 'ลบ ' + count + ' รายการที่เลือก (รวมของในโฟลเดอร์) แล้วกู้คืนไม่ได้'
+        + (hasAttached ? ' บางรายการแนบอยู่ในงานของโปรเจค ไฟล์แนบในงานจะหายไปด้วย' : '');
+    if (!await confirmAction(msg, 'ลบ ' + count + ' รายการ', 'ลบรายการที่เลือก?')) return;
     try {
         await Promise.all(selectedFileIds.map(id => apiFetch(BASE_URL + '/api/files/' + id, { method: 'DELETE' })));
         toast('ลบ ' + count + ' รายการแล้ว');

@@ -96,21 +96,133 @@
         </div>
     </div>
 
+    <!-- One filter for the board, the list and the calendar; it stays while switching (projects-views.js) -->
+    <div class="view-filters" id="taskFilters">
+        <input type="search" id="taskFilterQ" class="form-control grow" placeholder="ค้นหางาน" aria-label="ค้นหางาน" autocomplete="off" data-act="setTaskFilter" data-args='["q", "$value"]' data-on="input">
+        <select id="taskFilterWho" class="form-control" aria-label="ผู้รับผิดชอบ" data-act="setTaskFilter" data-args='["who", "$value"]' data-on="change"></select>
+        <select id="taskFilterGrp" class="form-control" aria-label="สถานะ" data-act="setTaskFilter" data-args='["grp", "$value"]' data-on="change">
+            <option value="">ทุกสถานะ</option>
+            <option value="todo">ยังไม่เริ่ม</option>
+            <option value="doing">กำลังทำ</option>
+            <option value="done">เสร็จ</option>
+        </select>
+        <select id="taskFilterDue" class="form-control" aria-label="ครบกำหนด" data-act="setTaskFilter" data-args='["due", "$value"]' data-on="change">
+            <option value="">ทุกวันส่ง</option>
+            <option value="over">เลยกำหนด</option>
+            <option value="week">7 วันข้างหน้า</option>
+            <option value="none">ไม่มีวันส่ง</option>
+        </select>
+        <span class="view-field-filters" id="taskFieldFilters"></span>
+        <span class="view-filter-state" id="taskFilterState" role="status" hidden></span>
+        <button class="btn btn-link btn-sm" type="button" id="taskFilterClear" data-act="clearTaskFilters" hidden>ล้างตัวกรอง</button>
+    </div>
+
     <div class="tabs" role="tablist" aria-label="มุมมองของโปรเจค" id="projectTabs">
         <button class="tab" role="tab" type="button" id="tabBoard" aria-selected="true" aria-controls="boardPanel" data-act="showProjectTab" data-args='["board"]'>บอร์ด</button>
+        <button class="tab" role="tab" type="button" id="tabList" aria-selected="false" aria-controls="listPanel" data-act="showProjectTab" data-args='["list"]'>รายการ</button>
+        <button class="tab" role="tab" type="button" id="tabCalendar" aria-selected="false" aria-controls="calendarPanel" data-act="showProjectTab" data-args='["calendar"]'>ปฏิทิน</button>
+        <button class="tab" role="tab" type="button" id="tabOverview" aria-selected="false" aria-controls="overviewPanel" data-act="showProjectTab" data-args='["overview"]'>ภาพรวม</button>
         <?php if (!$isGuest): /* a share-link guest has no settings to change */ ?>
         <button class="tab" role="tab" type="button" id="tabSettings" aria-selected="false" aria-controls="settingsPanel" data-act="showProjectTab" data-args='["settings"]'>ตั้งค่า</button>
         <?php endif; ?>
     </div>
 
     <div id="boardPanel" role="tabpanel" aria-labelledby="tabBoard">
+        <p class="proj-note" id="boardFilterNote" hidden>กรองอยู่ ลากการ์ดไม่ได้จนกว่าจะล้างตัวกรอง (เปลี่ยนคอลัมน์ในรายละเอียดงานได้)</p>
         <div class="kanban-board" id="kanbanBoard"></div>
+    </div>
+
+    <div class="proj-view" id="listPanel" role="tabpanel" aria-labelledby="tabList" hidden>
+        <div class="task-list-head">
+            <label class="text-sm" for="taskListGroup">จัดกลุ่มตาม</label>
+            <select id="taskListGroup" class="form-control" data-act="setTaskFilter" data-args='["group", "$value"]' data-on="change">
+                <option value="column">คอลัมน์</option>
+                <option value="who">ผู้รับผิดชอบ</option>
+                <option value="priority">ความสำคัญ</option>
+                <option value="">ไม่จัดกลุ่ม</option>
+            </select>
+        </div>
+        <div class="task-table-wrap">
+            <table class="task-table" id="taskListTable">
+                <thead><tr>
+                    <th scope="col" data-sort="title"><button class="th-sort" type="button" data-act="sortTaskList" data-args='["title"]'>งาน</button></th>
+                    <th scope="col" data-sort="column" class="c-col"><button class="th-sort" type="button" data-act="sortTaskList" data-args='["column"]'>คอลัมน์</button></th>
+                    <th scope="col" data-sort="who"><button class="th-sort" type="button" data-act="sortTaskList" data-args='["who"]'>ผู้รับผิดชอบ</button></th>
+                    <th scope="col" data-sort="due"><button class="th-sort" type="button" data-act="sortTaskList" data-args='["due"]'>ครบกำหนด</button></th>
+                    <th scope="col" data-sort="priority"><button class="th-sort" type="button" data-act="sortTaskList" data-args='["priority"]'>ความสำคัญ</button></th>
+                </tr></thead>
+                <tbody id="taskListBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="proj-view" id="calendarPanel" role="tabpanel" aria-labelledby="tabCalendar" hidden>
+        <div class="cal-wrap">
+            <div>
+                <div class="cal-head">
+                    <h3 id="taskCalTitle"></h3>
+                    <span class="cal-nav">
+                        <button class="btn btn-sm" type="button" data-act="navTaskCalendar" data-args="[-1]" aria-label="เดือนก่อน">&lsaquo;</button>
+                        <button class="btn btn-sm" type="button" data-act="taskCalendarToday">วันนี้</button>
+                        <button class="btn btn-sm" type="button" data-act="navTaskCalendar" data-args="[1]" aria-label="เดือนถัดไป">&rsaquo;</button>
+                    </span>
+                </div>
+                <div class="cal-grid-wrap"><div class="cal-grid" id="taskCalGrid"></div></div>
+                <div class="agenda" id="taskCalAgenda"></div>
+            </div>
+            <aside class="unscheduled" id="taskCalUnscheduled" aria-label="งานที่ยังไม่ลงวัน"></aside>
+        </div>
+    </div>
+
+    <div class="proj-view" id="overviewPanel" role="tabpanel" aria-labelledby="tabOverview" hidden>
+        <div class="ov-grid" id="overviewGrid">
+            <section id="aiSummaryCardWrap" class="sec" aria-labelledby="insightTitle" hidden>
+                <div class="sec-head"><h2 id="insightTitle">สรุปสถานะโปรเจค</h2></div>
+                <p class="proj-insight" id="aiInsightText"></p>
+                <p class="alert alert-warning" id="aiWarningBox" role="status" hidden></p>
+                <p class="proj-note">คำนวณจากจำนวนงาน ความสำคัญ และวันส่งของโปรเจคนี้ ไม่ได้ใช้ AI</p>
+            </section>
+
+            <section id="analyticsWidgetCard" class="sec" aria-labelledby="progressTitle" hidden>
+                <div class="sec-head"><h2 id="progressTitle">ความคืบหน้า</h2></div>
+                <div class="facts proj-facts">
+                    <div class="fact"><div class="k">เสร็จแล้ว</div><div class="v" id="statCompletedTasks">0</div></div>
+                    <div class="fact"><div class="k">ยังค้างอยู่</div><div class="v" id="statRemainingTasks">0</div></div>
+                    <div class="fact"><div class="k">สำเร็จ</div><div class="v" id="statProductivity">0%</div></div>
+                </div>
+                <div class="proj-status-bar" id="projectStatusBar" role="img" aria-label="สัดส่วนงานแต่ละคอลัมน์"></div>
+                <ul class="proj-legend" id="projectStatusLegend"></ul>
+            </section>
+
+            <section id="activityWidgetCard" class="sec" aria-labelledby="activityTitle" hidden>
+                <div class="sec-head"><h2 id="activityTitle">กิจกรรมล่าสุด</h2></div>
+                <ul class="activity-feed-list" id="projectActivityList"></ul>
+            </section>
+
+            <section id="chatWidgetCard" class="sec" aria-labelledby="chatTitle" hidden>
+                <div class="sec-head">
+                    <h2 id="chatTitle">แชทในโปรเจค</h2>
+                    <span class="chat-status-text" id="chatStatusText" role="status">กำลังเชื่อมต่อ</span>
+                </div>
+                <p id="guestRenameContainer" class="proj-note" hidden>
+                    <span id="lblGuestName">คุณ: …</span>
+                    <button class="btn btn-link btn-sm" type="button" data-act="changeGuestName">เปลี่ยนชื่อที่แสดง</button>
+                </p>
+                <div class="chat-messages-container" id="chatMessagesList" aria-live="polite"></div>
+                <form class="chat-input-wrap" id="chatForm" data-act="sendChatMessage" novalidate>
+                    <label class="sr-only" for="chatMessageInput">ข้อความ</label>
+                    <input type="text" id="chatMessageInput" class="form-control" placeholder="พิมพ์ข้อความถึงทีม" autocomplete="off" maxlength="1000">
+                    <button type="submit" class="btn btn-primary">ส่ง</button>
+                </form>
+            </section>
+        </div>
     </div>
 
     <div id="settingsPanel" role="tabpanel" aria-labelledby="tabSettings" hidden>
         <nav class="subnav proj-subnav" aria-label="ตั้งค่าโปรเจค">
             <button class="subnav-link" type="button" id="settingsNavTeam" aria-current="page" data-act="showSettingsSection" data-args='["team"]'>ทีมและสิทธิ์</button>
             <button class="subnav-link" type="button" id="settingsNavColumns" data-act="showSettingsSection" data-args='["columns"]'>คอลัมน์</button>
+            <button class="subnav-link" type="button" id="settingsNavFields" data-act="showSettingsSection" data-args='["fields"]'>ช่องข้อมูล</button>
             <button class="subnav-link" type="button" id="settingsNavType" data-act="showSettingsSection" data-args='["type"]'>ประเภท</button>
         </nav>
 
@@ -203,6 +315,40 @@
             <p class="alert alert-warning" id="columnsDenied" role="alert" hidden>คอลัมน์ตั้งได้เฉพาะเจ้าของและผู้ดูแล</p>
         </div>
 
+        <!-- ช่องข้อมูลเพิ่มเติม (projects-fields.js) -->
+        <div class="proj-settings-pane" id="settingsFields" hidden>
+            <div id="fieldsEditor"></div>
+            <p class="alert alert-warning" id="fieldsDenied" role="alert" hidden>ช่องข้อมูลตั้งได้เฉพาะเจ้าของและผู้ดูแล</p>
+            <form class="sec" id="fieldAddForm" data-act="submitAddField" data-args='["$event"]' data-on="submit" novalidate>
+                <div class="sec-head"><h2>เพิ่มช่อง</h2></div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="fieldName">ชื่อช่อง</label>
+                        <input type="text" id="fieldName" class="form-control" maxlength="60" placeholder="เช่น ลูกค้า" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="fieldKind">ชนิด</label>
+                        <select id="fieldKind" class="form-control" data-act="toggleFieldOptions" data-args='["$value"]' data-on="change">
+                            <option value="text">ข้อความ</option>
+                            <option value="number">ตัวเลข</option>
+                            <option value="date">วันที่</option>
+                            <option value="select">ตัวเลือก</option>
+                            <option value="person">คน</option>
+                            <option value="check">ติ๊ก (ใช่/ไม่ใช่)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group" id="fieldOptionsGroup" hidden>
+                    <label class="form-label" for="fieldOptions">ตัวเลือก (บรรทัดละหนึ่ง)</label>
+                    <textarea id="fieldOptions" class="form-control" rows="3"></textarea>
+                </div>
+                <p class="form-hint">ชนิดเปลี่ยนไม่ได้หลังเพิ่ม ลบช่องแล้วค่าที่กรอกไว้ในทุกงานจะหายไปด้วย ระบบจะถามก่อนลบ</p>
+                <p class="form-error" id="fieldError" role="alert" hidden></p>
+                <p class="proj-note" id="fieldsFull" hidden>ครบ 10 ช่องแล้ว ลบช่องที่ไม่ใช้ก่อนจึงเพิ่มได้</p>
+                <button type="submit" class="btn btn-primary" id="fieldAddSubmit">เพิ่มช่อง</button>
+            </form>
+        </div>
+
         <!-- ประเภท -->
         <div class="proj-settings-pane" id="settingsType" hidden>
             <div class="sec">
@@ -226,24 +372,6 @@
 </section>
 
 <div class="proj-widgets">
-    <section id="aiSummaryCardWrap" class="sec" aria-labelledby="insightTitle" hidden>
-        <div class="sec-head"><h2 id="insightTitle">สรุปสถานะโปรเจค</h2></div>
-        <p class="proj-insight" id="aiInsightText"></p>
-        <p class="alert alert-warning" id="aiWarningBox" role="status" hidden></p>
-        <p class="proj-note">คำนวณจากจำนวนงาน ความสำคัญ และวันส่งของโปรเจคนี้ ไม่ได้ใช้ AI</p>
-    </section>
-
-    <section id="analyticsWidgetCard" class="sec" aria-labelledby="progressTitle" hidden>
-        <div class="sec-head"><h2 id="progressTitle">ความคืบหน้า</h2></div>
-        <div class="facts proj-facts">
-            <div class="fact"><div class="k">เสร็จแล้ว</div><div class="v" id="statCompletedTasks">0</div></div>
-            <div class="fact"><div class="k">ยังค้างอยู่</div><div class="v" id="statRemainingTasks">0</div></div>
-            <div class="fact"><div class="k">สำเร็จ</div><div class="v" id="statProductivity">0%</div></div>
-        </div>
-        <div class="proj-status-bar" id="projectStatusBar" role="img" aria-label="สัดส่วนงานแต่ละคอลัมน์"></div>
-        <ul class="proj-legend" id="projectStatusLegend"></ul>
-    </section>
-
     <section id="miniCalendarWidgetCard" class="sec" aria-labelledby="calendarMonthTitle">
         <div class="sec-head">
             <h2 id="calendarMonthTitle">เดือนนี้</h2>
@@ -254,28 +382,6 @@
         </div>
         <div class="mini-cal-grid" id="miniCalendarGrid"></div>
         <p class="proj-note">วันที่ขีดเส้นใต้มีกำหนดส่งโปรเจคหรืองาน</p>
-    </section>
-
-    <section id="activityWidgetCard" class="sec" aria-labelledby="activityTitle" hidden>
-        <div class="sec-head"><h2 id="activityTitle">กิจกรรมล่าสุด</h2></div>
-        <ul class="activity-feed-list" id="projectActivityList"></ul>
-    </section>
-
-    <section id="chatWidgetCard" class="sec" aria-labelledby="chatTitle" hidden>
-        <div class="sec-head">
-            <h2 id="chatTitle">แชทในโปรเจค</h2>
-            <span class="chat-status-text" id="chatStatusText" role="status">กำลังเชื่อมต่อ</span>
-        </div>
-        <p id="guestRenameContainer" class="proj-note" hidden>
-            <span id="lblGuestName">คุณ: …</span>
-            <button class="btn btn-link btn-sm" type="button" data-act="changeGuestName">เปลี่ยนชื่อที่แสดง</button>
-        </p>
-        <div class="chat-messages-container" id="chatMessagesList" aria-live="polite"></div>
-        <form class="chat-input-wrap" id="chatForm" data-act="sendChatMessage" novalidate>
-            <label class="sr-only" for="chatMessageInput">ข้อความ</label>
-            <input type="text" id="chatMessageInput" class="form-control" placeholder="พิมพ์ข้อความถึงทีม" autocomplete="off" maxlength="1000">
-            <button type="submit" class="btn btn-primary">ส่ง</button>
-        </form>
     </section>
 </div>
 
@@ -424,10 +530,14 @@
 </div>
 
 <!-- A task, with its checklist -->
-<div class="modal-backdrop" id="editTaskModal" aria-hidden="true">
+<!-- รายละเอียดงาน: แผงด้านขวา (mockup P0b แบบ A) บนมือถือเต็มจอ เปิดตรงได้ด้วย ?task=<id> -->
+<div class="modal-backdrop task-panel" id="editTaskModal" aria-hidden="true">
     <div class="modal modal-task" role="dialog" aria-labelledby="editTaskTitleHeading">
         <div class="modal-header">
-            <h2 class="modal-title" id="editTaskTitleHeading">แก้ไขงาน</h2>
+            <h2 class="modal-title" id="editTaskTitleHeading">รายละเอียดงาน</h2>
+            <button class="icon-btn" type="button" data-act="copyTaskLink" aria-label="คัดลอกลิงก์ของงานนี้" title="คัดลอกลิงก์ของงานนี้">
+                <svg class="icon" aria-hidden="true"><use href="#i-link"/></svg>
+            </button>
             <button class="modal-close" type="button" aria-label="ปิด" data-close-modal>&times;</button>
         </div>
         <form id="editTaskForm" data-act="submitEditTask" data-args='["$event"]' data-on="submit" novalidate>
@@ -436,6 +546,10 @@
                 <div class="form-group">
                     <label class="form-label" for="editTaskTitle">ชื่องาน</label>
                     <input type="text" id="editTaskTitle" class="form-control" maxlength="255" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="editTaskDescription">คำอธิบาย</label>
+                    <textarea id="editTaskDescription" class="form-control" rows="4" maxlength="10000" placeholder="รายละเอียด ลิงก์ หรือเงื่อนไขที่ทีมต้องรู้"></textarea>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -455,7 +569,7 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label" for="editTaskCategory">หมวดหรือแท็ก</label>
-                        <input type="text" id="editTaskCategory" class="form-control" maxlength="100" placeholder="เช่น ดีไซน์, โค้ด, เนื้อหา" autocomplete="off">
+                        <input type="text" id="editTaskCategory" class="form-control" maxlength="50" placeholder="เช่น ดีไซน์, โค้ด, เนื้อหา" autocomplete="off">
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="editTaskAssignee">ผู้รับผิดชอบ</label>
@@ -466,6 +580,7 @@
                     <label class="form-label" for="editTaskDue">กำหนดส่ง</label>
                     <input type="date" id="editTaskDue" class="form-control">
                 </div>
+                <div class="task-custom" id="editTaskCustom" hidden></div>
 
                 <div class="modal-checklist-container">
                     <div class="checklist-header">
@@ -480,10 +595,47 @@
                         <button type="button" class="btn btn-sm" data-act="addChecklistItem">เพิ่ม</button>
                     </div>
                 </div>
+                <!-- ไฟล์แนบ: ลิงก์ไปไฟล์ในคลังของคนแนบ (D-4) แขกจากลิงก์แชร์ไม่เห็น (D-5) -->
+                <section class="task-files" id="taskFiles" aria-labelledby="taskFilesHeading">
+                    <h3 id="taskFilesHeading">ไฟล์แนบ <small id="taskFileCount"></small></h3>
+                    <div id="taskFileList"></div>
+                    <div class="task-file-actions" id="taskFileActions">
+                        <label class="btn btn-sm">แนบจากเครื่อง
+                            <input type="file" id="taskFileInput" class="sr-only" multiple data-act="uploadTaskFiles" data-on="change">
+                        </label>
+                        <button type="button" class="btn btn-sm" data-act="openTaskFilePicker">เลือกจากคลังไฟล์</button>
+                    </div>
+                    <div class="task-file-picker" id="taskFilePicker" hidden>
+                        <div class="task-file-picker-head"><span id="taskFilePickerPath">คลังไฟล์</span>
+                            <button type="button" class="btn btn-link btn-sm" data-act="closeTaskFilePicker">ปิด</button></div>
+                        <div id="taskFilePickerList"></div>
+                    </div>
+                    <p class="proj-note">ไฟล์เก็บในคลังไฟล์ของคนแนบ (รวม Google Drive ถ้าเปิดไว้) ทุกคนในโปรเจคเปิดได้</p>
+                </section>
+
+                <!-- ความเห็น: แขกจากลิงก์แชร์ไม่เห็น (D-5) ผู้ดูอย่างเดียวอ่านได้แต่เขียนไม่ได้ -->
+                <section class="task-comments" id="taskComments" aria-labelledby="taskCommentsHeading">
+                    <h3 id="taskCommentsHeading">ความเห็น <small id="taskCommentCount"></small></h3>
+                    <div class="task-comment-list" id="taskCommentList" aria-live="polite"></div>
+                    <div class="comment-composer" id="taskCommentComposer">
+                        <div class="mention-pop" id="mentionPop" role="listbox" aria-label="เลือกคนที่จะกล่าวถึง" hidden></div>
+                        <label class="sr-only" for="taskCommentInput">เขียนความเห็น</label>
+                        <textarea id="taskCommentInput" class="form-control" rows="3" maxlength="5000" placeholder="เขียนความเห็น พิมพ์ @ เพื่อเรียกชื่อคนในทีม"
+                                  data-act="onCommentInput" data-on="input" aria-autocomplete="list" aria-controls="mentionPop"></textarea>
+                        <div class="comment-composer-actions">
+                            <span class="proj-note">ความเห็นใหม่ขึ้นเองภายใน 1 นาที · Ctrl+Enter ส่ง</span>
+                            <button type="button" class="btn btn-primary btn-sm" data-act="sendTaskComment">ส่งความเห็น</button>
+                        </div>
+                    </div>
+                </section>
+                <section class="task-history" aria-labelledby="taskHistoryHeading">
+                    <h3 id="taskHistoryHeading">ประวัติ</h3>
+                    <ul class="task-history-list" id="taskHistoryList"></ul>
+                </section>
                 <p class="form-error" id="taskError" role="alert" hidden></p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn" data-close-modal>ยกเลิก</button>
+                <button type="button" class="btn" data-close-modal>ปิด</button>
                 <button type="submit" class="btn btn-primary">บันทึกงาน</button>
             </div>
         </form>

@@ -17,7 +17,9 @@ final class NotificationDigest
      */
     public static function pendingFor(int $userId): array
     {
-        $items = [];
+        // การแจ้งเตือนในแอปที่ยังไม่อ่านภายใน 10 นาที (มอบหมายงาน ถูกกล่าวถึง ...) มาก่อนเรื่องอื่น
+        require_once __DIR__ . '/../models/Notification.php';
+        $items = Notification::pushItems($userId);
 
         // Reminders fired within the last hour, but not for reminders older
         // than two hours (those were skipped as too late).

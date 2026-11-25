@@ -187,22 +187,10 @@ class ProjectTeamController
                 : 'ลบสมาชิก "' . $memberName . '" ออกจากโครงการ';
             ProjectActivity::log($projectId, $userId, $actText);
 
-            // แจ้งเจ้าของเมื่อคนอื่นเป็นผู้กระทำ (REQ-P10: ไม่แจ้งการกระทำของตัวเอง)
-            if (!$isOwner) {
-                $details = [
-                    'โปรเจค'  => htmlspecialchars((string)$project['name']),
-                    'สมาชิก'  => htmlspecialchars($memberName),
-                    'สถานะ'   => $isSelf ? 'ออกจากโครงการเอง' : 'ถูกนำออกจากโครงการ',
-                ];
-                if ($assignedCount > 0) {
-                    $details['งาน'] = $assignedCount . ' งานไม่มีผู้รับผิดชอบแล้ว';
-                }
-                TelegramService::sendNotification(
-                    (int)$project['user_id'],
-                    'project',
-                    TelegramService::formatMessage('👤 สมาชิกออกจากโปรเจค', $details, 'แจ้งเตือน')
-                );
-            }
+            // แจ้งเจ้าของ (กระดิ่ง Telegram Push) เมื่อคนอื่นเป็นผู้กระทำ send() ข้ามเองถ้าเจ้าของทำเอง (REQ-P10)
+            $title = $memberName . ($isSelf ? ' ออกจากโปรเจค' : ' ถูกนำออกจากโปรเจค')
+                . ($assignedCount > 0 ? ' งาน ' . $assignedCount . ' งานไม่มีผู้รับผิดชอบแล้ว' : '');
+            Notification::send((int)$project['user_id'], $userId, 'member_left', $title, (string)$project['name'], '/projects?project=' . $projectId);
 
             Response::json(['ok' => true]);
         } else {
@@ -246,6 +234,10 @@ class ProjectTeamController
         }
 
         if (ProjectChat::sendMessage($projectId, $userId, $message)) {
+            // @username ในแชท แจ้งคนในโปรเจคที่ถูกกล่าวถึง (แขกจากลิงก์แชร์ไม่มีบัญชี จึงไม่แจ้งในนามแขก)
+            if ($userId > 0) {
+                ProjectComment::notifyMentions($projectId, $message, $userId, 'ในแชท', (string)$project['name'], '/projects?project=' . $projectId);
+            }
             Response::json(['ok' => true], 201);
         } else {
             Response::json(['error' => 'ไม่สามารถส่งข้อความได้'], 500);

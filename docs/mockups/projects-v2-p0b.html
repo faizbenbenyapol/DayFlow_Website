@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light" data-desk="sage" data-place="work">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mockup — โปรเจค v2 เฟส P0b</title>
+<!-- ใช้ CSS ตัวจริงของแอป (รวม projects.css หลัง P0a) หน้าตาจึงต่อจากของที่ทำเสร็จแล้ว เปิดผ่าน server ที่ root ของ repo -->
+<link rel="stylesheet" href="../../public/assets/css/fonts.css">
+<link rel="stylesheet" href="../../public/assets/css/tokens.css">
+<link rel="stylesheet" href="../../public/assets/css/base.css">
+<link rel="stylesheet" href="../../public/assets/css/components.css">
+<link rel="stylesheet" href="../../public/assets/css/shell.css">
+<link rel="stylesheet" href="../../public/assets/css/modules/projects.css">
+<style>
+/* ---------- แถบควบคุมของ mockup (ไม่ใช่ส่วนของแอป) ---------- */
+.mk-bar { position: sticky; top: 0; z-index: 10000; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center;
+    padding: 8px 16px; background: var(--ink); color: var(--paper); font-size: .8125rem; }
+.mk-bar label { display: inline-flex; gap: 6px; align-items: center; }
+.mk-bar select { font: inherit; padding: 2px 4px; border-radius: 4px; }
+.mk-note { margin: 0 0 var(--space-4); padding: var(--space-3) var(--space-4); border: 1.5px dashed var(--rule-strong);
+    border-radius: var(--r-card); background: var(--paper); font-size: .875rem; color: var(--pencil); }
+.mk-note strong { color: var(--ink); }
+[data-view] { display: none; }
+body[data-screen="list"] [data-view~="list"], body[data-screen="calendar"] [data-view~="calendar"],
+body[data-screen="detail"] [data-view~="detail"], body[data-screen="overview"] [data-view~="overview"],
+body[data-screen="fields"] [data-view~="fields"], body[data-screen="bell"] [data-view~="bell"] { display: block; }
+
+/* ---------- กระดิ่งแจ้งเตือนบนแถบบน ---------- */
+.bell { position: relative; display: inline-grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: var(--r-control);
+    background: transparent; color: var(--ink); cursor: pointer; }
+.bell svg { width: 22px; height: 22px; }
+.bell .dot { position: absolute; top: 6px; right: 6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+    background: var(--stamp-red); color: var(--paper); font: 600 .6875rem/18px var(--font-num); text-align: center; }
+.bell-panel { position: absolute; right: 16px; top: 64px; z-index: 50; width: min(380px, calc(100vw - 24px)); max-height: 70vh; overflow: auto;
+    border: 1.5px solid var(--edge); border-radius: var(--r-card); background: var(--paper); box-shadow: 0 8px 24px rgb(0 0 0 / .14); }
+.bell-panel header { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--rule); }
+.bell-panel h2 { margin: 0; font-size: 1rem; }
+.note-row { display: grid; grid-template-columns: 10px minmax(0, 1fr); gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--rule); text-decoration: none; color: var(--ink); }
+.note-row:hover { background: var(--paper-sunk); }
+.note-row::before { content: ""; width: 8px; height: 8px; margin-top: 7px; border-radius: 50%; background: transparent; }
+.note-row.unread::before { background: var(--stamp-red); }
+.note-row .what { font-size: .875rem; }
+.note-row .where { display: block; font-size: .75rem; color: var(--pencil); margin-top: 2px; }
+.note-group { padding: var(--space-2) var(--space-4) 0; font-size: .75rem; color: var(--pencil); }
+
+/* ---------- แถบกรองที่ค้างทุกมุมมอง ---------- */
+.view-filters { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin: var(--space-3) 0; }
+.view-filters select.form-control, .view-filters input.form-control { width: auto; min-width: 0; flex: 0 1 auto; }
+.view-filters input.form-control.grow { flex: 1 1 220px; }
+.filter-chip { display: inline-flex; gap: 6px; align-items: center; padding: 2px 10px; border: 1.5px solid var(--edge); border-radius: 14px; font-size: .8125rem; background: var(--highlighter); color: var(--ink); }
+
+/* ---------- มุมมองรายการ ---------- */
+.task-table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+.task-table th { text-align: left; font-weight: 600; font-size: .8125rem; color: var(--pencil); padding: 6px 8px; border-bottom: 1.5px solid var(--rule-strong); white-space: nowrap; }
+.task-table th button { all: unset; cursor: pointer; }
+.task-table th button:focus-visible { outline: 2px solid var(--ink); }
+.task-table th[aria-sort] button::after { content: " ↓"; }
+.task-table td { padding: 8px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.task-table tr.grp-row td { padding-top: var(--space-4); font-weight: 600; border-bottom: 3px solid var(--g); }
+.task-table .k { font-family: var(--font-mono); font-size: .75rem; color: var(--pencil); margin-right: 6px; }
+.task-table .num { font-family: var(--font-num); text-align: right; white-space: nowrap; }
+.task-table .over { color: var(--stamp-red); font-weight: 600; }
+.task-table .meta-ico { color: var(--pencil); font-size: .75rem; white-space: nowrap; }
+.task-table tr.row:hover td { background: var(--paper-sunk); cursor: pointer; }
+[data-g="todo"] { --g: var(--rule-strong); } [data-g="doing"] { --g: var(--caution); } [data-g="done"] { --g: var(--ledger-green); }
+.gdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--g); margin-right: 6px; }
+
+/* ---------- ปฏิทิน ---------- */
+.cal-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: var(--space-4); }
+.cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-2); }
+.cal-head h3 { margin: 0; font-size: 1.0625rem; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); }
+.cal-grid .dow { padding: 4px 6px; font-size: .75rem; color: var(--pencil); border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.cal-cell { min-height: 96px; padding: 4px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.cal-cell .d { font: .75rem var(--font-num); color: var(--pencil); }
+.cal-cell.other .d { opacity: .45; }
+.cal-cell.today { background: var(--butter); }
+.cal-cell.today .d { color: var(--ink-fixed); font-weight: 700; }
+.cal-chip { display: block; margin-top: 3px; padding: 2px 6px; border-left: 3px solid var(--g); border-radius: 3px; background: var(--paper-sunk);
+    font-size: .75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); text-decoration: none; }
+.cal-chip.done { text-decoration: line-through; color: var(--pencil); }
+.unscheduled { border-left: 1.5px dashed var(--rule-strong); padding-left: var(--space-3); }
+.unscheduled h4 { margin: 0 0 var(--space-2); font-size: .875rem; }
+.agenda { display: none; }
+
+/* ---------- รายละเอียดงาน ---------- */
+/* top เว้นแถบควบคุมของ mockup (JS ตั้งตามความสูงจริง) ในแอปจริงเริ่มที่ 0
+   z-index ต้องอยู่เหนือแถบแท็บล่างของมือถือ ไม่งั้นแท็บทับเนื้อหาของงาน */
+.detail-backdrop { position: fixed; inset: var(--mk-top, 37px) 0 0 0; z-index: 9998; background: rgb(0 0 0 / .32); display: flex; }
+body[data-variant="A"] .detail-backdrop { justify-content: flex-end; background: rgb(0 0 0 / .12); }
+body[data-variant="B"] .detail-backdrop { align-items: flex-start; justify-content: center; padding: 40px 16px; overflow: auto; }
+.detail { background: var(--paper); color: var(--ink); display: flex; flex-direction: column; }
+body[data-variant="A"] .detail { width: min(480px, 100vw); height: 100%; border-left: 1.5px solid var(--edge); overflow: auto; }
+body[data-variant="B"] .detail { width: min(920px, 100%); border: 1.5px solid var(--edge); border-radius: var(--r-sheet, 14px); }
+.detail-top { display: flex; gap: var(--space-2); align-items: center; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--rule); }
+.detail-top .k { font: .8125rem var(--font-mono); color: var(--pencil); }
+.detail-top .sp { flex: 1; }
+.detail-title { margin: 0; padding: var(--space-3) var(--space-4) 0; font-size: 1.25rem; }
+.detail-body { display: grid; gap: var(--space-4); padding: var(--space-4); }
+body[data-variant="B"] .detail-body { grid-template-columns: minmax(0, 1fr) 260px; }
+.detail-main { display: grid; gap: var(--space-5); min-width: 0; }
+.fields { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 6px var(--space-3); align-items: center; font-size: .875rem; }
+.fields dt { color: var(--pencil); }
+.fields dd { margin: 0; }
+.fields .form-control { min-height: 36px; padding: 4px 8px; }
+body[data-variant="B"] .detail-side .fields { grid-template-columns: 1fr; gap: 2px; }
+body[data-variant="B"] .detail-side .fields dd { margin-bottom: var(--space-2); }
+.dsec h3 { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 var(--space-2); font-size: .9375rem; }
+.dsec h3 small { font-weight: 400; color: var(--pencil); font-size: .8125rem; }
+.file-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: var(--space-2); align-items: center; padding: 6px 0; border-bottom: 1px solid var(--rule); font-size: .875rem; }
+.file-ico { width: 36px; height: 36px; border-radius: 6px; display: grid; place-items: center; background: var(--paper-sunk); font: 600 .625rem var(--font-mono); color: var(--pencil); }
+.file-row .sub { display: block; font-size: .75rem; color: var(--pencil); }
+.seg-tabs { display: flex; gap: var(--space-4); border-bottom: 1.5px solid var(--rule); margin-bottom: var(--space-3); }
+.seg-tabs button { all: unset; cursor: pointer; padding: 6px 0; margin-bottom: -1.5px; border-bottom: 3px solid transparent; font-size: .875rem; color: var(--pencil); }
+.seg-tabs button[aria-selected="true"] { border-bottom-color: var(--place-2); color: var(--ink); font-weight: 600; }
+.comment { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: var(--space-2); margin-bottom: var(--space-3); }
+.comment .avatar { width: 32px; height: 32px; font-size: .8125rem; }
+.comment .who { font-size: .8125rem; font-weight: 600; }
+.comment .who time { font-weight: 400; color: var(--pencil); margin-left: 6px; }
+.comment p { margin: 2px 0 0; font-size: .875rem; }
+.mention { padding: 0 4px; border-radius: 4px; background: var(--sky); color: var(--ink-fixed); font-weight: 600; }
+.composer { position: relative; display: grid; gap: var(--space-2); }
+.composer textarea { min-height: 70px; }
+.mention-pop { position: absolute; left: 12px; bottom: 100%; z-index: 5; width: 220px; border: 1.5px solid var(--edge); border-radius: var(--r-control); background: var(--paper); box-shadow: 0 6px 16px rgb(0 0 0 / .12); }
+.mention-pop div { padding: 8px 10px; font-size: .875rem; }
+.mention-pop div[aria-selected="true"] { background: var(--paper-sunk); font-weight: 600; }
+.hist { margin: 0; padding: 0; list-style: none; font-size: .8125rem; }
+.hist li { padding: 6px 0; border-bottom: 1px solid var(--rule); }
+.hist time { color: var(--pencil); margin-right: 8px; font-family: var(--font-num); }
+.live-note { font-size: .75rem; color: var(--pencil); }
+
+/* ---------- ภาพรวม ---------- */
+.ov-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+
+/* ---------- ช่องข้อมูลเพิ่มเติม ---------- */
+.field-line { display: grid; grid-template-columns: 28px minmax(0, 18rem) 9rem auto; gap: var(--space-3); align-items: center; padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); justify-content: start; }
+.field-type { font-size: .8125rem; color: var(--pencil); }
+
+@media (max-width: 720px) {
+    .cal-wrap { grid-template-columns: 1fr; }
+    .cal-grid-wrap { display: none; }
+    .agenda { display: block; }
+    .agenda h4 { margin: var(--space-3) 0 var(--space-1); font-size: .8125rem; color: var(--pencil); }
+    .unscheduled { border-left: 0; padding-left: 0; border-top: 1.5px dashed var(--rule-strong); padding-top: var(--space-3); }
+    .task-table thead { display: none; }
+    .task-table, .task-table tbody, .task-table tr, .task-table td { display: block; }
+    .task-table tr.row { padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); }
+    /* มือถือ: ชื่องานบรรทัดแรก คน · วันส่ง · ความสำคัญ อยู่บรรทัดเดียวใต้ชื่อ */
+    .task-table tr.row td { display: inline-block; border: 0; padding: 0 var(--space-3) 0 0; font-size: .8125rem; color: var(--pencil); }
+    .task-table tr.row td:first-child { display: block; padding-bottom: 2px; font-size: .9375rem; color: var(--ink); }
+    .task-table tr.row td.c-col, .task-table tr.row td.c-field { display: none; }
+    .task-table tr.row td.num { text-align: left; }
+    .detail-backdrop { padding: 0 !important; }
+    body[data-variant] .detail { width: 100vw; height: 100%; border-radius: 0; border: 0; overflow: auto; }
+    body[data-variant="B"] .detail-body { grid-template-columns: 1fr; }
+    body[data-variant="B"] .detail-side { order: -1; }   /* มือถือ: คน วันส่ง ความสำคัญ อยู่บนสุดเสมอ */
+    .ov-grid { grid-template-columns: 1fr; }
+    .field-line { grid-template-columns: 28px minmax(0, 1fr) auto; }
+    .field-line .field-type { grid-column: 2; }
+}
+</style>
+</head>
+<body data-screen="list" data-variant="A" data-role="owner">
+
+<div class="mk-bar" role="region" aria-label="ตัวควบคุม mockup">
+    <b>mockup P0b</b>
+    <label>หน้าจอ
+        <select id="mkScreen">
+            <option value="list">1 รายการ</option>
+            <option value="calendar">2 ปฏิทิน</option>
+            <option value="detail">3 รายละเอียดงาน</option>
+            <option value="overview">4 ภาพรวม</option>
+            <option value="fields">5 ตั้งค่า: ช่องข้อมูล</option>
+            <option value="bell">6 กระดิ่งแจ้งเตือน</option>
+        </select>
+    </label>
+    <label>รายละเอียดงาน
+        <select id="mkVariant">
+            <option value="A">แบบ A แผงด้านขวา</option>
+            <option value="B">แบบ B หน้าต่างกว้าง</option>
+        </select>
+    </label>
+    <label>ธีม <select id="mkTheme"><option value="light">สว่าง</option><option value="dark">มืด</option></select></label>
+</div>
+
+<header class="desk-top">
+    <a class="brand" href="#">DayFlow</a>
+    <nav class="flags" aria-label="ที่หลัก">
+        <a class="flag" data-place="today" href="#"><span>วันนี้</span></a>
+        <a class="flag" data-place="work" href="#" aria-current="page"><span>งาน</span></a>
+        <a class="flag" data-place="life" href="#"><span>ชีวิต</span></a>
+        <a class="flag" data-place="money" href="#"><span>เงิน</span></a>
+        <a class="flag" data-place="vault" href="#"><span>คลัง</span></a>
+    </nav>
+    <div class="top-actions">
+        <button type="button" class="bell" aria-label="การแจ้งเตือน 3 รายการที่ยังไม่อ่าน" data-go="bell">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+            <span class="dot">3</span>
+        </button>
+        <button type="button" class="btn btn-primary top-add">เพิ่ม</button>
+    </div>
+</header>
+
+<!-- ================= 6 กระดิ่ง ================= -->
+<div class="bell-panel" data-view="bell" role="dialog" aria-label="การแจ้งเตือน">
+    <header><h2>การแจ้งเตือน</h2><button class="btn btn-link btn-sm" type="button">ทำเครื่องหมายว่าอ่านแล้ว</button></header>
+    <div class="note-group">วันนี้</div>
+    <a class="note-row unread" href="#" data-go="detail"><span><span class="what"><b>มายด์</b> มอบหมาย "แก้วันที่เพี้ยนตอนเที่ยงคืน" ให้คุณ</span><span class="where">แอป DayFlow รุ่นมือถือ · 10:42</span></span></a>
+    <a class="note-row unread" href="#" data-go="detail"><span><span class="what"><b>ต้น</b> กล่าวถึงคุณในความเห็น: "@ฟ้าใส ช่วยดูขนาดไฟล์ด้วยครับ"</span><span class="where">ส่งออกไฟล์ CSV · 09:15</span></span></a>
+    <a class="note-row unread" href="#"><span><span class="what"><b>พี่นก</b> ออกจากโปรเจค งาน 2 งานไม่มีผู้รับผิดชอบแล้ว</span><span class="where">งานแต่งพี่ฝน · 08:03</span></span></a>
+    <div class="note-group">เมื่อวาน</div>
+    <a class="note-row" href="#"><span><span class="what"><b>ต้น</b> กล่าวถึงคุณในแชท: "@ฟ้าใส ประชุมพรุ่งนี้ 10 โมงนะ"</span><span class="where">แอป DayFlow รุ่นมือถือ · 17:20</span></span></a>
+    <p class="proj-note" style="padding: var(--space-3) var(--space-4); margin:0">เก็บไว้ 30 วัน · ตั้งค่าช่องทาง (Push / Telegram) ได้ที่ ตั้งค่า &gt; การแจ้งเตือน</p>
+</div>
+
+<main class="app-main">
+    <nav class="subnav" aria-label="งาน">
+        <a class="subnav-link" href="#">งาน</a>
+        <a class="subnav-link" href="#" aria-current="page">โปรเจค</a>
+        <a class="subnav-link" href="#">แพลนเนอร์</a>
+    </nav>
+    <div class="app-content">
+        <p class="mk-note" id="mkNote"></p>
+
+        <section class="sec">
+            <div class="proj-head" data-ptype="software">
+                <span class="type-ear">ซอฟต์แวร์</span>
+                <div class="proj-head-row">
+                    <h2 class="proj-head-title">แอป DayFlow รุ่นมือถือ</h2>
+                    <span class="text-sm text-muted">คุณเป็น <b>เจ้าของ</b> · 4 คน</span>
+                </div>
+            </div>
+
+            <!-- ตัวกรองอยู่เหนือแท็บ: ใช้กับทุกมุมมองและค้างอยู่เมื่อสลับ (REQ-P4) -->
+            <div data-view="list calendar detail bell"><div class="view-filters">
+                <input class="form-control grow" type="search" placeholder="ค้นหางาน" aria-label="ค้นหางาน">
+                <select class="form-control" aria-label="ผู้รับผิดชอบ"><option>ทุกคน</option><option selected>งานของฉัน</option><option>ยังไม่มีผู้รับผิดชอบ</option><option>มายด์</option><option>ต้น</option></select>
+                <select class="form-control" aria-label="กลุ่ม"><option>ทุกสถานะ</option><option>ยังไม่เริ่ม</option><option>กำลังทำ</option><option>เสร็จ</option></select>
+                <select class="form-control" aria-label="ครบกำหนด"><option>ทุกวันส่ง</option><option>เลยกำหนด</option><option>7 วันข้างหน้า</option><option>ไม่มีวันส่ง</option></select>
+                <span class="filter-chip">งานของฉัน <button class="btn-link" type="button" aria-label="ล้างตัวกรอง งานของฉัน">×</button></span>
+            </div></div>
+
+            <div class="tabs" role="tablist" aria-label="มุมมองของโปรเจค">
+                <button class="tab" role="tab" type="button">บอร์ด</button>
+                <button class="tab" role="tab" type="button" data-go="list" data-tab="list">รายการ</button>
+                <button class="tab" role="tab" type="button" data-go="calendar" data-tab="calendar">ปฏิทิน</button>
+                <button class="tab" role="tab" type="button" data-go="overview" data-tab="overview">ภาพรวม</button>
+                <button class="tab" role="tab" type="button" data-go="fields" data-tab="fields">ตั้งค่า</button>
+            </div>
+
+            <!-- ================= 1 รายการ ================= -->
+            <div data-view="list detail bell" class="mt-3">
+                <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
+                    <span class="text-sm text-muted">8 งาน · กรองอยู่ 1</span>
+                    <label class="text-sm">จัดกลุ่มตาม
+                        <select class="form-control" style="width:auto; display:inline-block"><option>คอลัมน์</option><option>ผู้รับผิดชอบ</option><option>ความสำคัญ</option><option>ไม่จัดกลุ่ม</option></select>
+                    </label>
+                </div>
+                <table class="task-table">
+                    <thead><tr>
+                        <th scope="col"><button type="button">งาน</button></th>
+                        <th scope="col" class="c-col"><button type="button">คอลัมน์</button></th>
+                        <th scope="col"><button type="button">ผู้รับผิดชอบ</button></th>
+                        <th scope="col" aria-sort="ascending"><button type="button">ครบกำหนด</button></th>
+                        <th scope="col"><button type="button">ความสำคัญ</button></th>
+                        <th scope="col" class="c-field"><button type="button">แพลตฟอร์ม</button></th>
+                        <th scope="col"><span class="sr-only">ความเห็นและไฟล์แนบ</span></th>
+                    </tr></thead>
+                    <tbody id="listBody"></tbody>
+                </table>
+            </div>
+
+            <!-- ================= 2 ปฏิทิน ================= -->
+            <div data-view="calendar" class="mt-3">
+                <div class="cal-wrap">
+                    <div>
+                        <div class="cal-head"><h3>พฤศจิกายน 2569</h3><span class="flex gap-2"><button class="btn btn-sm" type="button">‹</button><button class="btn btn-sm" type="button">วันนี้</button><button class="btn btn-sm" type="button">›</button></span></div>
+                        <div class="cal-grid-wrap"><div class="cal-grid" id="calGrid"></div></div>
+                        <div class="agenda" id="agenda"></div>
+                    </div>
+                    <aside class="unscheduled">
+                        <h4>ยังไม่ลงวัน (2)</h4>
+                        <a class="cal-chip" data-g="todo" href="#" data-go="detail">ไอคอนแอปใหม่</a>
+                        <a class="cal-chip" data-g="doing" href="#" data-go="detail">โหมดออฟไลน์</a>
+                        <p class="proj-note">ใส่วันครบกำหนดในรายละเอียดงานเพื่อให้ขึ้นในปฏิทิน</p>
+                    </aside>
+                </div>
+            </div>
+
+            <!-- ================= 4 ภาพรวม ================= -->
+            <div data-view="overview" class="mt-4">
+                <div class="ov-grid">
+                    <section class="sec"><div class="sec-head"><h2>ความคืบหน้า</h2></div>
+                        <div class="facts proj-facts"><div class="fact"><div class="k">เสร็จแล้ว</div><div class="v">3</div></div><div class="fact"><div class="k">ยังค้าง</div><div class="v">5</div></div><div class="fact"><div class="k">เลยกำหนด</div><div class="v text-danger">1</div></div></div>
+                    </section>
+                    <section class="sec"><div class="sec-head"><h2>สรุปสถานะโปรเจค</h2></div><p class="proj-insight">ความคืบหน้า 38% มีงานเลยกำหนด 1 งาน ("แก้วันที่เพี้ยนตอนเที่ยงคืน") งานในคอลัมน์ "ทดสอบ" รอนานที่สุด 4 วัน</p></section>
+                    <section class="sec"><div class="sec-head"><h2>กิจกรรมล่าสุด</h2></div><ul class="activity-feed-list"><li class="activity-feed-item">ต้น ย้าย "ส่งออกไฟล์ CSV" ไป ทดสอบ <span class="activity-item-time">09:02</span></li><li class="activity-feed-item">มายด์ แนบไฟล์ "สเปก-CSV.pdf" <span class="activity-item-time">เมื่อวาน</span></li></ul></section>
+                    <section class="sec"><div class="sec-head"><h2>แชทในโปรเจค</h2></div><p class="text-sm"><b>ต้น:</b> <span class="mention">@ฟ้าใส</span> ประชุมพรุ่งนี้ 10 โมงนะ</p><div class="chat-input-wrap"><input class="form-control" placeholder="พิมพ์ข้อความถึงทีม พิมพ์ @ เพื่อเรียกชื่อ"><button class="btn btn-primary" type="button">ส่ง</button></div></section>
+                </div>
+            </div>
+
+            <!-- ================= 5 ช่องข้อมูลเพิ่มเติม ================= -->
+            <div data-view="fields" class="mt-3">
+                <nav class="subnav" aria-label="ตั้งค่าโปรเจค" style="padding-left:0">
+                    <a class="subnav-link" href="#">ทีมและสิทธิ์</a><a class="subnav-link" href="#">คอลัมน์</a>
+                    <a class="subnav-link" href="#" aria-current="page">ช่องข้อมูล</a><a class="subnav-link" href="#">ประเภท</a>
+                </nav>
+                <p class="text-sm text-muted mt-3">ช่องที่เพิ่มจะอยู่ในรายละเอียดงานทุกงาน และใช้กรอง/เรียงในมุมมองรายการได้ สูงสุด 10 ช่อง</p>
+                <div class="field-line"><span class="drag-handle" aria-hidden="true">⠿</span><input class="form-control" value="แพลตฟอร์ม" aria-label="ชื่อช่อง"><span class="field-type">ตัวเลือก: iOS, Android, เว็บ</span><button class="btn btn-sm btn-ghost" type="button">ลบ</button></div>
+                <div class="field-line"><span class="drag-handle" aria-hidden="true">⠿</span><input class="form-control" value="ผู้ทดสอบ" aria-label="ชื่อช่อง"><span class="field-type">คน</span><button class="btn btn-sm btn-ghost" type="button">ลบ</button></div>
+                <div class="field-line"><span class="drag-handle" aria-hidden="true">⠿</span><input class="form-control" value="ชั่วโมงที่ใช้" aria-label="ชื่อช่อง"><span class="field-type">ตัวเลข</span><button class="btn btn-sm btn-ghost" type="button">ลบ</button></div>
+                <form class="sec mt-4" onsubmit="return false">
+                    <div class="sec-head"><h2>เพิ่มช่อง</h2></div>
+                    <div class="form-row">
+                        <div class="form-group"><label class="form-label" for="fName">ชื่อช่อง</label><input id="fName" class="form-control" placeholder="เช่น ลูกค้า"></div>
+                        <div class="form-group"><label class="form-label" for="fType">ชนิด</label><select id="fType" class="form-control"><option>ข้อความ</option><option>ตัวเลข</option><option>วันที่</option><option selected>ตัวเลือก</option><option>คน</option><option>ติ๊ก (ใช่/ไม่ใช่)</option></select></div>
+                    </div>
+                    <div class="form-group"><label class="form-label" for="fOpts">ตัวเลือก (บรรทัดละหนึ่ง)</label><textarea id="fOpts" class="form-control" rows="3">ด่วน
+ปกติ</textarea></div>
+                    <p class="form-hint">ลบช่องแล้วค่าที่กรอกไว้ในทุกงานจะหายไปด้วย ระบบจะถามก่อนลบ</p>
+                    <button class="btn btn-primary" type="button">เพิ่มช่อง</button>
+                </form>
+            </div>
+        </section>
+    </div>
+</main>
+
+<!-- ================= 3 รายละเอียดงาน ================= -->
+<div class="detail-backdrop" data-view="detail" style="display:none" id="detailWrap">
+    <article class="detail" role="dialog" aria-labelledby="dTitle">
+        <div class="detail-top">
+            <span class="k">DF-49</span>
+            <select class="form-control" style="width:auto" aria-label="คอลัมน์"><option>ต้องทำ</option><option>กำลังทำ</option><option>รอรีวิว</option><option selected>ทดสอบ</option><option>เสร็จ</option></select>
+            <span class="sp"></span>
+            <button class="icon-btn" type="button" aria-label="คัดลอกลิงก์งาน">⧉</button>
+            <button class="icon-btn" type="button" aria-label="ปิด" data-go="list">×</button>
+        </div>
+        <h2 class="detail-title" id="dTitle">ส่งออกไฟล์ CSV</h2>
+        <div class="detail-body">
+            <div class="detail-main">
+                <dl class="fields" data-fields-main>
+                    <dt>ผู้รับผิดชอบ</dt><dd><select class="form-control"><option>ฟ้าใส</option><option>มายด์</option><option>ต้น</option><option>ยังไม่มี</option></select></dd>
+                    <dt>ครบกำหนด</dt><dd><input class="form-control" type="date" value="2026-11-26"></dd>
+                    <dt>ความสำคัญ</dt><dd><select class="form-control"><option>สูง</option></select></dd>
+                    <dt>แพลตฟอร์ม</dt><dd><select class="form-control"><option>เว็บ</option></select></dd>
+                    <dt>ชั่วโมงที่ใช้</dt><dd><input class="form-control" type="number" value="6"></dd>
+                </dl>
+                <section class="dsec"><h3>คำอธิบาย</h3><textarea class="form-control" rows="3">ผู้ใช้ส่งออกงานและรายรับรายจ่ายเป็น CSV เปิดใน Excel ภาษาไทยไม่เพี้ยน (BOM UTF-8)</textarea></section>
+                <section class="dsec"><h3>เช็กลิสต์ <small>2/3</small></h3>
+                    <label class="check-item"><input type="checkbox" checked> หัวคอลัมน์ภาษาไทย</label>
+                    <label class="check-item"><input type="checkbox" checked> ใส่ BOM</label>
+                    <label class="check-item"><input type="checkbox"> ทดสอบไฟล์ 10,000 แถว</label>
+                </section>
+                <section class="dsec"><h3>ไฟล์แนบ <small>2</small></h3>
+                    <div class="file-row"><span class="file-ico">PDF</span><span>สเปก-CSV.pdf<span class="sub">มายด์ · 240 KB · เมื่อวาน</span></span><button class="btn btn-sm btn-ghost" type="button">ดาวน์โหลด</button></div>
+                    <div class="file-row"><span class="file-ico">CSV</span><span>ตัวอย่าง-ส่งออก.csv<span class="sub">ต้น · 18 KB · วันนี้</span></span><button class="btn btn-sm btn-ghost" type="button">ดาวน์โหลด</button></div>
+                    <div class="flex gap-2 mt-2"><button class="btn btn-sm" type="button">แนบจากเครื่อง</button><button class="btn btn-sm" type="button">เลือกจากคลังไฟล์</button></div>
+                    <p class="form-hint">ไฟล์เก็บในที่เก็บไฟล์ของ DayFlow (รวม Google Drive ถ้าเปิดไว้) ทุกคนในโปรเจคเปิดได้</p>
+                </section>
+                <section class="dsec">
+                    <div class="seg-tabs" role="tablist"><button role="tab" aria-selected="true" type="button" id="tabC">ความเห็น 2</button><button role="tab" aria-selected="false" type="button" id="tabH">ประวัติ</button></div>
+                    <div id="paneC">
+                        <div class="comment"><span class="avatar">ม</span><div><div class="who">มายด์<time>เมื่อวาน 16:10</time></div><p>แนบสเปกแล้วนะ ขอให้รองรับวันที่แบบ พ.ศ. ด้วย</p></div></div>
+                        <div class="comment"><span class="avatar">ต</span><div><div class="who">ต้น<time>09:15</time></div><p><span class="mention">@ฟ้าใส</span> ช่วยดูขนาดไฟล์ด้วยครับ ไฟล์ตัวอย่าง 10,000 แถวได้ 1.2 MB</p></div></div>
+                        <div class="composer">
+                            <div class="mention-pop" role="listbox" aria-label="เลือกคนที่จะกล่าวถึง"><div role="option" aria-selected="true">มายด์</div><div role="option" aria-selected="false">ต้น</div><div role="option" aria-selected="false">พี่นก (ดูอย่างเดียว)</div></div>
+                            <textarea class="form-control" aria-label="เขียนความเห็น">ขอบคุณครับ @</textarea>
+                            <div class="flex justify-between items-center"><span class="live-note">ความเห็นใหม่ขึ้นเองภายใน 1 นาที</span><button class="btn btn-primary btn-sm" type="button">ส่งความเห็น</button></div>
+                        </div>
+                    </div>
+                    <ul class="hist" id="paneH" hidden>
+                        <li><time>09:02</time>ต้น ย้ายจาก "รอรีวิว" ไป "ทดสอบ"</li>
+                        <li><time>เมื่อวาน</time>มายด์ แนบไฟล์ "สเปก-CSV.pdf"</li>
+                        <li><time>22 พ.ย.</time>ฟ้าใส เปลี่ยนครบกำหนดเป็น 26 พ.ย.</li>
+                        <li><time>20 พ.ย.</time>ฟ้าใส สร้างงาน</li>
+                    </ul>
+                </section>
+            </div>
+            <aside class="detail-side" data-side></aside>
+        </div>
+    </article>
+</div>
+
+<script>
+/* ข้อมูลตัวอย่างชุดเดียว ใช้วาดทั้งรายการและปฏิทิน: [เลข, ชื่อ, คอลัมน์, กลุ่ม, คน, วันส่ง(วันในเดือน พ.ย. หรือ null), ความสำคัญ, แพลตฟอร์ม, ความเห็น, ไฟล์] */
+var TASKS = [
+    ['DF-41', 'หน้าตั้งค่าแจ้งเตือน', 'ต้องทำ', 'todo', 'ฟ้าใส', 28, 'ปานกลาง', 'iOS', 0, 0],
+    ['DF-44', 'ไอคอนแอปใหม่', 'ต้องทำ', 'todo', 'มายด์', null, 'ต่ำ', '—', 1, 2],
+    ['DF-45', 'ล็อกอินด้วยลายนิ้วมือ', 'กำลังทำ', 'doing', 'ฟ้าใส', 30, 'สูง', 'Android', 3, 0],
+    ['DF-43', 'โหมดออฟไลน์', 'กำลังทำ', 'doing', 'ยังไม่มี', null, 'สูง', 'iOS', 0, 0],
+    ['DF-47', 'แก้วันที่เพี้ยนตอนเที่ยงคืน', 'รอรีวิว', 'doing', 'ฟ้าใส', 23, 'วิกฤต', 'เว็บ', 4, 1],
+    ['DF-49', 'ส่งออกไฟล์ CSV', 'ทดสอบ', 'doing', 'ฟ้าใส', 26, 'สูง', 'เว็บ', 2, 2],
+    ['DF-51', 'หน้าแรกแบบใหม่', 'เสร็จ', 'done', 'ฟ้าใส', 18, 'ปานกลาง', 'เว็บ', 0, 0],
+    ['DF-52', 'ย้ายฐานข้อมูล', 'เสร็จ', 'done', 'ฟ้าใส', 12, 'สูง', '—', 1, 0]
+];
+var TODAY = 24;
+var NOTES = {
+    list: '<strong>รายการ:</strong> ตารางเรียงได้ทุกหัวคอลัมน์ (กดหัวเพื่อสลับ) จัดกลุ่มตามคอลัมน์/คน/ความสำคัญ แถบกรองด้านบนใช้ร่วมกับบอร์ดและปฏิทิน และค้างอยู่เมื่อสลับแท็บ วันส่งที่เลยแล้วเป็นสีแดง คอลัมน์ "แพลตฟอร์ม" คือช่องข้อมูลเพิ่มเติม (หน้าจอ 5) บนมือถือแต่ละแถวกลายเป็นการ์ดสั้น ๆ กดแถวเพื่อเปิดรายละเอียด',
+    calendar: '<strong>ปฏิทิน:</strong> งานวางตามวันครบกำหนด เส้นซ้ายบอกกลุ่ม งานเสร็จขีดฆ่า งานไม่มีวันส่งอยู่ "ยังไม่ลงวัน" ด้านข้าง (บนมือถือเป็นรายการตามวันแทนตาราง) กดงานเพื่อเปิดรายละเอียด การลากเปลี่ยนวันมาในเฟสการตลาด (REQ-M3)',
+    detail: '<strong>รายละเอียดงาน — ใช้แบบ A (เลือก 2026-11-24) แบบ B เก็บไว้ดูเทียบ:</strong> A แผงด้านขวา บอร์ด/รายการยังเห็นอยู่ข้างหลัง เหมาะกับเปิดดูทีละงานเร็ว ๆ · B หน้าต่างกว้างสองคอลัมน์ เนื้อหาซ้าย ข้อมูลประกอบขวา อ่านความเห็นยาว ๆ สบายกว่า · บนมือถือทั้งสองแบบเต็มจอ พิมพ์ @ แล้วเลือกคนในโปรเจค คนที่ถูกกล่าวถึงได้แจ้งเตือน ความเห็นใหม่ขึ้นเองภายใน 1 นาที แท็บ "ประวัติ" คือทุกการเปลี่ยนของงานนี้',
+    overview: '<strong>ภาพรวม (แนะนำ):</strong> ย้ายวิดเจ็ตที่ตอนนี้อยู่ใต้บอร์ด (ความคืบหน้า สรุป กิจกรรม แชท) มาไว้แท็บนี้ หน้าบอร์ดจะเหลือแค่บอร์ด แชทพิมพ์ @ เรียกชื่อได้เหมือนความเห็น',
+    fields: '<strong>ช่องข้อมูลเพิ่มเติม (REQ-P6 "ควรมี" ทำหลังข้อต้องมี):</strong> เจ้าของ/ผู้ดูแลเพิ่มช่องได้ 6 ชนิด ค่าที่กรอกขึ้นในรายละเอียดงานและเป็นคอลัมน์ในมุมมองรายการ กรอง/เรียงได้',
+    bell: '<strong>กระดิ่งแจ้งเตือน (ใหม่ ทุกหน้าของแอป):</strong> แจ้งเมื่อถูกมอบหมายงาน ถูกกล่าวถึงในความเห็นหรือแชท และเหตุการณ์ของทีม ไม่แจ้งเรื่องที่ตัวเองทำ จุดแดงคือยังไม่อ่าน กดแล้วไปที่งานนั้น ส่ง Push/Telegram ตามช่องทางที่เปิดไว้ด้วย'
+};
+var b = document.body;
+
+/* หนีอักขระ HTML: รับข้อความ คืนข้อความที่ใส่ innerHTML ได้ */
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function thDate(d) { return d ? d + ' พ.ย.' : '—'; }
+
+/* วาดรายการจัดกลุ่มตามคอลัมน์ และปฏิทินเดือน พ.ย. 2569 (1 พ.ย. เป็นวันอาทิตย์) จาก TASKS ชุดเดียว */
+function render() {
+    var html = '', last = '';
+    TASKS.forEach(function (t) {
+        if (t[2] !== last) { last = t[2]; html += '<tr class="grp-row" data-g="' + t[3] + '"><td colspan="7"><span class="gdot"></span>' + esc(t[2]) + '</td></tr>'; }
+        var over = t[5] && t[5] < TODAY && t[3] !== 'done';
+        html += '<tr class="row" data-g="' + t[3] + '" data-go="detail"><td><span class="k">' + t[0] + '</span>' + esc(t[1]) + '</td>'
+            + '<td class="c-col"><span class="gdot"></span>' + esc(t[2]) + '</td><td>' + esc(t[4]) + '</td>'
+            + '<td class="num' + (over ? ' over' : '') + '">' + thDate(t[5]) + (over ? ' · เลยกำหนด' : '') + '</td><td>' + t[6] + '</td><td class="c-field">' + t[7] + '</td>'
+            + '<td class="meta-ico">' + (t[8] ? '💬 ' + t[8] + ' ' : '') + (t[9] ? '📎 ' + t[9] : '') + '</td></tr>';
+    });
+    document.getElementById('listBody').innerHTML = html;
+
+    var cal = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'].map(function (d) { return '<div class="dow">' + d + '</div>'; }).join('');
+    for (var i = 0; i < 35; i++) {
+        var day = i + 1, other = day > 30;
+        var chips = TASKS.filter(function (t) { return t[5] === day; }).map(function (t) {
+            return '<a class="cal-chip' + (t[3] === 'done' ? ' done' : '') + '" data-g="' + t[3] + '" href="#" data-go="detail">' + esc(t[1]) + '</a>';
+        }).join('');
+        cal += '<div class="cal-cell' + (other ? ' other' : '') + (day === TODAY ? ' today' : '') + '"><span class="d">' + (other ? day - 30 : day) + '</span>' + (other ? '' : chips) + '</div>';
+    }
+    document.getElementById('calGrid').innerHTML = cal;
+    document.getElementById('agenda').innerHTML = TASKS.filter(function (t) { return t[5]; }).sort(function (a, c) { return a[5] - c[5]; })
+        .map(function (t) { return '<h4>' + t[5] + ' พ.ย.' + (t[5] === TODAY ? ' (วันนี้)' : '') + '</h4><a class="cal-chip' + (t[3] === 'done' ? ' done' : '') + '" data-g="' + t[3] + '" href="#" data-go="detail">' + esc(t[1]) + '</a>'; }).join('');
+
+    // แบบ B: ย้ายช่องข้อมูลไปคอลัมน์ขวา แบบ A: อยู่บนสุดของเนื้อหา
+    var fields = document.querySelector('[data-fields-main]'), side = document.querySelector('[data-side]'), main = document.querySelector('.detail-main');
+    if (b.dataset.variant === 'B') side.appendChild(fields); else main.insertBefore(fields, main.firstChild);
+    document.getElementById('detailWrap').style.display = b.dataset.screen === 'detail' ? 'flex' : 'none';
+    document.documentElement.style.setProperty('--mk-top', document.querySelector('.mk-bar').offsetHeight + 'px');
+    document.getElementById('mkNote').innerHTML = NOTES[b.dataset.screen];
+    document.querySelectorAll('.tab').forEach(function (t) { t.setAttribute('aria-selected', String(t.dataset.tab === b.dataset.screen || (!t.dataset.tab && false) || (t.dataset.tab === 'list' && (b.dataset.screen === 'detail' || b.dataset.screen === 'bell')))); });
+}
+function go(s) { b.dataset.screen = s; document.getElementById('mkScreen').value = s; render(); }
+document.getElementById('mkScreen').addEventListener('change', function (e) { go(e.target.value); });
+document.getElementById('mkVariant').addEventListener('change', function (e) { b.dataset.variant = e.target.value; render(); });
+document.getElementById('mkTheme').addEventListener('change', function (e) { document.documentElement.dataset.theme = e.target.value; });
+document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-go]');
+    if (el) { e.preventDefault(); go(el.dataset.go); return; }
+    if (e.target.id === 'tabC' || e.target.id === 'tabH') {
+        var h = e.target.id === 'tabH';
+        document.getElementById('paneC').hidden = h; document.getElementById('paneH').hidden = !h;
+        document.getElementById('tabC').setAttribute('aria-selected', String(!h)); document.getElementById('tabH').setAttribute('aria-selected', String(h));
+    }
+});
+new URLSearchParams(location.search).forEach(function (v, k) {
+    if (k === 'theme') document.documentElement.dataset.theme = v; else b.dataset[k] = v;
+    var s = document.getElementById('mk' + k[0].toUpperCase() + k.slice(1)); if (s) s.value = v;
+});
+render();
+</script>
+</body>
+</html>

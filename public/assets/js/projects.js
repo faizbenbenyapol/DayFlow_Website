@@ -39,6 +39,12 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     await loadProjects();
     initSortable();
+
+    // ลิงก์จากการแจ้งเตือนหรือที่คัดลอกไว้: ?project=&task= เปิดแผงรายละเอียดของงานนั้นเลย
+    const taskParam = params.get('task');
+    if (taskParam && /^\d+$/.test(taskParam) && typeof openEditTask === 'function') {
+        openEditTask(parseInt(taskParam, 10));
+    }
     renderCalendar();
 
     // A chat nobody is looking at is not worth asking the server about every few seconds.
@@ -238,8 +244,7 @@ async function selectProject(projectId) {
         }
 
         renderBoardColumns();
-        renderKanbanCards();
-        initSortable();
+        loadTaskView();               // the shared filter, then the board, the list and the calendar
         updateAnalyticsCharts();
         renderActivityFeed();
         renderAiInsights();

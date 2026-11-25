@@ -66,6 +66,10 @@ class Router
         $this->add('GET',  '/api/review',              'ReviewController',    'apiSummary', true);
 
         // --- API: Browser notifications ---
+        // --- API: กระดิ่งแจ้งเตือน (ทุกเมนู) ---
+        $this->add('GET',    '/api/notifications',        'NotificationController', 'apiList',   true);
+        $this->add('GET',    '/api/notifications/unread', 'NotificationController', 'apiUnread', true);
+        $this->add('POST',   '/api/notifications/read',   'NotificationController', 'apiRead',   true);
         $this->add('GET',    '/api/push/config',      'PushController', 'apiConfig',      true);
         $this->add('POST',   '/api/push/subscribe',   'PushController', 'apiSubscribe',   true);
         $this->add('POST',   '/api/push/unsubscribe', 'PushController', 'apiUnsubscribe', true);
@@ -319,6 +323,15 @@ class Router
         $this->add('POST',   '/api/projects/{id}/tasks',   'ProjectTaskController', 'apiTaskCreate',  true);
         $this->add('PUT',    '/api/projects/tasks/{tid}',  'ProjectTaskController', 'apiTaskUpdate',  true);
         $this->add('DELETE', '/api/projects/tasks/{tid}',  'ProjectTaskController', 'apiTaskDelete',  true);
+        $this->add('GET',    '/api/projects/tasks/{tid}/history', 'ProjectTaskController', 'apiTaskHistory', true);
+        $this->add('GET',    '/api/projects/tasks/{tid}/comments', 'ProjectCommentController', 'apiList',   true);
+        $this->add('POST',   '/api/projects/tasks/{tid}/comments', 'ProjectCommentController', 'apiCreate', true);
+        $this->add('DELETE', '/api/projects/comments/{cid}',       'ProjectCommentController', 'apiDelete', true);
+        $this->add('GET',    '/api/projects/tasks/{tid}/files',       'ProjectAttachmentController', 'apiList',     true);
+        $this->add('POST',   '/api/projects/tasks/{tid}/files',       'ProjectAttachmentController', 'apiUpload',   true);
+        $this->add('POST',   '/api/projects/tasks/{tid}/files/link',  'ProjectAttachmentController', 'apiLink',     true);
+        $this->add('GET',    '/api/projects/tasks/{tid}/files/{fid}', 'ProjectAttachmentController', 'apiDownload', true);
+        $this->add('DELETE', '/api/projects/tasks/{tid}/files/{fid}', 'ProjectAttachmentController', 'apiUnlink',   true);
         $this->add('POST',   '/api/projects/tasks/reorder','ProjectTaskController', 'apiTaskReorder', true);
 
         // --- API: Projects Board Columns ---
@@ -326,6 +339,12 @@ class Router
         $this->add('POST',   '/api/projects/{id}/columns/reorder', 'ProjectColumnController', 'apiReorder', true);
         $this->add('PUT',    '/api/projects/columns/{cid}',        'ProjectColumnController', 'apiUpdate',  true);
         $this->add('DELETE', '/api/projects/columns/{cid}',        'ProjectColumnController', 'apiDelete',  true);
+
+        // --- API: Projects custom fields (REQ-P6) ---
+        $this->add('POST',   '/api/projects/{id}/fields',          'ProjectFieldController', 'apiCreate',  true);
+        $this->add('POST',   '/api/projects/{id}/fields/reorder',  'ProjectFieldController', 'apiReorder', true);
+        $this->add('PUT',    '/api/projects/fields/{fid}',         'ProjectFieldController', 'apiUpdate',  true);
+        $this->add('DELETE', '/api/projects/fields/{fid}',         'ProjectFieldController', 'apiDelete',  true);
 
         // --- API: Projects Collaboration & Chat ---
         $this->add('GET',    '/api/projects/{id}/members',      'ProjectTeamController', 'apiMemberList',   true);
@@ -482,6 +501,8 @@ class Router
         '#^/api/ai/keys(/|$)#',
         '#^/api/push(/|$)#',
         '#^/api/projects/[^/]+/(share|members)(/|$)#',
+        // ไฟล์แนบของงานเก็บไฟล์ลงคลังเหมือน /api/files บัญชีทดลองจึงแนบไม่ได้
+        '#^/api/projects/tasks/[^/]+/files(/|$)#',
     ];
 
     private function isDemoRestricted(string $path): bool

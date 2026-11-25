@@ -28,6 +28,7 @@ if (isset($pageScript) && in_array($pageScript, $sortablePages, true)):
 <script src="<?= APP_URL ?>/assets/js/actions.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/actions.js') ?>"></script>
 <script src="<?= APP_URL ?>/assets/js/app.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/app.js') ?>"></script>
 <script src="<?= APP_URL ?>/assets/js/shell.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/shell.js') ?>"></script>
+<script src="<?= APP_URL ?>/assets/js/notifications.js?v=<?= @filemtime(PUBLIC_ROOT . '/assets/js/notifications.js') ?>"></script>
 
 <script nonce="<?= h(Security::nonce()) ?>">
 // Service worker: caches the static shell only (CSS/JS/fonts), never pages or
@@ -50,7 +51,7 @@ if ('serviceWorker' in navigator) {
         'ai'         => ['ai-chat'],
         'finance'    => ['finance-report'],
         'settings'   => ['settings-categories', 'settings-stock-keys', 'settings-menus', 'settings-telegram', 'settings-two-factor', 'settings-push', 'settings-app-shares', 'settings-install', 'settings-drive', 'shares'],
-        'projects'   => ['projects-board', 'projects-team', 'projects-share'],
+        'projects'   => ['projects-board', 'projects-team', 'projects-share', 'projects-comments', 'projects-files', 'projects-fields', 'projects-views'],
         'stocks'     => ['stocks-analysis', 'stocks-capital', 'stocks-screenshots'],
         'calculator' => ['calculator-finance', 'calculator-convert', 'calculator-math'],
         'file-tools' => ['file-tools-pdf', 'file-tools-image', 'file-tools-data', 'file-tools-zip'],

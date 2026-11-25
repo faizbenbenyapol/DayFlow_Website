@@ -30,6 +30,62 @@ final class FileStore
         return new self($userId);
     }
 
+    /**
+     * ตรวจไฟล์ที่อัปโหลดมาใน $_FILES[...] ที่เดียวของทั้งแอป (เมนูไฟล์และไฟล์แนบของงาน)
+     * ขนาด ชนิดจริงจากเนื้อไฟล์ (ไม่เชื่อ client) และนามสกุลสคริปต์ที่ห้าม ไม่ผ่านจบด้วย 422
+     *
+     * @param mixed $file รายการหนึ่งของ $_FILES
+     * @return array{tmp: string, name: string, mime: string, size: int}
+     */
+    public static function acceptUpload(mixed $file): array
+    {
+        if (!is_array($file) || empty($file['tmp_name'])) {
+            Response::json(['error' => 'ไม่พบไฟล์'], 422);
+        }
+        if (!is_uploaded_file($file['tmp_name'])) {
+            Response::json(['error' => 'ไฟล์อัปโหลดไม่ถูกต้อง'], 422);
+        }
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            Response::json(['error' => 'อัปโหลดไม่สำเร็จ: ' . $file['error']], 422);
+        }
+        if ($file['size'] > MAX_UPLOAD_BYTES) {
+            Response::json(['error' => 'ไฟล์ขนาดใหญ่เกินกว่าที่กำหนด (' . formatBytes(MAX_UPLOAD_BYTES) . ')'], 422);
+        }
+
+        $finfo    = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $file['tmp_name']) ?: 'application/octet-stream';
+        finfo_close($finfo);
+        $blocked = ['application/x-php', 'text/x-php', 'application/x-httpd-php', 'application/x-executable', 'text/html'];
+        if (in_array($mimeType, $blocked, true)) {
+            Response::json(['error' => 'ประเภทไฟล์นี้ไม่อนุญาต'], 422);
+        }
+
+        $origName = basename((string)$file['name']);
+        $ext      = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+        $blockedExt = ['php', 'php3', 'php4', 'php5', 'php7', 'php8', 'phtml', 'phar', 'cgi', 'pl', 'py', 'sh', 'rb', 'asp', 'aspx', 'jsp'];
+        if (in_array($ext, $blockedExt, true)) {
+            Response::json(['error' => 'นามสกุลไฟล์นี้ไม่อนุญาต'], 422);
+        }
+
+        return ['tmp' => (string)$file['tmp_name'], 'name' => $origName, 'mime' => $mimeType, 'size' => (int)$file['size']];
+    }
+
+    /**
+     * ตอบ error ของ Google Drive เป็นข้อความไทยที่บอกว่าต้องทำอะไร แล้วจบคำขอ
+     */
+    public function failDrive(DriveError $error): never
+    {
+        $this->noteFailure($error);
+        Response::json(['error' => match ($error->kind) {
+            DriveError::AUTH      => $this->isDisconnected()
+                ? 'ไฟล์นี้อยู่ใน Google Drive ที่ยกเลิกการเชื่อมแล้ว เชื่อมบัญชีเดิมในหน้าตั้งค่าก่อน'
+                : 'การเชื่อม Google Drive หลุด กดเชื่อมใหม่ในหน้าตั้งค่า',
+            DriveError::QUOTA     => 'Google Drive เต็ม ลบไฟล์ใน Drive หรือเพิ่มพื้นที่ก่อน',
+            DriveError::NOT_FOUND => 'ไฟล์นี้ถูกลบจาก Google Drive แล้ว',
+            default               => 'ติดต่อ Google Drive ไม่ได้ตอนนี้ ลองอีกครั้ง',
+        }, 'drive' => $error->kind], $error->kind === DriveError::OTHER ? 502 : 409);
+    }
+
     /** ไฟล์ใหม่ของผู้ใช้คนนี้ไป Drive ไหม (เชื่อมอยู่และสิทธิ์ยังใช้ได้) */
     public function usesDrive(): bool
     {
@@ -37,9 +93,10 @@ final class FileStore
     }
 
     /**
-     * เก็บไฟล์ที่อัปโหลดมา (ผ่านการตรวจชื่อและชนิดใน FileController แล้ว) แล้วเพิ่มแถวในสารบัญ
+     * เก็บไฟล์ที่อัปโหลดมา (ผ่านการตรวจชื่อและชนิดใน FileStore::acceptUpload แล้ว) แล้วเพิ่มแถวในสารบัญ
      * @return int id ของแถวใหม่
      * @throws DriveError เมื่อเก็บใน Drive ไม่สำเร็จ (เต็ม สิทธิ์หลุด) ไม่มีแถวใหม่เกิดขึ้น
+     * @throws RuntimeException เมื่อย้ายไฟล์ลงดิสก์ของเซิร์ฟเวอร์ไม่ได้
      */
     public function upload(string $tmpPath, string $name, string $mime, int $size, ?int $parentId): int
     {

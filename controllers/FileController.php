@@ -14,15 +14,7 @@ class FileController
      */
     private function driveFailed(FileStore $store, DriveError $error): never
     {
-        $store->noteFailure($error);
-        Response::json(['error' => match ($error->kind) {
-            DriveError::AUTH      => $store->isDisconnected()
-                ? 'ไฟล์นี้อยู่ใน Google Drive ที่ยกเลิกการเชื่อมแล้ว เชื่อมบัญชีเดิมในหน้าตั้งค่าก่อน'
-                : 'การเชื่อม Google Drive หลุด กดเชื่อมใหม่ในหน้าตั้งค่า',
-            DriveError::QUOTA     => 'Google Drive เต็ม ลบไฟล์ใน Drive หรือเพิ่มพื้นที่ก่อน',
-            DriveError::NOT_FOUND => 'ไฟล์นี้ถูกลบจาก Google Drive แล้ว',
-            default               => 'ติดต่อ Google Drive ไม่ได้ตอนนี้ ลองอีกครั้ง',
-        }, 'drive' => $error->kind], $error->kind === DriveError::OTHER ? 502 : 409);
+        $store->failDrive($error);
     }
 
     private function validateName(mixed $name, string $kind = 'ไฟล์'): string
@@ -111,50 +103,13 @@ class FileController
 
         $this->validateParent($userId, $parentId);
 
-        if (empty($_FILES['file'])) {
-            Response::json(['error' => 'ไม่พบไฟล์'], 422);
-        }
-
-        $file = $_FILES['file'];
-        if (!is_uploaded_file($file['tmp_name'])) {
-            Response::json(['error' => 'ไฟล์อัปโหลดไม่ถูกต้อง'], 422);
-        }
-
-        if ($file['error'] !== UPLOAD_ERR_OK) {
-            Response::json(['error' => 'อัปโหลดไม่สำเร็จ: ' . $file['error']], 422);
-        }
-
-        if ($file['size'] > MAX_UPLOAD_BYTES) {
-            Response::json(['error' => 'ไฟล์ขนาดใหญ่เกินกว่าที่กำหนด (' . formatBytes(MAX_UPLOAD_BYTES) . ')'], 422);
-        }
-
-        // Validate MIME type using finfo (not trusting client)
-        $finfo    = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_file($finfo, $file['tmp_name']) ?: 'application/octet-stream';
-        finfo_close($finfo);
-
-        // Block dangerous types
-        $blocked = ['application/x-php', 'text/x-php', 'application/x-httpd-php',
-                    'application/x-executable', 'text/html'];
-        if (in_array($mimeType, $blocked)) {
-            Response::json(['error' => 'ประเภทไฟล์นี้ไม่อนุญาต'], 422);
-        }
-
-        // Get original name safely
-        $origName = basename($file['name']);
-        $ext      = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
-
-        // Block script extensions regardless of MIME
-        $blockedExt = ['php','php3','php4','php5','php7','php8','phtml','phar',
-                       'cgi','pl','py','sh','rb','asp','aspx','jsp'];
-        if (in_array($ext, $blockedExt)) {
-            Response::json(['error' => 'นามสกุลไฟล์นี้ไม่อนุญาต'], 422);
-        }
+        // ตรวจขนาด ชนิดจริง และนามสกุลที่ห้าม ที่เดียวกับไฟล์แนบของงาน
+        $upload = FileStore::acceptUpload($_FILES['file'] ?? null);
 
         // เก็บบนเซิร์ฟเวอร์ หรือใน Google Drive ของผู้ใช้ถ้าเชื่อมอยู่ (REQ-21, REQ-23)
         $store = FileStore::forUser($userId);
         try {
-            $id = $store->upload($file['tmp_name'], $origName, $mimeType, (int)$file['size'], $parentId);
+            $id = $store->upload($upload['tmp'], $upload['name'], $upload['mime'], $upload['size'], $parentId);
         } catch (DriveError $e) {
             $this->driveFailed($store, $e);
         } catch (RuntimeException) {

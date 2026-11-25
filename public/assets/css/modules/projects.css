@@ -593,7 +593,8 @@
     line-height: 1.7;
 }
 
-.proj-widgets .alert {
+.proj-widgets .alert,
+.ov-grid .alert {
     margin-top: var(--space-3);
 }
 
@@ -753,6 +754,75 @@
 --------------------------------------------------------------- */
 .modal-task {
     max-width: 600px;
+}
+
+/* รายละเอียดงานเป็นแผงชิดขวาเต็มความสูง (mockup P0b แบบ A) บอร์ด/รายการยังเห็นอยู่ทางซ้าย */
+.task-panel {
+    justify-content: flex-end;
+    align-items: stretch;
+    padding: 0;
+}
+
+.task-panel .modal-task {
+    max-width: 480px;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    border-radius: 0;
+    border-left: 1.5px solid var(--edge);
+}
+
+.task-panel .modal-header {
+    gap: var(--space-2);
+}
+
+/* form ครอบทั้งเนื้อหาและปุ่ม: ต้องเป็น flex ไม่งั้น .modal-body ไม่เลื่อนและปุ่มบันทึกหลุดใต้จอ */
+.task-panel .modal-task > form {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.task-panel .modal-title {
+    flex: 1;
+}
+
+.task-history {
+    margin-top: var(--space-5);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--rule-strong);
+}
+
+.task-history h3 {
+    margin: 0 0 var(--space-2);
+    font-size: 0.9375rem;
+}
+
+.task-history-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.8125rem;
+}
+
+.task-history-list li {
+    padding: 6px 0;
+    border-bottom: 1px solid var(--rule);
+}
+
+.task-history-list time {
+    margin-right: var(--space-2);
+    color: var(--pencil);
+    font-family: var(--font-num);
+}
+
+@media (max-width: 576px) {
+    /* มือถือ: เต็มจอ อยู่เหนือแถบแท็บล่าง (z-index ของ .modal-backdrop สูงกว่า) */
+    .task-panel .modal-task {
+        max-width: none;
+        border-left: 0;
+    }
 }
 
 .modal-checklist-container {
@@ -1102,6 +1172,11 @@
         grid-template-columns: 28px minmax(0, 1fr) auto;
     }
 
+    /* A field line: the kind and its options drop under the name */
+    .field-line .field-type {
+        grid-column: 2;
+    }
+
     .col-line .n {
         display: none;
     }
@@ -1117,5 +1192,615 @@
     .member > .btn,
     .member > select {
         min-height: 44px;
+    }
+}
+
+/* ---------------------------------------------------------------
+   ความเห็นในแผงรายละเอียดงาน และตัวเลือก @กล่าวถึง (P0b)
+--------------------------------------------------------------- */
+.task-comments {
+    margin-top: var(--space-5);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--rule-strong);
+}
+
+.task-comments h3 {
+    margin: 0 0 var(--space-2);
+    font-size: 0.9375rem;
+}
+
+.task-comments h3 small {
+    margin-left: var(--space-1);
+    font-weight: 400;
+    color: var(--pencil);
+}
+
+.comment {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+.comment .avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 0.8125rem;
+}
+
+.comment-who {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--space-2);
+    align-items: baseline;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.comment-who time {
+    font-weight: 400;
+    color: var(--pencil);
+}
+
+.comment-who .btn-link {
+    margin-left: auto;
+    min-height: 0;
+    padding: 0;
+    font-weight: 400;
+}
+
+.comment p {
+    margin: 2px 0 0;
+    font-size: 0.875rem;
+    overflow-wrap: anywhere;
+}
+
+.mention {
+    padding: 0 4px;
+    border-radius: 4px;
+    background: var(--sky);
+    color: var(--ink);
+    font-weight: 600;
+}
+
+.comment-composer {
+    position: relative;
+    display: grid;
+    gap: var(--space-2);
+}
+
+.comment-composer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    align-items: center;
+    justify-content: space-between;
+}
+
+.comment-composer-actions .proj-note {
+    margin: 0;
+}
+
+.mention-pop {
+    position: absolute;
+    left: var(--space-3);
+    bottom: 100%;
+    z-index: 5;
+    width: min(260px, 100%);
+    border: 1.5px solid var(--edge);
+    border-radius: var(--r-control);
+    background: var(--paper);
+    box-shadow: var(--lift-2);
+}
+
+.mention-pop [role="option"] {
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 0.875rem;
+    cursor: pointer;
+}
+
+.mention-pop [role="option"][aria-selected="true"] {
+    background: var(--paper-sunk);
+    font-weight: 600;
+}
+
+/* ---------------------------------------------------------------
+   ไฟล์แนบในแผงรายละเอียดงาน (P0b)
+--------------------------------------------------------------- */
+.task-files {
+    margin-top: var(--space-5);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--rule-strong);
+}
+
+.task-files h3 {
+    margin: 0 0 var(--space-2);
+    font-size: 0.9375rem;
+}
+
+.task-files h3 small {
+    margin-left: var(--space-1);
+    font-weight: 400;
+    color: var(--pencil);
+}
+
+.task-files .file-row {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    gap: var(--space-2);
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.875rem;
+}
+
+.file-ico {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    background: var(--paper-sunk);
+    color: var(--pencil);
+    font: 600 0.625rem var(--font-mono);
+}
+
+.file-main a {
+    color: var(--ink);
+    overflow-wrap: anywhere;
+}
+
+.file-sub {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--pencil);
+}
+
+.task-file-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+}
+
+.task-file-actions label.btn:focus-within {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+}
+
+.task-file-picker {
+    margin-top: var(--space-2);
+    border: 1.5px solid var(--rule-strong);
+    border-radius: var(--r-control);
+    max-height: 260px;
+    overflow: auto;
+}
+
+.task-file-picker-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-1) var(--space-2);
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.8125rem;
+}
+
+.picker-row {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-3);
+    border: 0;
+    border-bottom: 1px solid var(--rule);
+    background: none;
+    color: var(--ink);
+    text-align: left;
+    font: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+}
+
+.picker-row:hover,
+.picker-row:focus-visible {
+    background: var(--paper-sunk);
+}
+
+.task-files > .proj-note {
+    margin-top: var(--space-2);
+}
+
+/* ---------------------------------------------------------------
+   แถบตัวกรองที่ใช้ร่วมทุกมุมมอง
+--------------------------------------------------------------- */
+.view-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    align-items: center;
+    margin: var(--space-3) 0;
+}
+
+.view-filters select.form-control,
+.view-filters input.form-control {
+    width: auto;
+    min-width: 0;
+    flex: 0 1 auto;
+}
+
+.view-filters input.form-control.grow {
+    flex: 1 1 220px;
+}
+
+/* The custom-field filters sit in the same row as the fixed ones */
+.view-field-filters {
+    display: contents;
+}
+
+.view-filter-state {
+    font-size: .75rem;
+    color: var(--pencil);
+}
+
+
+/* ---------------------------------------------------------------
+   มุมมองรายการ
+--------------------------------------------------------------- */
+/* The list, calendar and overview sit a little below the index tabs */
+.proj-view {
+    padding-top: var(--space-3);
+}
+
+.task-list-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+.task-list-head .form-control {
+    width: auto;
+}
+
+.task-table-wrap {
+    overflow-x: auto;
+}
+
+.task-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .875rem;
+}
+
+.task-table th {
+    text-align: left;
+    font-weight: 600;
+    font-size: .8125rem;
+    color: var(--pencil);
+    padding: 6px 8px;
+    border-bottom: 1.5px solid var(--rule-strong);
+    white-space: nowrap;
+}
+
+.task-table .th-sort {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    text-align: inherit;
+    cursor: pointer;
+}
+
+.task-table .th-sort:focus-visible,
+.task-open:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+}
+
+.task-table th[aria-sort="ascending"] .th-sort::after {
+    content: " ↑";
+}
+
+.task-table th[aria-sort="descending"] .th-sort::after {
+    content: " ↓";
+}
+
+.task-table td {
+    padding: 8px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+}
+
+.task-table tr.grp-row > th {
+    padding-top: var(--space-4);
+    font-weight: 600;
+    text-align: left;
+    border-bottom: 3px solid var(--g);
+}
+
+.task-table .grp-n {
+    color: var(--pencil);
+    font-weight: 400;
+}
+
+.task-table tr.row:hover td {
+    background: var(--paper-sunk);
+    cursor: pointer;
+}
+
+.task-open {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    color: var(--ink);
+    text-align: inherit;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.task-open:hover {
+    text-decoration: underline;
+}
+
+.task-table .c-due {
+    white-space: nowrap;
+}
+
+.task-table .over {
+    color: var(--stamp-red);
+    font-weight: 600;
+}
+
+.task-table .c-col {
+    white-space: nowrap;
+}
+
+.task-table .c-title .tag {
+    margin-left: 6px;
+}
+
+.gdot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--g);
+    margin-right: 6px;
+}
+
+/* ---------------------------------------------------------------
+   ปฏิทิน
+--------------------------------------------------------------- */
+.cal-wrap {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: var(--space-4);
+}
+
+.cal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-2);
+}
+
+.cal-head h3 {
+    margin: 0;
+    font-size: 1.0625rem;
+}
+
+.cal-nav {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.cal-nav button:focus-visible,
+.cal-chip:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+}
+
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    border-top: 1px solid var(--rule);
+    border-left: 1px solid var(--rule);
+}
+
+.cal-grid .dow {
+    padding: 4px 6px;
+    font-size: .75rem;
+    color: var(--pencil);
+    border-right: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+}
+
+.cal-cell {
+    min-height: 96px;
+    padding: 4px;
+    border-right: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+}
+
+.cal-cell .d {
+    font-size: .75rem;
+    font-family: var(--font-num);
+    color: var(--pencil);
+}
+
+.cal-cell.other .d {
+    opacity: .45;
+}
+
+.cal-cell.today {
+    background: var(--butter);
+}
+
+/* --butter is dark in the dark theme, so the day takes the theme's ink, not a fixed dark one */
+.cal-cell.today .d {
+    color: var(--ink);
+    font-weight: 700;
+}
+
+.cal-chip {
+    display: block;
+    width: 100%;
+    margin-top: 3px;
+    padding: 2px 6px;
+    border: 0;
+    border-left: 3px solid var(--g);
+    border-radius: 3px;
+    background: var(--paper-sunk);
+    font: inherit;
+    font-size: .75rem;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--ink);
+    cursor: pointer;
+}
+
+.cal-chip.done {
+    text-decoration: line-through;
+    color: var(--pencil);
+}
+
+.unscheduled {
+    border-left: 1.5px dashed var(--rule-strong);
+    padding-left: var(--space-3);
+}
+
+.unscheduled h4 {
+    margin: 0 0 var(--space-2);
+    font-size: .875rem;
+}
+
+.agenda {
+    display: none;
+}
+
+/* ---------------------------------------------------------------
+   แท็บภาพรวม
+--------------------------------------------------------------- */
+.ov-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+}
+
+.ov-grid > .sec {
+    margin-top: 0;
+}
+
+/* ---------------------------------------------------------------
+   มือถือ
+--------------------------------------------------------------- */
+@media (max-width: 720px) {
+    .cal-wrap {
+        grid-template-columns: 1fr;
+    }
+
+    .cal-grid-wrap {
+        display: none;
+    }
+
+    .agenda {
+        display: block;
+    }
+
+    .agenda h4 {
+        margin: var(--space-3) 0 var(--space-1);
+        font-size: .8125rem;
+        color: var(--pencil);
+    }
+
+    .unscheduled {
+        border-left: 0;
+        padding-left: 0;
+        border-top: 1.5px dashed var(--rule-strong);
+        padding-top: var(--space-3);
+    }
+
+    .task-table thead {
+        display: none;
+    }
+
+    .task-table,
+    .task-table tbody,
+    .task-table tr,
+    .task-table td {
+        display: block;
+    }
+
+    .task-table tr.row {
+        padding: var(--space-2) 0;
+        border-bottom: 1px solid var(--rule);
+    }
+
+    .task-table tr.row td {
+        display: inline-block;
+        border: 0;
+        padding: 0 var(--space-3) 0 0;
+        font-size: .8125rem;
+        color: var(--pencil);
+    }
+
+    .task-table tr.row td.c-title {
+        display: block;
+        padding-bottom: 2px;
+        font-size: .9375rem;
+        color: var(--ink);
+    }
+
+    .task-table tr.row td.c-col,
+    .task-table tr.row td.c-field {
+        display: none;
+    }
+
+    /* เลยกำหนดต้องแดงบนมือถือด้วย (กฎสีเทาข้างบนหนักกว่า .over) */
+    .task-table tr.row td.over {
+        color: var(--stamp-red);
+    }
+
+    .ov-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ---------------------------------------------------------------
+   Custom fields: the settings lines and the cells in the list
+--------------------------------------------------------------- */
+.col-line.field-line {
+    grid-template-columns: 28px minmax(0, 18rem) minmax(0, 16rem) auto;
+}
+
+.field-type {
+    font-size: .8125rem;
+    color: var(--pencil);
+}
+
+.field-actions {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.task-table .c-field {
+    white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+    .col-line.field-line {
+        grid-template-columns: 28px minmax(0, 1fr) auto;
+    }
+
+    .field-line .field-actions {
+        grid-column: 2 / -1;
     }
 }

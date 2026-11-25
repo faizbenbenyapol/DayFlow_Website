@@ -776,3 +776,111 @@ dialog.menu-sheet[open] {
     background: var(--rose);
     color: var(--ink);
 }
+
+/* =====================================================
+   กระดิ่งแจ้งเตือน (notifications.js) และแผงรายการ
+===================================================== */
+.notif-bell {
+    position: relative;
+    min-width: 44px;
+    justify-content: center;
+}
+
+.notif-count {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--stamp-red);
+    color: var(--paper);
+    font: 600 0.6875rem/18px var(--font-num);
+    text-align: center;
+}
+
+.notif-panel {
+    position: fixed;
+    top: 64px;
+    right: 16px;
+    z-index: 9995;
+    width: min(380px, calc(100vw - 24px));
+    max-height: 70vh;
+    overflow: auto;
+    border: 1.5px solid var(--edge);
+    border-radius: var(--r-card);
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: var(--lift-2);
+}
+
+.notif-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--rule);
+}
+
+.notif-head h2 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.notif-row {
+    display: block;
+    position: relative;
+    min-height: 44px;
+    padding: var(--space-3) var(--space-4) var(--space-3) calc(var(--space-4) + 14px);
+    border-bottom: 1px solid var(--rule);
+    color: var(--ink);
+    text-decoration: none;
+}
+
+.notif-row:hover,
+.notif-row:focus-visible {
+    background: var(--paper-sunk);
+}
+
+.notif-row.unread::before {
+    content: "";
+    position: absolute;
+    left: var(--space-4);
+    top: calc(var(--space-3) + 7px);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--stamp-red);
+}
+
+.notif-what {
+    display: block;
+    font-size: 0.875rem;
+}
+
+.notif-where,
+.notif-empty,
+.notif-foot {
+    display: block;
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--pencil);
+}
+
+.notif-where {
+    margin-top: 2px;
+}
+
+.notif-empty,
+.notif-foot {
+    padding: var(--space-3) var(--space-4);
+}
+
+@media (max-width: 720px) {
+    .notif-panel {
+        top: 56px;
+        right: 12px;
+    }
+}

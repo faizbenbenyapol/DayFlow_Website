@@ -903,11 +903,110 @@ async function main() {
         check(await tab.eval(`document.querySelector('#col-${secondColumnId}-list .kanban-card').dataset.priority`) === 'critical', 'and its priority shows');
         check(await tab.eval(`document.querySelector('#col-${secondColumnId}-list .kcard-check').textContent.includes('0/1')`), 'with its checklist count');
 
+        // ---------- the list, the calendar and the filter they share with the board ----------
+        console.log('Project views');
+        const today = await tab.eval(`serverToday()`);
+        await api(tab, `/api/projects/${second.body.id}/tasks`, { method: 'POST', body: JSON.stringify({ title: `มีวันส่ง ${STAMP}`, column_id: Number(firstColumnId), priority: 'Low', due_date: today }) });
+        await tab.eval(`selectProject(${second.body.id})`);
+        await sleep(1200);
+        const visibleRows = () => tab.eval(`document.querySelectorAll('#taskListBody tr.row').length`);
+
+        await click(tab, '#tabList');
+        await sleep(200);
+        check(await tab.eval(`!document.getElementById('listPanel').hidden && document.getElementById('boardPanel').hidden`), 'the list tab replaces the board');
+        check(await visibleRows() === 2, 'the list shows every task of the project', String(await visibleRows()));
+        check(await tab.eval(`document.querySelectorAll('#taskListBody tr.grp-row').length`) === 2, 'grouped by column by default');
+        check(await tab.eval(`document.querySelector('#taskListBody tr.row .task-open').textContent.startsWith('มีวันส่ง')`), 'sorted by due date, dated tasks first');
+        // Sorting works inside each group, so compare across columns without groups.
+        await fill(tab, '#taskListGroup', '');
+        check(await tab.eval(`document.querySelectorAll('#taskListBody tr.grp-row').length`) === 0, 'the list can drop its groups');
+        await click(tab, '#taskListTable [data-sort="priority"] .th-sort');
+        check(await tab.eval(`document.querySelector('#taskListTable [data-sort="priority"]').getAttribute('aria-sort')`) === 'ascending', 'a header sorts and says so');
+        check(await tab.eval(`document.querySelector('#taskListBody tr.row .task-open').textContent.startsWith('งาน ')`), 'critical before low');
+
+        await fill(tab, '#taskFilterDue', 'none');
+        await sleep(100);
+        check(await visibleRows() === 1, 'the due filter narrows the list');
+        check(await tab.eval(`!document.getElementById('taskFilterState').hidden && document.getElementById('taskFilterState').textContent.includes('1 จาก 2')`), 'and says how much it hides');
+
+        await click(tab, '#tabCalendar');
+        await sleep(100);
+        check(await tab.eval(`document.getElementById('taskFilterDue').value`) === 'none', 'the filter stays when the tab changes');
+        check(await tab.eval(`document.getElementById('taskCalUnscheduled').textContent.includes('ยังไม่ลงวัน (1)')`), 'the calendar keeps undated tasks aside');
+        check(await tab.eval(`!document.querySelector('#taskCalGrid .cal-chip')`), 'and the filter hides the dated one from the month');
+        await click(tab, '#tabBoard');
+        await sleep(100);
+        check(await tab.eval(`document.querySelectorAll('#kanbanBoard .kanban-card').length`) === 1, 'the board obeys the same filter');
+        check(await tab.eval(`!document.getElementById('boardFilterNote').hidden`), 'and says why its cards cannot be dragged');
+
+        await tab.goto(`${BASE}/projects?project=${second.body.id}`);
+        await sleep(1500);
+        check(await tab.eval(`document.getElementById('taskFilterDue').value`) === 'none', 'the filter survives a reload');
+        await click(tab, '#taskFilterClear');
+        await click(tab, '#tabCalendar');
+        await sleep(100);
+        check(await tab.eval(`document.querySelector('#taskCalGrid .cal-cell.today .cal-chip')?.textContent.startsWith('มีวันส่ง')`), 'clearing the filter puts the dated task on today');
+        await click(tab, '#taskCalGrid .cal-cell.today .cal-chip');
+        await sleep(400);
+        check(await tab.eval(`new URL(location.href).searchParams.get('task')`) !== null, 'a calendar task opens its details');
+        await tab.eval(`document.querySelector('#editTaskModal [data-close-modal]')?.click()`);
+        await sleep(200);
+
+        await click(tab, '#tabOverview');
+        await sleep(100);
+        check(await tab.eval(`document.getElementById('taskFilters').hidden`), 'the overview tab has no task filter');
+        check(await tab.eval(`!!document.querySelector('#overviewPanel #analyticsWidgetCard') && !!document.querySelector('#overviewPanel #chatWidgetCard')`), 'the figures and the chat moved into the overview tab');
+
         await fill(tab, '#chatMessageInput', `สวัสดีทีม ${STAMP}`);
         await tab.eval(`document.getElementById('chatMessageInput').focus()`);
         await key(tab, 'Enter');
         await sleep(1200);
         check(await tab.eval(`document.getElementById('chatMessagesList').textContent.includes(${JSON.stringify(STAMP)})`), 'a chat message appears after sending');
+
+        // ---------- custom fields: set up in settings, filled in the panel, shown and filtered in the list ----------
+        console.log('Project fields');
+        await click(tab, '#tabSettings');
+        await click(tab, '#settingsNavFields');
+        await sleep(100);
+        check(await tab.eval(`!document.getElementById('settingsFields').hidden`), 'the settings have a fields section');
+        await fill(tab, '#fieldName', 'แพลตฟอร์ม');
+        await fill(tab, '#fieldKind', 'select');
+        check(await tab.eval(`!document.getElementById('fieldOptionsGroup').hidden`), 'a select field asks for its options');
+        await fill(tab, '#fieldOptions', 'iOS\nเว็บ');
+        await click(tab, '#fieldAddSubmit');
+        await sleep(1500);
+        check(await tab.eval(`[...document.querySelectorAll('#fieldLines .field-line input')].some(i => i.value === 'แพลตฟอร์ม')`), 'the new field is listed');
+        await fill(tab, '#fieldName', 'ชั่วโมง');
+        await fill(tab, '#fieldKind', 'number');
+        await click(tab, '#fieldAddSubmit');
+        await sleep(1500);
+        check(await tab.eval(`document.querySelectorAll('#fieldLines .field-line').length`) === 2, 'a second field is added');
+
+        await tab.eval(`openEditTask(activeProjectData.tasks.find(t => t.title === ${JSON.stringify('งาน ' + STAMP)}).id)`);
+        await sleep(400);
+        check(await tab.eval(`document.querySelectorAll('#editTaskCustom [data-field-id]').length`) === 2, 'the task panel shows both fields');
+        await tab.eval(`(() => { const [platform, hours] = document.querySelectorAll('#editTaskCustom [data-field-id]'); platform.value = 'เว็บ'; hours.value = '6'; })()`);
+        await click(tab, '#editTaskForm [type="submit"]');
+        await sleep(1500);
+        await click(tab, '#tabList');
+        await sleep(100);
+        check(await tab.eval(`[...document.querySelectorAll('#taskListTable thead th.c-field')].map(th => th.textContent).join(',')`) === 'แพลตฟอร์ม,ชั่วโมง', 'the list gets a column per field');
+        check(await tab.eval(`[...document.querySelectorAll('#taskListBody tr.row')].some(r => r.textContent.includes('เว็บ') && r.textContent.includes('6'))`), 'showing the values filled in the panel');
+        await fill(tab, '#taskFieldFilters select', 'iOS');
+        check(await visibleRows() === 0, 'a field filter narrows the list');
+        await fill(tab, '#taskFieldFilters select', 'เว็บ');
+        check(await visibleRows() === 1, 'to the tasks with that value');
+        await click(tab, '#taskFilterClear');
+
+        await click(tab, '#tabSettings');
+        await click(tab, '#settingsNavFields');
+        await click(tab, '#fieldLines [data-act="deleteField"]');
+        await sleep(200);
+        check(await tab.eval(`document.querySelector('.df-dialog[open]')?.textContent.includes('1 งาน')`), 'deleting a field says how many tasks lose a value');
+        await click(tab, '.df-dialog[open] button[type="submit"]');
+        await sleep(1500);
+        check(await tab.eval(`document.querySelectorAll('#fieldLines .field-line').length`) === 1, 'the field is gone');
+        await tab.eval(`showSettingsSection('team'); showProjectTab('board')`);
 
         // ---------- the settings tab: team, columns and type ----------
         console.log('Project settings');
@@ -1062,6 +1161,17 @@ async function main() {
         await sleep(300);
         check(await tab.eval(`document.documentElement.scrollWidth <= window.innerWidth`), 'at 360px the settings panel does not scroll sideways');
         check(await tab.eval(`document.getElementById('settingsPanel').scrollWidth <= document.getElementById('settingsPanel').clientWidth`), 'the settings panel keeps its content inside itself');
+
+        // แผงรายละเอียดงาน (P0b): เปิดตรงจาก ?task= และปุ่มบันทึกต้องอยู่ในจอ ไม่หลุดใต้ขอบล่าง
+        const panelTaskId = await tab.eval(`fetch(BASE_URL + '/api/projects/${softwareProject?.id}/tasks').then(r => r.json()).then(d => (d.tasks || [])[0]?.id || 0)`);
+        await tab.goto(`${BASE}/projects?project=${softwareProject?.id}&task=${panelTaskId}`);
+        await tab.settle();
+        await sleep(800);
+        check(await tab.eval(`document.getElementById('editTaskModal').classList.contains('active')`), 'a ?task= link opens the task panel');
+        check(await tab.eval(`document.querySelector('#editTaskModal .modal-footer').getBoundingClientRect().bottom <= window.innerHeight`), 'at 360px the save button of the panel is on screen');
+        await key(tab, 'Escape');
+        await sleep(300);
+        check(await tab.eval(`!new URL(location.href).searchParams.has('task')`), 'closing the panel takes ?task= out of the address');
         await tab.viewport({ width: 1366, height: 900, mobile: false });
 
         // ---------- outside the app ----------
