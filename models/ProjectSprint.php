@@ -328,6 +328,149 @@ class ProjectSprint
     }
 
     /**
+     * บันทึกยอดรวมของรอบ active สำหรับวันนี้ (ใช้ใน burndown)
+     *
+     * อ่านผลรวมแต้มของงานในรอบ (ไม่นับงานใหญ่) และแต้มของงานที่อยู่คอลัมน์
+     * กลุ่ม done จากงานจริงในคำสั่งเดียว แล้ว upsert แถวของวันนี้
+     * "วันนี้" มาจาก date() ของ PHP (เขตเวลาของแอป) ไม่ใช่ CURDATE() ของฐานข้อมูล
+     * โปรเจคที่ไม่มีรอบ active จะไม่เขียนอะไรเลย
+     *
+     * @param int $projectId รหัสโปรเจค
+     */
+    public static function recordDay(int $projectId): void
+    {
+        DB::run(
+            "INSERT INTO project_sprint_days (sprint_id, `day`, scope_points, done_points)
+             SELECT s.id, ?, COALESCE(SUM(t.story_points), 0),
+                    COALESCE(SUM(CASE WHEN c.grp = 'done' THEN t.story_points END), 0)
+             FROM project_sprints s
+             LEFT JOIN project_tasks t
+                    ON t.project_id = s.project_id AND t.sprint_id = s.id AND t.kind <> 'epic'
+             LEFT JOIN project_columns c ON c.id = t.column_id
+             WHERE s.project_id = ? AND s.state = 'active'
+             GROUP BY s.id
+             ON DUPLICATE KEY UPDATE scope_points = VALUES(scope_points), done_points = VALUES(done_points)",
+            [date('Y-m-d'), $projectId]
+        );
+    }
+
+    /**
+     * สร้างข้อมูล burndown ของรอบงานหนึ่ง
+     *
+     * ช่วงวันเริ่มที่วันแรกของแถวบันทึกหากน้อยกว่า start_date (หรือ DATE(started_at))
+     * และจบที่วันสุดท้ายของแถวบันทึกหากมากกว่า end_date (หรือ DATE(closed_at) หรือวันนี้)
+     * แล้วตัดไม่ให้เกินวันนี้ แต่ละวันใช้แถวที่บันทึกไว้ล่าสุดซึ่ง day <= วันนั้น
+     * วันก่อนแถวแรกใช้ค่าแถวแรก รอบที่ยังไม่มีแถวบันทึก (ยังไม่เริ่ม) คืน days ว่าง
+     * อ่านแถวทั้งหมดในคำสั่งเดียวแล้วเติมวันใน PHP
+     *
+     * @param int $projectId รหัสโปรเจค
+     * @param int $sprintId รหัสรอบงาน
+     * @return array{sprint: array<string, mixed>, days: list<array{day: string, scope: int, done: int, remaining: int}>}
+     */
+    public static function burndown(int $projectId, int $sprintId): array
+    {
+        $sprint = DB::run(
+            'SELECT id, name, state, start_date, end_date, started_at, closed_at
+             FROM project_sprints WHERE id = ? AND project_id = ?',
+            [$sprintId, $projectId]
+        )->fetch();
+        if (!$sprint) {
+            throw new ProjectColumnException(404, 'ไม่พบรอบงาน');
+        }
+
+        $rows = DB::run(
+            'SELECT `day`, scope_points, done_points
+             FROM project_sprint_days WHERE sprint_id = ? ORDER BY `day` ASC',
+            [$sprintId]
+        )->fetchAll();
+
+        $days = [];
+        if ($rows !== []) {
+            $firstRowDay = (string)$rows[0]['day'];
+            $lastRowDay = (string)$rows[count($rows) - 1]['day'];
+            $startBase = $sprint['start_date'] !== null
+                ? (string)$sprint['start_date']
+                : ($sprint['started_at'] !== null ? substr((string)$sprint['started_at'], 0, 10) : $firstRowDay);
+            // เริ่มก่อนวันเริ่มหรือเลยวันจบยังต้องเห็นวันที่มีแถวจริง
+            $start = min($startBase, $firstRowDay);
+            $endBase = $sprint['end_date'] !== null
+                ? (string)$sprint['end_date']
+                : ($sprint['closed_at'] !== null ? substr((string)$sprint['closed_at'], 0, 10) : date('Y-m-d'));
+            $end = max($endBase, $lastRowDay);
+            $today = date('Y-m-d');
+            if ($end > $today) {
+                $end = $today;
+            }
+
+            $cursor = 0;
+            $count = count($rows);
+            $date = new DateTimeImmutable($start);
+            $last = new DateTimeImmutable($end);
+            while ($date <= $last) {
+                $day = $date->format('Y-m-d');
+                // แถวล่าสุดที่ day <= วันนี้ (ก่อนแถวแรกยังใช้แถวแรก)
+                while ($cursor + 1 < $count && (string)$rows[$cursor + 1]['day'] <= $day) {
+                    $cursor++;
+                }
+                $scope = (int)$rows[$cursor]['scope_points'];
+                $done = (int)$rows[$cursor]['done_points'];
+                $days[] = ['day' => $day, 'scope' => $scope, 'done' => $done, 'remaining' => $scope - $done];
+                $date = $date->modify('+1 day');
+            }
+        }
+
+        return [
+            'sprint' => [
+                'id' => (int)$sprint['id'],
+                'name' => (string)$sprint['name'],
+                'state' => (string)$sprint['state'],
+                'start_date' => $sprint['start_date'] === null ? null : (string)$sprint['start_date'],
+                'end_date' => $sprint['end_date'] === null ? null : (string)$sprint['end_date'],
+            ],
+            'days' => $days,
+        ];
+    }
+
+    /**
+     * ค่า velocity ของโปรเจคจากห้ารอบที่ปิดล่าสุด
+     *
+     * คืนรอบที่ปิดแล้วเรียงเก่าไปใหม่ (ตาม closed_at แล้ว id) พร้อม committed/completed
+     * (ค่าว่างเป็น 0) และค่าเฉลี่ย completed ของสามรอบล่าสุด แบบปัดเศษ
+     * average เป็น null เมื่อยังไม่มีรอบที่ปิด
+     *
+     * @param int $projectId รหัสโปรเจค
+     * @return array{sprints: list<array{id: int, name: string, committed: int, completed: int}>, average: int|null}
+     */
+    public static function velocity(int $projectId): array
+    {
+        $rows = DB::run(
+            "SELECT id, name, committed_points, completed_points
+             FROM project_sprints
+             WHERE project_id = ? AND state = 'closed'
+             ORDER BY closed_at DESC, id DESC
+             LIMIT 5",
+            [$projectId]
+        )->fetchAll();
+
+        $sprints = [];
+        $completed = [];
+        foreach (array_reverse($rows) as $row) {
+            $sprints[] = [
+                'id' => (int)$row['id'],
+                'name' => (string)$row['name'],
+                'committed' => (int)($row['committed_points'] ?? 0),
+                'completed' => (int)($row['completed_points'] ?? 0),
+            ];
+            $completed[] = (int)($row['completed_points'] ?? 0);
+        }
+
+        $lastThree = array_slice($completed, -3);
+        $average = $lastThree === [] ? null : (int)round(array_sum($lastThree) / count($lastThree));
+
+        return ['sprints' => $sprints, 'average' => $average];
+    }
+
+    /**
      * ลบรอบงานที่ยังไม่เริ่ม งานในรอบกลับไปอยู่ backlog ผ่าน FK ON DELETE SET NULL
      *
      * @param int $projectId รหัสโปรเจค

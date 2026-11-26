@@ -342,6 +342,7 @@ class Router
         $this->add('POST',   '/api/projects/sprints/{sid}/start',       'ProjectSprintController', 'apiStart',  true);
         $this->add('POST',   '/api/projects/sprints/{sid}/close',       'ProjectSprintController', 'apiClose',  true);
         $this->add('POST',   '/api/projects/{id}/plan',                 'ProjectSprintController', 'apiPlan',   true);
+        $this->add('GET',    '/api/projects/{id}/reports',              'ProjectSprintController', 'apiReports', true);
 
         // --- API: Projects Board Columns ---
         $this->add('POST',   '/api/projects/{id}/columns',         'ProjectColumnController', 'apiCreate',  true);

@@ -11,6 +11,9 @@
 // เดียวกัน จึงไม่มีคำขอสองคำขอที่ทำให้กลุ่มว่างหรือชี้คอลัมน์ที่ถูกลบไปแล้ว
 // =====================================================
 
+// สคริปต์ CLI ไม่ได้ลงทะเบียน autoloader แต่ locked() เรียก ProjectSprint::recordDay()
+require_once __DIR__ . '/ProjectSprint.php';
+
 /**
  * ความผิดพลาดที่ผู้เรียกแก้ได้เอง (422) หรือคอลัมน์/เป้าหมายหายไป (404)
  *
@@ -221,6 +224,9 @@ class ProjectColumn
      * regroup()) จะไม่เปิดซ้อน เพราะ PDO เปิดซ้อนไม่ได้ และจะไม่ commit ให้
      * เจ้าของ transaction ชั้นนอกเป็นผู้ตัดสิน
      *
+     * เมื่อเป็นเจ้าของ transaction จะเรียก ProjectSprint::recordDay() หลัง callback
+     * ก่อน commit เพื่อบันทึกยอด burndown ของรอบ active สำหรับวันนี้
+     *
      * @param int $projectId รหัสโปรเจค
      * @param callable $callback งานที่จะทำหลังได้ lock
      * @return mixed ผลลัพธ์ของ callback
@@ -237,6 +243,9 @@ class ProjectColumn
             self::lockProject($projectId);
             $result = $callback();
             if ($ownsTransaction) {
+                // บันทึกยอดของวันนี้หลัง callback: เริ่มรอบจึงได้แถวแรก ส่วนการปิดรอบ
+                // ไม่บันทึกเพราะตอนนั้นไม่มีรอบ active แล้ว
+                ProjectSprint::recordDay($projectId);
                 $db->commit();
             }
             return $result;

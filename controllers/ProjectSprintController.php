@@ -234,4 +234,57 @@ class ProjectSprintController
             'moved' => $planned['moved'],
         ]);
     }
+
+    /**
+     * GET /api/projects/{id}/reports
+     *
+     * สมาชิกทุกบทบาท (รวมผู้ดู) อ่าน burndown ของรอบงานและ velocity ของโปรเจค
+     * `?sprint=` เลือกรอบที่ระบุ รอบที่ไม่มี ลบแล้ว อยู่คนละโปรเจค หรือค่าไม่ใช่ตัวเลข
+     * ตอบ 404 ข้อความเดียวกันทั้งหมด ไม่บอกว่ารหัสใดมีอยู่
+     * ไม่ระบุรอบจึงใช้รอบ active หรือรอบที่ปิดล่าสุด หรือ null เมื่อยังไม่มี
+     *
+     * @param string $id รหัสโปรเจคจาก URL
+     */
+    public function apiReports(string $id): void
+    {
+        $project = $this->loadProject((int)$id);
+        $projectId = (int)$project['id'];
+
+        $rawSprint = Request::query('sprint');
+        if ($rawSprint === null) {
+            $sprint = self::reportSprint($projectId);
+        } else {
+            $sprint = is_string($rawSprint) && ctype_digit($rawSprint)
+                ? ProjectSprint::findForProject($projectId, (int)$rawSprint)
+                : null;
+            if (!$sprint) {
+                Response::json(['error' => 'ไม่พบรอบงาน'], 404);
+            }
+        }
+
+        Response::json([
+            'burndown' => $sprint === null ? null : ProjectSprint::burndown($projectId, (int)$sprint['id']),
+            'velocity' => ProjectSprint::velocity($projectId),
+        ]);
+    }
+
+    /**
+     * เลือกรอบงานเริ่มต้นของรายงาน: รอบ active ก่อน ไม่มีจึงใช้รอบที่ปิดล่าสุด
+     *
+     * @param int $projectId รหัสโปรเจค
+     * @return array<string, mixed>|null แถวรอบงาน หรือ null เมื่อไม่มีทั้งสองแบบ
+     */
+    private static function reportSprint(int $projectId): ?array
+    {
+        $closed = null;
+        foreach (ProjectSprint::listForProject($projectId) as $sprint) {
+            if ((string)$sprint['state'] === 'active') {
+                return $sprint;
+            }
+            if ($closed === null && (string)$sprint['state'] === 'closed') {
+                $closed = $sprint;
+            }
+        }
+        return $closed;
+    }
 }
