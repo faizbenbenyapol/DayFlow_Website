@@ -397,6 +397,21 @@ function fillSoftwareTaskFields(task) {
         sprintSelect.dataset.original = sprintId;
     }
 
+    // เวอร์ชัน: ผูกได้ทุกชนิด ตัวเลือกคือเวอร์ชันที่ยังไม่ออก เวอร์ชันที่ออกแล้วของงานนี้
+    // ขึ้นเป็นตัวเลือกปิดไว้ เพื่อให้เห็นว่าอยู่เวอร์ชันไหนโดยย้ายกลับเข้าไปไม่ได้
+    const releaseSelect = document.getElementById('editTaskRelease');
+    if (releaseSelect) {
+        const releases = (activeProjectData.releases || []);
+        const current = releases.find(release => Number(release.id) === Number(task.release_id)) || null;
+        releaseSelect.innerHTML = '<option value="">ไม่ผูก</option>'
+            + releases.filter(release => release.state !== 'released' || release === current).map(release =>
+                '<option value="' + Number(release.id) + '"' + (release.state === 'released' ? ' disabled' : '') + '>'
+                + escHtml(release.name) + (release.state === 'released' ? ' (ออกแล้ว)' : '') + '</option>').join('');
+        releaseSelect.value = current ? String(Number(current.id)) : '';
+    }
+    const releaseGroup = document.getElementById('editTaskReleaseGroup');
+    if (releaseGroup) releaseGroup.hidden = false;
+
     const epicSelect = document.getElementById('editTaskEpic');
     const epics = tasks.filter(item => (item.kind || 'task') === 'epic' && Number(item.id) !== Number(task.id));
     epicSelect.innerHTML = '<option value="">ไม่มี</option>' + epics.map(item =>
@@ -866,6 +881,14 @@ async function submitEditTask(e) {
                 ? Number(loaded.sprint_id) : null;
             const sprintId = sprintSelect.value ? Number(sprintSelect.value) : null;
             if (sprintId !== loadedSprint) payload.sprint_id = sprintId;
+        }
+
+        // เวอร์ชันส่งเฉพาะเมื่อเปลี่ยน งานที่อยู่ในเวอร์ชันที่ออกแล้วจึงแก้ช่องอื่นได้ตามปกติ
+        const releaseSelect = document.getElementById('editTaskRelease');
+        if (releaseSelect) {
+            const loadedRelease = loaded && loaded.release_id != null ? Number(loaded.release_id) : null;
+            const releaseId = releaseSelect.value ? Number(releaseSelect.value) : null;
+            if (releaseId !== loadedRelease) payload.release_id = releaseId;
         }
     }
 

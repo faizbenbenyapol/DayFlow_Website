@@ -132,6 +132,7 @@
         <button class="tab" role="tab" type="button" id="tabList" aria-selected="false" aria-controls="listPanel" data-act="showProjectTab" data-args='["list"]'>รายการ</button>
         <button class="tab" role="tab" type="button" id="tabCalendar" aria-selected="false" aria-controls="calendarPanel" data-act="showProjectTab" data-args='["calendar"]'>ปฏิทิน</button>
         <button class="tab" role="tab" type="button" id="tabOverview" aria-selected="false" aria-controls="overviewPanel" data-act="showProjectTab" data-args='["overview"]'>ภาพรวม</button>
+        <button class="tab" role="tab" type="button" id="tabReleases" aria-selected="false" aria-controls="releasesPanel" data-act="showProjectTab" data-args='["releases"]' hidden>เวอร์ชัน</button>
         <?php if (!$isGuest): /* a share-link guest has no settings to change */ ?>
         <button class="tab" role="tab" type="button" id="tabSettings" aria-selected="false" aria-controls="settingsPanel" data-act="showProjectTab" data-args='["settings"]'>ตั้งค่า</button>
         <?php endif; ?>
@@ -155,6 +156,20 @@
             <button class="btn btn-sm" type="button" id="btnAddSprint" data-act="createSprint" hidden>+ สร้างรอบงาน</button>
         </div>
         <div class="bl-split" id="backlogBlocks"></div>
+    </div>
+
+    <!-- เวอร์ชัน + changelog: แสดงเฉพาะโปรเจคซอฟต์แวร์ (projects-releases.js) -->
+    <div class="proj-view" id="releasesPanel" role="tabpanel" aria-labelledby="tabReleases" hidden>
+        <div class="rel-wrap">
+            <div class="bl-block">
+                <div class="bl-head">
+                    <h3>เวอร์ชัน</h3><span class="sp"></span>
+                    <button class="btn btn-sm" type="button" id="btnAddRelease" data-act="createRelease" hidden>+ เวอร์ชัน</button>
+                </div>
+                <div id="releaseList"></div>
+            </div>
+            <div class="chart-card rel-detail" id="releaseDetail"></div>
+        </div>
     </div>
 
     <div class="proj-view" id="listPanel" role="tabpanel" aria-labelledby="tabList" hidden>
@@ -698,6 +713,10 @@
                         <label class="form-label" for="editTaskSprint">รอบงาน</label>
                         <select id="editTaskSprint" class="form-control"></select>
                     </div>
+                    <div class="form-group" id="editTaskReleaseGroup" hidden>
+                        <label class="form-label" for="editTaskRelease">เวอร์ชัน</label>
+                        <select id="editTaskRelease" class="form-control"></select>
+                    </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -837,6 +856,35 @@
             <div class="modal-footer">
                 <button type="button" class="btn" data-close-modal>ยกเลิก</button>
                 <button type="submit" class="btn btn-primary">ปิดรอบ</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ออกเวอร์ชันที่ยังมีงานไม่เสร็จ: เลือกที่ย้ายงานค้าง (projects-releases.js) -->
+<div class="modal-backdrop" id="releaseModal" aria-hidden="true">
+    <div class="modal modal-narrow" role="dialog" aria-labelledby="releaseModalTitle">
+        <div class="modal-header">
+            <h2 class="modal-title" id="releaseModalTitle">ออกเวอร์ชัน</h2>
+            <button class="modal-close" type="button" aria-label="ปิด" data-close-modal>&times;</button>
+        </div>
+        <form id="releaseForm" data-act="submitRelease" data-args='["$event"]' data-on="submit" novalidate>
+            <div class="modal-body">
+                <div class="close-sum" id="releaseSummary"></div>
+                <div>
+                    <p class="close-left-heading"><b>งานที่ยังไม่เสร็จ</b></p>
+                    <ul class="left-list" id="releaseLeftList"></ul>
+                </div>
+                <fieldset class="close-choices">
+                    <legend><b>ย้ายงานที่ยังไม่เสร็จไป</b></legend>
+                    <div id="releaseChoices"></div>
+                </fieldset>
+                <p class="proj-note">changelog สร้างจากเรื่องผู้ใช้ งาน และบั๊กที่เสร็จแล้ว งานใหญ่และงานย่อยไม่ขึ้น</p>
+                <p class="form-error" id="releaseError" role="alert" hidden></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" data-close-modal>ยกเลิก</button>
+                <button type="submit" class="btn btn-primary">ออกเวอร์ชัน</button>
             </div>
         </form>
     </div>

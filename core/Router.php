@@ -343,6 +343,11 @@ class Router
         $this->add('DELETE', '/api/projects/sprints/{sid}',             'ProjectSprintController', 'apiDelete', true);
         $this->add('POST',   '/api/projects/sprints/{sid}/start',       'ProjectSprintController', 'apiStart',  true);
         $this->add('POST',   '/api/projects/sprints/{sid}/close',       'ProjectSprintController', 'apiClose',  true);
+        $this->add('GET',    '/api/projects/{id}/releases',             'ProjectReleaseController', 'apiList',    true);
+        $this->add('POST',   '/api/projects/{id}/releases',             'ProjectReleaseController', 'apiCreate',  true);
+        $this->add('PUT',    '/api/projects/releases/{rid}',            'ProjectReleaseController', 'apiUpdate',  true);
+        $this->add('DELETE', '/api/projects/releases/{rid}',            'ProjectReleaseController', 'apiDelete',  true);
+        $this->add('POST',   '/api/projects/releases/{rid}/release',    'ProjectReleaseController', 'apiRelease', true);
         $this->add('POST',   '/api/projects/{id}/plan',                 'ProjectSprintController', 'apiPlan',   true);
         $this->add('GET',    '/api/projects/{id}/reports',              'ProjectSprintController', 'apiReports', true);
 

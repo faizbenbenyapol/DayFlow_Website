@@ -80,6 +80,8 @@ class ProjectTaskController
             'tasks'      => $tasks,
             'columns'    => ProjectColumn::listForProject($projectId),
             'sprints'    => ProjectSprint::listForProject($projectId),
+            // เวอร์ชันพร้อม changelog: แขกลิงก์แชร์เห็นได้ตาม D-5
+            'releases'   => ProjectRelease::listForProject($projectId),
             // ขอบงานที่ต้องรอกัน: มีเพียงรหัสงาน แขกลิงก์แชร์จึงเห็นได้ (D-5)
             'blocks'     => ProjectTaskBlock::listForProject($projectId),
             'activities' => $activities,
@@ -143,7 +145,7 @@ class ProjectTaskController
             $data = self::applyAssigneeUserId($projectId, $data, $json['assignee_user_id']);
         }
         // ส่งค่าที่ไม่ได้ระบุไปให้ model ตรวจใน lock: kind ว่าง = task, parent/แต้ม/รอบงาน null = ไม่มี
-        foreach (['kind', 'parent_id', 'story_points', 'sprint_id'] as $field) {
+        foreach (['kind', 'parent_id', 'story_points', 'sprint_id', 'release_id'] as $field) {
             if (array_key_exists($field, $json)) {
                 $data[$field] = $json[$field];
             }
@@ -268,7 +270,7 @@ class ProjectTaskController
 
         // ชนิดงาน งานแม่ แต้ม และรอบงานอ่านจาก JSON ตรง ๆ: null/'' ของค่าที่ล้างได้คือสั่งล้างค่า
         $structure = [];
-        foreach (['kind', 'parent_id', 'story_points', 'sprint_id'] as $field) {
+        foreach (['kind', 'parent_id', 'story_points', 'sprint_id', 'release_id'] as $field) {
             if (array_key_exists($field, $json)) {
                 $structure[$field] = $json[$field];
             }

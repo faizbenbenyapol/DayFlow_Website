@@ -1395,6 +1395,46 @@ async function main() {
         await api(tab, `/api/projects/tasks/${blockA.body.id}`, { method: 'DELETE' });
         await api(tab, `/api/projects/tasks/${blockB.body.id}`, { method: 'DELETE' });
 
+        // ---------- releases (เวอร์ชัน) ----------
+        console.log('Releases');
+        const relCreate = await api(tab, `/api/projects/${softwareProject.id}/releases`, { method: 'POST', body: JSON.stringify({ name: `v-e2e ${STAMP}` }) });
+        check(relCreate.status === 201, 'a release is created', JSON.stringify(relCreate.body));
+        const relId = relCreate.body.id;
+        const relDoneColumn = (await api(tab, `/api/projects/${softwareProject.id}/tasks`)).body.columns.find(column => column.grp === 'done').id;
+        const relTask = (title, kind, columnId) => api(tab, `/api/projects/${softwareProject.id}/tasks`, { method: 'POST', body: JSON.stringify({ title, kind, column_id: Number(columnId), release_id: relId }) });
+        const relStory = await relTask(`เรื่องในเวอร์ชัน ${STAMP}`, 'story', relDoneColumn);
+        const relBug = await relTask(`บั๊กในเวอร์ชัน ${STAMP}`, 'bug', relDoneColumn);
+        const relLeft = await relTask(`งานค้างในเวอร์ชัน ${STAMP}`, 'task', testingColumnId);
+        check([relStory, relBug, relLeft].every(res => res.status === 201), 'three tasks are linked to the release');
+
+        await tab.eval(`selectProject(${softwareProject.id})`);
+        await sleep(1500);
+        check(await tab.eval(`document.getElementById('tabReleases').hidden === false`), 'software projects show the releases tab');
+        await click(tab, '#tabReleases');
+        await sleep(300);
+        await tab.eval(`selectRelease(${relId})`);
+        await sleep(300);
+        check(await tab.eval(`document.querySelectorAll('#releaseDetail .child-row').length === 3`), 'the release lists its three tasks');
+        await click(tab, `#releaseDetail [data-act="openReleaseModal"]`);
+        await sleep(500);
+        check(await tab.eval(`document.getElementById('releaseModal').classList.contains('active')`), 'an unfinished task opens the release dialog');
+        await tab.eval(`document.querySelector('#releaseChoices input[value=""]').checked = true`);
+        await click(tab, '#releaseForm button[type="submit"]');
+        await sleep(2000);
+        const relHeadings = await tab.eval(`[...document.querySelectorAll('#releaseDetail .changelog h4')].map(h => h.textContent.trim()).join('|')`);
+        check(relHeadings === 'ของใหม่|แก้บั๊ก', 'the changelog groups the story and the bug', relHeadings);
+        check(await tab.eval(`[...document.querySelectorAll('#releaseDetail .changelog li')].some(li => li.textContent.includes('บั๊กในเวอร์ชัน ${STAMP}'))`), 'the bug title is in the changelog');
+        const relLeftAfter = (await api(tab, `/api/projects/${softwareProject.id}/tasks`)).body.tasks.find(task => task.id === relLeft.body.id);
+        check(relLeftAfter && relLeftAfter.release_id === null, 'the unfinished task is unlinked');
+        await click(tab, '#releaseDetail [data-act="copyChangelog"]');
+        await sleep(500);
+        check(await tab.eval(`[...document.querySelectorAll('.toast')].some(t => /คัดลอก/.test(t.textContent))`), 'the copy button answers with a toast');
+
+        await api(tab, `/api/projects/releases/${relId}`, { method: 'DELETE' });
+        for (const res of [relStory, relBug, relLeft]) await api(tab, `/api/projects/tasks/${res.body.id}`, { method: 'DELETE' });
+        await click(tab, '#tabBoard');
+        await sleep(200);
+
         await tab.goto(`${BASE}/projects?project=${newProject.id}`);
         await tab.settle();
         await sleep(1200);

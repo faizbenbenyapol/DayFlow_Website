@@ -65,7 +65,7 @@ class ProjectTask
      * @param int $userId ผู้สร้าง (0 = guest)
      * @param int $projectId รหัสโปรเจค
      * @param array<string, mixed> $column คอลัมน์ที่ตรวจแล้ว (ต้องมี id)
-     * @param array<string, mixed> $data ข้อมูลงาน (kind, parent_id, story_points, sprint_id ไม่บังคับ)
+     * @param array<string, mixed> $data ข้อมูลงาน (kind, parent_id, story_points, sprint_id, release_id ไม่บังคับ)
      * @return array{id: int, number: int} รหัสงานใหม่และเลขงานในโปรเจค
      */
     public static function create(int $userId, int $projectId, array $column, array $data): array
@@ -93,6 +93,9 @@ class ProjectTask
             $parent = self::checkedParent($projectId, 0, $kind, $parentId);
             $points = self::checkedPoints($data['story_points'] ?? null, (string)$project['point_scale'], $kind);
             $sprintId = self::sprintForCreate($projectId, $kind, $parent, $data);
+            $releaseId = self::isBlankId($data['release_id'] ?? null)
+                ? null
+                : ProjectRelease::checkedForTask($projectId, $data['release_id'], null);
             $number = (int)$project['next_task_number'];
 
             $maxPos = (int)DB::run(
@@ -107,8 +110,8 @@ class ProjectTask
             $assignee = ($assigneeUserId !== null) ? null : (!empty($data['assignee']) ? $data['assignee'] : null);
 
             $insert = DB::run(
-                'INSERT INTO project_tasks (project_id, number, user_id, guest_name, title, status, priority, due_date, category, assignee_user_id, assignee, kind, parent_id, story_points, sprint_id, column_id, position, checklist)
-                 SELECT ?, ?, ?, ?, ?, ' . self::shadowStatusSql() . ', ?, ?, ?, ?, ?, ?, ?, ?, ?, c.id, ?, ?
+                'INSERT INTO project_tasks (project_id, number, user_id, guest_name, title, status, priority, due_date, category, assignee_user_id, assignee, kind, parent_id, story_points, sprint_id, release_id, column_id, position, checklist)
+                 SELECT ?, ?, ?, ?, ?, ' . self::shadowStatusSql() . ', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, c.id, ?, ?
                  FROM project_columns c
                  WHERE c.id = ? AND c.project_id = ?',
                 [
@@ -126,6 +129,7 @@ class ProjectTask
                     $parentId,
                     $points,
                     $sprintId,
+                    $releaseId,
                     $maxPos + 1,
                     !empty($data['checklist']) ? json_encode($data['checklist'], JSON_UNESCAPED_UNICODE) : null,
                     $columnId,
@@ -197,7 +201,7 @@ class ProjectTask
      *
      * @param int $taskId รหัสงาน
      * @param int $projectId รหัสโปรเจคของงาน
-     * @param array<string, mixed> $input เฉพาะคีย์ที่ client ส่งมา: kind, parent_id, story_points, sprint_id
+     * @param array<string, mixed> $input เฉพาะคีย์ที่ client ส่งมา: kind, parent_id, story_points, sprint_id, release_id
      * @return array{changed: bool, changes: list<string>} ค่าที่เปลี่ยนและข้อความสำหรับบรรทัดประวัติ
      */
     public static function updateStructure(int $taskId, int $projectId, array $input): array
@@ -205,7 +209,7 @@ class ProjectTask
         /** @var array{changed: bool, changes: list<string>} $result */
         $result = ProjectColumn::locked($projectId, static function () use ($taskId, $projectId, $input): array {
             $task = DB::run(
-                'SELECT kind, parent_id, story_points, sprint_id FROM project_tasks WHERE id = ? AND project_id = ?',
+                'SELECT kind, parent_id, story_points, sprint_id, release_id FROM project_tasks WHERE id = ? AND project_id = ?',
                 [$taskId, $projectId]
             )->fetch();
             if (!$task) {
@@ -270,6 +274,15 @@ class ProjectTask
                     : self::checkedSprint($projectId, $input['sprint_id']);
             }
 
+            // เวอร์ชัน: ผูกได้ทุกชนิด (changelog เลือกชนิดเอง) ส่งรหัสเดิมกลับมาไม่ถือว่าเปลี่ยน
+            $oldRelease = $task['release_id'] === null ? null : (int)$task['release_id'];
+            $release = $oldRelease;
+            if (array_key_exists('release_id', $input)) {
+                $release = self::isBlankId($input['release_id'])
+                    ? null
+                    : ProjectRelease::checkedForTask($projectId, $input['release_id'], $oldRelease);
+            }
+
             $kindDiffers = $kind !== $oldKind;
             // อ่านงานลูกซ้ำใน lock เดียวกับการตัดสิน: คำขออื่นอาจย้ายหรือลบลูกไปแล้ว
             $childKinds = [];
@@ -311,10 +324,14 @@ class ProjectTask
                 $changes[] = "รอบงาน เปลี่ยนเป็น '" . self::sprintLabel($projectId, $sprint) . "'";
             }
 
+            if ($release !== $oldRelease) {
+                $changes[] = "เวอร์ชัน เปลี่ยนเป็น '" . ProjectRelease::label($projectId, $release) . "'";
+            }
+
             if ($changes !== []) {
                 DB::run(
-                    'UPDATE project_tasks SET kind = ?, parent_id = ?, story_points = ?, sprint_id = ? WHERE id = ? AND project_id = ?',
-                    [$kind, $parentId, $points, $sprint, $taskId, $projectId]
+                    'UPDATE project_tasks SET kind = ?, parent_id = ?, story_points = ?, sprint_id = ?, release_id = ? WHERE id = ? AND project_id = ?',
+                    [$kind, $parentId, $points, $sprint, $release, $taskId, $projectId]
                 );
             }
             // งานย่อยต้องตามงานแม่ไปรอบเดียวกันเสมอ

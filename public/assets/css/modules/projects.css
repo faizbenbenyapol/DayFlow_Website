@@ -2562,3 +2562,118 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* ---------- เวอร์ชัน (projects-releases.js) ---------- */
+/* รายการทางซ้าย รายละเอียดทางขวา จอแคบเรียงบนลงล่าง */
+.rel-wrap {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    gap: var(--space-4);
+    align-items: start;
+}
+
+.rel-wrap .bl-block {
+    margin-bottom: 0;
+}
+
+/* แถวเวอร์ชันเป็นปุ่ม จึงล้างหน้าตาปุ่มเดิมออก */
+.rel-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px var(--space-3);
+    align-items: center;
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    border: 0;
+    border-bottom: 1px solid var(--rule);
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.rel-row:last-child {
+    border-bottom: 0;
+}
+
+.rel-row:hover,
+.rel-row[aria-current="true"] {
+    background: var(--paper-sunk);
+}
+
+.rel-row[aria-current="true"] {
+    box-shadow: inset 3px 0 0 var(--place-2);
+}
+
+.rel-row .rel-name {
+    display: block;
+    font-weight: 600;
+    font-size: 0.9375rem;
+}
+
+.rel-row .sub,
+.rel-detail .sub {
+    display: block;
+    font-size: 0.8125rem;
+    color: var(--pencil);
+}
+
+.rel-wrap #releaseList > .proj-note {
+    padding: var(--space-3) var(--space-4);
+}
+
+.rel-detail-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
+    align-items: center;
+    justify-content: space-between;
+}
+
+.rel-detail-head h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.rel-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.rel-detail .task-epic-meter {
+    margin: var(--space-2) 0;
+}
+
+.changelog h4 {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin: var(--space-4) 0 var(--space-2);
+    font-size: 0.875rem;
+}
+
+.changelog ul {
+    margin: 0;
+    padding-left: 1.2em;
+    list-style: disc;   /* base.css ล้างจุดของ ul ทิ้ง แต่ changelog ต้องอ่านเป็นรายการ */
+    font-size: 0.875rem;
+}
+
+.changelog li {
+    margin-bottom: 4px;
+    overflow-wrap: anywhere;
+}
+
+.copy-box {
+    width: 100%;
+    min-height: 150px;
+    font: 0.75rem/1.5 var(--font-mono);
+}
+
+@media (max-width: 767px) {
+    .rel-wrap {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

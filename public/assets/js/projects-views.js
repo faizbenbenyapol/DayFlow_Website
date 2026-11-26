@@ -343,6 +343,7 @@ function renderTaskViews() {
     renderTaskFilterState();
     renderSprintChrome();
     renderBacklog();
+    renderReleases();
 }
 
 /** เทียบสองค่าแบบสตริงโดยให้ค่าว่างอยู่ท้ายเสมอไม่ว่า dir จะเป็นเท่าไร */
