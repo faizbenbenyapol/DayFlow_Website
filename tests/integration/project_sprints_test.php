@@ -163,6 +163,12 @@ test('a member plans tasks in order and their subs follow the parent', function 
     $t2 = sprintTaskId($f['owner'], $p, ['title' => 'งานสอง']);
     $t3 = sprintTaskId($f['owner'], $p, ['title' => 'บั๊กสาม', 'kind' => 'bug']);
 
+    // รหัสผิดรูปถูกตรวจก่อนเข้า lock: ต้องได้ 422 ไม่ใช่ 500 เพราะหาคลาส exception ไม่เจอ
+    foreach ([[null], ['x'], [['a' => 1]]] as $badIds) {
+        $bad = sprintPlan($f['member'], $p, $sprintId, $badIds);
+        assertSame(422, $bad['status'], 'ids ' . json_encode($badIds) . ' → ' . $bad['body']);
+    }
+
     $order = [$t3, $t1, $t2];
     $planned = sprintPlan($f['member'], $p, $sprintId, $order);
     assertSame(200, $planned['status'], $planned['body']);

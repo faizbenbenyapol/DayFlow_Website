@@ -3,6 +3,10 @@
 // models/ProjectTask.php — Kanban Task Model
 // =====================================================
 
+// ProjectColumnException อยู่ใน ProjectColumn.php autoloader หาจากชื่อคลาสไม่เจอ และบางคำสั่ง
+// (เช่น plan()) โยนก่อนเรียก ProjectColumn::locked() จึงต้องโหลดเอง
+require_once __DIR__ . '/ProjectColumn.php';
+
 class ProjectTask
 {
     /** ชนิดงานที่รับได้ (ตรงกับ ENUM ของ project_tasks.kind) */

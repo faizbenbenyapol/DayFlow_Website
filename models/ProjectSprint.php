@@ -7,6 +7,9 @@
 // มีรอบ active สองรอบ หรือย้ายงานค้างไปปลายทางที่ถูกลบไปแล้ว
 // =====================================================
 
+// ProjectColumnException อยู่ใน ProjectColumn.php autoloader หาจากชื่อคลาสไม่เจอ จึงต้องโหลดเอง
+require_once __DIR__ . '/ProjectColumn.php';
+
 class ProjectSprint
 {
     /** ความยาวชื่อรอบงานสูงสุด (ตรงกับ VARCHAR(60)) */
