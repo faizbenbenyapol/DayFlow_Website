@@ -200,6 +200,40 @@
     </div>
 
     <div class="proj-view" id="overviewPanel" role="tabpanel" aria-labelledby="tabOverview" hidden>
+        <!-- กราฟรอบงาน: แสดงเฉพาะโปรเจคซอฟต์แวร์ที่เปิดรอบงาน และไม่ใช่หน้าลิงก์แชร์ (projects-reports.js) -->
+        <section id="sprintReports" aria-label="กราฟรอบงานและความเร็วทีม" hidden>
+            <div class="rep-grid">
+                <div class="chart-card">
+                    <div class="chart-card-head">
+                        <h3 id="burndownTitle">งานคงเหลือรายวัน</h3>
+                        <label class="chart-pick" id="reportSprintPick" for="reportSprintSelect" hidden>รอบ
+                            <select id="reportSprintSelect" class="form-control" data-act="selectReportSprint" data-args='["$value"]' data-on="change"></select>
+                        </label>
+                    </div>
+                    <p class="sub">แต้มที่ยังไม่เสร็จ ณ สิ้นวัน เทียบกับเส้นที่ควรเป็น</p>
+                    <svg class="chart" id="burndownChart" viewBox="0 0 460 240" role="img" aria-labelledby="burndownDesc"><desc id="burndownDesc">กราฟงานคงเหลือ</desc></svg>
+                    <div class="legend" id="burndownLegend">
+                        <span><i class="sw-actual" aria-hidden="true"></i>จริง</span>
+                        <span><i class="sw-ideal" aria-hidden="true"></i>เส้นที่ควรเป็น</span>
+                        <span>วันหยุดนับด้วย (เส้นแบนได้)</span>
+                    </div>
+                    <p class="proj-note" id="burndownEmpty" role="status" hidden></p>
+                    <details id="burndownDetails"><summary>ดูเป็นตาราง</summary><table class="data-table" id="burndownTable"></table></details>
+                </div>
+                <div class="chart-card">
+                    <h3 id="velocityTitle">ความเร็วทีม</h3>
+                    <p class="sub" id="velocitySub">แต้มที่วางแผนตอนเริ่มรอบ เทียบกับที่เสร็จ</p>
+                    <svg class="chart" id="velocityChart" viewBox="0 0 320 240" role="img" aria-labelledby="velocityDesc"><desc id="velocityDesc">กราฟความเร็วทีม</desc></svg>
+                    <div class="legend" id="velocityLegend">
+                        <span><i class="sw-plan" aria-hidden="true"></i>วางแผน</span>
+                        <span><i class="sw-done" aria-hidden="true"></i>เสร็จ</span>
+                        <span><i class="sw-avg" aria-hidden="true"></i>เฉลี่ย</span>
+                    </div>
+                    <p class="proj-note" id="velocityEmpty" role="status" hidden></p>
+                    <details id="velocityDetails"><summary>ดูเป็นตาราง</summary><table class="data-table" id="velocityTable"></table></details>
+                </div>
+            </div>
+        </section>
         <div class="ov-grid" id="overviewGrid">
             <section id="aiSummaryCardWrap" class="sec" aria-labelledby="insightTitle" hidden>
                 <div class="sec-head"><h2 id="insightTitle">สรุปสถานะโปรเจค</h2></div>

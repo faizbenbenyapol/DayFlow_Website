@@ -80,6 +80,7 @@ const FILTERED_TABS = ['board', 'backlog', 'list', 'calendar'];   // the tabs th
  * สลับแท็บของโปรเจค (บอร์ด คลังงาน รายการ ปฏิทิน ภาพรวม ตั้งค่า) และจำแท็บไว้จนกว่าจะโหลดหน้าใหม่
  * รับชื่อแท็บ ชื่อที่ไม่รู้จักหรือแท็บที่หน้านี้ไม่มี (แขกไม่มี "ตั้งค่า") กลับไปบอร์ด
  * แท็บคลังงานใช้ได้เฉพาะโหมดรอบงาน ถ้าจำแท็บนี้ไว้แล้วปิดโหมดจะกลับไปบอร์ด
+ * แท็บภาพรวมโหลดกราฟรอบงานผ่าน syncSprintReports (projects-reports.js) เมื่อแสดง และโหลดใหม่เมื่อโปรเจคเปลี่ยน
  * ไม่คืนค่า แก้ aria-selected ซ่อน/แสดงแผง และแสดงแถบตัวกรองเฉพาะแท็บที่มีงานให้กรอง
  */
 function showProjectTab(name) {
@@ -93,6 +94,7 @@ function showProjectTab(name) {
         show(key + 'Panel', key === projectSettingsTab);
     });
     show('taskFilters', FILTERED_TABS.includes(projectSettingsTab));
+    if (typeof syncSprintReports === 'function') syncSprintReports();
 }
 
 /** วาดแท็บที่จำไว้กลับมาหลังโหลดโปรเจค (ไม่คืนค่า) */

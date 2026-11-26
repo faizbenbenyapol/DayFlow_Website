@@ -1283,6 +1283,24 @@ async function main() {
         await api(tab, `/api/projects/tasks/${sprintTaskB.body.id}`, { method: 'PUT', body: JSON.stringify({ column_id: Number(sprintDoneColumnId) }) });
         await tab.eval(`selectProject(${softwareProject.id})`);
         await sleep(1500);
+
+        // กราฟในแท็บภาพรวม: burndown ของรอบที่กำลังทำ
+        await click(tab, '#tabOverview');
+        await sleep(1500);
+        check(await tab.eval(`document.getElementById('sprintReports').hidden === false`), 'the overview shows the sprint reports');
+        check(await tab.eval(`!!document.querySelector('#burndownChart .actual')`), 'the burndown draws the actual line');
+        check(await tab.eval(`!!document.querySelector('#burndownChart .dot')`), 'the burndown marks each returned day');
+        const reportNow = await api(tab, `/api/projects/${softwareProject.id}/reports`);
+        const burndownRemaining = reportNow.body.burndown?.days?.at(-1)?.remaining;
+        const lastRemainingCell = await tab.eval(`document.querySelector('#burndownTable tbody tr:last-child td:nth-child(2)')?.textContent.trim()`);
+        check(Number(lastRemainingCell) === Number(burndownRemaining), 'the burndown table ends at the sprint\'s not-done points', `${lastRemainingCell} vs ${burndownRemaining}`);
+        await tab.viewport({ width: 375, height: 800, mobile: true });
+        await sleep(200);
+        check(await tab.eval(`document.documentElement.scrollWidth <= window.innerWidth`), 'at 375px the overview does not scroll sideways');
+        await tab.viewport({ width: 1366, height: 900, mobile: false });
+        await click(tab, '#tabBoard');
+        await sleep(300);
+
         await click(tab, '[data-act="openCloseSprint"]');
         await sleep(300);
         check(await tab.eval(`document.getElementById('closeSprintModal').classList.contains('active')`), 'the sprint bar opens the close dialog');
@@ -1295,6 +1313,16 @@ async function main() {
         await click(tab, '#tabBoard');
         await sleep(300);
         check(await tab.eval(`document.getElementById('boardSprintEmpty').hidden === false && document.getElementById('boardSprintEmpty').textContent.includes('ยังไม่มีรอบที่กำลังทำ')`), 'with no active sprint the board shows the empty state');
+
+        // หลังปิดรอบแรก: velocity มีแท่งคู่หนึ่งแท่งและตารางตรงกับยอดของรอบนั้น
+        await click(tab, '#tabOverview');
+        await sleep(1500);
+        check(await tab.eval(`document.querySelectorAll('#velocityChart .bar-plan').length === 1`), 'the velocity card shows one planned bar');
+        check(await tab.eval(`document.querySelectorAll('#velocityChart .bar-done').length === 1`), 'and one completed bar');
+        const velocityNow = await api(tab, `/api/projects/${softwareProject.id}/reports`);
+        const closedSprint = velocityNow.body.velocity?.sprints?.[0];
+        const velocityCells = await tab.eval(`[...document.querySelectorAll('#velocityTable tbody tr:last-child td')].map(cell => cell.textContent.trim())`);
+        check(Array.isArray(velocityCells) && Number(velocityCells[1]) === Number(closedSprint?.committed) && Number(velocityCells[2]) === Number(closedSprint?.completed), 'the velocity table holds the closed sprint\'s planned and completed points', JSON.stringify(velocityCells));
 
         await tab.viewport({ width: 375, height: 800, mobile: true });
         await click(tab, '#tabBacklog');
@@ -1314,6 +1342,17 @@ async function main() {
         await sleep(300);
         check(await tab.eval(`document.querySelectorAll('#kanbanBoard .kanban-card').length > 2`), 'the board shows every task again');
         check(await tab.eval(`document.getElementById('boardSprintBar').hidden === true && document.getElementById('boardSprintEmpty').hidden === true`), 'the sprint bar and empty state are gone');
+
+        await click(tab, '#tabOverview');
+        await sleep(300);
+        check(await tab.eval(`document.getElementById('sprintReports').hidden === true`), 'turning sprint mode off hides the reports');
+
+        await tab.goto(`${BASE}/projects?project=${newProject.id}`);
+        await tab.settle();
+        await sleep(1200);
+        await click(tab, '#tabOverview');
+        await sleep(300);
+        check(await tab.eval(`document.getElementById('sprintReports').hidden === true`), 'a general project\'s overview has no reports');
 
         await tab.viewport({ width: 360, height: 800, mobile: true });
         await tab.goto(BASE + '/projects');
