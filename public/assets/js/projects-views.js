@@ -330,7 +330,10 @@ function renderTaskFilterState() {
     }
 }
 
-/** วาดบอร์ด รายการ ปฏิทิน และสถานะตัวกรองใหม่ทั้งหมดจากข้อมูลในหน่วยความจำ */
+/**
+ * วาดบอร์ด รายการ ปฏิทิน และสถานะตัวกรองใหม่ทั้งหมดจากข้อมูลในหน่วยความจำ
+ * พร้อมวาดแถบรอบงานและคลังงานของโปรเจคซอฟต์แวร์ที่เปิดใช้รอบงาน
+ */
 function renderTaskViews() {
     if (!activeProjectData) return;
     renderKanbanCards();
@@ -338,6 +341,8 @@ function renderTaskViews() {
     renderTaskList();
     renderTaskCalendar();
     renderTaskFilterState();
+    renderSprintChrome();
+    renderBacklog();
 }
 
 /** เทียบสองค่าแบบสตริงโดยให้ค่าว่างอยู่ท้ายเสมอไม่ว่า dir จะเป็นเท่าไร */

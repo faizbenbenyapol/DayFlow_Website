@@ -128,6 +128,7 @@
 
     <div class="tabs" role="tablist" aria-label="มุมมองของโปรเจค" id="projectTabs">
         <button class="tab" role="tab" type="button" id="tabBoard" aria-selected="true" aria-controls="boardPanel" data-act="showProjectTab" data-args='["board"]'>บอร์ด</button>
+        <button class="tab" role="tab" type="button" id="tabBacklog" aria-selected="false" aria-controls="backlogPanel" data-act="showProjectTab" data-args='["backlog"]' hidden>คลังงาน</button>
         <button class="tab" role="tab" type="button" id="tabList" aria-selected="false" aria-controls="listPanel" data-act="showProjectTab" data-args='["list"]'>รายการ</button>
         <button class="tab" role="tab" type="button" id="tabCalendar" aria-selected="false" aria-controls="calendarPanel" data-act="showProjectTab" data-args='["calendar"]'>ปฏิทิน</button>
         <button class="tab" role="tab" type="button" id="tabOverview" aria-selected="false" aria-controls="overviewPanel" data-act="showProjectTab" data-args='["overview"]'>ภาพรวม</button>
@@ -137,8 +138,23 @@
     </div>
 
     <div id="boardPanel" role="tabpanel" aria-labelledby="tabBoard">
+        <div class="sprint-bar" id="boardSprintBar" hidden></div>
         <p class="proj-note" id="boardFilterNote" hidden>กรองอยู่ ลากการ์ดไม่ได้จนกว่าจะล้างตัวกรอง (เปลี่ยนคอลัมน์ในรายละเอียดงานได้)</p>
+        <div class="empty-state" id="boardSprintEmpty" hidden>
+            <p class="empty-state-title">ยังไม่มีรอบที่กำลังทำ</p>
+            <p class="empty-state-text">เริ่มรอบจากแท็บคลังงาน แล้วบอร์ดจะแสดงเฉพาะงานในรอบนั้น</p>
+            <button class="btn btn-primary" type="button" data-act="showProjectTab" data-args='["backlog"]'>ไปที่คลังงาน</button>
+        </div>
         <div class="kanban-board" id="kanbanBoard"></div>
+    </div>
+
+    <!-- คลังงาน + รอบงาน: แสดงเฉพาะโปรเจคซอฟต์แวร์ที่เปิดใช้รอบงาน (projects-sprints.js) -->
+    <div class="proj-view" id="backlogPanel" role="tabpanel" aria-labelledby="tabBacklog" hidden>
+        <p class="proj-note" id="backlogFilterNote" hidden>กรองอยู่ ลากงานไม่ได้จนกว่าจะล้างตัวกรอง (เปลี่ยนรอบงานในรายละเอียดงานได้)</p>
+        <div class="bl-toolbar">
+            <button class="btn btn-sm" type="button" id="btnAddSprint" data-act="createSprint" hidden>+ สร้างรอบงาน</button>
+        </div>
+        <div class="bl-split" id="backlogBlocks"></div>
     </div>
 
     <div class="proj-view" id="listPanel" role="tabpanel" aria-labelledby="tabList" hidden>
@@ -311,6 +327,7 @@
                         <tbody>
                             <tr><td>ดูงาน ความคืบหน้า แชท</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
                             <tr><td>สร้าง แก้ ลากงาน เขียนความเห็น</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td></tr>
+                            <tr id="permSprintsRow" hidden><td>สร้าง เริ่ม ปิดรอบงาน</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
                             <tr><td>ตั้งคอลัมน์ ชวนคน เอาคนออก ลิงก์แชร์</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
                             <tr><td>ตั้งผู้ดูแล เปลี่ยนประเภท ลบโปรเจค</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
                         </tbody>
@@ -396,6 +413,23 @@
                             <button type="button" class="btn btn-sm btn-primary" id="softwarePrefixSave" data-act="saveSoftwarePrefix">บันทึก</button>
                         </div>
                         <p class="proj-note" id="softwarePrefixPreview">งานถัดไปจะเป็น <span class="prefix-demo" id="softwarePrefixDemo">-</span></p>
+                    </div>
+                </div>
+                <div class="set-row">
+                    <div>
+                        <h4>ทำงานเป็นรอบ (sprint)</h4>
+                        <p>ปิดได้ถ้าทำงานคนเดียวแบบไหลต่อเนื่อง</p>
+                    </div>
+                    <div>
+                        <label class="switch-row">
+                            <span class="switch">
+                                <input type="checkbox" id="useSprintsToggle" aria-label="ใช้รอบงาน"
+                                       data-act="saveUseSprints" data-args='["$checked"]' data-on="change">
+                                <span class="slider"></span>
+                            </span>
+                            <span>ใช้รอบงาน</span>
+                        </label>
+                        <p>เปิด: บอร์ดแสดงเฉพาะงานในรอบที่กำลังทำ งานอื่นอยู่ในแท็บคลังงาน · ปิด: บอร์ดแสดงทุกงานเหมือนเดิม ไม่มีกราฟงานคงเหลือ (แต้ม เลขงาน เวอร์ชัน แผนงานยังใช้ได้)</p>
                     </div>
                 </div>
                 <div class="set-row">
@@ -626,6 +660,10 @@
                             <select id="editTaskParent" class="form-control"></select>
                         </div>
                     </div>
+                    <div class="form-group" id="editTaskSprintGroup" hidden>
+                        <label class="form-label" for="editTaskSprint">รอบงาน</label>
+                        <select id="editTaskSprint" class="form-control"></select>
+                    </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -725,6 +763,35 @@
             <div class="modal-footer">
                 <button type="button" class="btn" data-close-modal>ปิด</button>
                 <button type="submit" class="btn btn-primary">บันทึกงาน</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ปิดรอบงาน: สรุปผล เลือกที่ย้ายงานค้าง แล้วกลับไปคลังงาน -->
+<div class="modal-backdrop" id="closeSprintModal" aria-hidden="true">
+    <div class="modal modal-narrow" role="dialog" aria-labelledby="closeSprintTitle">
+        <div class="modal-header">
+            <h2 class="modal-title" id="closeSprintTitle">ปิดรอบงาน</h2>
+            <button class="modal-close" type="button" aria-label="ปิด" data-close-modal>&times;</button>
+        </div>
+        <form id="closeSprintForm" data-act="submitCloseSprint" data-args='["$event"]' data-on="submit" novalidate>
+            <div class="modal-body">
+                <div class="close-sum" id="closeSprintSummary"></div>
+                <div>
+                    <p class="close-left-heading"><b id="closeSprintLeftHeading">งานที่ยังไม่เสร็จ</b></p>
+                    <ul class="left-list" id="closeSprintLeftList"></ul>
+                </div>
+                <fieldset class="close-choices">
+                    <legend><b>ย้ายงานที่ยังไม่เสร็จไป</b></legend>
+                    <div id="closeSprintChoices"></div>
+                </fieldset>
+                <p class="proj-note">งานที่เสร็จแล้วยังผูกกับรอบนี้ไว้ ใช้คิดความเร็วทีม · คอลัมน์ของงานที่ย้ายไม่เปลี่ยน</p>
+                <p class="form-error" id="closeSprintError" role="alert" hidden></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" data-close-modal>ยกเลิก</button>
+                <button type="submit" class="btn btn-primary">ปิดรอบ</button>
             </div>
         </form>
     </div>

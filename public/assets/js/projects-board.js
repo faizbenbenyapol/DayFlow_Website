@@ -63,11 +63,21 @@ function renderBoardColumns() {
 /**
  * เติมการ์ดที่ผ่านตัวกรองร่วม (projects-views.js) ลงในคอลัมน์ของมัน และนับเฉพาะการ์ดที่เห็น
  * งานใหญ่ไม่ขึ้นบอร์ดเพราะไม่มีงานในคอลัมน์ แต่ยังเห็นได้ในมุมมองรายการ
+ * โปรเจคซอฟต์แวร์ที่ใช้รอบงานแสดงเฉพาะงานของรอบที่กำลังทำ และแสดงข้อความว่างเมื่อยังไม่มีรอบ
  */
 function renderKanbanCards() {
     buildTaskIndex();
     let tasks = filteredTasks();
     if (isSoftwareProject()) tasks = tasks.filter(task => task.kind !== 'epic');
+    const sprintMode = typeof isSprintMode === 'function' && isSprintMode();
+    const sprint = sprintMode && typeof activeSprint === 'function' ? activeSprint() : null;
+    if (sprintMode) {
+        tasks = sprint ? tasks.filter(task => Number(task.sprint_id) === Number(sprint.id)) : [];
+    }
+    const boardEl = document.getElementById('kanbanBoard');
+    if (boardEl) boardEl.hidden = sprintMode && !sprint;
+    show('boardSprintEmpty', sprintMode && !sprint);
+
     projectColumns().forEach(column => {
         const id = Number(column.id);
         const mine = tasks.filter(t => Number(t.column_id) === id);
@@ -240,7 +250,7 @@ function handleQuickAddKey(columnId, e) {
     else if (e.key === 'Escape') toggleQuickAddForm(columnId, false);
 }
 
-/** สร้างงานในคอลัมน์ที่กำหนดด้วย column_id แล้วโหลดบอร์ดใหม่ (โปรเจคซอฟต์แวร์สร้างเป็นงานธรรมดา) */
+/** สร้างงานในคอลัมน์ที่กำหนดด้วย column_id แล้วโหลดบอร์ดใหม่ (โปรเจคซอฟต์แวร์สร้างงานธรรมดา และโหมดรอบงานใส่รอบที่กำลังทำ) */
 async function submitQuickAdd(columnId) {
     const input = document.getElementById('quickadd-col-' + Number(columnId) + '-input');
     const title = input.value.trim();
@@ -248,6 +258,10 @@ async function submitQuickAdd(columnId) {
 
     const body = { title, column_id: Number(columnId), priority: 'Medium' };
     if (isSoftwareProject()) body.kind = 'task';
+    if (typeof isSprintMode === 'function' && isSprintMode()) {
+        const sprint = activeSprint();
+        if (sprint) body.sprint_id = Number(sprint.id);
+    }
 
     try {
         await apiFetch(BASE_URL + '/api/projects/' + activeProjectId + '/tasks', {
@@ -321,8 +335,8 @@ function openEditTask(id) {
 }
 
 /**
- * เติมช่องเฉพาะงานซอฟต์แวร์ในแผงรายละเอียด: ชนิดงาน แต้ม งานใหญ่ และงานแม่
- * ซ่อนทั้งชุดเมื่อโปรเจคไม่ใช่ซอฟต์แวร์
+ * เติมช่องเฉพาะงานซอฟต์แวร์ในแผงรายละเอียด: ชนิดงาน แต้ม งานใหญ่ งานแม่ และรอบงาน
+ * ซ่อนทั้งชุดเมื่อโปรเจคไม่ใช่ซอฟต์แวร์ และซ่อนช่องรอบงานเมื่อโปรเจคไม่ได้ใช้รอบงาน
  */
 function fillSoftwareTaskFields(task) {
     const software = isSoftwareProject();
@@ -355,6 +369,28 @@ function fillSoftwareTaskFields(task) {
     }
     pointsSelect.value = currentPoints;
 
+    // รอบงาน: เรื่องผู้ใช้/งาน/บั๊ก เลือกได้ระหว่างคลังงานกับรอบที่ยังไม่ปิด
+    // รอบที่ปิดแล้วยังแสดงเป็นตัวเลือกของงานที่อยู่รอบนั้น เพื่อไม่ให้การแก้ช่องอื่นย้ายงานออกโดยไม่ตั้งใจ
+    const sprintSelect = document.getElementById('editTaskSprint');
+    if (sprintSelect) {
+        const sprints = typeof isSprintMode === 'function' && isSprintMode()
+            ? projectSprints().filter(sprint => sprint.state !== 'closed')
+            : [];
+        const currentSprint = task.sprint_id == null || task.sprint_id === ''
+            ? null : sprintById(task.sprint_id);
+        let options = '<option value="">คลังงาน</option>' + sprints.map(sprint =>
+            '<option value="' + Number(sprint.id) + '">' + escHtml(sprint.name)
+            + ' (' + escHtml(SPRINT_STATE_LABEL[sprint.state] || sprint.state) + ')</option>').join('');
+        if (currentSprint && !sprints.some(sprint => Number(sprint.id) === Number(currentSprint.id))) {
+            options += '<option value="' + Number(currentSprint.id) + '">' + escHtml(currentSprint.name)
+                + ' (' + escHtml(SPRINT_STATE_LABEL[currentSprint.state] || currentSprint.state) + ')</option>';
+        }
+        sprintSelect.innerHTML = options;
+        const sprintId = currentSprint ? String(Number(currentSprint.id)) : '';
+        sprintSelect.value = sprintId;
+        sprintSelect.dataset.original = sprintId;
+    }
+
     const epicSelect = document.getElementById('editTaskEpic');
     const epics = tasks.filter(item => (item.kind || 'task') === 'epic' && Number(item.id) !== Number(task.id));
     epicSelect.innerHTML = '<option value="">ไม่มี</option>' + epics.map(item =>
@@ -371,14 +407,19 @@ function fillSoftwareTaskFields(task) {
     toggleSoftwareTaskFields(kind);
 }
 
-/** แสดงช่องที่ใช้กับชนิดงานที่เลือก: แต้มสำหรับทุกชนิดยกเว้นงานใหญ่ และช่องงานใหญ่หรืองานแม่ตามชนิด */
+/** แสดงช่องที่ใช้กับชนิดงานที่เลือก: แต้ม งานใหญ่ งานแม่ และรอบงานตามชนิดและโหมดรอบงาน */
 function toggleSoftwareTaskFields(kind) {
     const pointsGroup = document.getElementById('editTaskPointsGroup');
     const epicGroup = document.getElementById('editTaskEpicGroup');
     const parentGroup = document.getElementById('editTaskParentGroup');
+    const sprintGroup = document.getElementById('editTaskSprintGroup');
     if (pointsGroup) pointsGroup.hidden = kind === 'epic';
     if (epicGroup) epicGroup.hidden = !['story', 'task', 'bug'].includes(kind);
     if (parentGroup) parentGroup.hidden = kind !== 'sub';
+    if (sprintGroup) {
+        sprintGroup.hidden = !(typeof isSprintMode === 'function' && isSprintMode())
+            || !['story', 'task', 'bug'].includes(kind);
+    }
     const parentSelect = document.getElementById('editTaskParent');
     if (parentSelect) parentSelect.required = kind === 'sub';
 }
@@ -619,7 +660,7 @@ async function saveChecklistQuickly() {
 /**
  * บันทึกงานจากกล่องแก้ไข: ส่ง column_id เฉพาะเมื่อผู้ใช้เปลี่ยนคอลัมน์
  * ฟิลด์อื่นส่งตามปกติ แล้วโหลดบอร์ดและรายการโปรเจคใหม่
- * โปรเจคซอฟต์แวร์ส่งชนิดงาน งานแม่ และแต้มเฉพาะช่องที่ค่าเปลี่ยนจากตอนเปิดแผง
+ * โปรเจคซอฟต์แวร์ส่งชนิดงาน งานแม่ แต้ม และรอบงานเฉพาะช่องที่ค่าเปลี่ยนจากตอนเปิดแผง
  */
 async function submitEditTask(e) {
     e.preventDefault();
@@ -667,6 +708,16 @@ async function submitEditTask(e) {
         if (kind !== loadedKind) payload.kind = kind;
         if (parentId !== loadedParent) payload.parent_id = parentId;
         if (points !== loadedPoints) payload.story_points = points;
+
+        // ส่งรอบงานเฉพาะเมื่อเปลี่ยน และเฉพาะชนิดที่อยู่บนบอร์ดได้
+        const sprintSelect = document.getElementById('editTaskSprint');
+        if (sprintSelect && typeof isSprintMode === 'function' && isSprintMode()
+            && ['story', 'task', 'bug'].includes(kind)) {
+            const loadedSprint = loaded && loaded.sprint_id != null && loaded.sprint_id !== ''
+                ? Number(loaded.sprint_id) : null;
+            const sprintId = sprintSelect.value ? Number(sprintSelect.value) : null;
+            if (sprintId !== loadedSprint) payload.sprint_id = sprintId;
+        }
     }
 
     try {

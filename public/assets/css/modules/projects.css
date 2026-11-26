@@ -2005,3 +2005,327 @@
         grid-template-columns: 1fr;
     }
 }
+
+
+/* ---------------------------------------------------------------
+   รอบงาน: แถบเหนือบอร์ด คลังงาน และกล่องปิดรอบ
+   พื้นพาสเทลใช้ตัวอักษร var(--ink) เสมอ
+--------------------------------------------------------------- */
+.sprint-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-2) var(--space-4);
+    align-items: center;
+    margin: var(--space-3) 0;
+    padding: var(--space-3) var(--space-4);
+    border: 1.5px solid var(--edge);
+    border-radius: var(--r-card);
+    background: var(--paper);
+    color: var(--ink);
+}
+
+.sprint-bar h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.sprint-bar .goal {
+    margin: 2px 0 0;
+    font-size: 0.875rem;
+    color: var(--pencil);
+}
+
+.sprint-meta {
+    display: flex;
+    flex-wrap: wrap;
+    grid-column: 1 / -1;
+    gap: var(--space-2) var(--space-4);
+    align-items: center;
+    font-size: 0.8125rem;
+}
+
+.sprint-meta b {
+    font-family: var(--font-num);
+}
+
+.sprint-meter {
+    width: 120px;
+    height: 8px;
+    accent-color: var(--ledger-green);
+    vertical-align: middle;
+}
+
+.bl-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: var(--space-3);
+}
+
+.bl-block {
+    margin-bottom: var(--space-4);
+    border: 1.5px solid var(--edge);
+    border-radius: var(--r-card);
+    background: var(--paper);
+    color: var(--ink);
+}
+
+.bl-block.backlog {
+    border-style: dashed;
+}
+
+.bl-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
+    align-items: center;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--rule);
+}
+
+.bl-head h3 {
+    margin: 0;
+    font-size: 0.9375rem;
+}
+
+.bl-head .sub {
+    font-size: 0.8125rem;
+    color: var(--pencil);
+}
+
+.bl-head .sp {
+    flex: 1;
+}
+
+.bl-list {
+    min-height: 2.5rem;
+}
+
+.bl-row {
+    display: grid;
+    grid-template-columns: 14px 18px auto minmax(0, 1fr) auto 22px 30px;
+    gap: var(--space-2);
+    align-items: center;
+    padding: 7px var(--space-4);
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.875rem;
+    background: var(--paper);
+    color: var(--ink);
+}
+
+.bl-row:last-child {
+    border-bottom: 0;
+}
+
+.bl-row:hover {
+    background: var(--paper-sunk);
+}
+
+.bl-grip {
+    color: var(--rule-strong);
+    cursor: grab;
+    font-size: 0.75rem;
+    letter-spacing: -2px;
+    touch-action: none;
+}
+
+.bl-grip.is-hidden {
+    visibility: hidden;
+}
+
+.bl-title {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.bl-row.done .bl-title {
+    color: var(--pencil);
+    text-decoration: line-through;
+}
+
+.bl-epic {
+    min-width: 0;
+}
+
+.bl-row .pts {
+    justify-self: end;
+}
+
+.avatar-xs {
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 50%;
+    background: var(--paper-sunk);
+    color: var(--ink);
+    font-size: 0.6875rem;
+}
+
+.bl-empty {
+    margin: 0;
+    padding: var(--space-4);
+    color: var(--pencil);
+    font-size: 0.875rem;
+    text-align: center;
+}
+
+.bl-add {
+    padding: var(--space-2) var(--space-4);
+}
+
+.bl-edit {
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--rule);
+}
+
+.bl-edit .form-group {
+    margin-bottom: var(--space-2);
+}
+
+.bl-edit-dates {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2);
+}
+
+.bl-edit-actions {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.switch-row {
+    display: inline-flex;
+    gap: var(--space-2);
+    align-items: center;
+    font-size: 0.875rem;
+    cursor: pointer;
+}
+
+.close-sum {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+    text-align: center;
+}
+
+.close-sum div {
+    padding: var(--space-2);
+    border-radius: var(--r-control);
+    background: var(--paper-sunk);
+    color: var(--ink);
+}
+
+.close-sum b {
+    display: block;
+    font: 700 1.25rem var(--font-num);
+}
+
+.close-left-heading {
+    margin: 0 0 var(--space-2);
+}
+
+.left-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid var(--rule);
+    border-radius: var(--r-control);
+}
+
+.left-list li {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--rule);
+}
+
+.left-list li:last-child {
+    border-bottom: 0;
+}
+
+.left-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.close-choices {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.close-choices legend {
+    margin-bottom: var(--space-2);
+    font-size: 0.875rem;
+}
+
+.close-choices > div {
+    display: grid;
+    gap: var(--space-2);
+}
+
+.choice {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr);
+    gap: var(--space-2);
+    align-items: start;
+    padding: var(--space-2) var(--space-3);
+    border: 1.5px solid var(--rule);
+    border-radius: var(--r-control);
+    color: var(--ink);
+    cursor: pointer;
+}
+
+.choice:has(input:checked) {
+    border-color: var(--edge);
+    background: var(--highlighter);
+    color: var(--ink);
+}
+
+.choice small {
+    display: block;
+    color: inherit;
+    opacity: 0.75;
+}
+
+.bl-title:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+}
+
+@media (max-width: 720px) {
+    .sprint-bar {
+        grid-template-columns: 1fr;
+    }
+
+    .sprint-bar > .btn {
+        justify-self: start;
+    }
+
+    .bl-row {
+        grid-template-columns: 14px 18px auto minmax(0, 1fr) 22px 30px;
+    }
+
+    .bl-row .bl-epic {
+        display: none;
+    }
+
+    .bl-edit-dates {
+        grid-template-columns: 1fr;
+    }
+}

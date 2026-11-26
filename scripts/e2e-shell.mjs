@@ -1140,6 +1140,13 @@ async function main() {
         check(!!softwareProject, 'the software project reached the server');
         if (softwareProject) made.projects.push(softwareProject.id);
 
+        // โปรเจคซอฟต์แวร์ใหม่เปิดใช้รอบงานไว้โดยปริยาย ปิดไว้ก่อนเพื่อตรวจหน้าจอเดิม
+        // แล้วค่อยเปิดใหม่ในส่วน "Sprints" ด้านล่าง
+        const offSprints = await api(tab, `/api/projects/${softwareProject.id}`, { method: 'PUT', body: JSON.stringify({ use_sprints: 0 }) });
+        check(offSprints.status === 200, 'sprint mode can be turned off for the existing checks', JSON.stringify(offSprints.body));
+        await tab.goto(`${BASE}/projects?project=${softwareProject.id}`);
+        await sleep(1500);
+
         const testingColumnId = await tab.eval(`document.querySelector('#kanbanBoard .kanban-column:nth-child(4)')?.dataset.columnId`);
         await click(tab, `[data-act="toggleQuickAddForm"][data-args="[${testingColumnId}]"]`);
         await sleep(200);
@@ -1226,6 +1233,87 @@ async function main() {
         check(await tab.eval(`!!document.querySelector('.kanban-card[data-id="${subId}"]')`), 'the epic filter keeps the sub card under that story');
         await fill(tab, '#taskFilterEpic', '');
         await sleep(300);
+
+        // ---------- sprints and the backlog ----------
+        console.log('Sprints');
+        await click(tab, '#tabSettings');
+        await sleep(200);
+        await click(tab, '#settingsNavSoftware');
+        await sleep(200);
+        check(await tab.eval(`document.getElementById('useSprintsToggle').checked === false`), 'sprint mode starts off for the checks above');
+        check(await tab.eval(`document.getElementById('useSprintsToggle').disabled === false`), 'its switch is editable for the owner');
+        await tab.eval(`document.getElementById('useSprintsToggle').click()`);
+        await sleep(1800);
+        check(await tab.eval(`document.getElementById('tabBacklog').hidden === false`), 'turning sprint mode on shows the backlog tab');
+        await click(tab, '#tabBacklog');
+        await sleep(300);
+        check(await tab.eval(`document.getElementById('backlogPanel').hidden === false`), 'the backlog tab opens its panel');
+
+        await click(tab, '#btnAddSprint');
+        await sleep(1800);
+        check(await tab.eval(`[...document.querySelectorAll('#backlogBlocks .bl-block')].some(block => block.textContent.includes('รอบ 1') && block.dataset.state === 'planned')`), 'a planned sprint named รอบ 1 appears');
+        await click(tab, '#backlogBlocks [data-act="cancelSprintEdit"]');
+        await sleep(200);
+
+        const sprintList = await api(tab, `/api/projects/${softwareProject.id}/tasks`);
+        const sprint = (sprintList.body.sprints || []).find(item => item.name === 'รอบ 1' && item.state === 'planned');
+        check(!!sprint, 'the sprint reached the server');
+        const sprintTaskA = await api(tab, `/api/projects/${softwareProject.id}/tasks`, { method: 'POST', body: JSON.stringify({ title: `งานรอบ A ${STAMP}`, kind: 'task', column_id: Number(testingColumnId), story_points: 3 }) });
+        const sprintTaskB = await api(tab, `/api/projects/${softwareProject.id}/tasks`, { method: 'POST', body: JSON.stringify({ title: `งานรอบ B ${STAMP}`, kind: 'task', column_id: Number(testingColumnId), story_points: 2 }) });
+        check(sprintTaskA.status === 201 && sprintTaskB.status === 201, 'two tasks were made for the sprint');
+        const planned = await api(tab, `/api/projects/${softwareProject.id}/plan`, { method: 'POST', body: JSON.stringify({ sprint_id: Number(sprint.id), ids: [sprintTaskA.body.id, sprintTaskB.body.id] }) });
+        check(planned.status === 200, 'two tasks were planned into the sprint', JSON.stringify(planned.body));
+        await tab.eval(`selectProject(${softwareProject.id})`);
+        await sleep(1500);
+        await click(tab, '#tabBacklog');
+        await sleep(300);
+        check(await tab.eval(`document.querySelectorAll('#backlogBlocks .bl-block[data-sprint-id="${sprint.id}"] .bl-row').length === 2`), 'the planned sprint block lists both tasks');
+
+        await click(tab, `#backlogBlocks [data-act="startSprint"][data-args="[${sprint.id}]"]`);
+        await sleep(300);
+        check(await tab.eval(`document.querySelector('.df-dialog[open]')?.textContent.includes('เริ่มรอบ')`), 'starting a sprint asks first');
+        await click(tab, '.df-dialog[open] button[type="submit"]');
+        await sleep(1800);
+        await click(tab, '#tabBoard');
+        await sleep(300);
+        check(await tab.eval(`document.getElementById('boardSprintBar').textContent.includes('รอบ 1')`), 'the board bar names the active sprint');
+        check(await tab.eval(`document.querySelectorAll('#kanbanBoard .kanban-card').length === 2`), 'the board shows only the two tasks of the sprint', String(await tab.eval(`document.querySelectorAll('#kanbanBoard .kanban-card').length`)));
+
+        const sprintDoneColumnId = (await api(tab, `/api/projects/${softwareProject.id}/tasks`)).body.columns.find(column => column.grp === 'done').id;
+        await api(tab, `/api/projects/tasks/${sprintTaskB.body.id}`, { method: 'PUT', body: JSON.stringify({ column_id: Number(sprintDoneColumnId) }) });
+        await tab.eval(`selectProject(${softwareProject.id})`);
+        await sleep(1500);
+        await click(tab, '[data-act="openCloseSprint"]');
+        await sleep(300);
+        check(await tab.eval(`document.getElementById('closeSprintModal').classList.contains('active')`), 'the sprint bar opens the close dialog');
+        await tab.eval(`document.querySelector('#closeSprintModal input[name="closeCarry"][value="backlog"]').click()`);
+        await click(tab, '#closeSprintForm [type="submit"]');
+        await sleep(2200);
+        check(await tab.eval(`document.getElementById('backlogPanel').hidden === false`), 'closing the sprint goes to the backlog');
+        check(await tab.eval(`document.querySelector('#backlogBlocks .bl-block[data-sprint-id=""]')?.textContent.includes(${JSON.stringify(`งานรอบ A ${STAMP}`)})`), 'the unfinished task is back in the backlog block');
+
+        await click(tab, '#tabBoard');
+        await sleep(300);
+        check(await tab.eval(`document.getElementById('boardSprintEmpty').hidden === false && document.getElementById('boardSprintEmpty').textContent.includes('ยังไม่มีรอบที่กำลังทำ')`), 'with no active sprint the board shows the empty state');
+
+        await tab.viewport({ width: 375, height: 800, mobile: true });
+        await click(tab, '#tabBacklog');
+        await sleep(300);
+        check(await tab.eval(`document.documentElement.scrollWidth <= window.innerWidth`), 'at 375px the backlog does not scroll sideways');
+        check(await tab.eval(`document.getElementById('backlogPanel').scrollWidth <= document.getElementById('backlogPanel').clientWidth`), 'the backlog keeps its rows inside the panel');
+        await tab.viewport({ width: 1366, height: 900, mobile: false });
+
+        await click(tab, '#tabSettings');
+        await sleep(200);
+        await click(tab, '#settingsNavSoftware');
+        await sleep(200);
+        await tab.eval(`document.getElementById('useSprintsToggle').click()`);
+        await sleep(1800);
+        check(await tab.eval(`document.getElementById('tabBacklog').hidden === true`), 'turning sprint mode off hides the backlog tab');
+        await click(tab, '#tabBoard');
+        await sleep(300);
+        check(await tab.eval(`document.querySelectorAll('#kanbanBoard .kanban-card').length > 2`), 'the board shows every task again');
+        check(await tab.eval(`document.getElementById('boardSprintBar').hidden === true && document.getElementById('boardSprintEmpty').hidden === true`), 'the sprint bar and empty state are gone');
 
         await tab.viewport({ width: 360, height: 800, mobile: true });
         await tab.goto(BASE + '/projects');

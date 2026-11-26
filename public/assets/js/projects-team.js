@@ -73,17 +73,20 @@ function isProjectAdmin() {
     return !!project && (!!project.is_owner || project.user_role === 'Admin');
 }
 
-const PROJECT_TABS = ['board', 'list', 'calendar', 'overview', 'settings'];
-const FILTERED_TABS = ['board', 'list', 'calendar'];   // the tabs that show tasks, so the filter bar shows with them
+const PROJECT_TABS = ['board', 'backlog', 'list', 'calendar', 'overview', 'settings'];
+const FILTERED_TABS = ['board', 'backlog', 'list', 'calendar'];   // the tabs that show tasks, so the filter bar shows with them
 
 /**
- * สลับแท็บของโปรเจค (บอร์ด รายการ ปฏิทิน ภาพรวม ตั้งค่า) และจำแท็บไว้จนกว่าจะโหลดหน้าใหม่
+ * สลับแท็บของโปรเจค (บอร์ด คลังงาน รายการ ปฏิทิน ภาพรวม ตั้งค่า) และจำแท็บไว้จนกว่าจะโหลดหน้าใหม่
  * รับชื่อแท็บ ชื่อที่ไม่รู้จักหรือแท็บที่หน้านี้ไม่มี (แขกไม่มี "ตั้งค่า") กลับไปบอร์ด
+ * แท็บคลังงานใช้ได้เฉพาะโหมดรอบงาน ถ้าจำแท็บนี้ไว้แล้วปิดโหมดจะกลับไปบอร์ด
  * ไม่คืนค่า แก้ aria-selected ซ่อน/แสดงแผง และแสดงแถบตัวกรองเฉพาะแท็บที่มีงานให้กรอง
  */
 function showProjectTab(name) {
     const tabId = key => 'tab' + key.charAt(0).toUpperCase() + key.slice(1);
-    projectSettingsTab = PROJECT_TABS.includes(name) && document.getElementById(tabId(name)) ? name : 'board';
+    const sprintBacklog = name === 'backlog' && !(typeof isSprintMode === 'function' && isSprintMode());
+    const wanted = sprintBacklog ? 'board' : name;
+    projectSettingsTab = PROJECT_TABS.includes(wanted) && document.getElementById(tabId(wanted)) ? wanted : 'board';
     PROJECT_TABS.forEach(key => {
         const tab = document.getElementById(tabId(key));
         if (tab) tab.setAttribute('aria-selected', String(key === projectSettingsTab));
@@ -179,6 +182,8 @@ function renderTeamPanel() {
     document.querySelectorAll('.perm th[data-role-col]').forEach(th => {
         th.classList.toggle('mine', th.dataset.roleCol === column);
     });
+    // แถวสิทธิ์ของรอบงานมีเฉพาะโปรเจคซอฟต์แวร์
+    show('permSprintsRow', isSoftwareProject());
 }
 
 /** สร้างแถวสมาชิกหนึ่งแถว: รูปย่อ ชื่อ จำนวนงาน ตัวเลือกบทบาท และปุ่มเอาออก */
@@ -558,6 +563,7 @@ function renderTypeSettings() {
 
 /**
  * เปลี่ยนประเภทของโปรเจคหลังยืนยันแล้ว
+ * ถ้าออกจากซอฟต์แวร์ขณะมีรอบที่กำลังทำ ข้อความยืนยันบอกว่ารอบงานและคลังงานจะถูกซ่อนไว้ ไม่ลบ
  * รับรหัสประเภท ไม่คืนค่า แล้วโหลดโปรเจคใหม่ให้หูสีและบอร์ดตรงกัน
  */
 async function changeProjectType(type) {
@@ -565,8 +571,17 @@ async function changeProjectType(type) {
     if (!project || !project.is_owner) return;
     const ear = PROJECT_TYPE_EAR[type] || type;
 
+    let message = 'คอลัมน์ งาน ทีม และแชทไม่เปลี่ยน ข้อมูลเฉพาะของประเภทเดิม (ถ้ามี) จะถูกซ่อนไว้ ไม่ลบ เปลี่ยนกลับเมื่อไหร่ก็กลับมาครบ';
+    if ((project.type || 'general') === 'software' && type !== 'software'
+        && typeof activeSprint === 'function') {
+        const sprint = activeSprint();
+        if (sprint) {
+            message += ' รอบ "' + sprint.name + '" กำลังทำอยู่ รอบงานและคลังงานจะถูกซ่อนไว้ ไม่ลบ กลับมาเป็นซอฟต์แวร์เมื่อไหร่ก็เห็นเหมือนเดิม';
+        }
+    }
+
     if (!await confirmAction(
-        'คอลัมน์ งาน ทีม และแชทไม่เปลี่ยน ข้อมูลเฉพาะของประเภทเดิม (ถ้ามี) จะถูกซ่อนไว้ ไม่ลบ เปลี่ยนกลับเมื่อไหร่ก็กลับมาครบ',
+        message,
         'เปลี่ยนเป็น' + ear,
         'เปลี่ยนเป็น "' + ear + '"',
         'primary'
@@ -586,7 +601,7 @@ async function changeProjectType(type) {
 }
 
 /**
- * เติมแผงตั้งค่า "ซอฟต์แวร์": ตัวย่อเลขงาน ชุดแต้ม และสิทธิ์ของเจ้าของ/ผู้ดูแล
+ * เติมแผงตั้งค่า "ซอฟต์แวร์": ตัวย่อเลขงาน ชุดแต้ม สวิตช์ใช้รอบงาน และสิทธิ์ของเจ้าของ/ผู้ดูแล
  * คนที่ไม่ใช่ผู้ดูแลเห็นค่าเดิมแบบอ่านอย่างเดียวพร้อมคำอธิบาย
  */
 function renderSoftwareSettings() {
@@ -611,6 +626,11 @@ function renderSoftwareSettings() {
     if (scaleSelect) {
         scaleSelect.value = project.point_scale === 'ten' ? 'ten' : 'fib';
         scaleSelect.disabled = !admin;
+    }
+    const sprintToggle = document.getElementById('useSprintsToggle');
+    if (sprintToggle) {
+        sprintToggle.checked = !!Number(project.use_sprints);
+        sprintToggle.disabled = !admin;
     }
     show('softwareDenied', !admin);
     updateSoftwarePrefixPreview();
