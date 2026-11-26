@@ -1347,6 +1347,54 @@ async function main() {
         await sleep(300);
         check(await tab.eval(`document.getElementById('sprintReports').hidden === true`), 'turning sprint mode off hides the reports');
 
+        // ---------- blockers (งานขวาง) ----------
+        console.log('Blockers');
+        const blockColumnId = Number(testingColumnId);
+        const blockA = await api(tab, `/api/projects/${softwareProject.id}/tasks`, { method: 'POST', body: JSON.stringify({ title: `งานขวาง A ${STAMP}`, kind: 'task', column_id: blockColumnId }) });
+        const blockB = await api(tab, `/api/projects/${softwareProject.id}/tasks`, { method: 'POST', body: JSON.stringify({ title: `งานขวาง B ${STAMP}`, kind: 'task', column_id: blockColumnId }) });
+        check(blockA.status === 201 && blockB.status === 201, 'two tasks were made for the blockers check');
+        const blockKeys = await api(tab, `/api/projects/${softwareProject.id}/tasks`);
+        const blockPrefix = blockKeys.body.project.key_prefix || '';
+        const blockAKey = `${blockPrefix}-${blockA.body.number}`;
+        const blockBKey = `${blockPrefix}-${blockB.body.number}`;
+
+        await tab.eval(`selectProject(${softwareProject.id})`);
+        await sleep(1500);
+        await tab.eval(`openEditTask(${blockA.body.id})`);
+        await sleep(500);
+        check(await tab.eval(`document.getElementById('taskBlocksSection').hidden === false`), 'the panel shows the blockers section');
+        await fill(tab, '#taskBlockRelation', 'waits');
+        await fill(tab, '#taskBlockInput', blockBKey);
+        await click(tab, '[data-act="addTaskBlock"]');
+        await sleep(1200);
+        check(await tab.eval(`document.querySelector('#taskBlocksList .dep-row .key')?.textContent`) === blockBKey, 'the blocker row appears');
+        check(await tab.eval(`!!document.querySelector('.kanban-card[data-id="${blockA.body.id}"] .stuck')`), 'the waiting card shows the ติด badge');
+
+        await tab.eval(`openEditTask(${blockB.body.id})`);
+        await sleep(400);
+        await fill(tab, '#taskBlockRelation', 'waits');
+        await fill(tab, '#taskBlockInput', blockAKey);
+        await click(tab, '[data-act="addTaskBlock"]');
+        await sleep(800);
+        check(await tab.eval(`document.getElementById('taskBlockError').hidden === false && document.getElementById('taskBlockError').textContent.includes('ไม่มีวันเริ่ม')`), 'asking B to wait for A is refused');
+
+        const blockDoneColumnId = (await api(tab, `/api/projects/${softwareProject.id}/tasks`)).body.columns.find(column => column.grp === 'done').id;
+        await api(tab, `/api/projects/tasks/${blockB.body.id}`, { method: 'PUT', body: JSON.stringify({ column_id: Number(blockDoneColumnId) }) });
+        await tab.eval(`selectProject(${softwareProject.id})`);
+        await sleep(1500);
+        check(await tab.eval(`!document.querySelector('.kanban-card[data-id="${blockA.body.id}"] .stuck')`), 'the badge is gone once the blocker is done');
+
+        await tab.eval(`openEditTask(${blockA.body.id})`);
+        await sleep(400);
+        await click(tab, '#taskBlocksList [data-act="removeTaskBlock"]');
+        await sleep(1000);
+        check(await tab.eval(`document.querySelectorAll('#taskBlocksList .dep-row').length === 0`), 'the × removes the blocker row');
+
+        await key(tab, 'Escape');
+        await sleep(300);
+        await api(tab, `/api/projects/tasks/${blockA.body.id}`, { method: 'DELETE' });
+        await api(tab, `/api/projects/tasks/${blockB.body.id}`, { method: 'DELETE' });
+
         await tab.goto(`${BASE}/projects?project=${newProject.id}`);
         await tab.settle();
         await sleep(1200);

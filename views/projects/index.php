@@ -741,6 +741,17 @@
                     <progress class="task-epic-meter" id="taskEpicChildrenMeter" max="1" value="0"></progress>
                     <div id="taskEpicChildrenList"></div>
                 </section>
+                <section class="dsec" id="taskBlocksSection" hidden>
+                    <h3 id="taskBlocksHeading">งานขวาง</h3>
+                    <div id="taskBlocksList"></div>
+                    <div class="dep-add" id="taskBlocksForm">
+                        <select class="form-control" id="taskBlockRelation" aria-label="ความสัมพันธ์"><option value="waits">ต้องรอ</option><option value="blocks">ขวาง</option></select>
+                        <input class="form-control" id="taskBlockInput" list="taskBlockOptions" placeholder="เลขหรือชื่องาน" aria-label="งานที่จะผูก" autocomplete="off">
+                        <datalist id="taskBlockOptions"></datalist>
+                        <button type="button" class="btn btn-sm" data-act="addTaskBlock">ผูก</button>
+                    </div>
+                    <p class="dep-err" id="taskBlockError" role="alert" hidden></p>
+                </section>
 
                 <div class="modal-checklist-container">
                     <div class="checklist-header">

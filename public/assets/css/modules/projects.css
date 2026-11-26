@@ -2110,7 +2110,8 @@
     color: var(--pencil);
 }
 
-.child-row {
+.child-row,
+.dep-row {
     display: flex;
     gap: var(--space-2);
     align-items: center;
@@ -2119,12 +2120,62 @@
     font-size: 0.875rem;
 }
 
-.child-row .title {
+.child-row .title,
+.dep-row .title {
     flex: 1;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* ป้าย "ติด" ของการ์ดที่ยังมีงานขวางไม่เสร็จ รูปทรงและคำบอก ไม่พึ่งสีอย่างเดียว */
+.stuck {
+    display: inline-flex;
+    padding: 0 6px;
+    border-radius: 4px;
+    background: var(--stamp-red);
+    color: var(--paper);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.6;
+}
+
+/* ส่วนงานขวางอยู่ระหว่างงานย่อยกับเช็กลิสต์ ต้องมีระยะแยกจากทั้งสองฝั่ง */
+#taskBlocksSection {
+    margin: var(--space-4) 0;
+}
+
+.dep-row .rel {
+    width: 4.5rem;
+    flex: none;
+    font-size: 0.75rem;
+    color: var(--pencil);
+}
+
+.dep-add {
+    display: flex;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.dep-add select {
+    width: auto;
+}
+
+.dep-add input {
+    flex: 1;
+    min-width: 10rem;
+}
+
+.dep-err {
+    margin: var(--space-2) 0 0;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--r-control);
+    background: var(--rose);
+    color: var(--ink);
+    font-size: 0.8125rem;
 }
 
 .state {

@@ -148,6 +148,10 @@ function renderSoftwareKanbanCard(task) {
     const key = taskKey(task);
     const parent = task.parent_id == null ? null : softwareTaskIndex.byId.get(Number(task.parent_id)) || null;
     const epic = parent && parent.kind === 'epic' ? parent : null;
+    const open = openBlockers(task);
+    const stuckTitle = open.length
+        ? 'รอ ' + open.map(blocker => (taskKey(blocker) + ' ' + (blocker.title || '')).trim()).join(', ')
+        : '';
 
     return '<div class="kanban-card' + (kind === 'sub' ? ' is-sub' : '') + '" data-id="' + task.id + '" data-priority="' + escHtml(priority.toLowerCase()) + '">'
         + (kind === 'sub' && parent
@@ -155,6 +159,8 @@ function renderSoftwareKanbanCard(task) {
             : '')
         + '<div class="kcard-top">' + kindIcon(kind)
         + (key ? '<span class="key">' + escHtml(key) + '</span>' : '')
+        // ป้ายอยู่ต่อจากเลขงาน ไม่ดันไปขวาสุด เพราะมุมขวาบนเป็นที่ของปุ่มแก้/ลบที่ลอยทับ
+        + (open.length ? '<span class="stuck" title="' + escHtml(stuckTitle) + '">ติด</span>' : '')
         + '</div>'
         + '<div class="kanban-card-title">' + title + '</div>'
         + '<div class="kcard-meta">'
@@ -429,16 +435,20 @@ function handleTaskKindChange(value) {
     toggleSoftwareTaskFields(value);
 }
 
-/** วาดส่วนงานย่อยของเรื่องผู้ใช้/งาน/บั๊ก และส่วนงานลูกของงานใหญ่ในแผงรายละเอียด */
+/** วาดส่วนงานย่อยของเรื่องผู้ใช้/งาน/บั๊ก ส่วนงานลูกของงานใหญ่ และงานขวางในแผงรายละเอียด */
 function renderSoftwareTaskSections(task) {
     const subtasks = document.getElementById('taskSubtasksSection');
     const epicSection = document.getElementById('taskEpicChildrenSection');
+    const blocksSection = document.getElementById('taskBlocksSection');
     if (!subtasks || !epicSection) return;
     if (!isSoftwareProject()) {
         subtasks.hidden = true;
         epicSection.hidden = true;
+        if (blocksSection) blocksSection.hidden = true;
         return;
     }
+
+    renderSoftwareTaskBlocks(task);
 
     const kind = task.kind || 'task';
     if (['story', 'task', 'bug'].includes(kind)) {
@@ -473,6 +483,56 @@ function renderSoftwareTaskSections(task) {
 
     subtasks.hidden = true;
     epicSection.hidden = true;
+}
+
+/**
+ * วาดส่วน "งานขวาง" ของงานที่เปิดอยู่: แถวที่ต้องรอก่อน แล้วตามด้วยแถวที่งานนี้ขวาง
+ * หัวข้อบอกจำนวนงานที่ยังติด ผู้ดูอย่างเดียวเห็นรายการแต่ไม่มีปุ่มเอาออกและไม่มีฟอร์มผูก
+ * @param {object} task งานที่เปิดในแผง
+ */
+function renderSoftwareTaskBlocks(task) {
+    const section = document.getElementById('taskBlocksSection');
+    if (!section) return;
+    section.hidden = false;
+
+    const waits = blockersOf(task.id);
+    const blocks = blockedTasksOf(task.id);
+    const open = waits.filter(blocker => !isDoneTask(blocker));
+    document.getElementById('taskBlocksHeading').innerHTML = 'งานขวาง'
+        + (open.length ? ' <small>ยังติด ' + open.length + '</small>' : '');
+
+    const viewer = isViewer();
+    const rows = waits.map(blocker => softwareBlockRow(blocker, 'ต้องรอ', viewer))
+        .concat(blocks.map(blocked => softwareBlockRow(blocked, 'ขวาง', viewer)));
+    document.getElementById('taskBlocksList').innerHTML = rows.length
+        ? rows.join('')
+        : '<p class="proj-note">ยังไม่มีงานขวาง</p>';
+
+    const form = document.getElementById('taskBlocksForm');
+    if (form) form.hidden = viewer;
+    const error = document.getElementById('taskBlockError');
+    if (error) error.hidden = true;
+
+    const datalist = document.getElementById('taskBlockOptions');
+    if (datalist) {
+        datalist.innerHTML = ((activeProjectData && activeProjectData.tasks) || [])
+            .filter(item => Number(item.id) !== Number(task.id))
+            .map(item => '<option value="' + escHtml((taskKey(item) + ' ' + (item.title || '')).trim()) + '"></option>')
+            .join('');
+    }
+}
+
+/** แถวงานขวางในแผงรายละเอียด: ความสัมพันธ์ เลขงาน ชื่องาน ชื่อคอลัมน์ และปุ่มเอาออก */
+function softwareBlockRow(other, relation, viewer) {
+    const column = columnById(other.column_id);
+    const key = taskKey(other);
+    return '<div class="dep-row">'
+        + '<span class="rel">' + escHtml(relation) + '</span>'
+        + (key ? '<span class="key">' + escHtml(key) + '</span>' : '')
+        + '<span class="title">' + escHtml(other.title || '') + '</span>'
+        + '<span class="state">' + escHtml(column ? column.name : '') + '</span>'
+        + (viewer ? '' : '<button type="button" class="icon-btn sm" data-act="removeTaskBlock" data-args="[' + Number(other.id) + ']" aria-label="เอาออก: ' + escHtml(key) + '">×</button>')
+        + '</div>';
 }
 
 /** แถวงานลูกในแผงรายละเอียด: ไอคอน เลขงาน ชื่องาน และชื่อคอลัมน์ */
@@ -519,6 +579,95 @@ async function addSubtask() {
         openEditTask(parentId);
     } catch (err) {
         formErrorLine('taskError', err.message || 'เพิ่มงานย่อยไม่สำเร็จ ลองอีกครั้ง');
+    }
+}
+
+/**
+ * เอาผลลัพธ์ขอบงานขวางจากเซิร์ฟเวอร์มาใส่ state แล้ววาดบอร์ดและแผงใหม่
+ * ไม่โหลดโปรเจคซ้ำทั้งก้อน เพราะเซิร์ฟเวอร์คืน blocks ล่าสุดมาแล้ว
+ * @param {object} task งานที่เปิดในแผง
+ * @param {Array<object>} blocks ขอบทั้งหมดของโปรเจค
+ */
+function applyTaskBlocks(task, blocks) {
+    activeProjectData.blocks = blocks || [];
+    buildTaskIndex();
+    renderKanbanCards();
+    if (task) renderSoftwareTaskSections(task);
+}
+
+/**
+ * ผูกงานในแผงกับงานที่พิมพ์ในช่อง: รับเลขงานนำหน้า (df-50 / DF-50 ชื่อ) หรือชื่อที่ตรงกับงานเดียว
+ * แสดงข้อความผิดพลาดใน #taskBlockError และไม่ใช้กล่องของเบราว์เซอร์
+ */
+async function addTaskBlock() {
+    if (!isSoftwareProject() || isViewer()) return;
+    const taskId = parseInt(document.getElementById('editTaskId').value, 10);
+    const task = softwareTaskIndex.byId.get(taskId);
+    const input = document.getElementById('taskBlockInput');
+    const relation = document.getElementById('taskBlockRelation').value;
+    const errorEl = document.getElementById('taskBlockError');
+    if (!task || !input || !errorEl) return;
+    const showError = message => {
+        errorEl.textContent = message;
+        errorEl.hidden = false;
+    };
+
+    const text = input.value.trim();
+    errorEl.hidden = true;
+    if (!text) { input.focus(); return; }
+
+    const allTasks = (activeProjectData && activeProjectData.tasks) || [];
+    let target = null;
+    const keyMatch = text.match(/^(\S+-\d+)(?=\s|$)/u);
+    if (keyMatch) {
+        const wanted = keyMatch[1].toLowerCase();
+        target = allTasks.find(item => taskKey(item).toLowerCase() === wanted) || null;
+    }
+    if (!target) {
+        const needle = text.toLowerCase();
+        // ไม่นับงานที่เปิดอยู่ ชื่อที่ตรงกับตัวเองและอีกงานเดียวจึงยังผูกได้
+        const matches = allTasks.filter(item => Number(item.id) !== taskId && (item.title || '').toLowerCase().includes(needle));
+        if (matches.length === 0) { showError('ไม่พบงานนี้ในโปรเจค'); return; }
+        if (matches.length > 1) { showError('พบหลายงาน พิมพ์เลขงานให้ชัด'); return; }
+        target = matches[0];
+    }
+    if (Number(target.id) === taskId) { showError('งานขวางตัวเองไม่ได้'); return; }
+
+    try {
+        const data = await apiFetch(BASE_URL + '/api/projects/tasks/' + taskId + '/blocks', {
+            method: 'POST',
+            body: JSON.stringify({ other_id: Number(target.id), relation })
+        });
+        input.value = '';
+        applyTaskBlocks(task, data.blocks);
+        toast('ผูกงานแล้ว', 'success');
+    } catch (err) {
+        showError(err.message || 'ผูกงานไม่สำเร็จ ลองอีกครั้ง');
+    }
+}
+
+/**
+ * เอาความสัมพันธ์ของงานออกจากแผง แล้ววาดบอร์ดและแผงใหม่
+ * @param {number} otherId งานอีกฝั่งของความสัมพันธ์
+ */
+async function removeTaskBlock(otherId) {
+    if (!isSoftwareProject() || isViewer()) return;
+    const taskId = parseInt(document.getElementById('editTaskId').value, 10);
+    const task = softwareTaskIndex.byId.get(taskId);
+    if (!task) return;
+    const errorEl = document.getElementById('taskBlockError');
+
+    try {
+        const data = await apiFetch(BASE_URL + '/api/projects/tasks/' + taskId + '/blocks/' + Number(otherId), {
+            method: 'DELETE'
+        });
+        applyTaskBlocks(task, data.blocks);
+        toast('เอาออกแล้ว', 'success');
+    } catch (err) {
+        if (errorEl) {
+            errorEl.textContent = err.message || 'เอาออกไม่สำเร็จ ลองอีกครั้ง';
+            errorEl.hidden = false;
+        }
     }
 }
 

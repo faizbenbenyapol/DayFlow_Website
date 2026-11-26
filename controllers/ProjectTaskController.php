@@ -80,6 +80,8 @@ class ProjectTaskController
             'tasks'      => $tasks,
             'columns'    => ProjectColumn::listForProject($projectId),
             'sprints'    => ProjectSprint::listForProject($projectId),
+            // ขอบงานที่ต้องรอกัน: มีเพียงรหัสงาน แขกลิงก์แชร์จึงเห็นได้ (D-5)
+            'blocks'     => ProjectTaskBlock::listForProject($projectId),
             'activities' => $activities,
             'ai'         => $aiInsight
         ];
@@ -392,6 +394,86 @@ class ProjectTaskController
         }
         ProjectActivity::log($task['project_id'], $userId, 'ลบงาน: "' . $task['title'] . '"');
         Response::json(['ok' => true, 'deleted_subtasks' => $deleted['subtasks']]);
+    }
+
+    /**
+     * POST /api/projects/tasks/{tid}/blocks
+     *
+     * ผูกงานนี้กับงานอื่น: relation = waits คือ "งานนี้ต้องรออีกงาน"
+     * ส่วน blocks คือ "งานนี้ขวางอีกงาน" สมาชิกขึ้นไปผูกได้ ผู้ดูอย่างเดียว 403
+     * และงานที่มองไม่เห็นตอบ 404 เดียวกับงานที่ไม่มี (EDGE-P4)
+     * คืนขอบทั้งหมดของโปรเจคให้ client วาดบอร์ดใหม่โดยไม่ต้องโหลดซ้ำ
+     */
+    public function apiBlockCreate(string $tid): void
+    {
+        $userId = Auth::userId();
+        $taskId = (int)$tid;
+
+        $task = ProjectTask::getById($taskId);
+        $project = null;
+        if ($task) {
+            $project = Project::getById((int)$task['project_id'], $userId);
+        }
+        if (!$task || !$project) {
+            Response::json(['error' => 'ไม่พบข้อมูลงาน'], 404);
+        }
+        $this->requireRole($project, 'member', 'แก้ไขงาน');
+
+        $json = Request::json();
+        $relation = $json['relation'] ?? null;
+        if ($relation !== 'waits' && $relation !== 'blocks') {
+            Response::json(['error' => 'ความสัมพันธ์ไม่ถูกต้อง'], 422);
+        }
+        $otherId = $json['other_id'] ?? null;
+        if (!is_int($otherId) || $otherId <= 0) {
+            Response::json(['error' => 'ข้อมูลงานไม่ถูกต้อง'], 422);
+        }
+
+        $projectId = (int)$task['project_id'];
+        try {
+            // waits: งานนี้รออีกงาน → อีกงานเป็น blocker; blocks: กลับทิศ
+            if ($relation === 'waits') {
+                ProjectTaskBlock::link($projectId, $otherId, $taskId, $userId);
+            } else {
+                ProjectTaskBlock::link($projectId, $taskId, $otherId, $userId);
+            }
+        } catch (ProjectColumnException $e) {
+            self::fail($e);
+        }
+
+        Response::json(['ok' => true, 'blocks' => ProjectTaskBlock::listForProject($projectId)], 201);
+    }
+
+    /**
+     * DELETE /api/projects/tasks/{tid}/blocks/{oid}
+     *
+     * เอาความสัมพันธ์ระหว่างงานนี้ออก ไม่ว่าฝั่งไหนเป็น blocker ก็ตาม
+     * สมาชิกขึ้นไปทำได้ ผู้ดูอย่างเดียว 403 และงานที่มองไม่เห็นตอบ 404 เดียวกัน
+     * คืนขอบทั้งหมดของโปรเจคหลังลบ
+     */
+    public function apiBlockDelete(string $tid, string $oid): void
+    {
+        $userId = Auth::userId();
+        $taskId = (int)$tid;
+
+        $task = ProjectTask::getById($taskId);
+        $project = null;
+        if ($task) {
+            $project = Project::getById((int)$task['project_id'], $userId);
+        }
+        if (!$task || !$project) {
+            Response::json(['error' => 'ไม่พบข้อมูลงาน'], 404);
+        }
+        $this->requireRole($project, 'member', 'แก้ไขงาน');
+
+        $projectId = (int)$task['project_id'];
+        try {
+            ProjectTaskBlock::unlink($projectId, $taskId, (int)$oid, $userId);
+        } catch (ProjectColumnException $e) {
+            self::fail($e);
+        }
+
+        Response::json(['ok' => true, 'blocks' => ProjectTaskBlock::listForProject($projectId)]);
     }
 
     /**
