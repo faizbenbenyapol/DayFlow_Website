@@ -8,7 +8,7 @@ class ProjectTaskController
     use ProjectAccess;
 
     /** ชื่อช่องภาษาไทยในบรรทัดประวัติ (แท็บประวัติแสดงให้ผู้ใช้เห็นตรง ๆ) */
-    private const FIELD_LABELS = ['title' => 'ชื่องาน', 'priority' => 'ความสำคัญ', 'due_date' => 'กำหนดส่ง', 'category' => 'หมวด', 'assignee' => 'ผู้รับผิดชอบ'];
+    private const FIELD_LABELS = ['title' => 'ชื่องาน', 'priority' => 'ความสำคัญ', 'due_date' => 'กำหนดส่ง', 'start_date' => 'วันเริ่ม', 'category' => 'หมวด', 'assignee' => 'ผู้รับผิดชอบ'];
 
     /** ค่าความสำคัญภาษาไทย */
     private const PRIORITY_LABELS = ['Low' => 'ต่ำ', 'Medium' => 'ปานกลาง', 'High' => 'สูง', 'Critical' => 'วิกฤต'];
@@ -134,6 +134,7 @@ class ProjectTaskController
         $data = [
             'title'     => $title,
             'priority'  => Request::input('priority', 'Medium'),
+            'start_date' => Request::input('start_date', ''),
             'due_date'  => Request::input('due_date', ''),
             'category'  => Request::input('category', ''),
             'assignee'  => Request::input('assignee', ''),
@@ -202,7 +203,7 @@ class ProjectTaskController
         }
 
         $data = [];
-        $allowed = ['title', 'description', 'priority', 'due_date', 'category', 'assignee', 'checklist'];
+        $allowed = ['title', 'description', 'priority', 'due_date', 'start_date', 'category', 'assignee', 'checklist'];
         $changes = [];
 
         foreach ($allowed as $field) {
@@ -292,8 +293,14 @@ class ProjectTaskController
             $structureChanges = $updated['changes'];
             $taskChanged = $updated['changed'];
         }
-        if (!empty($data) && ProjectTask::update($taskId, $data)) {
-            $taskChanged = true;
+        if (!empty($data)) {
+            try {
+                if (ProjectTask::update($taskId, $data)) {
+                    $taskChanged = true;
+                }
+            } catch (ProjectColumnException $e) {
+                self::fail($e);
+            }
         }
         if ($structureChanges !== []) {
             $changes = array_merge($changes, $structureChanges);

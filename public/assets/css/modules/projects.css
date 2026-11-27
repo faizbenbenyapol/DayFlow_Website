@@ -2677,3 +2677,178 @@
         grid-template-columns: minmax(0, 1fr);
     }
 }
+
+/* ---------- แผนงาน (projects-roadmap.js, REQ-S7) ---------- */
+/* ตารางรายเดือน: ชื่องานใหญ่ค้างซ้าย แถบเวลาอยู่เลนขวา มือถือเลื่อนแนวนอนใน .rm-scroll */
+.rm-scroll {
+    overflow-x: auto;
+    border: 1.5px solid var(--edge);
+    border-radius: var(--r-card);
+    background: var(--paper);
+}
+
+.rm {
+    display: grid;
+    grid-template-columns: 200px repeat(var(--rm-months, 5), minmax(120px, 1fr));
+    min-width: calc(200px + var(--rm-months, 5) * 120px);
+    position: relative;
+}
+
+.rm-month {
+    padding: 8px;
+    border-left: 1px solid var(--rule);
+    border-bottom: 1.5px solid var(--rule-strong);
+    font-size: 0.8125rem;
+    color: var(--pencil);
+}
+
+.rm-month.now {
+    color: var(--ink);
+    font-weight: 600;
+}
+
+.rm-name {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--rule);
+    background: var(--paper);
+    font-size: 0.875rem;
+}
+
+.rm-name.rm-head {
+    border-bottom: 1.5px solid var(--rule-strong);
+}
+
+.rm-name .rm-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rm-name .pct {
+    margin-left: auto;
+    font: 0.75rem var(--font-num);
+    color: var(--pencil);
+}
+
+.rm-lane {
+    grid-column: 2 / -1;
+    position: relative;
+    border-bottom: 1px solid var(--rule);
+    background: repeating-linear-gradient(90deg, transparent 0 calc(20% - 1px), var(--rule) calc(20% - 1px) 20%);
+}
+
+.rm-bar {
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    border-radius: 6px;
+    border: 1.5px solid var(--place-2);
+    background: var(--lilac);
+    color: var(--ink);
+    font-size: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    cursor: grab;
+    touch-action: none;   /* ลากแถบบนมือถือไม่เลื่อนจอ */
+}
+
+.rm-bar .fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: var(--lilac-2);
+    z-index: 0;
+}
+
+.rm-bar span {
+    position: relative;
+}
+
+.rm-bar::before,
+.rm-bar::after {
+    content: "";
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    width: 4px;
+    border-radius: 2px;
+    background: var(--place-2);
+    cursor: ew-resize;
+    z-index: 1;
+}
+
+.rm-bar::before { left: 2px; }
+.rm-bar::after { right: 2px; }
+
+.rm-bar.dragging {
+    box-shadow: 0 6px 18px var(--rule-strong);
+    cursor: grabbing;
+}
+
+.rm-today {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    border-left: 2px solid var(--stamp-red);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.rm-tip {
+    position: absolute;
+    top: -26px;
+    z-index: 3;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.rm-undated {
+    margin-top: var(--space-3);
+    font-size: 0.875rem;
+}
+
+.rm-undated .sub {
+    color: var(--pencil);
+}
+
+.rm-undated-item {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-decoration: underline dotted;
+    cursor: pointer;
+}
+
+@media (max-width: 720px) {
+    .rm {
+        grid-template-columns: 128px repeat(var(--rm-months, 5), minmax(110px, 1fr));
+        min-width: calc(128px + var(--rm-months, 5) * 110px);
+    }
+
+    .rm-name {
+        font-size: 0.8125rem;
+    }
+
+    .rm-name .key {
+        display: none;
+    }
+}

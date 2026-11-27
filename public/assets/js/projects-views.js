@@ -343,6 +343,7 @@ function renderTaskViews() {
     renderTaskFilterState();
     renderSprintChrome();
     renderBacklog();
+    renderRoadmap();
     renderReleases();
 }
 

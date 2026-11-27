@@ -323,6 +323,8 @@ function openEditTask(id) {
     document.getElementById('editTaskCategory').value = task.category || '';
     fillAssignees(task);
     document.getElementById('editTaskDue').value = task.due_date || '';
+    const startInput = document.getElementById('editTaskStart');
+    if (startInput) startInput.value = task.start_date || '';
     formErrorLine('taskError', '');
     fillSoftwareTaskFields(task);
 
@@ -355,7 +357,11 @@ function fillSoftwareTaskFields(task) {
     const wrap = document.getElementById('editTaskSoftware');
     if (!wrap) return;
     wrap.hidden = !software;
-    if (!software) return;
+    if (!software) {
+        const startGroup = document.getElementById('editTaskStartGroup');
+        if (startGroup) startGroup.hidden = true;
+        return;
+    }
 
     const tasks = (activeProjectData && activeProjectData.tasks) || [];
     const kind = task.kind || 'task';
@@ -434,9 +440,11 @@ function toggleSoftwareTaskFields(kind) {
     const epicGroup = document.getElementById('editTaskEpicGroup');
     const parentGroup = document.getElementById('editTaskParentGroup');
     const sprintGroup = document.getElementById('editTaskSprintGroup');
+    const startGroup = document.getElementById('editTaskStartGroup');
     if (pointsGroup) pointsGroup.hidden = kind === 'epic';
     if (epicGroup) epicGroup.hidden = !['story', 'task', 'bug'].includes(kind);
     if (parentGroup) parentGroup.hidden = kind !== 'sub';
+    if (startGroup) startGroup.hidden = kind !== 'epic';
     if (sprintGroup) {
         sprintGroup.hidden = !(typeof isSprintMode === 'function' && isSprintMode())
             || !['story', 'task', 'bug'].includes(kind);
@@ -872,6 +880,8 @@ async function submitEditTask(e) {
         if (kind !== loadedKind) payload.kind = kind;
         if (parentId !== loadedParent) payload.parent_id = parentId;
         if (points !== loadedPoints) payload.story_points = points;
+        // แผนงาน: งานใหญ่มีวันเริ่มคู่กับกำหนดส่ง (ช่องนี้ซ่อนในงานชนิดอื่น)
+        if (kind === 'epic') payload.start_date = document.getElementById('editTaskStart').value;
 
         // ส่งรอบงานเฉพาะเมื่อเปลี่ยน และเฉพาะชนิดที่อยู่บนบอร์ดได้
         const sprintSelect = document.getElementById('editTaskSprint');

@@ -96,6 +96,10 @@ class ProjectTask
             $releaseId = self::isBlankId($data['release_id'] ?? null)
                 ? null
                 : ProjectRelease::checkedForTask($projectId, $data['release_id'], null);
+            // แผนงาน: วันเริ่มและวันจบต้องเป็น Y-m-d จริง และวันเริ่มต้องไม่หลังวันจบ
+            $startDate = self::checkedDate($data['start_date'] ?? null, 'วันเริ่ม');
+            $dueDate = self::checkedDate($data['due_date'] ?? null, 'กำหนดส่ง');
+            self::assertDateOrder($startDate, $dueDate);
             $number = (int)$project['next_task_number'];
 
             $maxPos = (int)DB::run(
@@ -110,8 +114,8 @@ class ProjectTask
             $assignee = ($assigneeUserId !== null) ? null : (!empty($data['assignee']) ? $data['assignee'] : null);
 
             $insert = DB::run(
-                'INSERT INTO project_tasks (project_id, number, user_id, guest_name, title, status, priority, due_date, category, assignee_user_id, assignee, kind, parent_id, story_points, sprint_id, release_id, column_id, position, checklist)
-                 SELECT ?, ?, ?, ?, ?, ' . self::shadowStatusSql() . ', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, c.id, ?, ?
+                'INSERT INTO project_tasks (project_id, number, user_id, guest_name, title, status, priority, start_date, due_date, category, assignee_user_id, assignee, kind, parent_id, story_points, sprint_id, release_id, column_id, position, checklist)
+                 SELECT ?, ?, ?, ?, ?, ' . self::shadowStatusSql() . ', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, c.id, ?, ?
                  FROM project_columns c
                  WHERE c.id = ? AND c.project_id = ?',
                 [
@@ -121,7 +125,8 @@ class ProjectTask
                     $guestName,
                     $data['title'],
                     $data['priority'] ?? 'Medium',
-                    !empty($data['due_date']) ? $data['due_date'] : null,
+                    $startDate,
+                    $dueDate,
                     !empty($data['category']) ? $data['category'] : null,
                     $assigneeUserId,
                     $assignee,
@@ -164,12 +169,34 @@ class ProjectTask
         $fields = [];
         $params = [];
 
+        // วันที่: ค่าว่างล้างค่า และค่าที่ส่งมาทีละตัวต้องเรียงกับค่าเดิมที่เก็บไว้ด้วย
+        $dates = [];
+        $dateLabels = ['due_date' => 'กำหนดส่ง', 'start_date' => 'วันเริ่ม'];
+        foreach ($dateLabels as $field => $label) {
+            if (array_key_exists($field, $data)) {
+                $dates[$field] = self::checkedDate($data[$field], $label);
+            }
+        }
+        if ($dates !== []) {
+            $current = DB::run('SELECT start_date, due_date FROM project_tasks WHERE id = ?', [$id])->fetch();
+            if (!$current) return false;
+            $start = array_key_exists('start_date', $dates)
+                ? $dates['start_date']
+                : ($current['start_date'] === null ? null : (string)$current['start_date']);
+            $due = array_key_exists('due_date', $dates)
+                ? $dates['due_date']
+                : ($current['due_date'] === null ? null : (string)$current['due_date']);
+            self::assertDateOrder($start, $due);
+        }
+
         // สถานะและตำแหน่งเขียนผ่าน moveTo()/reorder() เท่านั้น
-        $allowed = ['title', 'description', 'priority', 'due_date', 'category', 'assignee_user_id', 'assignee', 'checklist'];
+        $allowed = ['title', 'description', 'priority', 'due_date', 'start_date', 'category', 'assignee_user_id', 'assignee', 'checklist'];
         foreach ($allowed as $field) {
             if (array_key_exists($field, $data)) {
                 $fields[] = "`$field` = ?";
-                if (($field === 'due_date' || $field === 'assignee_user_id' || $field === 'assignee') && empty($data[$field])) {
+                if (array_key_exists($field, $dates)) {
+                    $params[] = $dates[$field];
+                } elseif (($field === 'due_date' || $field === 'assignee_user_id' || $field === 'assignee') && empty($data[$field])) {
                     $params[] = null;
                 } elseif ($field === 'checklist') {
                     $params[] = is_array($data[$field]) ? json_encode($data[$field], JSON_UNESCAPED_UNICODE) : $data[$field];
@@ -438,6 +465,41 @@ class ProjectTask
             throw new ProjectColumnException(422, 'แต้มต้องเป็นค่าในชุดแต้มของโปรเจค');
         }
         return $points;
+    }
+
+    /**
+     * ตรวจวันที่ของแผนงาน: ค่าว่างคือไม่มีวัน และค่าอื่นต้องเป็น Y-m-d จริง
+     *
+     * @param mixed $value ค่าที่ client ส่งมา
+     * @param string $label ชื่อช่องสำหรับข้อความผิดพลาด
+     * @return string|null วันที่ที่ตรวจแล้ว หรือ null
+     */
+    private static function checkedDate(mixed $value, string $label): ?string
+    {
+        if ($value === null) return null;
+        if (!is_string($value)) {
+            throw new ProjectColumnException(422, $label . 'ไม่ถูกต้อง');
+        }
+        $text = trim($value);
+        if ($text === '') return null;
+        $parsed = DateTime::createFromFormat('Y-m-d', $text);
+        if (!$parsed || $parsed->format('Y-m-d') !== $text) {
+            throw new ProjectColumnException(422, $label . 'ไม่ถูกต้อง');
+        }
+        return $text;
+    }
+
+    /**
+     * วันเริ่มต้องไม่หลังวันจบ (เทียบได้ตรง ๆ เพราะทั้งคู่เป็น Y-m-d)
+     *
+     * @param string|null $start วันที่เริ่ม
+     * @param string|null $due วันที่จบ
+     */
+    private static function assertDateOrder(?string $start, ?string $due): void
+    {
+        if ($start !== null && $due !== null && $start > $due) {
+            throw new ProjectColumnException(422, 'วันเริ่มต้องไม่หลังวันจบ');
+        }
     }
 
     /**

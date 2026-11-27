@@ -1435,12 +1435,63 @@ async function main() {
         await click(tab, '#tabBoard');
         await sleep(200);
 
+        // ---------- roadmap (แผนงาน) ----------
+        console.log('Roadmap');
+        const roadToday = await tab.eval(`document.documentElement.dataset.today`);
+        const roadDayMs = 86400000;
+        const roadYmd = ms => new Date(ms).toISOString().slice(0, 10);
+        const roadTodayMs = Date.parse(roadToday + 'T00:00:00Z');
+        const roadStart = roadYmd(roadTodayMs - 10 * roadDayMs);
+        const roadDue = roadYmd(roadTodayMs + 20 * roadDayMs);
+        const roadEpic = await api(tab, `/api/projects/${softwareProject.id}/tasks`, {
+            method: 'POST',
+            body: JSON.stringify({ title: `งานใหญ่แผนงาน ${STAMP}`, kind: 'epic', start_date: roadStart, due_date: roadDue })
+        });
+        check(roadEpic.status === 201, 'an epic with both dates is created', JSON.stringify(roadEpic.body));
+
+        await tab.eval(`selectProject(${softwareProject.id})`);
+        await sleep(1500);
+        check(await tab.eval(`document.getElementById('tabRoadmap').hidden === false`), 'software projects show the roadmap tab');
+        await click(tab, '#tabRoadmap');
+        await sleep(300);
+        check(await tab.eval(`document.getElementById('roadmapPanel').hidden === false`), 'the roadmap tab opens its panel');
+        const roadBar = await tab.eval(`(() => {
+            const el = document.querySelector('.rm-bar[data-epic="${roadEpic.body.id}"]');
+            if (!el) return null;
+            const r = el.getBoundingClientRect();
+            return { x: r.left + r.width / 2, y: r.top + r.height / 2, width: r.width };
+        })()`);
+        check(!!roadBar, 'the roadmap draws a bar for the epic with dates');
+        check(await tab.eval(`!!document.querySelector('.rm-today')`), 'the roadmap marks today');
+
+        await tab.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: roadBar.x, y: roadBar.y, button: 'left', buttons: 1, clickCount: 1 });
+        await sleep(60);
+        for (const dx of [10, 20, 30, 40]) {
+            await tab.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: roadBar.x + dx, y: roadBar.y, button: 'left', buttons: 1 });
+            await sleep(30);
+        }
+        await tab.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: roadBar.x + 40, y: roadBar.y, button: 'left', buttons: 0, clickCount: 1 });
+        await sleep(2200);
+
+        const roadAfter = (await api(tab, `/api/projects/${softwareProject.id}/tasks`)).body.tasks
+            .find(task => Number(task.id) === Number(roadEpic.body.id));
+        const movedStart = Math.round((Date.parse(roadAfter.start_date + 'T00:00:00Z') - Date.parse(roadStart + 'T00:00:00Z')) / roadDayMs);
+        const movedDue = Math.round((Date.parse(roadAfter.due_date + 'T00:00:00Z') - Date.parse(roadDue + 'T00:00:00Z')) / roadDayMs);
+        check(movedStart > 0, 'dragging the bar forward moves start_date', String(movedStart));
+        check(movedStart === movedDue, 'both dates move by the same number of days', `${movedStart} vs ${movedDue}`);
+        check(await tab.eval(`document.getElementById('editTaskModal').classList.contains('active') === false`), 'a drag does not open the task panel');
+
+        await api(tab, `/api/projects/tasks/${roadEpic.body.id}`, { method: 'DELETE' });
+        await click(tab, '#tabBoard');
+        await sleep(200);
+
         await tab.goto(`${BASE}/projects?project=${newProject.id}`);
         await tab.settle();
         await sleep(1200);
         await click(tab, '#tabOverview');
         await sleep(300);
         check(await tab.eval(`document.getElementById('sprintReports').hidden === true`), 'a general project\'s overview has no reports');
+        check(await tab.eval(`document.getElementById('tabRoadmap').hidden === true`), 'a general project has no roadmap tab');
 
         await tab.viewport({ width: 360, height: 800, mobile: true });
         await tab.goto(BASE + '/projects');

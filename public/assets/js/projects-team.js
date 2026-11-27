@@ -73,11 +73,11 @@ function isProjectAdmin() {
     return !!project && (!!project.is_owner || project.user_role === 'Admin');
 }
 
-const PROJECT_TABS = ['board', 'backlog', 'list', 'calendar', 'overview', 'releases', 'settings'];
+const PROJECT_TABS = ['board', 'backlog', 'roadmap', 'list', 'calendar', 'overview', 'releases', 'settings'];
 const FILTERED_TABS = ['board', 'backlog', 'list', 'calendar'];   // the tabs that show tasks, so the filter bar shows with them
 
 /**
- * สลับแท็บของโปรเจค (บอร์ด คลังงาน รายการ ปฏิทิน ภาพรวม เวอร์ชัน ตั้งค่า) และจำแท็บไว้จนกว่าจะโหลดหน้าใหม่
+ * สลับแท็บของโปรเจค (บอร์ด คลังงาน แผนงาน รายการ ปฏิทิน ภาพรวม เวอร์ชัน ตั้งค่า) และจำแท็บไว้จนกว่าจะโหลดหน้าใหม่
  * รับชื่อแท็บ ชื่อที่ไม่รู้จักหรือแท็บที่หน้านี้ไม่มี (แขกไม่มี "ตั้งค่า") กลับไปบอร์ด
  * แท็บคลังงานใช้ได้เฉพาะโหมดรอบงาน ถ้าจำแท็บนี้ไว้แล้วปิดโหมดจะกลับไปบอร์ด
  * แท็บภาพรวมโหลดกราฟรอบงานผ่าน syncSprintReports (projects-reports.js) เมื่อแสดง และโหลดใหม่เมื่อโปรเจคเปลี่ยน

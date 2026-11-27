@@ -129,6 +129,7 @@
     <div class="tabs" role="tablist" aria-label="มุมมองของโปรเจค" id="projectTabs">
         <button class="tab" role="tab" type="button" id="tabBoard" aria-selected="true" aria-controls="boardPanel" data-act="showProjectTab" data-args='["board"]'>บอร์ด</button>
         <button class="tab" role="tab" type="button" id="tabBacklog" aria-selected="false" aria-controls="backlogPanel" data-act="showProjectTab" data-args='["backlog"]' hidden>คลังงาน</button>
+        <button class="tab" role="tab" type="button" id="tabRoadmap" aria-selected="false" aria-controls="roadmapPanel" data-act="showProjectTab" data-args='["roadmap"]' hidden>แผนงาน</button>
         <button class="tab" role="tab" type="button" id="tabList" aria-selected="false" aria-controls="listPanel" data-act="showProjectTab" data-args='["list"]'>รายการ</button>
         <button class="tab" role="tab" type="button" id="tabCalendar" aria-selected="false" aria-controls="calendarPanel" data-act="showProjectTab" data-args='["calendar"]'>ปฏิทิน</button>
         <button class="tab" role="tab" type="button" id="tabOverview" aria-selected="false" aria-controls="overviewPanel" data-act="showProjectTab" data-args='["overview"]'>ภาพรวม</button>
@@ -170,6 +171,14 @@
             </div>
             <div class="chart-card rel-detail" id="releaseDetail"></div>
         </div>
+    </div>
+
+    <!-- แผนงาน: แถบงานใหญ่รายเดือน แสดงเฉพาะโปรเจคซอฟต์แวร์ (projects-roadmap.js) -->
+    <div class="proj-view" id="roadmapPanel" role="tabpanel" aria-labelledby="tabRoadmap" hidden>
+        <p class="proj-note">ลากกลางแถบเพื่อเลื่อนทั้งช่วง ลากขอบซ้าย-ขวาเพื่อเปลี่ยนวันเริ่ม-จบ ปล่อยแล้วบันทึกทันที</p>
+        <div class="rm-scroll"><div class="rm" id="roadmap"></div></div>
+        <p class="proj-note" id="roadmapEmpty" hidden></p>
+        <div class="rm-undated" id="roadmapUndated" hidden></div>
     </div>
 
     <div class="proj-view" id="listPanel" role="tabpanel" aria-labelledby="tabList" hidden>
@@ -743,9 +752,15 @@
                         <select id="editTaskAssignee" class="form-control"><option value="">ยังไม่ระบุ</option></select>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="editTaskDue">กำหนดส่ง</label>
-                    <input type="date" id="editTaskDue" class="form-control">
+                <div class="form-row">
+                    <div class="form-group" id="editTaskStartGroup" hidden>
+                        <label class="form-label" for="editTaskStart">วันเริ่ม</label>
+                        <input type="date" id="editTaskStart" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="editTaskDue">กำหนดส่ง</label>
+                        <input type="date" id="editTaskDue" class="form-control">
+                    </div>
                 </div>
                 <div class="task-custom" id="editTaskCustom" hidden></div>
 
