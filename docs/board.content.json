@@ -1,0 +1,1275 @@
+{
+  "title": "DayFlow",
+  "now": {
+    "headline": "โปรเจคแบบทีมพัฒนาซอฟต์แวร์",
+    "goal": "ทำให้เมนูโปรเจควางแผนงานเขียนโปรแกรมได้ครบในตัว มีเลขงาน รอบงาน กราฟ เวอร์ชัน และแผนงาน โดยไม่ต้องเปิดโปรแกรมอื่น",
+    "context": "อยู่ในงานใหญ่ \"โปรเจค v2\" เฟส P1 · เฟสก่อนหน้า P0a กับ P0b ทำเสร็จแล้ว รอคุณ merge · ลองได้ที่ http://localhost:8080 → โปรเจค → สร้างโปรเจคประเภท \"พัฒนาซอฟต์แวร์\"",
+    "progress": {
+      "done": 6,
+      "total": 9
+    },
+    "done": [
+      {
+        "title": "เตรียมที่เก็บข้อมูลชุดใหม่",
+        "lines": [
+          "ผู้ใช้ยังไม่เห็นอะไรเปลี่ยน",
+          "ทดสอบบนสำเนาข้อมูลแล้ว ของเดิมไม่เปลี่ยน"
+        ],
+        "ref": "ขั้น 1 · 25 พ.ย. · 5134e18"
+      },
+      {
+        "title": "งานมีเลข มีชนิด และแต้มความยาก",
+        "lines": [
+          "เช่น WEB-12 ชนิด บั๊ก / งานใหญ่ / งานย่อย",
+          "ลองดู: สร้างงาน → เลือกชนิด → ใส่แต้ม"
+        ],
+        "ref": "ขั้น 2 · 25–26 พ.ย. · ad605ea 0591b04"
+      },
+      {
+        "title": "วางแผนรอบงาน และคลังงาน",
+        "lines": [
+          "ลองดู: แท็บคลังงาน → สร้างรอบ → ลากงานเข้ารอบ → เริ่มรอบ",
+          "บอร์ดแสดงเฉพาะรอบที่กำลังทำ"
+        ],
+        "ref": "ขั้น 3 · 26 พ.ย. · 321c878 c256324"
+      },
+      {
+        "title": "กราฟงานคงเหลือ และความเร็วทีม",
+        "lines": [
+          "ลองดู: แท็บภาพรวม ด้านบนสุด",
+          "มีปุ่ม \"ดูเป็นตาราง\" สำหรับอ่านตัวเลข"
+        ],
+        "ref": "ขั้น 4 · 26 พ.ย. · cb2c55f b2062dd"
+      },
+      {
+        "title": "บอกได้ว่างานไหนรองานอื่น",
+        "lines": [
+          "การ์ดที่ยังรองานอื่นขึ้นป้าย \"ติด\"",
+          "ผูกวนเป็นวงไม่ได้"
+        ],
+        "ref": "ขั้น 5 · 26 พ.ย. · 0b8a0ea"
+      },
+      {
+        "title": "ออกเวอร์ชัน ได้รายการสิ่งที่เปลี่ยน",
+        "lines": [
+          "ลองดู: แท็บเวอร์ชัน → ออกเวอร์ชัน → คัดลอก changelog",
+          "แก้ชื่องานทีหลัง รายการที่ออกไปแล้วไม่เปลี่ยน"
+        ],
+        "ref": "ขั้น 6 · 27 พ.ย. · 8562c54 · ล่าสุด"
+      }
+    ],
+    "next": [
+      {
+        "title": "แผนงานรายเดือน",
+        "lines": [
+          "แถบงานใหญ่บนไทม์ไลน์ ลากเลื่อนหรือยืดวันได้",
+          "มือถือเลื่อนแนวนอนได้",
+          "มีทางสำรองไม่ต้องลาก: แก้วันที่ในรายละเอียดงาน"
+        ],
+        "ref": "ขั้น 7 · รอคุณตอบข้อ 2.1 ก่อนเริ่ม"
+      }
+    ],
+    "later": [
+      {
+        "title": "ช่องกรอกบั๊ก ป้ายส่วนของระบบ ลิงก์ PR",
+        "lines": [
+          "ความรุนแรง ขั้นตอนทำซ้ำ ผลที่คาด ผลจริง",
+          "กรองตามความรุนแรงและส่วนของระบบได้"
+        ],
+        "ref": "ขั้น 8"
+      },
+      {
+        "title": "ตรวจรวมทั้งหมด แล้วส่งให้คุณรีวิว",
+        "lines": [
+          "test ทั้งชุด · ลองบนเบราว์เซอร์ · ผู้ตรวจอิสระ",
+          "เขียนคู่มือส่งมอบ แล้วถามคุณเรื่องเปิด PR"
+        ],
+        "ref": "ขั้น 9"
+      }
+    ]
+  },
+  "ask": [
+    {
+      "title": "2.1 ขั้น 7 ให้ใครเขียนโค้ด",
+      "lines": [
+        "ตกลงไว้ว่าให้ OpenCode เขียนก่อน แต่โควตา TokenMe หมด",
+        "ทางเลือก: เติมโควตา TokenMe · สลับไปใช้ Go ที่ตั้งไว้ · ให้ Claude เขียนเอง",
+        "ถ้ายังไม่ตอบ: AI หยุดรอก่อนเริ่มขั้น 7 ไม่สลับเอง"
+      ],
+      "answer": ""
+    },
+    {
+      "title": "2.2 PR #13 (P0a) กับ #14 (P0b) เปิดค้างอยู่",
+      "lines": [
+        "งาน P1 ต่อยอดจากสองอันนี้ ถ้าสองอันนี้ถูกขอแก้ งาน P1 ต้องย้ายตาม",
+        "AI แนะนำ: รีวิวและ merge #13 ก่อน แล้วค่อย #14",
+        "ถ้ายังไม่ merge: AI ทำ P1 ต่อบน branch เดิมไปก่อน"
+      ],
+      "answer": ""
+    },
+    {
+      "title": "2.3 จะเปิด PR ของ P1 เมื่อไร",
+      "lines": [
+        "AI แนะนำ: PR เดียวหลังครบขั้น 9",
+        "ระหว่างนี้ commit ไว้ในเครื่อง ไม่ push ขึ้น GitHub จนกว่าคุณสั่ง"
+      ],
+      "answer": ""
+    },
+    {
+      "title": "2.4 ลบบอร์ดเดิมบน Claude Whiteboard ไหม",
+      "lines": [
+        "AI แนะนำ: ลบ จะได้ไม่มีสองที่ให้สับสน",
+        "ลบแล้วกู้คืนไม่ได้ เนื้อหาทั้งหมดย้ายมาที่นี่แล้ว"
+      ],
+      "answer": ""
+    }
+  ],
+  "agreed": [
+    {
+      "title": "บอร์ดตั้งคอลัมน์เองได้ หน้าอื่นยังทำงานเหมือนเดิม",
+      "lines": [
+        "เพราะ: หน้าที่นับความคืบหน้าไม่ต้องแก้ และถอยกลับได้"
+      ],
+      "ref": "D-1 · คุณตอบแล้ว"
+    },
+    {
+      "title": "ไฟล์แนบไม่คัดลอกไฟล์ แค่ชี้ไปไฟล์ในคลังของคนแนบ",
+      "lines": [
+        "เพราะ: ไม่ต้องทำที่เก็บไฟล์ โควตา และ Google Drive ซ้ำอีกชุด"
+      ],
+      "ref": "D-4 · คุณตอบแล้ว"
+    },
+    {
+      "title": "คนนอกที่เปิดลิงก์แชร์ ไม่เห็นความเห็นและไฟล์แนบ",
+      "lines": [
+        "เพราะ: ความเห็นเป็นเรื่องในทีม ไฟล์อยู่ในคลังส่วนตัว เปิดเพิ่มทีหลังได้"
+      ],
+      "ref": "D-5 · คุณตอบแล้ว"
+    },
+    {
+      "title": "ช่องข้อมูลที่ตั้งเอง เก็บรวมไว้ในแถวของงาน",
+      "lines": [
+        "เพราะ: โหลดบอร์ดเร็ว การกรองทำในเบราว์เซอร์อยู่แล้ว"
+      ],
+      "ref": "D-6 · คุณตอบแล้ว"
+    },
+    {
+      "title": "กราฟเก็บยอดของรอบทุกวัน",
+      "lines": [
+        "เพราะ: อ่านง่าย ทดสอบง่าย",
+        "ข้อเสียที่ยอมรับ: ถ้าวันไหนบันทึกพลาด แก้ย้อนไม่ได้"
+      ],
+      "ref": "D-7 · คุณตอบแล้ว"
+    },
+    {
+      "title": "งานใหญ่ → งานลูก → งานย่อย ผูกด้วยช่องเดียว",
+      "lines": [
+        "แบบที่ไม่เลือก: แยกสองช่องสำหรับงานใหญ่กับงานแม่"
+      ],
+      "ref": "D-8 · คุณตอบแล้ว"
+    },
+    {
+      "title": "ไม่มีแท็บรายงานแยก กราฟอยู่บนสุดของแท็บภาพรวม",
+      "lines": [
+        "เพราะ: แถบแท็บสั้นลงบนมือถือ ภาพรวมเป็นที่ดูสถานะอยู่แล้ว"
+      ],
+      "ref": "CR-2 · คุณอนุมัติแล้ว"
+    },
+    {
+      "title": "ให้ OpenCode เขียนโค้ดก่อน ถ้าค้างให้หยุดถามคุณ",
+      "lines": [
+        "ตอนนี้ติดเรื่องโควตา ดูข้อ 2.1"
+      ],
+      "ref": "แผน P1 · คุณตอบแล้ว"
+    },
+    {
+      "title": "ช่องตัวย่อเลขงานซ่อนไว้จนถึง P1 · ยังไม่ทำโอนความเป็นเจ้าของ",
+      "lines": [
+        "การโอนความเป็นเจ้าของยังไม่มีในสเปก"
+      ],
+      "ref": "D-2 D-3 · คุณตอบแล้ว"
+    },
+    {
+      "title": "บอร์ดนี้อยู่ที่ draw.benyapol.com และอัปเดตทุกรอบงาน",
+      "lines": [
+        "เพราะ: ให้คุณกับ AI เข้าใจงานตรงกัน ลิงก์แก้ไขไม่ขึ้น git"
+      ],
+      "ref": "27 พ.ย. · คุณสั่ง"
+    }
+  ],
+  "roles": {
+    "you": [
+      "ตัดสินเรื่องที่ผู้ใช้เห็น: หน้าตา ขอบเขต กฎของงาน",
+      "ยืนยันสเปกก่อน AI ลงมือ",
+      "รีวิว PR แล้ว merge เอง",
+      "deploy ขึ้นเว็บจริงเอง",
+      "ตอบช่อง \"รอคุณตัดสิน\""
+    ],
+    "ai": [
+      "เขียนสเปกและแผน ให้คุณยืนยันก่อน",
+      "ให้ OpenCode เขียนโค้ด แล้วตรวจเองทุกครั้ง: test · ลองบนเบราว์เซอร์ · PHPStan",
+      "commit ทีละขั้น",
+      "อัปเดตบอร์ดนี้ทุกครั้งที่จบขั้น",
+      "คุยภาษาไทย"
+    ]
+  },
+  "system": {
+    "rows": [
+      {
+        "items": [
+          {
+            "title": "คุณและสมาชิก",
+            "lines": [
+              "เปิดบนเว็บหรือมือถือ",
+              "ติดตั้งเป็นแอปได้"
+            ]
+          },
+          {
+            "title": "เมนู 20 เมนู ใน 6 กลุ่ม",
+            "lines": [
+              "วันนี้ · งาน · ชีวิต · เงิน · คลัง · เครื่องมือ"
+            ],
+            "ref": "ไฟล์ของแต่ละเมนู: ภาคผนวก จ"
+          },
+          {
+            "title": "เซิร์ฟเวอร์ (PHP)",
+            "lines": [
+              "ตรวจทุกคำขอก่อน: ล็อกอินหรือยัง · ลิงก์แชร์ดูได้อย่างเดียว · บัญชีทดลองห้ามแก้ของสำคัญ"
+            ],
+            "ref": "ลำดับการตรวจ: ภาคผนวก ค"
+          },
+          {
+            "title": "ฐานข้อมูลและไฟล์",
+            "lines": [
+              "ข้อมูลทุกเมนูแยกตามเจ้าของบัญชี",
+              "ไฟล์อยู่ในเซิร์ฟเวอร์ หรือใน Google Drive ของคุณ"
+            ],
+            "ref": "ตารางของโปรเจค: ภาคผนวก ซ"
+          }
+        ]
+      },
+      {
+        "arrows": false,
+        "items": [
+          {
+            "title": "งานเบื้องหลังทุก 5 นาที",
+            "lines": [
+              "ส่งแจ้งเตือน · ล้างไฟล์หมดอายุ · คืนค่าบัญชีทดลองทุกคืน"
+            ],
+            "ref": "ลำดับ: ภาคผนวก ฉ"
+          },
+          {
+            "title": "Google",
+            "lines": [
+              "เข้าสู่ระบบ · เก็บไฟล์ใน Drive"
+            ],
+            "external": true
+          },
+          {
+            "title": "ผู้ให้บริการ AI 12 เจ้า",
+            "lines": [
+              "ผู้ช่วย AI ใช้กุญแจ API ที่คุณใส่เอง"
+            ],
+            "external": true
+          },
+          {
+            "title": "ราคาหุ้น",
+            "lines": [
+              "Twelve Data · Finnhub · Alpha Vantage"
+            ],
+            "external": true
+          },
+          {
+            "title": "Telegram และแจ้งเตือนมือถือ",
+            "lines": [
+              "เตือนงานตามเวลา · สรุปรายวัน"
+            ],
+            "external": true
+          }
+        ]
+      }
+    ],
+    "note": "แถวล่าง: เส้นประคือระบบภายนอกที่เราแก้ไม่ได้ ถ้าล่ม เมนูที่ใช้จะทำงานไม่ได้ชั่วคราว"
+  },
+  "glossary": [
+    [
+      "ขั้น",
+      "งานชิ้นเล็กที่ทำจบ ตรวจ และ commit ได้ในตัว แผนแต่ละเฟสแบ่งเป็นหลายขั้น",
+      "slice"
+    ],
+    [
+      "เฟส",
+      "ชุดของขั้นที่ส่งเป็น PR เดียว เช่น P0a P0b P1",
+      "phase"
+    ],
+    [
+      "รอบงาน",
+      "ช่วงเวลาที่ทีมตกลงว่าจะทำงานชุดหนึ่งให้เสร็จ",
+      "sprint"
+    ],
+    [
+      "คลังงาน",
+      "งานที่ยังไม่ถูกจัดเข้ารอบไหน",
+      "backlog"
+    ],
+    [
+      "แต้ม",
+      "ความยากของงานโดยประมาณ ใช้ดูว่ารอบหนึ่งทำได้เท่าไร",
+      "story points"
+    ],
+    [
+      "งานใหญ่",
+      "งานที่แตกเป็นงานลูกหลายชิ้น แสดง % เสร็จ",
+      "epic"
+    ],
+    [
+      "ติด",
+      "งานที่เริ่มไม่ได้จนกว่างานอื่นจะเสร็จ",
+      "blocker"
+    ],
+    [
+      "เวอร์ชัน",
+      "ชุดงานที่ออกพร้อมกัน พร้อมรายการสิ่งที่เปลี่ยน",
+      "release · changelog"
+    ],
+    [
+      "ลิงก์แชร์โปรเจค",
+      "ให้คนนอกดูความคืบหน้าของโปรเจค ดูได้อย่างเดียว",
+      "project share"
+    ],
+    [
+      "ลิงก์แชร์แอป",
+      "ให้คนอื่นดูบางเมนูของคุณ ดูได้อย่างเดียว",
+      "app share"
+    ],
+    [
+      "บัญชีทดลอง",
+      "บัญชีที่ใครก็เข้าลองได้ คืนค่าทุกคืน",
+      "demo"
+    ],
+    [
+      "merge",
+      "รวมงานจาก branch เข้า main หลังคุณรีวิว",
+      "merge"
+    ],
+    [
+      "deploy",
+      "เอาโค้ดขึ้นเว็บจริง คุณทำเอง",
+      "deploy"
+    ]
+  ],
+  "historyYear": 2026,
+  "history": [
+    {
+      "title": "31 พ.ค. · v1.0.0",
+      "line": "เปิดตัว เมนูหลักครบ"
+    },
+    {
+      "title": "27 ก.ค. · v1.3.0",
+      "line": "แก้บั๊ก เพิ่มฟีเจอร์"
+    },
+    {
+      "title": "21 ก.ย. · v1.4.0",
+      "line": "ปิดช่องโหว่ และเร็วขึ้น"
+    },
+    {
+      "title": "2 ต.ค. · v1.5.0",
+      "line": "แก้ตามการตรวจโค้ดรอบใหญ่"
+    },
+    {
+      "title": "3 ต.ค. · v2.0.0",
+      "line": "หน้าตาแบบปฏิทินฉีก คุณไม่เอา"
+    },
+    {
+      "title": "20 ต.ค. · v3",
+      "line": "หน้าตาสมุดโทนอ่อน 5 แท็บ (PR #1)"
+    },
+    {
+      "title": "23 พ.ย.",
+      "line": "ที่เก็บงานที่เดียว งานย่อย การเตือน (PR #6–#10)"
+    },
+    {
+      "title": "24 พ.ย.",
+      "line": "ปรับตามความเห็นรอบ 2 (PR #12)"
+    },
+    {
+      "title": "25 พ.ย.",
+      "line": "โปรเจค v2 ส่วนแรก: ประเภท คอลัมน์ บทบาท ความเห็น ไฟล์แนบ (PR #13 #14 รอ merge)"
+    },
+    {
+      "title": "27 พ.ย.",
+      "line": "ส่วนซอฟต์แวร์ทำถึงขั้น 6 (ยังไม่ push)",
+      "current": true
+    }
+  ],
+  "log": [
+    "27 พ.ย. · ตั้งสกิล project-board ให้ทุกโปรเจกต์มีบอร์ดแบบนี้ และอัปเดตทุกรอบงาน",
+    "27 พ.ย. · ทำบอร์ดใหม่ให้คุณกับ AI ใช้ร่วมกัน ข้อมูลระดับโค้ดย้ายไปภาคผนวก",
+    "27 พ.ย. · ย้ายบอร์ดจาก Claude Whiteboard มาที่ draw.benyapol.com",
+    "27 พ.ย. · ขั้น 6 เสร็จ: ออกเวอร์ชันได้ พร้อมรายการสิ่งที่เปลี่ยนที่คัดลอกได้",
+    "26 พ.ย. · ขั้น 5 เสร็จ: การ์ดขึ้นป้าย \"ติด\" เมื่อรองานอื่น",
+    "26 พ.ย. · ขั้น 3–4 เสร็จ: รอบงาน คลังงาน กราฟ",
+    "25–26 พ.ย. · ขั้น 1–2 เสร็จ: ที่เก็บข้อมูลใหม่ เลขงาน ชนิดงาน แต้ม"
+  ],
+  "appendix": [
+    {
+      "key": "ก",
+      "title": "แผนที่ระบบระดับไฟล์",
+      "type": "table",
+      "cols": [
+        2,
+        3,
+        4
+      ],
+      "header": [
+        "ส่วน",
+        "ไฟล์หลัก",
+        "ทำอะไร / ข้อควรรู้"
+      ],
+      "highlight": [
+        1,
+        4,
+        6,
+        8
+      ],
+      "rows": [
+        [
+          "หน้าเว็บ 20 เมนู",
+          "views/<เมนู>/index.php · public/assets/js/<เมนู>.js",
+          "ตัวช่วยกลางอยู่ใน app.js: serverToday() :377 · confirmAction() :323 (กฎ 5 · 7)"
+        ],
+        [
+          "Service worker",
+          "public/sw.js",
+          "ออฟไลน์ และรับ push"
+        ],
+        [
+          "ทางเข้าเดียว",
+          "public/index.php",
+          "โหลด config · ErrorHandler · DB · session · autoloader แล้วส่งให้ Router"
+        ],
+        [
+          "ด่านตรวจทุกคำขอ",
+          "core/Router.php:386",
+          "แชร์ · CSRF · login · demo ลำดับดูภาคผนวก ค · ลิงก์แชร์ดูอย่างเดียว :419 · demo ห้ามเขียน 10 กลุ่ม URL :511"
+        ],
+        [
+          "Controllers (49 ไฟล์)",
+          "controllers/",
+          "แยกตามเมนู ดูภาคผนวก จ · เมนูโปรเจคมี 10 controller (Project*Controller.php) · กฎ 6"
+        ],
+        [
+          "Models (46 ไฟล์)",
+          "models/",
+          "SQL ทั้งหมดอยู่ที่นี่ ผ่าน DB::run() (config/database.php:49)"
+        ],
+        [
+          "บริการกลาง (27 ไฟล์)",
+          "core/",
+          "Auth · Csrf · Security · FileStore (เลือกดิสก์หรือ Drive) · LlmClient · AiChat · Recurrence · WebPush"
+        ],
+        [
+          "cron ทุก 5 นาที",
+          "cron.php",
+          "ลำดับดูภาคผนวก ฉ · กฎ 4"
+        ],
+        [
+          "MariaDB 11.4",
+          "sql/migrations/ (42 ไฟล์)",
+          "กฎ 1 2 3"
+        ],
+        [
+          "ไฟล์อัปโหลด",
+          "uploads/ ผ่าน core/FileStore.php",
+          ""
+        ],
+        [
+          "ระบบภายนอก",
+          "core/DriveClient.php · core/LlmClient.php · models/StockQuote.php · core/TelegramService.php · core/WebPush.php",
+          "Google · AI 12 เจ้า + Replicate · Twelve Data / Finnhub / Alpha Vantage · Telegram · Web Push"
+        ]
+      ]
+    },
+    {
+      "key": "ข",
+      "title": "รีวิว P1 ทีละ commit",
+      "type": "table",
+      "cols": [
+        1,
+        4,
+        3,
+        6,
+        4,
+        2
+      ],
+      "header": [
+        "slice",
+        "ทำอะไร",
+        "commit",
+        "ไฟล์ที่ควรเปิดก่อน",
+        "test (tests/integration/)",
+        "สถานะ"
+      ],
+      "rows": [
+        [
+          "1",
+          "ตารางของโปรเจคซอฟต์แวร์ (migration 042) และ ตัว replay",
+          "5134e18 · 7d729b1",
+          "042_project_software.sql · replay-migration.mjs",
+          "replay บนสำเนาข้อมูล",
+          "เสร็จ"
+        ],
+        [
+          "2",
+          "เลขงาน ชนิดงาน แต้ม งานแม่-ลูก",
+          "ad605ea · 0591b04",
+          "models/ProjectTask.php · projects-software.js",
+          "project_software_test",
+          "เสร็จ"
+        ],
+        [
+          "3",
+          "รอบงาน และ คลังงาน",
+          "321c878 · c256324 · 8c3e85c",
+          "ProjectSprintController.php · models/ProjectSprint.php · projects-sprints.js",
+          "project_sprints_test",
+          "เสร็จ"
+        ],
+        [
+          "4",
+          "กราฟงานคงเหลือ และ ความเร็ว",
+          "cb2c55f · b2062dd · a95bc86",
+          "models/ProjectSprint.php · projects-reports.js",
+          "project_reports_test",
+          "เสร็จ"
+        ],
+        [
+          "5",
+          "งานขวาง และ ป้าย \"ติด\"",
+          "0b8a0ea",
+          "models/ProjectTaskBlock.php · projects-board.js",
+          "project_blocks_test",
+          "เสร็จ"
+        ],
+        [
+          "6",
+          "เวอร์ชัน และ changelog ที่คัดลอกได้",
+          "8562c54",
+          "ProjectReleaseController.php · models/ProjectRelease.php · projects-releases.js",
+          "project_releases_test",
+          "เสร็จ · ล่าสุด"
+        ],
+        [
+          "7",
+          "แผนงานรายเดือน ลากเลื่อน ลากยืด",
+          "—",
+          "projects-roadmap.js (ไฟล์ใหม่)",
+          "e2e ลากแล้ว วันที่ใน DB ตรง",
+          "ถัดไป"
+        ],
+        [
+          "8",
+          "ช่องบั๊ก ส่วนของระบบ ลิงก์ภายนอก",
+          "—",
+          "project_components · project_task_links (มีใน 042 แล้ว)",
+          "URL javascript: ต้องถูกปฏิเสธ",
+          "ยังไม่เริ่ม"
+        ],
+        [
+          "9",
+          "ตรวจทั้งก้อน และ ผู้ตรวจอิสระ",
+          "—",
+          "docs/handoff/projects-v2.md",
+          "test ทั้งชุด · e2e · PHPStan · CSS",
+          "ยังไม่เริ่ม"
+        ]
+      ],
+      "highlight": [
+        6
+      ]
+    },
+    {
+      "key": "ค",
+      "title": "หนึ่งคำขอผ่านอะไรบ้าง ตามลำดับในโค้ด",
+      "type": "flow",
+      "perRow": 5,
+      "items": [
+        {
+          "title": "1 เริ่มระบบ",
+          "lines": [
+            "config · ErrorHandler · DB · session · autoloader"
+          ],
+          "ref": "index.php:13–26"
+        },
+        {
+          "title": "2 ลิงก์แชร์?",
+          "lines": [
+            "มี token = ดูอย่างเดียว"
+          ],
+          "ref": "Router.php:393–446"
+        },
+        {
+          "title": "3 แปลง _method",
+          "lines": [
+            "ฟอร์ม POST → PUT / DELETE"
+          ],
+          "ref": "Router.php:449"
+        },
+        {
+          "title": "4 หา route",
+          "lines": [
+            "ตาราง route เริ่มบรรทัด 19"
+          ],
+          "ref": "Router.php:453"
+        },
+        {
+          "title": "5 ตรวจ CSRF",
+          "lines": [
+            "POST PUT PATCH DELETE"
+          ],
+          "ref": "Router.php:461"
+        },
+        {
+          "title": "6 ต้อง login?",
+          "lines": [
+            "Auth::requireLogin()"
+          ],
+          "ref": "Router.php:469"
+        },
+        {
+          "title": "7 บัญชี demo",
+          "lines": [
+            "กันการเขียนที่เกินบัญชี"
+          ],
+          "ref": "Router.php:472"
+        },
+        {
+          "title": "8 ปล่อยล็อก session",
+          "lines": [
+            "GET API วิ่งขนานกันได้"
+          ],
+          "ref": "Router.php:483"
+        },
+        {
+          "title": "9 เรียก controller",
+          "lines": [
+            "→ model → DB::run() → ตอบ"
+          ],
+          "ref": "Router.php:494"
+        },
+        {
+          "title": "ตกด่านได้อะไร",
+          "lines": [
+            "แชร์เขียน 403 · CSRF 403 · demo 403",
+            "ไม่เจอ route 404"
+          ],
+          "ref": "Router.php:498"
+        }
+      ]
+    },
+    {
+      "key": "ง",
+      "title": "กฎที่เคยพลาด เช็กทุกครั้งที่รีวิว (จาก CLAUDE.md)",
+      "type": "table",
+      "cols": [
+        1,
+        11,
+        7,
+        3
+      ],
+      "header": [
+        "#",
+        "กฎ",
+        "ดูตัวอย่างในโค้ด",
+        "บล็อกบนแผนที่"
+      ],
+      "rows": [
+        [
+          "1",
+          "UPDATE ที่ระบบทำเอง (backfill, จำค่า) ใส่ updated_at = updated_at ไม่งั้น เวลาแก้ล่าสุดของผู้ใช้เปลี่ยนเอง",
+          "ตารางที่มี ON UPDATE CURRENT_TIMESTAMP",
+          "MariaDB"
+        ],
+        [
+          "2",
+          "เทียบข้อความไทยใน SQL ใช้ COLLATE utf8mb4_bin เพราะ utf8mb4_unicode_ci มองข้ามวรรณยุกต์ · แปลง NBSP ก่อน TRIM",
+          "nameKeySql() ใน scripts/migrate-daily-loop.php",
+          "MariaDB"
+        ],
+        [
+          "3",
+          "migration ต้องรันซ้ำได้ · backfill อยู่ใต้เงื่อนไขเดียวกับการเพิ่มคอลัมน์",
+          "php scripts/migrate.php --force",
+          "MariaDB"
+        ],
+        [
+          "4",
+          "สคริปต์ CLI ไม่มี autoloader ต้อง require_once model เอง",
+          "cron.php บรรทัด 9–20",
+          "cron"
+        ],
+        [
+          "5",
+          "\"วันนี้\" ฝั่ง JS ใช้ serverToday() ห้าม new Date() หรือ toISOString()",
+          "public/assets/js/app.js:377",
+          "หน้าเว็บ"
+        ],
+        [
+          "6",
+          "API ที่รับ id ตอบเหมือนกันทั้ง id ของคนอื่น และ id ที่ถูกลบ",
+          "controllers/ProjectAccess.php · project_permissions_test",
+          "Controllers"
+        ],
+        [
+          "7",
+          "ห้าม alert() confirm() prompt() ใช้ confirmAction · askText · toast · showDialog แทน",
+          "app.js:96 · :228 · :323 · :333",
+          "หน้าเว็บ"
+        ]
+      ]
+    },
+    {
+      "key": "จ",
+      "title": "เมนู → ไฟล์ที่ต้องเปิด",
+      "type": "table",
+      "cols": [
+        13,
+        14,
+        28,
+        27,
+        20,
+        29
+      ],
+      "header": [
+        "เมนู",
+        "URL",
+        "controllers/ (ตัดคำ Controller)",
+        "models/",
+        "public/assets/js/",
+        "ตาราง DB"
+      ],
+      "rows": [
+        [
+          "วันนี้",
+          "/",
+          "Dashboard",
+          "DashboardLayout · Task · Habit · Stock",
+          "dashboard.js",
+          "dashboard_layout + อ่านตารางเมนูอื่น"
+        ],
+        [
+          "สรุปผล",
+          "/review",
+          "Review",
+          "Review",
+          "review.js",
+          "อ่าน tasks · habits · finances · notes · workouts · focus_sessions"
+        ],
+        [
+          "งาน",
+          "/tasks",
+          "Task · TaskSubtask · Quick",
+          "Task · TaskSubtask · LegacyTaskMapper",
+          "tasks.js",
+          "tasks · task_subtasks · quick_items"
+        ],
+        [
+          "โปรเจค",
+          "/projects",
+          "Project · ProjectTask · ProjectSprint · ProjectRelease · ProjectTeam · ProjectColumn · ProjectField · ProjectComment · ProjectAttachment · ProjectShare",
+          "Project* 12 ไฟล์",
+          "projects*.js 12 ไฟล์",
+          "projects + project_* อีก 15 ตาราง"
+        ],
+        [
+          "แพลนเนอร์",
+          "/planner",
+          "Planner",
+          "CalendarEvent · Task",
+          "planner.js",
+          "calendar_events · daily_todos"
+        ],
+        [
+          "นิสัย",
+          "/habits",
+          "Habit",
+          "Habit",
+          "habits.js",
+          "habits · habit_logs"
+        ],
+        [
+          "โฟกัส",
+          "/focus",
+          "Focus",
+          "FocusSession · Task",
+          "focus.js",
+          "focus_sessions"
+        ],
+        [
+          "ทักษะ",
+          "/skills",
+          "Skill",
+          "Skill · SkillLog",
+          "skills.js",
+          "skills · skill_logs · skill_active_timers"
+        ],
+        [
+          "ออกกำลังกาย",
+          "/exercise",
+          "Exercise",
+          "Workout · ExerciseCategory",
+          "exercise.js",
+          "workouts · exercise_categories"
+        ],
+        [
+          "อาหาร",
+          "/food-notes",
+          "FoodNote",
+          "FoodNote",
+          "food_notes.js",
+          "food_notes"
+        ],
+        [
+          "รายรับรายจ่าย",
+          "/finance",
+          "Finance",
+          "Finance",
+          "finance.js · finance-report.js",
+          "finances · finance_categories"
+        ],
+        [
+          "รายจ่ายประจำ",
+          "/subscriptions",
+          "Subscription",
+          "Subscription",
+          "subscriptions.js",
+          "subscriptions"
+        ],
+        [
+          "หุ้น",
+          "/stocks",
+          "Stocks · StockCapital · StockKey · StockScreenshot · StockWatchlist",
+          "Stock · StockQuote · StockPriceCache · StockApiKey",
+          "stocks*.js 4 ไฟล์",
+          "stock_transactions · stock_watchlists · stock_capital_flows · stock_screenshots · stock_price_cache"
+        ],
+        [
+          "โน้ต",
+          "/notes",
+          "Note",
+          "Note · NoteBlock",
+          "notes.js",
+          "notes · note_blocks · note_tags"
+        ],
+        [
+          "ลิงก์",
+          "/bookmarks",
+          "Bookmark",
+          "Bookmark",
+          "bookmarks.js",
+          "bookmarks"
+        ],
+        [
+          "ไฟล์",
+          "/files",
+          "File · Drive · Share",
+          "File (FileModel) · DriveLink · FileShare",
+          "files.js · shares.js",
+          "files · drive_links · file_shares"
+        ],
+        [
+          "ส่งไฟล์",
+          "/transfer",
+          "FileTransfer",
+          "FileTransfer",
+          "transfer.js · transfer-receive.js",
+          "file_transfers"
+        ],
+        [
+          "แปลงไฟล์",
+          "/file-tools",
+          "FileTools",
+          "—",
+          "file-tools*.js 5 ไฟล์",
+          "—"
+        ],
+        [
+          "ผู้ช่วย AI",
+          "/ai",
+          "Ai · AiChat",
+          "AiKey · AiGeneration",
+          "ai.js · ai-chat.js",
+          "user_ai_keys · ai_generations"
+        ],
+        [
+          "เครื่องคิดเลข",
+          "/calculator",
+          "Calculator",
+          "—",
+          "calculator*.js 4 ไฟล์",
+          "—"
+        ],
+        [
+          "ตั้งค่า",
+          "/settings",
+          "Settings · AccountSecurity · AccountData · Push · AppShare",
+          "User · TwoFactor · AccountData · PushSubscription · AppShare",
+          "settings*.js 10 ไฟล์",
+          "users · user_settings · user_two_factor · push_subscriptions · app_shares"
+        ],
+        [
+          "กระดิ่งแจ้งเตือน",
+          "ทุกหน้า",
+          "Notification",
+          "Notification",
+          "notifications.js",
+          "notifications"
+        ],
+        [
+          "เข้าสู่ระบบ",
+          "/login · /demo",
+          "Auth",
+          "User",
+          "auth.js",
+          "users · remember_tokens"
+        ]
+      ],
+      "highlight": [
+        4
+      ]
+    },
+    {
+      "key": "ฉ",
+      "title": "งานเบื้องหลัง (cron) ทีละขั้น",
+      "type": "text",
+      "text": "1. ล้างการส่งไฟล์ที่หมดอายุ และที่อัปโหลดค้าง  cron.php:32\n2. ย้ายไฟล์เดิมขึ้น Google Drive รอบละไม่เกิน 2 นาที  :36\n3. คืนค่าบัญชี demo หลัง 03:00 วันละครั้ง  :69\n4. ลบการแจ้งเตือนในแอปที่เก่ากว่า 30 วัน  :84\n5. Web Push สรุปวันละครั้งต่อคน  :96\n6. เตือนงานตามเวลาที่ตั้ง (Telegram + Push)  :125\n7. Telegram ของคนที่ตั้งบอทไว้ จบก่อนถ้าไม่มีใครตั้ง  :184\nกันส่งซ้ำด้วย telegram_cron_logs · รันจาก CLI เท่านั้น (:25)"
+    },
+    {
+      "key": "ช",
+      "title": "คำศัพท์เต็ม ↔ ชื่อในโค้ด",
+      "type": "table",
+      "cols": [
+        17,
+        47,
+        42,
+        22
+      ],
+      "header": [
+        "คำที่ใช้คุย",
+        "หมายถึง",
+        "ในโค้ด / ตาราง",
+        "ที่มา"
+      ],
+      "rows": [
+        [
+          "ประเภทโปรเจค",
+          "ทั่วไป · ซอฟต์แวร์ · การตลาด · การเงิน เปลี่ยนได้ ข้อมูลของประเภทเดิมซ่อนไว้ ไม่ลบ",
+          "projects.type",
+          "REQ-P1 · REQ-P8 · 038"
+        ],
+        [
+          "คอลัมน์",
+          "สถานะบนบอร์ดที่ตั้งเอง อยู่ในกลุ่ม ยังไม่เริ่ม / กำลังทำ / เสร็จ",
+          "project_columns · project_tasks.column_id (status เดิมเป็นเงา)",
+          "D-1 · 038"
+        ],
+        [
+          "บทบาท",
+          "เจ้าของ · ผู้ดูแล · สมาชิก · ดูอย่างเดียว",
+          "projects.user_id = เจ้าของ · project_members.role = Admin / Editor / Viewer · requireRole()",
+          "REQ-P7 · ProjectAccess.php"
+        ],
+        [
+          "เลขงาน",
+          "รหัสอย่าง WEB-12 ไม่ซ้ำในโปรเจค ไม่กลับมาใช้ซ้ำแม้ลบงาน",
+          "projects.key_prefix · next_task_number · project_tasks.number",
+          "REQ-S2"
+        ],
+        [
+          "ชนิดงาน",
+          "งานใหญ่ · เรื่องผู้ใช้ · งาน · บั๊ก · งานย่อย",
+          "project_tasks.kind = epic / story / task / bug / sub",
+          "REQ-S1"
+        ],
+        [
+          "งานใหญ่ · งานย่อย",
+          "งานแม่-ลูก งานใหญ่แสดง % เสร็จของงานลูก",
+          "project_tasks.parent_id",
+          "D-8 แบบ A"
+        ],
+        [
+          "แต้ม",
+          "ความยากของงาน (story points) ชุด fib หรือ 1–10",
+          "project_tasks.story_points · projects.point_scale",
+          "REQ-S3"
+        ],
+        [
+          "รอบงาน",
+          "sprint วางแผน → กำลังทำ → ปิด มีรอบที่กำลังทำได้รอบเดียว บอร์ดแสดงเฉพาะรอบนั้น",
+          "project_sprints.state · project_tasks.sprint_id",
+          "REQ-S4"
+        ],
+        [
+          "คลังงาน",
+          "งานที่ยังไม่อยู่ในรอบไหน (backlog) เรียงด้วยการลาก",
+          "sprint_id IS NULL · project_tasks.backlog_rank",
+          "REQ-S4"
+        ],
+        [
+          "กราฟงานคงเหลือ",
+          "แต้มที่เหลือในรอบต่อวัน (burndown) นับเสาร์-อาทิตย์ด้วย",
+          "project_sprint_days (ยอดรายวัน)",
+          "D-7 แบบ A"
+        ],
+        [
+          "ความเร็ว",
+          "แต้มที่ทำเสร็จต่อรอบ ย้อนหลัง (velocity)",
+          "project_sprints.completed_points",
+          "REQ-S5"
+        ],
+        [
+          "เวอร์ชัน",
+          "release กดออกแล้ว changelog ถูกแช่ไว้ แก้ชื่องานทีหลังไม่เปลี่ยนตาม",
+          "project_releases.changelog · project_tasks.release_id",
+          "REQ-S6"
+        ],
+        [
+          "งานขวาง · ป้าย \"ติด\"",
+          "งานที่ต้องรออีกงาน ผูกได้ในโปรเจคเดียวกัน ห้ามผูกเป็นวง",
+          "project_task_blocks (blocker_id → blocked_id)",
+          "REQ-S8"
+        ],
+        [
+          "ช่องข้อมูลเพิ่มเติม",
+          "ช่องที่ตั้งเองต่อโปรเจค ค่าเก็บเป็น JSON ในแถวงาน กรองในเบราว์เซอร์",
+          "project_fields · project_tasks.custom",
+          "D-6"
+        ],
+        [
+          "ไฟล์แนบ",
+          "ลิงก์ไปไฟล์ในคลังของคนแนบ ไม่ได้คัดลอกไฟล์",
+          "project_task_files (task_id, file_id) · FileStore::send()",
+          "D-4"
+        ],
+        [
+          "ลิงก์แชร์โปรเจค",
+          "คนนอกดูความคืบหน้า ไม่เห็นความเห็น ไฟล์แนบ และลิงก์ภายนอก",
+          "/project/shared/{token} · ProjectShareController",
+          "D-5"
+        ],
+        [
+          "ลิงก์แชร์แอป",
+          "เปิดเมนูที่เลือกให้คนอื่นดูแบบอ่านอย่างเดียว คนละอย่างกับลิงก์แชร์โปรเจค",
+          "app_shares · Auth::setShareMode() · Router.php:403",
+          "003"
+        ],
+        [
+          "ลิงก์แชร์ไฟล์",
+          "แชร์ไฟล์จากเมนูไฟล์ให้คนนอกดาวน์โหลด",
+          "file_shares · ShareController",
+          "009"
+        ],
+        [
+          "ส่งไฟล์",
+          "อัปโหลดไฟล์ใหญ่เป็นชิ้นให้คนรับโหลด หมดอายุแล้ว cron ลบ",
+          "file_transfers · FileTransferController",
+          "004 · 034"
+        ],
+        [
+          "บัญชี demo",
+          "บัญชีทดลองที่ทุกคนใช้ร่วม คืนค่าทุกคืนหลัง 03:00",
+          "/demo · DemoReset · Router DEMO_RESTRICTED",
+          "018 · cron.php:69"
+        ],
+        [
+          "ที่เก็บงานที่เดียว",
+          "งานทุกแหล่งรวมอยู่ในเมนูงาน จดได้จากทุกหน้า (Daily Loop)",
+          "tasks · quick_items · LegacyTaskMapper",
+          "daily-loop.md"
+        ],
+        [
+          "งานค้าง",
+          "ยังไม่เสร็จ และวันกำหนดก่อนวันนี้ ตามเวลาเซิร์ฟเวอร์ งานไม่มีวันกำหนดไม่นับ",
+          "serverToday() · TIMEZONE",
+          "daily-loop.md หัวข้อ 6"
+        ]
+      ]
+    },
+    {
+      "key": "ซ",
+      "title": "ตารางของเมนูโปรเจคและการผูกกัน",
+      "type": "table",
+      "cols": [
+        3,
+        4,
+        5
+      ],
+      "header": [
+        "ตาราง",
+        "ผูกกับ (foreign key)",
+        "เก็บอะไร"
+      ],
+      "highlight": [
+        2,
+        13
+      ],
+      "rows": [
+        [
+          "projects",
+          "users (เจ้าของ)",
+          "type · key_prefix · next_task_number · use_sprints · point_scale"
+        ],
+        [
+          "project_tasks",
+          "projects · parent_id → งานแม่ · sprint_id · release_id (SET NULL)",
+          "number · kind · story_points · column_id · custom"
+        ],
+        [
+          "project_members",
+          "projects · users",
+          "role Admin / Editor / Viewer"
+        ],
+        [
+          "project_columns",
+          "projects",
+          "group todo / doing / done"
+        ],
+        [
+          "project_fields",
+          "projects",
+          "ช่องที่ตั้งเอง (ค่าอยู่ใน project_tasks.custom)"
+        ],
+        [
+          "project_activities",
+          "projects · users",
+          "ประวัติการเปลี่ยน"
+        ],
+        [
+          "project_chats",
+          "projects · users",
+          "แชทของโปรเจค"
+        ],
+        [
+          "project_task_comments",
+          "project_tasks · projects · users",
+          "ความเห็น + @ชื่อ"
+        ],
+        [
+          "project_task_files",
+          "project_tasks · files",
+          "ชี้ files.id ของคนแนบ"
+        ],
+        [
+          "project_task_blocks",
+          "project_tasks (blocker_id → blocked_id)",
+          "งานขวาง"
+        ],
+        [
+          "project_task_links",
+          "project_tasks",
+          "รับ http / https เท่านั้น"
+        ],
+        [
+          "project_components · project_task_components",
+          "projects · project_tasks",
+          "ส่วนของระบบ ชื่อไม่ซ้ำ (utf8mb4_bin)"
+        ],
+        [
+          "project_releases",
+          "projects",
+          "changelog แช่ไว้ตอนออก"
+        ],
+        [
+          "project_sprints · project_sprint_days",
+          "projects · project_sprints",
+          "planned → active → closed · ยอดรายวันของกราฟ"
+        ]
+      ]
+    },
+    {
+      "key": "ฌ",
+      "title": "การตัดสินใจฉบับเต็ม",
+      "type": "table",
+      "cols": [
+        8,
+        42,
+        38,
+        30
+      ],
+      "header": [
+        "รหัส",
+        "ตัดสินว่า",
+        "ไม่เลือก และเหตุผล",
+        "อ่านต่อใน docs/"
+      ],
+      "rows": [
+        [
+          "D-1",
+          "คอลัมน์ใหม่ (column_id) เป็นความจริงเดียว status เดิมเป็นเงา เขียนที่ ProjectTask::moveTo ที่เดียว",
+          "เลิก status ทันที: diff ใหญ่ 2 เท่า แตะหน้าที่ไม่เกี่ยว ถอยไม่ได้",
+          "decisions/…project-columns.md"
+        ],
+        [
+          "D-2",
+          "ช่องตัวย่อเลขงาน ซ่อนไว้จนถึง P1",
+          "—",
+          "plans/projects-v2-p0a.md"
+        ],
+        [
+          "D-3",
+          "ยังไม่ทำ โอนความเป็นเจ้าของ",
+          "ไม่มี REQ ของตัวเอง",
+          "plans/projects-v2-p0a.md"
+        ],
+        [
+          "D-4",
+          "ไฟล์แนบ = ลิงก์ไปไฟล์ในคลังของคนแนบ ดาวน์โหลดผ่าน endpoint ของงานเท่านั้น",
+          "ที่เก็บของโปรเจค: ต้องทำที่เก็บ โควตา และ Google Drive ซ้ำอีกชุด",
+          "decisions/…collaboration.md"
+        ],
+        [
+          "D-5",
+          "แขกลิงก์แชร์ไม่เห็นความเห็นและไฟล์แนบ ทั้ง API และหน้าจอ",
+          "ความเห็นมักเป็นเรื่องภายในทีม ไฟล์อยู่ในคลังส่วนตัว เปิดเพิ่มทีหลังได้",
+          "decisions/…collaboration.md"
+        ],
+        [
+          "D-6",
+          "ค่าช่องข้อมูลเพิ่มเติมเก็บเป็น JSON ในแถวงาน (project_tasks.custom)",
+          "ตารางค่าแยก: JOIN ทุกครั้งที่โหลดบอร์ด ทั้งที่กรองในเบราว์เซอร์อยู่แล้ว",
+          "decisions/…collaboration.md"
+        ],
+        [
+          "D-7",
+          "กราฟงานคงเหลือใช้ยอดรายวันที่บันทึกไว้ (project_sprint_days)",
+          "แบบ B: บันทึกเหตุการณ์แล้วคำนวณย้อน",
+          "plans/projects-v2-p1.md หัวข้อ 3"
+        ],
+        [
+          "D-8",
+          "งานใหญ่ งานลูก งานย่อย ใช้คอลัมน์ parent_id เดียว",
+          "แบบ B: สองคอลัมน์ epic_id และ parent_id",
+          "plans/projects-v2-p1.md หัวข้อ 4"
+        ],
+        [
+          "CR-2",
+          "ไม่มีแท็บรายงานแยก กราฟอยู่บนสุดของแท็บภาพรวม คงแท็บรายการและปฏิทิน",
+          "ตามสเปกเดิม: แถบแท็บยาวขึ้นบนมือถือ",
+          "plans/projects-v2-p1.md หัวข้อ 7"
+        ],
+        [
+          "Drive",
+          "สารบัญไฟล์อยู่ที่ DayFlow ตัวไฟล์อยู่บนดิสก์หรือ Drive ของเจ้าของ เลือกที่ FileStore",
+          "ให้ Drive เป็นตัวจริง แอปเป็นแค่หน้าต่าง",
+          "decisions/…google-drive.md"
+        ]
+      ]
+    },
+    {
+      "key": "ญ",
+      "title": "ตรวจงานยังไง และเอกสารอยู่ไหน",
+      "type": "text",
+      "text": "คำสั่งตรวจ (ใน Git Bash ใส่ export MSYS_NO_PATHCONV=1 ก่อน)\n1. test ทั้งหมด ราว 2.5 นาที: docker exec dayflow-app php /var/www/html/tests/run.php http://localhost\n2. e2e: node scripts/e2e-shell.mjs --base http://localhost:8080\n3. PHPStan: docker run --rm -v \"$(pwd -W)\":/app -w /app ghcr.io/phpstan/phpstan:2.2.16 analyse --no-progress\n4. CSS: node scripts/check-css.mjs\n5. migration: node scripts/replay-migration.mjs · php scripts/migrate.php --force\nเว็บทดสอบ http://localhost:8080 (Docker dayflow-app · dayflow-db) ใช้ทดสอบเท่านั้น\n\nเอกสาร: docs/requirements/ สเปก · docs/plans/ แผนและ slice · docs/decisions/ เหตุผลการเลือกแบบ · docs/handoff/ คู่มือส่งมอบ · docs/mockups/ หน้าจอที่อนุมัติ · BACKLOG.md · CHANGELOG.md · docs/board.md"
+    }
+  ]
+}

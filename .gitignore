@@ -75,3 +75,6 @@ yarn-error.log*
 
 # Screenshots from scripts/screenshots.mjs: regenerate them, do not commit them
 docs/screenshots/
+
+# --- Board edit link (anyone with it can edit the board; keep local) ---
+/docs/board.local.md
