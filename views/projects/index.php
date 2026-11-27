@@ -121,6 +121,14 @@
             <option value="sub">งานย่อย</option>
         </select>
         <select id="taskFilterEpic" class="form-control" aria-label="งานใหญ่" data-act="setTaskFilter" data-args='["epic", "$value"]' data-on="change" hidden></select>
+        <select id="taskFilterSeverity" class="form-control" aria-label="ความรุนแรง" data-act="setTaskFilter" data-args='["severity", "$value"]' data-on="change" hidden>
+            <option value="">ทุกความรุนแรง</option>
+            <option value="critical">วิกฤต</option>
+            <option value="high">สูง</option>
+            <option value="medium">ปานกลาง</option>
+            <option value="low">ต่ำ</option>
+        </select>
+        <select id="taskFilterComponent" class="form-control" aria-label="ส่วนของระบบ" data-act="setTaskFilter" data-args='["component", "$value"]' data-on="change" hidden></select>
         <span class="view-field-filters" id="taskFieldFilters"></span>
         <span class="view-filter-state" id="taskFilterState" role="status" hidden></span>
         <button class="btn btn-link btn-sm" type="button" id="taskFilterClear" data-act="clearTaskFilters" hidden>ล้างตัวกรอง</button>
@@ -503,6 +511,20 @@
                         </select>
                     </div>
                 </div>
+                <div class="set-row">
+                    <div>
+                        <h4>ส่วนของระบบ (component)</h4>
+                        <p>ป้ายที่ติดกับงาน ใช้กรอง</p>
+                    </div>
+                    <div>
+                        <div class="comp-chips" id="componentsSettingsList"></div>
+                        <form class="comp-add" id="componentAddForm" data-act="submitAddComponent" data-args='["$event"]' data-on="submit" novalidate>
+                            <input type="text" class="form-control" id="componentNameInput" maxlength="60" placeholder="ชื่อส่วนใหม่" aria-label="ชื่อส่วนของระบบใหม่" autocomplete="off">
+                            <button type="submit" class="btn btn-sm">เพิ่ม</button>
+                        </form>
+                        <p class="form-error" id="componentError" role="alert" hidden></p>
+                    </div>
+                </div>
                 <p class="alert alert-warning" id="softwareDenied" role="alert" hidden>ตัวย่อเลขงานและชุดแต้มตั้งได้เฉพาะเจ้าของและผู้ดูแล</p>
             </div>
         </div>
@@ -727,6 +749,43 @@
                         <select id="editTaskRelease" class="form-control"></select>
                     </div>
                 </div>
+
+                <!-- ข้อมูลบั๊ก: แสดงเฉพาะงานชนิดบั๊ก (REQ-S9) -->
+                <section class="dsec" id="taskBugSection" hidden>
+                    <h3>ข้อมูลบั๊ก</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="editTaskSeverity">ความรุนแรง</label>
+                            <select id="editTaskSeverity" class="form-control">
+                                <option value="">—</option>
+                                <option value="critical">วิกฤต</option>
+                                <option value="high">สูง</option>
+                                <option value="medium">ปานกลาง</option>
+                                <option value="low">ต่ำ</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="editTaskEnvironment">สภาพแวดล้อม</label>
+                            <input type="text" id="editTaskEnvironment" class="form-control" maxlength="255"
+                                   placeholder="เช่น Safari 18 / iPhone 15 / แอป 1.4.2" autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="editTaskRepro">ขั้นตอนทำซ้ำ</label>
+                        <textarea id="editTaskRepro" class="form-control" rows="3" maxlength="5000"
+                                  placeholder="1. เปิดหน้า… 2. กด… 3. เห็นอะไร"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="editTaskExpected">ผลที่คาด</label>
+                            <textarea id="editTaskExpected" class="form-control" rows="2" maxlength="5000"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="editTaskActual">ผลจริง</label>
+                            <textarea id="editTaskActual" class="form-control" rows="2" maxlength="5000"></textarea>
+                        </div>
+                    </div>
+                </section>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label" for="editTaskColumn">คอลัมน์</label>
@@ -785,6 +844,30 @@
                         <button type="button" class="btn btn-sm" data-act="addTaskBlock">ผูก</button>
                     </div>
                     <p class="dep-err" id="taskBlockError" role="alert" hidden></p>
+                </section>
+
+                <!-- ส่วนของระบบของงาน (REQ-S10): เลือกได้หลายส่วน เฉพาะโปรเจคซอฟต์แวร์ -->
+                <section class="dsec" id="taskComponentsSection" hidden>
+                    <h3>ส่วนของระบบ</h3>
+                    <div class="comp-chips" id="taskComponentsList"></div>
+                    <div class="dep-add" id="taskComponentsForm">
+                        <select class="form-control" id="taskComponentPick" aria-label="ส่วนของระบบที่จะเพิ่ม"></select>
+                        <button type="button" class="btn btn-sm" data-act="addTaskComponent">+ เพิ่ม</button>
+                    </div>
+                    <p class="proj-note">บันทึกพร้อมปุ่ม "บันทึกงาน" ด้านล่าง</p>
+                    <p class="dep-err" id="taskComponentError" role="alert" hidden></p>
+                </section>
+
+                <!-- ลิงก์ภายนอกของงาน (REQ-S10): แขกลิงก์แชร์ไม่เห็น (D-5) -->
+                <section class="dsec" id="taskLinksSection" hidden>
+                    <h3 id="taskLinksHeading">ลิงก์ <small>0</small></h3>
+                    <div id="taskLinksList"></div>
+                    <div class="dep-add" id="taskLinksForm">
+                        <input class="form-control" id="taskLinkUrl" placeholder="วาง URL ของ PR commit หรือเอกสาร" aria-label="ลิงก์ใหม่" autocomplete="off">
+                        <input class="form-control" id="taskLinkLabel" placeholder="ชื่อลิงก์ (ไม่บังคับ)" aria-label="ชื่อลิงก์" maxlength="120" autocomplete="off">
+                        <button type="button" class="btn btn-sm" data-act="addTaskLink">เพิ่ม</button>
+                    </div>
+                    <p class="dep-err" id="taskLinkError" role="alert" hidden></p>
                 </section>
 
                 <div class="modal-checklist-container">

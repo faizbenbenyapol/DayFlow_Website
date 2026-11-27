@@ -18,6 +18,18 @@ class ProjectTask
     /** ชุดแต้มที่รับได้ตามสเกลของโปรเจค */
     public const POINT_SCALES = ['fib' => [1, 2, 3, 5, 8, 13, 21], 'ten' => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]];
 
+    /** ความรุนแรงของบั๊กที่รับได้ (ตรงกับ ENUM ของ project_tasks.severity) */
+    public const SEVERITIES = ['critical', 'high', 'medium', 'low'];
+
+    /** ชื่อช่องข้อมูลบั๊กที่รับจาก client (5 ช่อง) */
+    public const BUG_FIELDS = ['severity', 'repro_steps', 'expected', 'actual', 'environment'];
+
+    /** ความยาวสูงสุดของข้อความบั๊กแต่ละช่อง */
+    public const MAX_BUG_TEXT = 5000;
+
+    /** ความยาวสูงสุดของสภาพแวดล้อม (ตรงกับ VARCHAR(255)) */
+    public const MAX_ENVIRONMENT = 255;
+
     /** จำนวนงานสูงสุดที่วางแผนเข้า/ออกรอบงานได้ในคำขอเดียว */
     public const MAX_PLAN_TASKS = 500;
 
@@ -100,6 +112,8 @@ class ProjectTask
             $startDate = self::checkedDate($data['start_date'] ?? null, 'วันเริ่ม');
             $dueDate = self::checkedDate($data['due_date'] ?? null, 'กำหนดส่ง');
             self::assertDateOrder($startDate, $dueDate);
+            // ข้อมูลบั๊ก: ช่องว่างเก็บบนฐานข้อมูลเป็น NULL และค่าที่ผิดกฎถูกปฏิเสธก่อน insert
+            $bug = self::bugValues($data);
             $number = (int)$project['next_task_number'];
 
             $maxPos = (int)DB::run(
@@ -114,8 +128,8 @@ class ProjectTask
             $assignee = ($assigneeUserId !== null) ? null : (!empty($data['assignee']) ? $data['assignee'] : null);
 
             $insert = DB::run(
-                'INSERT INTO project_tasks (project_id, number, user_id, guest_name, title, status, priority, start_date, due_date, category, assignee_user_id, assignee, kind, parent_id, story_points, sprint_id, release_id, column_id, position, checklist)
-                 SELECT ?, ?, ?, ?, ?, ' . self::shadowStatusSql() . ', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, c.id, ?, ?
+                'INSERT INTO project_tasks (project_id, number, user_id, guest_name, title, status, priority, start_date, due_date, category, assignee_user_id, assignee, kind, parent_id, story_points, sprint_id, release_id, severity, repro_steps, expected, actual, environment, column_id, position, checklist)
+                 SELECT ?, ?, ?, ?, ?, ' . self::shadowStatusSql() . ', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, c.id, ?, ?
                  FROM project_columns c
                  WHERE c.id = ? AND c.project_id = ?',
                 [
@@ -135,6 +149,11 @@ class ProjectTask
                     $points,
                     $sprintId,
                     $releaseId,
+                    $bug['severity'],
+                    $bug['repro_steps'],
+                    $bug['expected'],
+                    $bug['actual'],
+                    $bug['environment'],
                     $maxPos + 1,
                     !empty($data['checklist']) ? json_encode($data['checklist'], JSON_UNESCAPED_UNICODE) : null,
                     $columnId,
@@ -189,8 +208,16 @@ class ProjectTask
             self::assertDateOrder($start, $due);
         }
 
+        // ข้อมูลบั๊ก: ช่องว่างคือการล้างค่าเป็น NULL และค่าที่ผิดกฎถูกปฏิเสธก่อนเขียน
+        foreach (self::BUG_FIELDS as $field) {
+            if (array_key_exists($field, $data)) {
+                $data[$field] = self::bugValue($field, $data[$field]);
+            }
+        }
+
         // สถานะและตำแหน่งเขียนผ่าน moveTo()/reorder() เท่านั้น
-        $allowed = ['title', 'description', 'priority', 'due_date', 'start_date', 'category', 'assignee_user_id', 'assignee', 'checklist'];
+        $allowed = ['title', 'description', 'priority', 'due_date', 'start_date', 'category', 'assignee_user_id', 'assignee', 'checklist',
+            'severity', 'repro_steps', 'expected', 'actual', 'environment'];
         foreach ($allowed as $field) {
             if (array_key_exists($field, $data)) {
                 $fields[] = "`$field` = ?";
@@ -465,6 +492,68 @@ class ProjectTask
             throw new ProjectColumnException(422, 'แต้มต้องเป็นค่าในชุดแต้มของโปรเจค');
         }
         return $points;
+    }
+
+    /**
+     * ตรวจค่าข้อมูลบั๊กทั้งห้าช่องจากข้อมูลงาน (ช่องที่ไม่ส่งมาคือ NULL)
+     *
+     * @param array<string, mixed> $data ข้อมูลงาน
+     * @return array{severity: string|null, repro_steps: string|null, expected: string|null, actual: string|null, environment: string|null}
+     * @throws ProjectColumnException 422 เมื่อค่าใดผิดกฎ
+     */
+    private static function bugValues(array $data): array
+    {
+        $values = [];
+        foreach (self::BUG_FIELDS as $field) {
+            $values[$field] = self::bugValue($field, $data[$field] ?? null);
+        }
+        return $values;
+    }
+
+    /**
+     * ตรวจค่าข้อมูลบั๊กหนึ่งช่อง
+     *
+     * severity รับเฉพาะค่าของ ENUM หรือค่าว่าง (NULL) ข้อความอื่นตัดช่องว่างและ
+     * เก็บ NULL เมื่อว่าง ส่วน environment จำกัด 255 ตัวอักษร
+     *
+     * @param string $field ชื่อช่อง (severity, repro_steps, expected, actual, environment)
+     * @param mixed $value ค่าที่ client ส่งมา
+     * @return string|null ค่าที่ตรวจแล้ว หรือ NULL
+     * @throws ProjectColumnException 422 เมื่อค่าไม่ถูกกฎ
+     */
+    private static function bugValue(string $field, mixed $value): ?string
+    {
+        if ($field === 'severity') {
+            if ($value === null) return null;
+            if (!is_string($value)) {
+                throw new ProjectColumnException(422, 'ความรุนแรงไม่ถูกต้อง');
+            }
+            $severity = trim($value);
+            if ($severity === '') return null;
+            if (!in_array($severity, self::SEVERITIES, true)) {
+                throw new ProjectColumnException(422, 'ความรุนแรงไม่ถูกต้อง');
+            }
+            return $severity;
+        }
+
+        if ($value === null) return null;
+        if (!is_string($value)) {
+            throw new ProjectColumnException(422, 'ข้อความบั๊กไม่ถูกต้อง');
+        }
+        $text = trim($value);
+        if ($text === '') return null;
+        if ($field === 'environment') {
+            if (mb_strlen($text) > self::MAX_ENVIRONMENT) {
+                throw new ProjectColumnException(422, 'สภาพแวดล้อมยาวได้ไม่เกิน ' . self::MAX_ENVIRONMENT . ' ตัวอักษร');
+            }
+            return $text;
+        }
+
+        if (mb_strlen($text) > self::MAX_BUG_TEXT) {
+            $labels = ['repro_steps' => 'ขั้นตอนทำซ้ำ', 'expected' => 'ผลที่คาด', 'actual' => 'ผลจริง'];
+            throw new ProjectColumnException(422, ($labels[$field] ?? 'ข้อความบั๊ก') . 'ยาวได้ไม่เกิน 5,000 ตัวอักษร');
+        }
+        return $text;
     }
 
     /**

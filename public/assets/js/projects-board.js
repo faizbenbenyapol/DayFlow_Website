@@ -159,6 +159,8 @@ function renderSoftwareKanbanCard(task) {
             : '')
         + '<div class="kcard-top">' + kindIcon(kind)
         + (key ? '<span class="key">' + escHtml(key) + '</span>' : '')
+        // ป้ายความรุนแรงของบั๊ก ต่อจากเลขงาน (เพิ่มใน projects-tasklinks.js)
+        + (typeof severityBadge === 'function' ? severityBadge(task) : '')
         // ป้ายอยู่ต่อจากเลขงาน ไม่ดันไปขวาสุด เพราะมุมขวาบนเป็นที่ของปุ่มแก้/ลบที่ลอยทับ
         + (open.length ? '<span class="stuck" title="' + escHtml(stuckTitle) + '">ติด</span>' : '')
         + '</div>'
@@ -335,6 +337,8 @@ function openEditTask(id) {
     renderChecklist();
     renderTaskCustomFields(task);
     renderSoftwareTaskSections(task);
+    // ข้อมูลบั๊ก ส่วนของระบบ และลิงก์ภายนอก (projects-tasklinks.js)
+    if (typeof renderTaskExtras === 'function') renderTaskExtras(task);
     openModal('editTaskModal');
     setTaskParam(task.id);
     loadTaskHistory(task.id);
@@ -456,6 +460,8 @@ function toggleSoftwareTaskFields(kind) {
 /** เปลี่ยนชนิดงานในแผงรายละเอียดแล้วแสดง/ซ่อนช่องที่เกี่ยวข้องทันที */
 function handleTaskKindChange(value) {
     toggleSoftwareTaskFields(value);
+    // ส่วนข้อมูลบั๊กแสดงเฉพาะงานชนิดบั๊ก (projects-tasklinks.js)
+    if (typeof handleTaskExtrasKindChange === 'function') handleTaskExtrasKindChange(value);
 }
 
 /** วาดส่วนงานย่อยของเรื่องผู้ใช้/งาน/บั๊ก ส่วนงานลูกของงานใหญ่ และงานขวางในแผงรายละเอียด */

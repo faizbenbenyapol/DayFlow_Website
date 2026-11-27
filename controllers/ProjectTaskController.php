@@ -8,7 +8,11 @@ class ProjectTaskController
     use ProjectAccess;
 
     /** ชื่อช่องภาษาไทยในบรรทัดประวัติ (แท็บประวัติแสดงให้ผู้ใช้เห็นตรง ๆ) */
-    private const FIELD_LABELS = ['title' => 'ชื่องาน', 'priority' => 'ความสำคัญ', 'due_date' => 'กำหนดส่ง', 'start_date' => 'วันเริ่ม', 'category' => 'หมวด', 'assignee' => 'ผู้รับผิดชอบ'];
+    private const FIELD_LABELS = [
+        'title' => 'ชื่องาน', 'priority' => 'ความสำคัญ', 'due_date' => 'กำหนดส่ง', 'start_date' => 'วันเริ่ม',
+        'category' => 'หมวด', 'assignee' => 'ผู้รับผิดชอบ', 'severity' => 'ความรุนแรง',
+        'repro_steps' => 'ขั้นตอนทำซ้ำ', 'expected' => 'ผลที่คาด', 'actual' => 'ผลจริง', 'environment' => 'สภาพแวดล้อม',
+    ];
 
     /** ค่าความสำคัญภาษาไทย */
     private const PRIORITY_LABELS = ['Low' => 'ต่ำ', 'Medium' => 'ปานกลาง', 'High' => 'สูง', 'Critical' => 'วิกฤต'];
@@ -75,6 +79,13 @@ class ProjectTaskController
         $activities = ProjectActivity::getRecent($projectId, 8, $userId > 0);
         $aiInsight  = Project::getAiInsight($projectId, $userId);
 
+        // ส่วนของระบบของแต่ละงาน (รหัสเท่านั้น) อ่านครั้งเดียวแล้วแปะให้ทุกงาน
+        $componentIds = ProjectComponent::idsForProject($projectId);
+        $tasks = array_map(static function (array $task) use ($componentIds): array {
+            $task['component_ids'] = $componentIds[(int)$task['id']] ?? [];
+            return $task;
+        }, $tasks);
+
         $payload = [
             'project'    => $project,
             'tasks'      => $tasks,
@@ -84,14 +95,24 @@ class ProjectTaskController
             'releases'   => ProjectRelease::listForProject($projectId),
             // ขอบงานที่ต้องรอกัน: มีเพียงรหัสงาน แขกลิงก์แชร์จึงเห็นได้ (D-5)
             'blocks'     => ProjectTaskBlock::listForProject($projectId),
+            // ชื่อส่วนของระบบ: แขกลิงก์แชร์เห็นได้ (D-5) รหัสของแต่ละงานอยู่ใน component_ids
+            'components' => ProjectComponent::listForProject($projectId),
             'activities' => $activities,
             'ai'         => $aiInsight
         ];
-        // ลิงก์แชร์เปิดข้อมูลใหม่ของ P0b ตาม D-5 เท่านั้น: แขกไม่เห็นช่องข้อมูลเพิ่มเติมและค่าของมัน
+        // ลิงก์ภายนอกและรายละเอียดบั๊กเป็นข้อมูลภายใน: แขกลิงก์แชร์ไม่เห็น (D-5)
         if ($userId > 0) {
             $payload['fields'] = ProjectField::listForProject($projectId);
+            $payload['links'] = ProjectTaskLink::listForProject($projectId);
         } else {
-            $payload['tasks'] = array_map(static fn(array $task): array => array_merge($task, ['custom' => null]), $tasks);
+            $hidden = ['repro_steps', 'expected', 'actual', 'environment'];
+            $payload['tasks'] = array_map(static function (array $task) use ($hidden): array {
+                foreach ($hidden as $field) {
+                    unset($task[$field]);
+                }
+                $task['custom'] = null;
+                return $task;
+            }, $tasks);
         }
         Response::json($payload);
     }
@@ -131,6 +152,17 @@ class ProjectTaskController
             Request::input('status')
         );
 
+        $json = Request::json();
+
+        // แขกลิงก์แชร์เขียนช่องข้อมูลบั๊กไม่ได้ แม้ลิงก์จะแก้ไขงานได้ (D-5)
+        if ($userId <= 0) {
+            foreach (ProjectTask::BUG_FIELDS as $field) {
+                if (array_key_exists($field, $json)) {
+                    Response::json(['error' => 'ลิงก์แชร์แก้ข้อมูลบั๊กไม่ได้'], 403);
+                }
+            }
+        }
+
         $data = [
             'title'     => $title,
             'priority'  => Request::input('priority', 'Medium'),
@@ -140,8 +172,13 @@ class ProjectTaskController
             'assignee'  => Request::input('assignee', ''),
             'checklist' => Request::list('checklist')
         ];
+        // ข้อมูลบั๊กส่งค่าดิบให้ model ตรวจ (ค่าว่างกลายเป็น NULL)
+        foreach (ProjectTask::BUG_FIELDS as $field) {
+            if (array_key_exists($field, $json)) {
+                $data[$field] = $json[$field];
+            }
+        }
 
-        $json = Request::json();
         if (array_key_exists('assignee_user_id', $json)) {
             $data = self::applyAssigneeUserId($projectId, $data, $json['assignee_user_id']);
         }
@@ -234,6 +271,31 @@ class ProjectTaskController
         }
 
         $json = Request::json();
+
+        // แขกลิงก์แชร์เขียนช่องของซอฟต์แวร์ไม่ได้ แม้ลิงก์จะแก้ไขงานได้ (D-5)
+        if ($userId <= 0) {
+            foreach (ProjectTask::BUG_FIELDS as $field) {
+                if (array_key_exists($field, $json)) {
+                    Response::json(['error' => 'ลิงก์แชร์แก้ข้อมูลบั๊กไม่ได้'], 403);
+                }
+            }
+            if (array_key_exists('component_ids', $json)) {
+                Response::json(['error' => 'ลิงก์แชร์แก้ส่วนของระบบไม่ได้'], 403);
+            }
+        }
+
+        // ข้อมูลบั๊ก: ส่งค่าดิบให้ model ตรวจ ค่าว่างคือการล้างค่า
+        $bugChanged = false;
+        foreach (ProjectTask::BUG_FIELDS as $field) {
+            if (!array_key_exists($field, $json)) continue;
+            $data[$field] = $json[$field];
+            $raw = $json[$field];
+            $newText = is_string($raw) ? trim($raw) : '';
+            $oldText = (string)($task[$field] ?? '');
+            if ($oldText !== $newText) $bugChanged = true;
+        }
+        if ($bugChanged) $changes[] = 'แก้ข้อมูลบั๊ก';
+
         if (array_key_exists('assignee_user_id', $json)) {
             $data = self::applyAssigneeUserId($task['project_id'], $data, $json['assignee_user_id']);
 
@@ -277,7 +339,8 @@ class ProjectTaskController
             }
         }
 
-        if (empty($data) && $moveTo === null && $structure === [] && !array_key_exists('custom', $json)) {
+        if (empty($data) && $moveTo === null && $structure === [] && !array_key_exists('custom', $json)
+            && !array_key_exists('component_ids', $json)) {
             Response::json(['error' => 'ไม่มีข้อมูลสำหรับแก้ไข'], 400);
         }
 
@@ -292,6 +355,24 @@ class ProjectTaskController
             }
             $structureChanges = $updated['changes'];
             $taskChanged = $updated['changed'];
+        }
+
+        // ส่วนของระบบ: แทนทั้งชุด รหัสของโปรเจคอื่นหรือที่ถูกลบแล้วได้ 404 เดียวกัน
+        $componentChanged = false;
+        if (array_key_exists('component_ids', $json)) {
+            if (!is_array($json['component_ids'])) {
+                Response::json(['error' => 'ข้อมูลส่วนของระบบไม่ถูกต้อง'], 422);
+            }
+            try {
+                $set = ProjectComponent::setForTask((int)$task['project_id'], $taskId, array_values($json['component_ids']));
+            } catch (ProjectColumnException $e) {
+                self::fail($e);
+            }
+            if ($set['changed']) {
+                $componentChanged = true;
+                $taskChanged = true;
+                $changes[] = "ส่วนของระบบ เปลี่ยนเป็น '" . ($set['names'] !== [] ? implode(', ', $set['names']) : 'ว่าง') . "'";
+            }
         }
         if (!empty($data)) {
             try {
@@ -483,6 +564,84 @@ class ProjectTaskController
         }
 
         Response::json(['ok' => true, 'blocks' => ProjectTaskBlock::listForProject($projectId)]);
+    }
+
+    /**
+     * POST /api/projects/tasks/{tid}/links
+     *
+     * เพิ่มลิงก์ภายนอกให้งาน สมาชิกขึ้นไปทำได้ ลิงก์แชร์ทำไม่ได้ (403)
+     * URL รับเฉพาะ http/https (model ตรวจ) งานที่มองไม่เห็นตอบ 404 เดียวกับงานที่ไม่มี
+     *
+     * @param string $tid รหัสงานจาก URL
+     */
+    public function apiLinkCreate(string $tid): void
+    {
+        $userId = Auth::userId();
+        $taskId = (int)$tid;
+
+        $task = ProjectTask::getById($taskId);
+        $project = null;
+        if ($task) {
+            $project = Project::getById((int)$task['project_id'], $userId);
+        }
+        if (!$task || !$project) {
+            Response::json(['error' => 'ไม่พบข้อมูลงาน'], 404);
+        }
+        if ($userId <= 0) {
+            Response::json(['error' => 'ลิงก์แชร์แก้ลิงก์ภายนอกไม่ได้'], 403);
+        }
+        $this->requireRole($project, 'member', 'แก้ไขงาน');
+
+        $json = Request::json();
+        $projectId = (int)$task['project_id'];
+        try {
+            $created = ProjectTaskLink::create($projectId, $taskId, $json['url'] ?? null, $json['label'] ?? null);
+        } catch (ProjectColumnException $e) {
+            self::fail($e);
+        }
+
+        $shown = $created['label'] ?? $created['url'];
+        ProjectActivity::log($projectId, $userId, 'เพิ่มลิงก์ "' . $shown . '"', $taskId);
+        Response::json(['ok' => true, 'links' => ProjectTaskLink::listForProject($projectId)], 201);
+    }
+
+    /**
+     * DELETE /api/projects/tasks/{tid}/links/{lid}
+     *
+     * เอาลิงก์ของงานออก สมาชิกขึ้นไปทำได้ ลิงก์แชร์ทำไม่ได้ (403)
+     * ลิงก์ของงานอื่น ลิงก์ที่ถูกลบ หรืออยู่คนละโปรเจค ตอบ 404 เดียวกัน
+     *
+     * @param string $tid รหัสงานจาก URL
+     * @param string $lid รหัสลิงก์จาก URL
+     */
+    public function apiLinkDelete(string $tid, string $lid): void
+    {
+        $userId = Auth::userId();
+        $taskId = (int)$tid;
+
+        $task = ProjectTask::getById($taskId);
+        $project = null;
+        if ($task) {
+            $project = Project::getById((int)$task['project_id'], $userId);
+        }
+        if (!$task || !$project) {
+            Response::json(['error' => 'ไม่พบข้อมูลงาน'], 404);
+        }
+        if ($userId <= 0) {
+            Response::json(['error' => 'ลิงก์แชร์แก้ลิงก์ภายนอกไม่ได้'], 403);
+        }
+        $this->requireRole($project, 'member', 'แก้ไขงาน');
+
+        $projectId = (int)$task['project_id'];
+        try {
+            $deleted = ProjectTaskLink::delete($projectId, $taskId, (int)$lid);
+        } catch (ProjectColumnException $e) {
+            self::fail($e);
+        }
+
+        $shown = $deleted['label'] ?? $deleted['url'];
+        ProjectActivity::log($projectId, $userId, 'เอาลิงก์ "' . $shown . '" ออก', $taskId);
+        Response::json(['ok' => true, 'links' => ProjectTaskLink::listForProject($projectId)]);
     }
 
     /**

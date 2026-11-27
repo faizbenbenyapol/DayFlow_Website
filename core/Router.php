@@ -326,6 +326,11 @@ class Router
         $this->add('GET',    '/api/projects/tasks/{tid}/history', 'ProjectTaskController', 'apiTaskHistory', true);
         $this->add('POST',   '/api/projects/tasks/{tid}/blocks',  'ProjectTaskController', 'apiBlockCreate', true);
         $this->add('DELETE', '/api/projects/tasks/{tid}/blocks/{oid}', 'ProjectTaskController', 'apiBlockDelete', true);
+        $this->add('POST',   '/api/projects/tasks/{tid}/links',   'ProjectTaskController', 'apiLinkCreate',  true);
+        $this->add('DELETE', '/api/projects/tasks/{tid}/links/{lid}', 'ProjectTaskController', 'apiLinkDelete', true);
+        $this->add('POST',   '/api/projects/{id}/components',     'ProjectComponentController', 'apiCreate', true);
+        $this->add('PUT',    '/api/projects/components/{cid}',    'ProjectComponentController', 'apiUpdate', true);
+        $this->add('DELETE', '/api/projects/components/{cid}',    'ProjectComponentController', 'apiDelete', true);
         $this->add('GET',    '/api/projects/tasks/{tid}/comments', 'ProjectCommentController', 'apiList',   true);
         $this->add('POST',   '/api/projects/tasks/{tid}/comments', 'ProjectCommentController', 'apiCreate', true);
         $this->add('DELETE', '/api/projects/comments/{cid}',       'ProjectCommentController', 'apiDelete', true);
