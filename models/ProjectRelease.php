@@ -294,7 +294,8 @@ class ProjectRelease
     /**
      * ตรวจรหัสเวอร์ชันที่ client ส่งให้งาน: ต้องเป็นของโปรเจคนี้และยังไม่ออก
      *
-     * รหัสผิดรูป ไม่มี หรืออยู่คนละโปรเจค ตอบ 404 เดียวกัน (เหมือน checkedSprint)
+     * รหัสผิดรูป (เช่น "x", -1, [1]) ตอบ 422 ตั้งแต่ก่อนแตะฐานข้อมูล
+     * รหัสที่ไม่มีหรืออยู่คนละโปรเจคตอบ 404 เดียวกัน
      * ส่วนเวอร์ชันที่ออกแล้วตอบ 422 ยกเว้นรหัสเดิมของงานที่ส่งกลับมาโดยไม่เปลี่ยน
      *
      * @param int $projectId รหัสโปรเจค
@@ -305,7 +306,10 @@ class ProjectRelease
      */
     public static function checkedForTask(int $projectId, mixed $raw, ?int $current): int
     {
-        $id = self::checkedId($raw);
+        $id = is_int($raw) ? $raw : (is_string($raw) && ctype_digit($raw) ? (int)$raw : 0);
+        if ($id <= 0) {
+            throw new ProjectColumnException(422, 'รหัสเวอร์ชันไม่ถูกต้อง');
+        }
         $state = DB::run(
             'SELECT state FROM project_releases WHERE id = ? AND project_id = ?',
             [$id, $projectId]

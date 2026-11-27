@@ -37,13 +37,20 @@ function releaseTitleLine(release) {
     return release.name + (date ? ' (' + formatDate(String(date).slice(0, 10)) + ')' : '');
 }
 
-/** บรรทัดย่อยใต้ชื่อเวอร์ชัน: วันออกและจำนวนงาน (สถานะมีป้ายของมันเองแล้ว จึงไม่ซ้ำที่นี่) */
+/**
+ * บรรทัดย่อยใต้ชื่อเวอร์ชัน: วันออกและจำนวนงาน
+ * ที่วางแผนยังไม่มีงานเสร็จจึงบอกจำนวนงานเฉย ๆ ส่วนที่กำลังทำบอกความคืบหน้า
+ * (สถานะมีป้ายของมันเองแล้ว แต่แถววางแผนใส่คำว่าวางแผนไว้ให้อ่านต่อกันได้เหมือนแบบ)
+ */
 function releaseSubLine(release) {
     const total = Number(release.task_count) || 0;
     if (release.state === 'released') {
         return 'ออกแล้ว ' + formatDate(String(release.released_at || '').slice(0, 10)) + ' · ' + total + ' งาน';
     }
     const when = release.release_date ? 'ออก ' + formatDate(release.release_date) : 'ยังไม่กำหนดวัน';
+    if (release.state === 'planned') {
+        return 'วางแผน · ' + when + ' · ' + total + ' งาน';
+    }
     return when + ' · เสร็จ ' + (Number(release.done_count) || 0) + ' จาก ' + total + ' งาน';
 }
 
@@ -112,7 +119,8 @@ function openReleaseDetailHtml(release) {
             + '<button class="btn btn-sm btn-primary" type="button" data-act="openReleaseModal" data-args="[' + id + ']">ออกเวอร์ชัน</button>'
             + '</span>' : '')
         + '</div>'
-        + '<p class="sub">' + escHtml(releaseSubLine(release)) + '</p>'
+        + '<p class="sub">' + escHtml(RELEASE_STATE_LABEL[release.state] || '') + ' · เสร็จ ' + done + ' จาก ' + tasks.length + ' งาน'
+        + (release.release_date ? ' · ออก ' + escHtml(formatDate(release.release_date)) : '') + '</p>'
         + '<progress class="task-epic-meter" max="' + Math.max(tasks.length, 1) + '" value="' + done + '"'
         + ' aria-label="เสร็จ ' + done + ' จาก ' + tasks.length + ' งาน"></progress>'
         + (tasks.length

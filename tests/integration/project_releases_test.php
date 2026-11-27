@@ -256,7 +256,7 @@ test('tasks link only to unreleased releases of their own project', function (Te
     $foreign = relCreate($f, relProject($f, 'อื่น 2'), 'v9');
 
     $cases = [
-        [$foreign, 404], [999999999, 404], ['x', 404], [-1, 404], [[1], 404],
+        [$foreign, 404], [999999999, 404], ['x', 422], [-1, 422], [[1], 422],
         [$shipped, 200],            // ส่งค่าเดิมกลับมาไม่ถือว่าเปลี่ยน
         [$open, 200],
     ];
@@ -270,6 +270,8 @@ test('tasks link only to unreleased releases of their own project', function (Te
 
     $created = $f['member']->post("/api/projects/{$p}/tasks", ['title' => 'ใหม่', 'release_id' => $shipped]);
     assertSame(422, $created['status'], 'a new task cannot join a released release');
+    $badCreated = $f['member']->post("/api/projects/{$p}/tasks", ['title' => 'ใหม่', 'release_id' => 'x']);
+    assertSame(422, $badCreated['status'], 'a new task cannot take a malformed release id');
     assertSame(200, $f['member']->request('PUT', "/api/projects/tasks/{$task}", ['release_id' => null])['status']);
     assertSame(null, relOf($task), 'null unlinks');
 });
